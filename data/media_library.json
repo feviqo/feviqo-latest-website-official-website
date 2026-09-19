@@ -1,0 +1,35 @@
+{
+  "feviqo-hero-video": {
+    "id": "feviqo-hero-video",
+    "filename": "Sequence 01.mp4",
+    "originalName": "Sequence 01.mp4",
+    "mimeType": "video/mp4",
+    "url": "/videos/Sequence 01.mp4",
+    "fallbackUrl": "/videos/Sequence-01.mp4",
+    "fileSize": 783608,
+    "duration": 51.3,
+    "durationDisplay": "00:51",
+    "width": 1280,
+    "height": 720,
+    "aspectRatio": "16:9",
+    "isAssignedHero": true,
+    "posterId": "feviqo-hero-poster",
+    "createdAt": "2026-09-11T16:35:00.000Z",
+    "updatedAt": "2026-09-11T16:40:00.000Z"
+  },
+  "feviqo-hero-poster": {
+    "id": "feviqo-hero-poster",
+    "filename": "feviqo-hero-poster.jpg",
+    "originalName": "feviqo-hero-poster.jpg",
+    "mimeType": "image/jpeg",
+    "url": "/images/feviqo-hero-poster.jpg",
+    "fileSize": 13350,
+    "width": 1280,
+    "height": 720,
+    "aspectRatio": "16:9",
+    "isAssignedHero": true,
+    "sourceVideoId": "feviqo-hero-video",
+    "createdAt": "2026-09-11T16:38:00.000Z",
+    "updatedAt": "2026-09-11T16:40:00.000Z"
+  }
+}

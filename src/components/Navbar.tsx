@@ -1,0 +1,415 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  ChevronDown, 
+  Menu, 
+  X, 
+  Sparkles, 
+  Video, 
+  Briefcase, 
+  TrendingUp,
+  FileCheck,
+  MessageSquareQuote,
+  Lock,
+  ShieldCheck,
+  Globe,
+} from 'lucide-react';
+import { FeviqoHeaderLogo } from './FeviqoLogo';
+import { AppRoute } from '../types';
+
+interface NavbarProps {
+  onBookCall: () => void;
+  onNavigateSection: (sectionId: string) => void;
+  onNavigatePricing: () => void;
+  onNavigateFlow: (view?: 'login' | 'register' | 'admin') => void;
+  onNavigatePage: (route: AppRoute) => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ 
+  onBookCall, 
+  onNavigateSection,
+  onNavigatePricing,
+  onNavigateFlow,
+  onNavigatePage,
+}) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [solutionsOpen, setSolutionsOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(false);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const y = window.scrollY;
+          // Hysteresis prevents rapid boundary jitter: activate at >24px, deactivate only below 8px
+          setScrolled((prev) => (prev ? y > 8 : y > 24));
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <header 
+      id="feviqo-global-header" 
+      className={`sticky top-0 z-50 transition-colors duration-200 ${
+        scrolled 
+          ? 'bg-[#032415]/95 backdrop-blur-md border-b border-[#064e3b]/90 shadow-lg py-3.5' 
+          : 'bg-gradient-to-r from-[#032415] via-[#064e3b] to-[#032415] border-b border-[#064e3b]/60 py-3.5'
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+        
+        {/* Brand Logo */}
+        <div className="flex items-center gap-8">
+          <a 
+            href="#" 
+            onClick={(e) => { e.preventDefault(); onNavigatePage('home'); }}
+            className="flex items-center group py-0.5"
+            aria-label="FEVIQO Home"
+          >
+            <FeviqoHeaderLogo 
+              theme="dark" 
+              className="h-7 sm:h-8 w-auto transition-opacity group-hover:opacity-85" 
+            />
+          </a>
+        </div>
+
+        {/* Desktop Navigation Links */}
+        <nav className="hidden lg:flex items-center gap-1 xl:gap-2 text-[13px] font-semibold text-white">
+          
+          {/* Work / Gallery */}
+          <button 
+            onClick={() => onNavigatePage('gallery')}
+            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
+          >
+            Work
+          </button>
+
+          {/* Solutions Dropdown */}
+          <div 
+            className="relative"
+            onMouseEnter={() => setSolutionsOpen(true)}
+            onMouseLeave={() => setSolutionsOpen(false)}
+          >
+            <button 
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
+            >
+              Solutions
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform text-emerald-200 ${solutionsOpen ? 'rotate-180 text-white' : ''}`} />
+            </button>
+
+            {solutionsOpen && (
+              <div className="absolute top-full left-0 w-80 bg-white border border-slate-200/80 rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-[#0B0B0D]">
+                <div className="space-y-1">
+                  <button 
+                    onClick={() => { onNavigatePage('creators'); setSolutionsOpen(false); }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                  >
+                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">Content Creators</div>
+                      <div className="text-slate-500 text-xs mt-0.5">High-retention editing for YouTubers & streamers.</div>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { onNavigatePage('business'); setSolutionsOpen(false); }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                  >
+                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                      <Briefcase className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">Business Owners</div>
+                      <div className="text-slate-500 text-xs mt-0.5">Turn 1 founder recording into a multi-channel video suite.</div>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { onNavigatePage('agencies'); setSolutionsOpen(false); }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                  >
+                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">Marketers & Agencies</div>
+                      <div className="text-slate-500 text-xs mt-0.5">White-label editing pods scaling retainer capacity.</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Services Dropdown */}
+          <div 
+            className="relative"
+            onMouseEnter={() => setServicesOpen(true)}
+            onMouseLeave={() => setServicesOpen(false)}
+          >
+            <button 
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
+            >
+              Services
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform text-emerald-200 ${servicesOpen ? 'rotate-180 text-white' : ''}`} />
+            </button>
+
+            {servicesOpen && (
+              <div className="absolute top-full left-0 w-80 bg-white border border-slate-200/80 rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-[#0B0B0D]">
+                <div className="space-y-1">
+                  <button 
+                    onClick={() => { onNavigatePage('unlimited-editing'); setServicesOpen(false); }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                  >
+                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                      <Video className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">Unlimited Video Editing</div>
+                      <div className="text-slate-500 text-xs mt-0.5">Dedicated editor, 4K rendering & 24–48h turnarounds.</div>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { onNavigatePage('platform'); setServicesOpen(false); }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                  >
+                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                      <FileCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">FEVIQO Flow Platform</div>
+                      <div className="text-slate-500 text-xs mt-0.5">Timestamped client revisions & seamless asset management.</div>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => { onNavigatePage('turkish-drama'); setServicesOpen(false); }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer border-t border-slate-100 mt-1 pt-2.5"
+                  >
+                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        <span>Turkish TV Licensing</span>
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-[#15803D] text-[9px] font-black">B2B</span>
+                      </div>
+                      <div className="text-slate-500 text-xs mt-0.5">Urdu dubbing & authorized digital distribution in Pakistan.</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Pricing */}
+          <button 
+            onClick={onNavigatePricing}
+            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer font-semibold text-white"
+          >
+            Pricing
+          </button>
+
+          {/* Resources Dropdown */}
+          <div 
+            className="relative"
+            onMouseEnter={() => setResourcesOpen(true)}
+            onMouseLeave={() => setResourcesOpen(false)}
+          >
+            <button 
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
+            >
+              Resources
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform text-emerald-200 ${resourcesOpen ? 'rotate-180 text-white' : ''}`} />
+            </button>
+
+            {resourcesOpen && (
+              <div className="absolute top-full left-0 w-72 bg-white border border-slate-200/80 rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-[#0B0B0D]">
+                <div className="space-y-1">
+                  <button 
+                    onClick={() => { onNavigatePage('case-studies'); setResourcesOpen(false); }}
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 flex items-center gap-3 transition group cursor-pointer"
+                  >
+                    <FileCheck className="w-4 h-4 text-[#15803D]" />
+                    <span className="text-xs font-bold text-[#0B0B0D]">Case Studies</span>
+                  </button>
+                  <button 
+                    onClick={() => { onNavigatePage('testimonials'); setResourcesOpen(false); }}
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 flex items-center gap-3 transition group cursor-pointer"
+                  >
+                    <MessageSquareQuote className="w-4 h-4 text-[#15803D]" />
+                    <span className="text-xs font-bold text-[#0B0B0D]">Client Reviews</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </nav>
+
+        {/* Right CTA & Access */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Client Portal Login */}
+          <button 
+            onClick={() => onNavigateFlow('login')}
+            className="hidden xl:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-white/95 hover:text-white bg-white/10 hover:bg-white/20 border border-white/25 transition cursor-pointer"
+            title="Client Portal Login"
+          >
+            <Lock className="w-3.5 h-3.5 text-emerald-200" />
+            <span>Login</span>
+          </button>
+
+          {/* Admin Control Center */}
+          <button 
+            onClick={() => onNavigateFlow('admin')}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-white bg-black/25 hover:bg-black/40 border border-white/25 transition cursor-pointer"
+            title="Studio Admin Control Center"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-[#DBFF4C]" />
+            <span>Admin</span>
+          </button>
+
+          {/* Primary Action */}
+          <button
+            onClick={onBookCall}
+            id="nav-start-project-btn"
+            className="bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black px-5 sm:px-6 py-2.5 rounded-full text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5"
+          >
+            Start a Project
+          </button>
+
+          {/* Mobile menu toggle */}
+          <button 
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden p-2 rounded-full text-white hover:bg-white/15 transition cursor-pointer"
+            aria-label="Toggle navigation"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Drawer Menu */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="lg:hidden bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border-b border-[#064e3b]/90 px-5 sm:px-6 py-5 space-y-4 shadow-2xl text-white overflow-hidden"
+          >
+            <div className="space-y-1">
+              <button 
+                onClick={() => { onNavigatePricing(); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-bold flex items-center justify-between text-white cursor-pointer"
+              >
+                <span>Pricing Plans</span>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#22C55E] text-slate-950 uppercase tracking-wider">Save $15.6k/yr</span>
+              </button>
+              
+              <button 
+                onClick={() => { onNavigatePage('gallery'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
+              >
+                Work & Gallery
+              </button>
+
+              <button 
+                onClick={() => { onNavigatePage('creators'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
+              >
+                Content Creators
+              </button>
+
+              <button 
+                onClick={() => { onNavigatePage('business'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
+              >
+                Business Owners
+              </button>
+
+              <button 
+                onClick={() => { onNavigatePage('agencies'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
+              >
+                Marketers & Agencies
+              </button>
+
+              <button 
+                onClick={() => { onNavigatePage('unlimited-editing'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
+              >
+                Unlimited Video Editing
+              </button>
+
+              <button 
+                onClick={() => { onNavigatePage('platform'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
+              >
+                FEVIQO Flow Platform
+              </button>
+
+              <button 
+                onClick={() => { onNavigatePage('turkish-drama'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 font-bold cursor-pointer text-[#22C55E] flex items-center justify-between"
+              >
+                <span>Turkish TV Licensing (Pakistan)</span>
+                <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">B2B</span>
+              </button>
+
+              <button 
+                onClick={() => { onNavigatePage('testimonials'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
+              >
+                Client Reviews (Testimonials)
+              </button>
+
+              <button 
+                onClick={() => { onNavigatePage('case-studies'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
+              >
+                Case Studies
+              </button>
+            </div>
+
+            <div className="pt-4 border-t border-emerald-600/60 flex flex-col gap-2.5">
+              <button
+                onClick={() => { onBookCall(); setMobileMenuOpen(false); }}
+                className="w-full py-3 rounded-full bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black uppercase tracking-wider text-xs transition-colors cursor-pointer shadow-lg shadow-emerald-950/20"
+              >
+                Start a Project
+              </button>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <button
+                  onClick={() => { onNavigateFlow('login'); setMobileMenuOpen(false); }}
+                  className="py-2.5 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-semibold text-center cursor-pointer flex items-center justify-center gap-1.5 border border-white/20"
+                >
+                  <Lock className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>Client Login</span>
+                </button>
+                <button
+                  onClick={() => { onNavigateFlow('admin'); setMobileMenuOpen(false); }}
+                  className="py-2.5 rounded-full bg-black/30 hover:bg-black/45 border border-white/25 text-white text-xs font-semibold text-center cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" />
+                  <span>Admin Panel</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
+  );
+};

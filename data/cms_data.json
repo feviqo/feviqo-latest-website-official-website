@@ -1,0 +1,336 @@
+{
+  "logos": [
+    {
+      "id": "logo-1",
+      "name": "Alex Tubio",
+      "image": "/images/logos/alex-tubio.webp",
+      "altText": "Alex Tubio Media",
+      "displayOrder": 1,
+      "isActive": true,
+      "link": "https://alextubio.com"
+    },
+    {
+      "id": "logo-2",
+      "name": "Jenna Kutcher",
+      "image": "/images/logos/jenna-kutcher.webp",
+      "altText": "Jenna Kutcher Podcast",
+      "displayOrder": 2,
+      "isActive": true,
+      "link": "https://jennakutcher.com"
+    },
+    {
+      "id": "logo-3",
+      "name": "Google",
+      "image": "/images/logos/google.webp",
+      "altText": "Google",
+      "displayOrder": 3,
+      "isActive": true,
+      "link": "https://google.com"
+    },
+    {
+      "id": "logo-4",
+      "name": "Jeff Walker",
+      "image": "/images/logos/jeff-walker.webp",
+      "altText": "Jeff Walker",
+      "displayOrder": 4,
+      "isActive": true,
+      "link": "https://jeffwalker.com"
+    },
+    {
+      "id": "logo-5",
+      "name": "Moolah",
+      "image": "/images/logos/moolah.webp",
+      "altText": "Moolah",
+      "displayOrder": 5,
+      "isActive": true,
+      "link": ""
+    },
+    {
+      "id": "logo-6",
+      "name": "Lais",
+      "image": "/images/logos/lais.webp",
+      "altText": "Lais",
+      "displayOrder": 6,
+      "isActive": true,
+      "link": ""
+    },
+    {
+      "id": "logo-7",
+      "name": "Logo-R",
+      "image": "/images/logos/logo-r.webp",
+      "altText": "Logo-R",
+      "displayOrder": 7,
+      "isActive": true,
+      "link": ""
+    },
+    {
+      "id": "logo-8",
+      "name": "Ask a Concierge",
+      "image": "/images/logos/ask-a-concierge.webp",
+      "altText": "Ask a Concierge",
+      "displayOrder": 8,
+      "isActive": true,
+      "link": ""
+    },
+    {
+      "id": "logo-9",
+      "name": "Canyon Ranch",
+      "image": "/images/logos/canyon-ranch.webp",
+      "altText": "Canyon Ranch",
+      "displayOrder": 9,
+      "isActive": true,
+      "link": ""
+    }
+  ],
+  "testimonials": [
+    {
+      "id": "test-1",
+      "name": "Alex Tubio",
+      "role": "YouTube Creator & Strategist",
+      "company": "Tubio Media",
+      "quote": "FEVIQO completely transformed my production workflow. I went from spending entire weekends editing to simply uploading raw files and receiving polished cuts within 24-48 hours. My views jumped from 100K to 800K.",
+      "avatar": "/images/avatars/alex-tubio.webp",
+      "vimeoId": "922887065",
+      "rating": 5,
+      "highlight": "800K Monthly Views",
+      "subscribers": "140K+ Subs",
+      "displayOrder": 1,
+      "isActive": true
+    },
+    {
+      "id": "test-2",
+      "name": "Danny Barrera",
+      "role": "Marketing Agency CEO",
+      "company": "High Growth Media Agency",
+      "quote": "We have produced over 500 videos with FEVIQO. They are responsive, fast, and deliver consistent high retention. They operate literally like our private internal video department.",
+      "avatar": "/images/avatars/danny-barrera.webp",
+      "vimeoId": "922887065",
+      "rating": 5,
+      "highlight": "Zero Hiring Overhead",
+      "subscribers": "500+ Client Edits",
+      "displayOrder": 2,
+      "isActive": true
+    },
+    {
+      "id": "test-3",
+      "name": "Patrick Anghel",
+      "role": "Founder & Consultant",
+      "company": "Anghel Consulting",
+      "quote": "A single video ad edited by FEVIQO helped me land three $20K consulting deals. The kinetic text, pacing, and color grade gave my brand enterprise-level credibility immediately.",
+      "avatar": "/images/avatars/patrick-anghel.webp",
+      "vimeoId": "922887065",
+      "rating": 5,
+      "highlight": "$60K Direct Pipeline",
+      "subscribers": "$60K Closed",
+      "displayOrder": 3,
+      "isActive": true
+    },
+    {
+      "id": "test-4",
+      "name": "Jenna Kutcher Team",
+      "role": "Course Creator & Podcaster",
+      "company": "Goal Digger Media",
+      "quote": "The team at FEVIQO understands brand aesthetic down to the smallest detail. Our social clips feel fresh, engaging, and convert listeners into high-ticket course buyers.",
+      "avatar": "/images/avatars/jenna-kutcher.webp",
+      "vimeoId": "922887065",
+      "rating": 5,
+      "highlight": "Daily Viral Shorts",
+      "subscribers": "Top 1% Podcast",
+      "displayOrder": 4,
+      "isActive": true
+    },
+    {
+      "id": "test-5",
+      "name": "Marcus Vance",
+      "role": "B2B SaaS Growth Lead",
+      "company": "Hypergrowth.io",
+      "quote": "Our ad creative burnout was killing our Meta and LinkedIn campaigns. With FEVIQO Pro, we test 8-10 creative hooks per week. Our CPA dropped by 42% in 60 days.",
+      "avatar": "/images/avatars/clhppy-avatar1.png",
+      "vimeoId": "922887065",
+      "rating": 5,
+      "highlight": "42% Lower CPA",
+      "subscribers": "Hypergrowth.io",
+      "displayOrder": 5,
+      "isActive": true
+    },
+    {
+      "id": "test-6",
+      "name": "Lais DeLeon",
+      "role": "Fitness Brand Founder",
+      "company": "Lais Fitness",
+      "quote": "Unlimited revisions means zero anxiety. If I want a music tweak or a text placement shifted, they update it in a couple of hours. I could never go back to Upwork freelancers.",
+      "avatar": "/images/avatars/lais-deleon.webp",
+      "vimeoId": "922887065",
+      "rating": 5,
+      "highlight": "Fast Turnarounds",
+      "subscribers": "950K Community",
+      "displayOrder": 6,
+      "isActive": true
+    },
+    {
+      "id": "test-7",
+      "name": "David Chen",
+      "role": "DTC Brand Founder",
+      "company": "Kumo Living",
+      "quote": "Our TikTok and Reels ad creative fatigue was killing profitability. FEVIQO delivers 6-8 fresh high-converting hooks weekly without missing a single deadline. Our ROAS spiked 2.8x in 60 days.",
+      "avatar": "/images/avatars/clhppy_clients.webp",
+      "vimeoId": "1003651372",
+      "rating": 5,
+      "highlight": "2.8x Blended ROAS",
+      "subscribers": "8-Figure Brand",
+      "displayOrder": 7,
+      "isActive": true
+    }
+  ],
+  "portfolio": [
+    {
+      "id": "port-1",
+      "title": "Omnichannel DTC Growth Campaign",
+      "category": "Performance Ads",
+      "description": "Cross-platform short-form video hooks engineered for paid social scaling with 3.8x blended ROAS.",
+      "coverImage": "https://vumbnail.com/922887065.jpg",
+      "videoUrl": "https://vimeo.com/922887065",
+      "clientOrCompany": "Lumina Skincare",
+      "platform": "Meta & TikTok",
+      "metrics": "+380% ROAS",
+      "displayOrder": 1,
+      "isActive": true
+    },
+    {
+      "id": "port-2",
+      "title": "Performance Marketing Retainer Sprint",
+      "category": "Agency Retainer",
+      "description": "High-velocity weekly creative iterations testing 12 hook variations for B2B client acquisition.",
+      "coverImage": "https://vumbnail.com/921740529.jpg",
+      "videoUrl": "https://vimeo.com/921740529",
+      "clientOrCompany": "Apex Growth Labs",
+      "platform": "YouTube & LinkedIn",
+      "metrics": "-42% CPA",
+      "displayOrder": 2,
+      "isActive": true
+    },
+    {
+      "id": "port-3",
+      "title": "YouTube Long-Form Retention Masterclass",
+      "category": "YouTube Masterclass",
+      "description": "Paced documentary-style editing with kinetic chapter titles and custom sound design holding 62% average view duration.",
+      "coverImage": "https://vumbnail.com/922887065.jpg",
+      "videoUrl": "https://vimeo.com/922887065",
+      "clientOrCompany": "Alex Tubio Media",
+      "platform": "YouTube (16:9)",
+      "metrics": "800K Views",
+      "displayOrder": 3,
+      "isActive": true
+    },
+    {
+      "id": "port-4",
+      "title": "Viral TikTok E-Commerce Unboxing",
+      "category": "Reels / TikTok (9:16)",
+      "description": "High-energy kinetic cuts, beat-matched transitions, and native caption typography for organic virality.",
+      "coverImage": "https://vumbnail.com/921740529.jpg",
+      "videoUrl": "https://vimeo.com/921740529",
+      "clientOrCompany": "Nova Athletics",
+      "platform": "TikTok & IG Reels",
+      "metrics": "2.4M Organic",
+      "displayOrder": 4,
+      "isActive": true
+    }
+  ],
+  "pages": {
+    "agencies": {
+      "badge": "For Marketers & Creative Agencies",
+      "headline": "Marketers & Agencies",
+      "highlightHeadline": "White-label editing pods scaling retainer capacity.",
+      "description": "Plug dedicated, vetted senior video editing pods directly into your agency workflow. Increase client margins and scale retainers without overhead, HR headaches, or delivery bottlenecks.",
+      "ctaPrimary": "Partner with FEVIQO",
+      "ctaSecondary": "Review Agency Plans",
+      "heroVideoUrl": "1225114561",
+      "heroVideoThumbnail": "https://vumbnail.com/1225114561.jpg",
+      "heroVideoEnabled": true,
+      "stats": [
+        {
+          "label": "Client Retention Rate",
+          "value": "98.4%",
+          "subtext": "Zero delivery bottlenecks"
+        },
+        {
+          "label": "Average Turnaround",
+          "value": "24-48h",
+          "subtext": "SLA guaranteed"
+        },
+        {
+          "label": "Dedicated Video Editors",
+          "value": "1-to-1",
+          "subtext": "Assigned to your roster"
+        }
+      ]
+    },
+    "creators": {
+      "badge": "For Content Creators",
+      "headline": "Content Creators",
+      "highlightHeadline": "High-retention editing for YouTubers & streamers.",
+      "description": "Engineered specifically for creators who refuse to sacrifice audience watch-time. We turn raw A-roll and streams into high-retention YouTube masterpieces, algorithmic Shorts, and viral podcast cutdowns.",
+      "ctaPrimary": "Get Started with FEVIQO",
+      "ctaSecondary": "Explore Creator Tier",
+      "heroVideoUrl": "922887065",
+      "heroVideoThumbnail": "https://vumbnail.com/922887065.jpg",
+      "heroVideoEnabled": true,
+      "stats": [
+        {
+          "label": "Average Retention Lift",
+          "value": "+48%",
+          "subtext": "Algorithmic pacing & hooks"
+        },
+        {
+          "label": "Hours Saved Weekly",
+          "value": "25+ hrs",
+          "subtext": "Focus 100% on recording"
+        },
+        {
+          "label": "Turnaround Window",
+          "value": "Same Day",
+          "subtext": "For urgent shorts & reels"
+        }
+      ]
+    },
+    "business": {
+      "badge": "For Business Owners & Founders",
+      "headline": "Business Owners",
+      "highlightHeadline": "Turn 1 founder recording into a multi-channel video suite.",
+      "description": "Record once for 30 minutes. Our elite post-production suite extracts high-converting VSLs, LinkedIn thought-leadership clips, YouTube authority videos, and Meta ad variations that generate pipeline on autopilot.",
+      "ctaPrimary": "Book Strategy Call",
+      "ctaSecondary": "See Enterprise Options",
+      "heroVideoUrl": "921740529",
+      "heroVideoThumbnail": "https://vumbnail.com/921740529.jpg",
+      "heroVideoEnabled": true,
+      "stats": [
+        {
+          "label": "Average Blended ROAS",
+          "value": "3.4x",
+          "subtext": "Tested across Meta & TikTok"
+        },
+        {
+          "label": "CAC Reduction",
+          "value": "-36%",
+          "subtext": "Within first 60 days"
+        },
+        {
+          "label": "Ad Creative Hooks / Mo",
+          "value": "20+",
+          "subtext": "Continuous split testing"
+        }
+      ]
+    },
+    "home": {
+      "badge": "Unlimited Video Editing Subscription",
+      "headline": "Unlimited Video Editing.",
+      "highlightHeadline": "Flat Monthly Fee.",
+      "description": "Scale your brand with high-retention video editing, dedicated top 1% video editors, fast 24-48h turnarounds, and unlimited revisions.",
+      "ctaPrimary": "See Our Plans",
+      "ctaSecondary": "Book 1-on-1 Call",
+      "heroVideoUrl": "1225114561",
+      "heroVideoThumbnail": "https://vumbnail.com/1225114561.jpg",
+      "heroVideoEnabled": true
+    }
+  }
+}

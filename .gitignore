@@ -1,0 +1,17 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Exclude large user videos from AI Studio IDE sync to bypass the 30 MB web editor file size limit
+public/videos/1.mp4
+public/videos/*.mov
+public/videos/*.mkv
+public/videos/*.webm
+public/videos/*-large*
+uploads/
+public/uploads/

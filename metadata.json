@@ -1,0 +1,6 @@
+{
+  "name": "FEVIQO - Unlimited Video Editing",
+  "description": "Top-rated unlimited video editing agency for brands, creators, and marketing agencies worldwide. High-converting TikTok, YouTube, and performance ad creatives with 24-48h turnaround.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

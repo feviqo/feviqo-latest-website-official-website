@@ -1,0 +1,322 @@
+{
+  "sourceFile": "index 2.html",
+  "referenceOnly": true,
+  "inspectionDate": "2026-09-11",
+  "summary": "Complete asset relationship and structural manifest extracted from the reference HTML to restore FEVIQO media relationships without competitor branding.",
+  "assets": [
+    {
+      "referenceId": "ref-logo-header",
+      "type": "image",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2021/10/logo-becreatives-white.svg",
+      "canonicalUrl": "/logos/feviqo-white.svg",
+      "role": "logo",
+      "section": "header",
+      "context": "Main application header navigation logo",
+      "feviqoAssetId": "feviqo-logo-primary"
+    },
+    {
+      "referenceId": "ref-hero-video-overlay",
+      "type": "video_poster",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/11/Landing-Gif-2-1.gif.webp",
+      "canonicalUrl": "/images/hero-poster.webp",
+      "role": "hero_poster",
+      "section": "hero",
+      "context": "Main hero video overlay thumbnail and fallback frame",
+      "feviqoAssetId": "feviqo-hero-poster"
+    },
+    {
+      "referenceId": "ref-trusted-client-faces",
+      "type": "image",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/clhppy_clients.png.webp",
+      "canonicalUrl": "/images/avatars/client-group-mockup.webp",
+      "role": "audience",
+      "section": "hero_sidebar",
+      "context": "Trusted by many! card with real client portrait faces mockup",
+      "feviqoAssetId": "feviqo-trusted-avatars"
+    },
+    {
+      "referenceId": "ref-trustpilot-badge",
+      "type": "image",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/trust_pilot.png.webp",
+      "canonicalUrl": "/images/trustpilot.svg",
+      "role": "social_proof",
+      "section": "hero_sidebar",
+      "context": "4.7 Reviews 75 Trustpilot badge rating indicator",
+      "feviqoAssetId": "feviqo-trustpilot"
+    },
+    {
+      "referenceId": "ref-logo-alex-tubio",
+      "type": "client_logo",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/alex-tubio.png.webp",
+      "canonicalUrl": "/logos/alex-tubio.svg",
+      "role": "client_logo",
+      "section": "trusted_by_hundreds",
+      "context": "Dr. Alex Tubio - Chiropractic content creator with 800K+ views",
+      "feviqoAssetId": "logo-alex-tubio"
+    },
+    {
+      "referenceId": "ref-logo-jenna-kutcher",
+      "type": "client_logo",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/jenna-kutcher.png.webp",
+      "canonicalUrl": "/logos/jenna-kutcher.svg",
+      "role": "client_logo",
+      "section": "trusted_by_hundreds",
+      "context": "Jenna Kutcher - Goal Digger Podcast & NYT Best Seller",
+      "feviqoAssetId": "logo-jenna-kutcher"
+    },
+    {
+      "referenceId": "ref-logo-google",
+      "type": "client_logo",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/google.png.webp",
+      "canonicalUrl": "/logos/google.svg",
+      "role": "client_logo",
+      "section": "trusted_by_hundreds",
+      "context": "Google marketing & media productions",
+      "feviqoAssetId": "logo-google"
+    },
+    {
+      "referenceId": "ref-logo-jeff-walker",
+      "type": "client_logo",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/jeff-walker.png.webp",
+      "canonicalUrl": "/logos/jeff-walker.svg",
+      "role": "client_logo",
+      "section": "trusted_by_hundreds",
+      "context": "Jeff Walker - Product Launch Formula creator",
+      "feviqoAssetId": "logo-jeff-walker"
+    },
+    {
+      "referenceId": "ref-logo-moolah",
+      "type": "client_logo",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/moolah_white-2-300x82.png.webp",
+      "canonicalUrl": "/logos/moolah.svg",
+      "role": "client_logo",
+      "section": "trusted_by_hundreds",
+      "context": "Moolah media brand and marketing",
+      "feviqoAssetId": "logo-moolah"
+    },
+    {
+      "referenceId": "ref-logo-lais",
+      "type": "client_logo",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/Lais.png.webp",
+      "canonicalUrl": "/logos/lais.svg",
+      "role": "client_logo",
+      "section": "trusted_by_hundreds",
+      "context": "Lais DeLeon - Fitness brand & lifestyle creator",
+      "feviqoAssetId": "logo-lais"
+    },
+    {
+      "referenceId": "ref-logo-r",
+      "type": "client_logo",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/Logo-R-Charcoal-Transparent-3-300x64.png.webp",
+      "canonicalUrl": "/logos/logo-r.svg",
+      "role": "client_logo",
+      "section": "trusted_by_hundreds",
+      "context": "R-Charcoal branding agency",
+      "feviqoAssetId": "logo-r"
+    },
+    {
+      "referenceId": "ref-logo-ask-concierge",
+      "type": "client_logo",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/ask-a-concierge.png.webp",
+      "canonicalUrl": "/logos/ask-concierge.svg",
+      "role": "client_logo",
+      "section": "trusted_by_hundreds",
+      "context": "Ask a Concierge hospitality media",
+      "feviqoAssetId": "logo-ask-concierge"
+    },
+    {
+      "referenceId": "ref-logo-canyon-ranch",
+      "type": "client_logo",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/CanyonRanch-300x51.png.webp",
+      "canonicalUrl": "/logos/canyon-ranch.svg",
+      "role": "client_logo",
+      "section": "trusted_by_hundreds",
+      "context": "Canyon Ranch luxury wellness resort brand",
+      "feviqoAssetId": "logo-canyon-ranch"
+    },
+    {
+      "referenceId": "ref-creative-decisions",
+      "type": "feature_image",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/creative1.png.webp",
+      "canonicalUrl": "/images/1st-image.jpeg",
+      "role": "feature",
+      "section": "value_pillars",
+      "context": "Creative Decisions - Get editors who create engaging and trendy videos in any style",
+      "feviqoAssetId": "feviqo-creative-decisions"
+    },
+    {
+      "referenceId": "ref-faster-turnaround",
+      "type": "feature_image",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/creative2.png.webp",
+      "canonicalUrl": "/images/2nd.jpeg",
+      "role": "feature",
+      "section": "value_pillars",
+      "context": "Faster Turnaround - Get your videos delivered in less than 24h",
+      "feviqoAssetId": "feviqo-faster-turnaround"
+    },
+    {
+      "referenceId": "ref-streamlined-process",
+      "type": "feature_image",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/10/creative3.png.webp",
+      "canonicalUrl": "/images/3rd.jpeg",
+      "role": "feature",
+      "section": "value_pillars",
+      "context": "Streamlined Process - Spend less time handling video edits and stay focused on your business",
+      "feviqoAssetId": "feviqo-streamlined-process"
+    },
+    {
+      "referenceId": "ref-process-request",
+      "type": "process_image",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/11/1Request.gif.webp",
+      "canonicalUrl": "/images/process-request.webp",
+      "role": "process",
+      "section": "how_it_works",
+      "context": "1. Request - Submit video order directly into FEVIQO portal",
+      "feviqoAssetId": "feviqo-process-1"
+    },
+    {
+      "referenceId": "ref-process-review",
+      "type": "process_image",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/11/2Review.gif.webp",
+      "canonicalUrl": "/images/process-review.webp",
+      "role": "process",
+      "section": "how_it_works",
+      "context": "2. Review - Give feedback and request reedit if needed",
+      "feviqoAssetId": "feviqo-process-2"
+    },
+    {
+      "referenceId": "ref-process-download",
+      "type": "process_image",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/11/3Download.gif.webp",
+      "canonicalUrl": "/images/process-download.webp",
+      "role": "process",
+      "section": "how_it_works",
+      "context": "3. Download - Get final videos in any format with master audio",
+      "feviqoAssetId": "feviqo-process-3"
+    },
+    {
+      "referenceId": "ref-case-alex-tubio",
+      "type": "case_study_portrait",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2022/08/image-2.png.webp",
+      "canonicalUrl": "/images/case-alex-tubio.webp",
+      "role": "case_study",
+      "section": "edits_pay_off",
+      "context": "Alex Tubio story: 800K Views - Went from 100K to 800K video views",
+      "feviqoAssetId": "case-alex-tubio"
+    },
+    {
+      "referenceId": "ref-case-fund-black-founders",
+      "type": "case_study_portrait",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2023/03/image.png.webp",
+      "canonicalUrl": "/images/case-fund-founders.webp",
+      "role": "case_study",
+      "section": "edits_pay_off",
+      "context": "FundBlackFounders story: $50K Donations raised",
+      "feviqoAssetId": "case-fund-black-founders"
+    },
+    {
+      "referenceId": "ref-case-danny-barrera",
+      "type": "case_study_portrait",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2023/12/image-328.png.webp",
+      "canonicalUrl": "/images/case-danny-barrera.webp",
+      "role": "case_study",
+      "section": "edits_pay_off",
+      "context": "Danny Barrera story: 500+ Videos produced consistently",
+      "feviqoAssetId": "case-danny-barrera"
+    },
+    {
+      "referenceId": "ref-case-patrick-anghel",
+      "type": "case_study_portrait",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2023/12/image-1.png.webp",
+      "canonicalUrl": "/images/case-patrick-anghel.webp",
+      "role": "case_study",
+      "section": "edits_pay_off",
+      "context": "Patrick Anghel story: $60K Single video - Landed three $20K deals",
+      "feviqoAssetId": "case-patrick-anghel"
+    },
+    {
+      "referenceId": "ref-case-blessed-boys",
+      "type": "case_study_portrait",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2023/12/image-3.png.webp",
+      "canonicalUrl": "/images/case-blessed-boys.webp",
+      "role": "case_study",
+      "section": "edits_pay_off",
+      "context": "Blessed Boys story: 100K Subscribers YouTube Channel growth",
+      "feviqoAssetId": "case-blessed-boys"
+    },
+    {
+      "referenceId": "ref-sticky-creating-hard",
+      "type": "editorial_visual",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2025/01/creating-hard.png.webp",
+      "canonicalUrl": "/images/last.jpeg",
+      "role": "editorial",
+      "section": "video_creation_easy",
+      "context": "Centerpiece visual for Video Creation Should Be Easy section",
+      "feviqoAssetId": "feviqo-creating-hard"
+    },
+    {
+      "referenceId": "ref-editors-booking",
+      "type": "team_portrait",
+      "sourceUrl": "https://becreatives.co/wp-content/uploads/2024/11/editors.png.webp",
+      "canonicalUrl": "/images/editors-team.webp",
+      "role": "cta_banner",
+      "section": "booking_call",
+      "context": "Got Questions? Book a Chat with our creatives team banner",
+      "feviqoAssetId": "feviqo-editors-team"
+    }
+  ],
+  "sections": [
+    {
+      "id": "hero",
+      "heading": "Unlimited Video Editing Service",
+      "subtext": "Tailored for modern-day video editing by FEVIQO, so you can create video content without the hassle of managing.",
+      "cta": "Get Started!",
+      "elements": ["hero_video", "trusted_by_many_card", "rating_card", "monthly_stats_card"]
+    },
+    {
+      "id": "trusted_by",
+      "heading": "Trusted by hundreds",
+      "elements": ["logo_marquee"]
+    },
+    {
+      "id": "value_pillars",
+      "heading": "You Create. We Edit.",
+      "subtext": "No stress, no fuss. One less thing on your plate.",
+      "pillars": [
+        { "title": "Creative Decisions", "description": "Get editors who create engaging and trendy videos in any style." },
+        { "title": "Faster Turnaround", "description": "Get your videos delivered in less than 24h." },
+        { "title": "Streamlined Process", "description": "Spend less time handling video edits and stay focused on your business." }
+      ]
+    },
+    {
+      "id": "how_it_works",
+      "heading": "Request video edits using all-in-one platform",
+      "steps": [
+        { "step": "1. Request", "text": "Submit video order directly into FEVIQO platform." },
+        { "step": "2. Review", "text": "Give feedback and request reedit if needed." },
+        { "step": "3. Download", "text": "Get final videos in any format." }
+      ]
+    },
+    {
+      "id": "edits_pay_off",
+      "heading": "Edits Pay Off",
+      "subtext": "Real people. Real businesses. Real results.",
+      "elements": ["case_studies_cards"]
+    },
+    {
+      "id": "ai_powered_tools",
+      "heading": "AI-Powered Tools",
+      "elements": ["Generate Scripts", "Create Trendy Videos", "Repurpose to Clips"]
+    },
+    {
+      "id": "video_creation_easy",
+      "heading": "Video Creation Should be Easy.",
+      "subtext": "Your content deserves to shine, but the process can be overwhelming. That's where we step in."
+    },
+    {
+      "id": "comparison",
+      "heading": "The Video Editing Choices In 2026",
+      "options": ["Do It Yourself", "Use AI Tools", "Hire In-House", "Choose FEVIQO"]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "chunk-1789654469077-test_1789654469013",
+    "originalName": "test_chunk_assembly.mp4",
+    "fileName": "test_chunk_assembly.mp4",
+    "url": "/videos/test_chunk_assembly.mp4?t=1789654469068",
+    "size": 4096,
+    "sizeFormatted": "0.00 MB",
+    "mimeType": "video/mp4",
+    "createdAt": "2026-09-17T14:14:29.077Z",
+    "status": "stored_permanently",
+    "storageProvider": "chunked_local_disk"
+  }
+]
