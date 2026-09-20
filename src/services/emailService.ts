@@ -50,6 +50,7 @@ export interface EmailNotificationResult {
 }
 
 export const PRIMARY_STUDIO_EMAIL = 'partner@feviqo.com';
+export const SECONDARY_STUDIO_EMAIL = 'rexanmedia01@gmail.com';
 
 /**
  * Generates high-end branded HTML email template for FEVIQO notifications

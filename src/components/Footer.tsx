@@ -322,6 +322,9 @@ export const Footer: React.FC<FooterProps> = ({
             © 2026 FEVIQO Ltd. All rights reserved. Registered Creative Production Studio.
           </div>
           <div className="flex items-center gap-6">
+            <button onClick={onNavigateFlow} className="text-[#22C55E] hover:underline font-bold transition cursor-pointer">
+              Admin &amp; Flow Portal
+            </button>
             <button onClick={() => onNavigateSection('faq')} className="hover:text-white transition cursor-pointer">
               Privacy Policy
             </button>
