@@ -41,19 +41,18 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
             </p>
           </div>
 
-          {/* 3-Column Bento Grid - 6 Real Video Showcase Items */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-5 lg:gap-6">
+          {/* Desktop Layout: 3-Column Bento Grid (sm:grid) */}
+          <div className="hidden sm:grid sm:grid-cols-3 gap-5 lg:gap-6">
             {HOMEPAGE_SHOWCASE_COLUMNS.map((col) => (
-              <div key={col.colIndex} className="flex flex-col gap-2 sm:gap-5 lg:gap-6">
+              <div key={col.colIndex} className="flex flex-col gap-5 lg:gap-6">
                 {col.items.map((item) => {
                   const isVertical = item.orientation === 'vertical';
 
                   return (
                     <div
                       key={item.id}
-                      className="w-full group bg-[#03150D] rounded-xl sm:rounded-2xl md:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex items-center justify-center border border-emerald-900/30"
+                      className="w-full group bg-[#03150D] rounded-2xl md:rounded-3xl overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex items-center justify-center border border-emerald-900/30"
                     >
-                      {/* Direct Native HTML5 Video Showcase */}
                       <InlineVideoPlayer
                         id={item.id}
                         src={item.src}
@@ -71,6 +70,108 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
                 })}
               </div>
             ))}
+          </div>
+
+          {/* Mobile Layout: Responsive Phone Experience (block sm:hidden) */}
+          {/* Horizontal videos get full-width 16:9 view so they are large, clear, and easy to pause */}
+          <div className="block sm:hidden space-y-4">
+            {/* 1. First Horizontal Feature Video (Full Width 16:9) */}
+            <div className="w-full bg-[#03150D] rounded-2xl overflow-hidden shadow-lg border border-emerald-800/40">
+              <InlineVideoPlayer
+                id="showcase-col1-h"
+                src="https://stream.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M.m3u8"
+                poster="https://image.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M/thumbnail.jpg?time=1"
+                title="Cinematic Landscape & Documentary Master"
+                tag="YOUTUBE LONG-FORM"
+                duration="8:15"
+                isVertical={false}
+                onOpenModal={onOpenVideo}
+              />
+            </div>
+
+            {/* 2. Pair of Vertical Reels Side-by-Side (2 Columns) */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-[#03150D] rounded-2xl overflow-hidden shadow-lg border border-emerald-800/40">
+                <InlineVideoPlayer
+                  id="showcase-col1-v"
+                  src="https://stream.mux.com/2XO015Sw1RdYlJgjM6OS009uhQNiJycsmbilSY2MeDNis.m3u8"
+                  poster="https://image.mux.com/2XO015Sw1RdYlJgjM6OS009uhQNiJycsmbilSY2MeDNis/thumbnail.jpg?time=1"
+                  title="High-Retention Talking Head"
+                  tag="RETENTION REEL"
+                  duration="0:30"
+                  isVertical={true}
+                  onOpenModal={onOpenVideo}
+                />
+              </div>
+              <div className="bg-[#03150D] rounded-2xl overflow-hidden shadow-lg border border-emerald-800/40">
+                <InlineVideoPlayer
+                  id="showcase-col2-v"
+                  src="https://stream.mux.com/oQ902RknkEysM3K9nNVlA011tnD3u1HrXBS7uynYxCRwE.m3u8"
+                  poster="https://image.mux.com/oQ902RknkEysM3K9nNVlA011tnD3u1HrXBS7uynYxCRwE/thumbnail.jpg?time=1"
+                  title="Kinetic Motion Typography"
+                  tag="KINETIC MOTION"
+                  duration="0:22"
+                  isVertical={true}
+                  onOpenModal={onOpenVideo}
+                />
+              </div>
+            </div>
+
+            {/* 3. Second Horizontal Feature Video (Full Width 16:9) */}
+            <div className="w-full bg-[#03150D] rounded-2xl overflow-hidden shadow-lg border border-emerald-800/40">
+              <InlineVideoPlayer
+                id="showcase-col2-h"
+                src="https://stream.mux.com/OWmigFb1rqJZ7H3cjtFkEWYbLs2vBQDyNCmm1V4lnEc.m3u8"
+                poster="https://image.mux.com/OWmigFb1rqJZ7H3cjtFkEWYbLs2vBQDyNCmm1V4lnEc/thumbnail.jpg?time=1"
+                title="Commercial SaaS Product Launch"
+                tag="PRODUCT DEMO"
+                duration="2:45"
+                isVertical={false}
+                onOpenModal={onOpenVideo}
+              />
+            </div>
+
+            {/* 4. Third Horizontal Feature Video (Full Width 16:9) */}
+            <div className="w-full bg-[#03150D] rounded-2xl overflow-hidden shadow-lg border border-emerald-800/40">
+              <InlineVideoPlayer
+                id="showcase-col3-h"
+                src="https://stream.mux.com/KA56Y3M8FLwvVDX91p012krrmMftMnLQSwlar01QlEkqc.m3u8"
+                poster="https://image.mux.com/KA56Y3M8FLwvVDX91p012krrmMftMnLQSwlar01QlEkqc/thumbnail.jpg?time=1"
+                title="Founder Vision & Brand Documentary"
+                tag="FOUNDER SERIES"
+                duration="9:30"
+                isVertical={false}
+                onOpenModal={onOpenVideo}
+              />
+            </div>
+
+            {/* 5. Balanced Pair of Viral Vertical Reels Side-by-Side (2 Columns) */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="bg-[#03150D] rounded-2xl overflow-hidden shadow-lg border border-emerald-800/40">
+                <InlineVideoPlayer
+                  id="showcase-col3-v"
+                  src="https://stream.mux.com/Xi8FLFTXCSpPW5T5A9L71xPO02cXgge9tvYAXjsE3gjw.m3u8"
+                  poster="https://image.mux.com/Xi8FLFTXCSpPW5T5A9L71xPO02cXgge9tvYAXjsE3gjw/thumbnail.jpg?time=1"
+                  title="Viral Engagement Loop"
+                  tag="VIRAL REEL"
+                  duration="0:22"
+                  isVertical={true}
+                  onOpenModal={onOpenVideo}
+                />
+              </div>
+              <div className="bg-[#03150D] rounded-2xl overflow-hidden shadow-lg border border-emerald-800/40">
+                <InlineVideoPlayer
+                  id="showcase-col3-v2"
+                  src="https://stream.mux.com/kxeMNXlvZr02rU9pIRUA02PtMMToQJrYNRgz4WtD02giPk.m3u8"
+                  poster="https://image.mux.com/kxeMNXlvZr02rU9pIRUA02PtMMToQJrYNRgz4WtD02giPk/thumbnail.jpg?time=1"
+                  title="Executive Authority Short"
+                  tag="PODCAST CUT"
+                  duration="0:30"
+                  isVertical={true}
+                  onOpenModal={onOpenVideo}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Bottom "See full gallery" Pill Button */}

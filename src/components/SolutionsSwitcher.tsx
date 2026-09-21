@@ -3,11 +3,11 @@ import { motion } from 'motion/react';
 import { AppRoute } from '../types';
 
 interface SolutionsSwitcherProps {
-  activeTab: 'creators' | 'business' | 'agencies';
-  onSelectTab: (tab: 'creators' | 'business' | 'agencies') => void;
+  activeTab: 'creators' | 'business' | 'agencies' | 'turkish-drama' | 'turkish';
+  onSelectTab: (tab: AppRoute) => void;
 }
 
-const TABS: { id: 'creators' | 'business' | 'agencies'; label: string }[] = [
+const TABS: { id: AppRoute; label: string }[] = [
   { id: 'creators', label: 'For Creators' },
   { id: 'business', label: 'For Business Owners' },
   { id: 'agencies', label: 'For Marketing Agencies' },
@@ -19,10 +19,10 @@ export const SolutionsSwitcher: React.FC<SolutionsSwitcherProps> = ({ activeTab,
       <div 
         role="tablist" 
         aria-label="Solutions target audience"
-        className="inline-flex p-1.5 rounded-full bg-slate-100 border border-slate-200/80 relative shadow-inner"
+        className="inline-flex p-1.5 rounded-full bg-slate-100 border border-slate-200/80 relative shadow-inner flex-wrap justify-center gap-1"
       >
         {TABS.map((tab) => {
-          const isActive = activeTab === tab.id;
+          const isActive = activeTab === tab.id || (activeTab === 'turkish' && tab.id === 'turkish-drama');
           return (
             <button
               key={tab.id}

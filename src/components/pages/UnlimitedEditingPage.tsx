@@ -1,15 +1,44 @@
-import React from 'react';
-import { ArrowRight, Check, Sparkles, Clock, RefreshCw, Shield, Film, Layers } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { motion } from 'motion/react';
+import { WordFadeUpHeadline } from '../WordFadeUpHeadline';
+import { 
+  ArrowRight, 
+  Check, 
+  Sparkles, 
+  Clock, 
+  RefreshCw, 
+  Shield, 
+  Film, 
+  Layers, 
+  Volume2, 
+  VolumeX, 
+  Play, 
+  HelpCircle, 
+  ChevronDown, 
+  ChevronUp, 
+  MessageSquare, 
+  Calendar, 
+  Star, 
+  CheckCircle2, 
+  X,
+  Zap,
+  Sliders
+} from 'lucide-react';
 import { Navbar } from '../Navbar';
+import { Footer } from '../Footer';
+import { StillHavingDoubtsBanner } from '../StillHavingDoubtsBanner';
+import { HorizontalVideoShowcase } from '../HorizontalVideoShowcase';
+import { PricingMatrixSection } from '../PricingMatrixSection';
 import { AppRoute } from '../../types';
 
 interface UnlimitedEditingPageProps {
   onBackToHome: () => void;
-  onBookCall: () => void;
+  onBookCall: (plan?: any) => void;
   onNavigatePricing: () => void;
   onOpenFlow: (view?: 'login' | 'register' | 'admin') => void;
   onNavigateSection?: (sectionId: string) => void;
   onNavigatePage?: (route: AppRoute) => void;
+  onOpenVideo?: (id: string, title?: string, aspect?: '16/9' | '9/16') => void;
 }
 
 const SERVICE_CAPABILITIES = [
@@ -63,6 +92,49 @@ const WORKFLOW_STEPS = [
   },
 ];
 
+// Recent Horizontal Video Showcase Samples
+const RECENT_HORIZONTAL_VIDEOS = [
+  {
+    id: 'hz-1',
+    title: 'Modern Architecture Documentary',
+    category: 'YouTube Long-Form',
+    duration: '14:20',
+    views: '420K views',
+    thumbnail: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
+    videoSrc: '/videos/Sequence-01.mp4',
+  },
+  {
+    id: 'hz-2',
+    title: 'B2B SaaS Growth Engine Case Study',
+    category: 'Brand Storytelling',
+    duration: '08:45',
+    views: '185K views',
+    thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80',
+    videoSrc: '/videos/Sequence-01.mp4',
+  },
+  {
+    id: 'hz-3',
+    title: 'High-Ticket Agency Podcast Masterclass',
+    category: 'Podcast Production',
+    duration: '22:15',
+    views: '630K views',
+    thumbnail: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=800&auto=format&fit=crop&q=80',
+    videoSrc: '/videos/Sequence-01.mp4',
+  },
+];
+
+// Comparison Matrix Data
+const COMPARISON_FEATURES = [
+  { feature: 'Turnaround Time', scale: '24–48 Hours', pro: '24–36 Hours', inhouse: 'Same Day' },
+  { feature: 'Concurrent Active Requests', scale: '1 Video at a time', pro: '2 Videos at a time', inhouse: 'Dedicated Full Pod' },
+  { feature: 'Unlimited Revisions', scale: '✓ Included', pro: '✓ Included', inhouse: '✓ Included' },
+  { feature: 'Licensed Stock & Sound FX', scale: '✓ Included', pro: '✓ Included', inhouse: '✓ Included' },
+  { feature: 'Kinetic Motion Typography', scale: 'Standard', pro: 'Advanced Custom 2D', inhouse: 'Bespoke 2D/3D Motion' },
+  { feature: 'Cinema RAW/LOG Grading', scale: 'Standard Rec.709', pro: 'Multi-Cam Match & LOG', inhouse: 'Master Color Suite' },
+  { feature: 'Direct Slack / Flow Sync', scale: 'Flow Portal', pro: 'Slack + WhatsApp + Flow', inhouse: 'Dedicated Private Slack' },
+  { feature: 'Dedicated Creative Director', scale: 'Weekly Review', pro: 'Dedicated Director', inhouse: 'Full Creative Team' },
+];
+
 export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
   onBackToHome,
   onBookCall,
@@ -70,12 +142,25 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
   onOpenFlow,
   onNavigateSection,
   onNavigatePage,
+  onOpenVideo,
 }) => {
+  const [billingCycle, setBillingCycle] = useState<'quarterly' | 'monthly'>('quarterly');
+  const [showComparisonTable, setShowComparisonTable] = useState(false);
+  const [isHeroMuted, setIsHeroMuted] = useState(true);
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+
+  const toggleHeroSound = () => {
+    if (heroVideoRef.current) {
+      heroVideoRef.current.muted = !heroVideoRef.current.muted;
+      setIsHeroMuted(heroVideoRef.current.muted);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white text-[#0B0B0D] font-sans antialiased selection:bg-[#22C55E] selection:text-slate-950 flex flex-col">
       {/* Navigation */}
       <Navbar 
-        onBookCall={onBookCall}
+        onBookCall={() => onBookCall()}
         onNavigateSection={onNavigateSection || onBackToHome}
         onNavigatePricing={onNavigatePricing}
         onNavigateFlow={onOpenFlow}
@@ -84,42 +169,113 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
         })}
       />
 
-      {/* Hero Section */}
-      <section className="pt-14 sm:pt-20 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-6 text-emerald-900">
-          <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-          <span className="text-xs font-semibold tracking-wider text-emerald-800 uppercase">
-            SERVICES &bull; UNLIMITED VIDEO EDITING
-          </span>
+      {/* 1. Hero Section - Split 2-Column Text Left / Video Right */}
+      <section className="pt-10 sm:pt-16 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          {/* Left Column: Two-Typography Headline & Value Props */}
+          <div className="lg:col-span-6 text-left">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-6 text-emerald-900 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+              <span className="text-xs font-semibold tracking-wider text-emerald-800 uppercase">
+                SERVICES &bull; UNLIMITED VIDEO EDITING
+              </span>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 25 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            >
+            <div className="mb-5">
+              <WordFadeUpHeadline
+                className="font-coolvetica text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#0B0B0D] leading-[1.06]"
+                words={[
+                  { text: "You" },
+                  { text: "Shoot" },
+                  { text: "the" },
+                  { text: "Footage." },
+                  { text: "We" },
+                  { text: "Deliver", className: "font-editorial-italic font-normal text-[#16a34a]" },
+                  { text: "Master", className: "font-editorial-italic font-normal text-[#16a34a]" },
+                  { text: "Cuts.", className: "font-editorial-italic font-normal text-[#16a34a]" },
+                ]}
+              />
+            </div>
+
+              <p className="font-neue text-base sm:text-lg text-slate-600 max-w-xl mb-8 font-normal leading-relaxed">
+                A dedicated senior editor and creative director integrated into your workflow. Submit unlimited requests, get fast 24–48h turnarounds, and publish consistently without managing freelancers.
+              </p>
+            </motion.div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-8">
+              <button
+                onClick={() => onBookCall()}
+                className="px-9 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-base shadow-lg shadow-[#22C55E]/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>Get Started!</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <a
+                href="#pricing"
+                className="px-7 py-4 rounded-xl sm:rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base border border-slate-200 transition-colors cursor-pointer flex items-center justify-center text-center"
+              >
+                View Pricing &amp; Compare Plans
+              </a>
+            </div>
+
+            <div className="flex items-center gap-6 pt-4 border-t border-slate-100 text-xs text-slate-500 font-medium">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-800 font-bold">24–48h Turnaround</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-800 font-bold">Unlimited Revisions</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-800 font-bold">Dedicated Pod</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Hero Video Showcase */}
+          <div className="lg:col-span-6">
+            <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-slate-200/90 group">
+              <button
+                type="button"
+                onClick={toggleHeroSound}
+                className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/80 hover:bg-black text-white text-xs font-semibold backdrop-blur-md border border-white/20 shadow-lg cursor-pointer transition"
+              >
+                {isHeroMuted ? (
+                  <>
+                    <VolumeX className="w-4 h-4 text-slate-300" />
+                    <span>Click for sound</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-4 h-4 text-[#22C55E]" />
+                    <span className="text-[#22C55E]">Sound On</span>
+                  </>
+                )}
+              </button>
+
+              <video
+                ref={heroVideoRef}
+                src="/videos/Sequence-01.mp4"
+                autoPlay
+                muted={isHeroMuted}
+                loop
+                playsInline
+                className="w-full h-full object-cover cursor-pointer"
+                onClick={toggleHeroSound}
+              />
+            </div>
+          </div>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#0B0B0D] leading-[1.08] max-w-4xl mx-auto mb-5">
-          You Shoot the Footage. <br />
-          <span className="text-[#22C55E]">We Deliver the Master Cuts.</span>
-        </h1>
-
-        <p className="text-base sm:text-xl text-slate-600 max-w-2xl mx-auto mb-10 font-normal leading-relaxed">
-          A dedicated senior editor and creative director integrated into your workflow. Submit unlimited requests, get fast 24–48h turnarounds, and publish consistently without managing freelancers.
-        </p>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-          <button
-            onClick={onBookCall}
-            className="w-full sm:w-auto px-9 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-base sm:text-lg shadow-lg shadow-[#22C55E]/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
-          >
-            <span>Get Started!</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onNavigatePricing}
-            className="w-full sm:w-auto px-7 py-4 rounded-xl sm:rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base border border-slate-200 transition-colors cursor-pointer"
-          >
-            View Retainer Plans
-          </button>
-        </div>
-
-        {/* Feature Strip - Clean Apple-Grade Editorial Typography */}
-        <div className="pt-10 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-8 text-left">
+        {/* Feature Strip */}
+        <div className="pt-14 mt-12 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-8 text-left">
           <div className="space-y-1">
             <span className="text-xs font-semibold tracking-wider text-[#16a34a] uppercase block">Turnaround SLA</span>
             <div className="font-extrabold text-[#0B0B0D] text-2xl tracking-tight">24–48 Hours</div>
@@ -143,8 +299,8 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
         </div>
       </section>
 
-      {/* How it works: 3 Steps */}
-      <section className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full py-16 sm:py-24 border-t border-slate-100 text-left">
+      {/* 2. How It Works: 3 Steps */}
+      <section className="px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full py-16 sm:py-24 border-t border-slate-100 text-left">
         <div className="max-w-2xl mb-12">
           <span className="text-xs font-semibold tracking-wider text-[#16a34a] uppercase block mb-3">
             HOW IT WORKS
@@ -167,8 +323,8 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
         </div>
       </section>
 
-      {/* Scope of Production Capabilities */}
-      <section className="px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full py-16 sm:py-24 border-t border-slate-100 text-left">
+      {/* 3. Scope of Craft */}
+      <section className="px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto w-full py-16 sm:py-24 border-t border-slate-100 text-left">
         <div className="max-w-2xl mb-12">
           <span className="text-xs font-semibold tracking-wider text-[#16a34a] uppercase block mb-3">
             SCOPE OF CRAFT
@@ -191,31 +347,162 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
         </div>
       </section>
 
-      {/* Bottom CTA */}
-      <section className="border-t border-slate-200 py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 text-center mt-auto">
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#0B0B0D] tracking-tight mb-3">
-            Start getting your videos edited today.
-          </h2>
-          <p className="text-slate-600 text-base mb-8">
-            Transparent flat monthly pricing. No contract lock-in. Cancel anytime.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              onClick={onBookCall}
-              className="w-full sm:w-auto px-9 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-base shadow-lg shadow-[#22C55E]/25 hover:scale-105 transition-all duration-200 cursor-pointer"
-            >
-              Get Started!
-            </button>
-            <button
-              onClick={onNavigatePricing}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl sm:rounded-2xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-sm border border-slate-200 transition-colors cursor-pointer"
-            >
-              View Retainer Plans
-            </button>
+      {/* 4. Recent Horizontal Video Showcase Grid */}
+      <HorizontalVideoShowcase
+        onOpenVideo={(src, title, aspect) => onOpenVideo?.(src, title, aspect)}
+        title="Recent Master Video Productions"
+        subtitle="Horizontal 16:9 cuts crafted by dedicated FEVIQO editors for brands & top YouTubers."
+        tag="PORTFOLIO SHOWCASE"
+      />
+
+      {/* 4.5 Premium Apple-Grade Editorial Client Reviews */}
+      <section className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full py-20 sm:py-28 border-t border-slate-100 text-left">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-6">
+          <div>
+            <span className="text-xs font-mono font-semibold tracking-widest text-[#16a34a] uppercase block mb-3">
+              VERIFIED PARTNER FEEDBACK
+            </span>
+            <h2 className="font-coolvetica text-4xl sm:text-5xl lg:text-6xl font-bold text-[#0B0B0D] tracking-tight max-w-2xl leading-[1.04]">
+              What creators &amp; brand leaders say about FEVIQO.
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-3 bg-slate-50 border border-slate-200/80 px-4 py-2.5 rounded-full shrink-0">
+            <div className="flex items-center gap-1 text-[#22C55E]">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="w-4 h-4 fill-[#22C55E]" />
+              ))}
+            </div>
+            <span className="font-coolvetica text-sm font-bold text-slate-900">4.9/5 Rating</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-xs font-medium text-slate-600">75+ Verified Studios</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10">
+          {/* Review 1 */}
+          <div className="bg-white border-t-2 border-[#16a34a] pt-8 space-y-6 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="text-xs font-mono font-bold uppercase text-[#16a34a] tracking-wider">
+                YOUTUBE LONG-FORM &bull; 4K PRODUCTION
+              </div>
+              <blockquote className="font-coolvetica text-xl sm:text-2xl font-bold text-[#0B0B0D] leading-snug tracking-tight">
+                &ldquo;FEVIQO turned our YouTube channel around. Delivers 4K long-form edits in under 36 hours with zero hand-holding.&rdquo;
+              </blockquote>
+            </div>
+
+            <div className="flex items-center gap-4 pt-6 border-t border-slate-100">
+              <img
+                src="/images/avatars/lais-deleon.webp"
+                alt="Lais DeLeon"
+                className="w-12 h-12 rounded-full object-cover border border-slate-200"
+                referrerPolicy="no-referrer"
+              />
+              <div>
+                <strong className="font-coolvetica text-base font-bold text-slate-950 block">Lais DeLeon</strong>
+                <span className="text-xs text-slate-500 font-medium block">Fitness &amp; Lifestyle Creator (1.2M)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Review 2 */}
+          <div className="bg-white border-t-2 border-[#16a34a] pt-8 space-y-6 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="text-xs font-mono font-bold uppercase text-[#16a34a] tracking-wider">
+                AGENCY SLACK POD &bull; ELASTIC CAPACITY
+              </div>
+              <blockquote className="font-coolvetica text-xl sm:text-2xl font-bold text-[#0B0B0D] leading-snug tracking-tight">
+                &ldquo;Having a dedicated video pod on Slack is like having an in-house studio at a fraction of the cost. Game changer for our agency.&rdquo;
+              </blockquote>
+            </div>
+
+            <div className="flex items-center gap-4 pt-6 border-t border-slate-100">
+              <img
+                src="/images/avatars/alex-tubio.webp"
+                alt="Alex Tubio"
+                className="w-12 h-12 rounded-full object-cover border border-slate-200"
+                referrerPolicy="no-referrer"
+              />
+              <div>
+                <strong className="font-coolvetica text-base font-bold text-slate-950 block">Alex Tubio</strong>
+                <span className="text-xs text-slate-500 font-medium block">Founder, Media Scale Agency</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Review 3 */}
+          <div className="bg-white border-t-2 border-[#16a34a] pt-8 space-y-6 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="text-xs font-mono font-bold uppercase text-[#16a34a] tracking-wider">
+                AUDIENCE RETENTION &bull; +42% AVD
+              </div>
+              <blockquote className="font-coolvetica text-xl sm:text-2xl font-bold text-[#0B0B0D] leading-snug tracking-tight">
+                &ldquo;The retention pacing and motion graphics bumped our average view duration by 42%. They truly understand audience retention.&rdquo;
+              </blockquote>
+            </div>
+
+            <div className="flex items-center gap-4 pt-6 border-t border-slate-100">
+              <img
+                src="/images/avatars/patrick-anghel.webp"
+                alt="Patrick Anghel"
+                className="w-12 h-12 rounded-full object-cover border border-slate-200"
+                referrerPolicy="no-referrer"
+              />
+              <div>
+                <strong className="font-coolvetica text-base font-bold text-slate-950 block">Patrick Anghel</strong>
+                <span className="text-xs text-slate-500 font-medium block">Tech YouTuber &amp; Educator</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
+
+      {/* 
+        5. Exact Pricing Section (Scale, Pro, In-House Team)
+        Matches competitor reference model with Compare Plans feature and exact PricingPage matrix
+      */}
+      <section id="pricing" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full text-center">
+        <div className="max-w-3xl mx-auto mb-6">
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#16a34a] block mb-3">
+            FLEXIBLE RETAINER PRICING
+          </span>
+          <h2 className="text-3xl sm:text-5xl font-black text-[#0B0B0D] tracking-tight mb-4">
+            Simple, transparent video editing plans.
+          </h2>
+          <p className="text-slate-600 text-base sm:text-lg">
+            No long-term contracts. Pause or cancel anytime. All plans include dedicated editors and unlimited revisions.
+          </p>
+        </div>
+
+        <PricingMatrixSection 
+          onBookCall={onBookCall} 
+          showCompetitorTable={false}
+          showRetainerAndTrialBanner={false}
+          showCompareToggle={true}
+        />
+      </section>
+
+      {/* 
+        6. Competitor-Style "Still Having Doubts?" Support Banner
+        Matches the uploaded screenshot design with laptop presenter graphic
+      */}
+      <StillHavingDoubtsBanner
+        onScheduleCall={() => onBookCall()}
+        onChoosePlan={() => {
+          const el = document.getElementById('pricing');
+          el?.scrollIntoView({ behavior: 'smooth' });
+        }}
+      />
+
+      {/* Footer */}
+      <Footer 
+        onBookCall={() => onBookCall()}
+        onGetStarted={() => onBookCall()}
+        onNavigateSection={onNavigateSection || onBackToHome}
+        onNavigatePricing={onNavigatePricing}
+        onNavigateFlow={onOpenFlow}
+        onNavigatePage={onNavigatePage}
+      />
     </div>
   );
 };

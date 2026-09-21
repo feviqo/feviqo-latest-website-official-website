@@ -69,8 +69,8 @@ export const PlatformOverviewPage: React.FC<PlatformOverviewPageProps> = ({
           </span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-[1.05] max-w-4xl mx-auto mb-6 text-[#0B0B0D]">
-          The creative portal designed for frictionless post-production.
+        <h1 className="font-coolvetica text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05] max-w-4xl mx-auto mb-6 text-[#0B0B0D]">
+          The creative portal designed for <span className="font-editorial-italic font-normal text-[#16a34a]">frictionless post-production.</span>
         </h1>
 
         <p className="text-base sm:text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed font-normal">

@@ -1,24 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  ArrowRight, 
-  CheckCircle2, 
-  ShieldCheck, 
-  Film, 
-  Layers, 
-  TrendingUp, 
-  Tv, 
-  Languages, 
-  Sparkles, 
-  BarChart3, 
-  Check, 
-  X, 
-  Mail, 
-  Copy, 
-  Building2, 
-  Globe, 
-  AlertCircle
-} from 'lucide-react';
+import { motion } from 'motion/react';
+import { WordFadeUpHeadline } from '../WordFadeUpHeadline';
+import { ArrowRight, Check, ShieldCheck, Globe, Film, Sparkles, Copy, Play, FileCheck } from 'lucide-react';
 import { Navbar } from '../Navbar';
+import { SolutionsSwitcher } from '../SolutionsSwitcher';
 import { AppRoute } from '../../types';
 
 interface TurkishDramaPageProps {
@@ -31,18 +16,19 @@ interface TurkishDramaPageProps {
 
 export const TurkishDramaPage: React.FC<TurkishDramaPageProps> = ({
   onBackToHome,
-  onBookCall,
+  onBookCall = () => {},
   onNavigatePricing = () => {},
   onNavigateFlow = () => {},
   onNavigatePage,
 }) => {
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const PARTNERSHIP_EMAIL = 'partner@feviqo.com';
   const PARTNERSHIP_MAILTO = `mailto:${PARTNERSHIP_EMAIL}?subject=${encodeURIComponent(
     'Licensing Partnership Proposal: Turkish Content / Urdu Localization'
   )}&body=${encodeURIComponent(
-    'Hello FEVIQO Content Partnerships Team,\n\nWe would like to discuss a potential licensing and digital distribution partnership for Turkish content in Pakistan.\n\nOrganization / Studio:\nCatalog / Series Title(s):\nTerritory / Language Scope: Pakistan (Urdu Localization)\nPlatform Scope: YouTube / Digital AVOD\nContact Person & Title:\n\nLooking forward to speaking with your licensing desk.\n\nBest regards,'
+    'Hello FEVIQO Content Acquisitions Desk,\n\nWe would like to discuss potential licensing and digital distribution opportunities for Turkish content in Pakistan.\n\nOrganization / Rights Holder:\nCatalog / Series Title(s):\nTerritory / Scope:\nAvailable Language Rights:\nDigital / AVOD Rights:\nContact Person & Title:\n\nBest regards,'
   )}`;
 
   const handleCopyEmail = () => {
@@ -51,1096 +37,600 @@ export const TurkishDramaPage: React.FC<TurkishDramaPageProps> = ({
     setTimeout(() => setCopiedEmail(false), 2500);
   };
 
-  const handleScrollToOverview = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#FAFAF8] text-slate-900 font-sans selection:bg-[#22C55E] selection:text-slate-950">
-      {/* Global Brand Navbar */}
+    <div className="min-h-screen bg-white text-[#0B0B0D] font-sans antialiased selection:bg-[#22C55E] selection:text-slate-950 flex flex-col">
+      {/* Primary Global Navigation */}
       <Navbar
-        onBookCall={onBookCall || (() => {})}
-        onNavigateSection={() => onNavigatePage('home')}
+        onBookCall={onBookCall}
+        onNavigateSection={() => onBackToHome()}
         onNavigatePricing={onNavigatePricing}
         onNavigateFlow={onNavigateFlow}
         onNavigatePage={onNavigatePage}
       />
 
-      {/* ============================================================ */}
-      {/* HERO SECTION — EXECUTIVE LICENSING PROPOSAL */}
-      {/* ============================================================ */}
-      <section className="relative pt-16 pb-20 sm:pt-24 sm:pb-28 border-b border-slate-200 bg-gradient-to-b from-[#FFFFFF] via-[#F4FDF7] to-[#FFFFFF] overflow-hidden">
-        {/* Subtle decorative glow with #22C55E */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#22C55E]/10 rounded-full blur-3xl pointer-events-none -z-10" />
+      {/* Animated Solutions Pill Switcher */}
+      <SolutionsSwitcher
+        activeTab="turkish"
+        onSelectTab={(tab) => onNavigatePage(tab)}
+      />
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Hero Section - Split 2-Column Text Left / Media Showcase Right */}
+      <section className="pt-8 sm:pt-14 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           
-          {/* Category Tag */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-slate-950 text-[#FFFFFF] shadow-sm mb-6 border border-slate-800">
-            <Globe className="w-3.5 h-3.5 text-[#22C55E]" />
-            <span>Licensing & Digital Distribution Proposal</span>
-          </div>
-
-          {/* Headline */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-950 max-w-4xl leading-[1.1] mb-6 uppercase">
-            TURKISH STORIES.<br />
-            BUILT FOR <span className="text-[#22C55E] drop-shadow-sm">URDU AUDIENCES</span>.
-          </h1>
-
-          {/* Clear Core Mission Statement */}
-          <p className="text-lg sm:text-xl text-slate-700 max-w-3xl leading-relaxed mb-6">
-            FEVIQO is seeking to obtain licensing rights for selected Turkish content for Urdu localization and authorized digital distribution in Pakistan. We propose an authorized, revenue-sharing digital model combining professional Urdu localization, dedicated YouTube channel management, audience development, and transparent commercialization.
-          </p>
-
-          {/* Upfront Legal & Rights Clarity Badge */}
-          <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 max-w-3xl mb-8 flex items-start gap-3 shadow-sm">
-            <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-950 leading-relaxed font-medium">
-              <strong className="text-amber-900 font-bold">Exploratory Licensing Inquiry:</strong> FEVIQO does not claim, own, or represent existing distribution or intellectual property rights to any third-party series. This document represents a formal distribution proposal to international content owners and sales agencies.
-            </p>
-          </div>
-
-          {/* ONE Simple CTA: Discuss a Licensing Partnership */}
-          <div className="flex flex-wrap items-center gap-4">
-            <a
-              id="cta-discuss-licensing-hero"
-              href={PARTNERSHIP_MAILTO}
-              className="px-8 py-4 rounded-full bg-[#22C55E] hover:bg-[#1eb054] text-slate-950 font-black text-sm uppercase tracking-wider transition-all shadow-lg shadow-[#22C55E]/20 hover:shadow-xl hover:shadow-[#22C55E]/30 inline-flex items-center gap-2.5 cursor-pointer"
-            >
-              <Mail className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-              <span>Discuss a Licensing Partnership</span>
-            </a>
-
-            <button
-              onClick={() => handleScrollToOverview('the-opportunity')}
-              className="px-8 py-4 rounded-full bg-[#FFFFFF] hover:bg-slate-50 border border-slate-300 text-slate-900 font-bold text-sm tracking-wider transition cursor-pointer shadow-sm"
-            >
-              Review Proposal Overview
-            </button>
-          </div>
-
-          {/* Quick Specifications Strip */}
-          <div className="mt-12 pt-8 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-slate-200 shadow-sm hover:border-[#22C55E]/40 transition">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Target Territory</span>
-              <span className="text-sm font-black text-slate-950 mt-1 block">Pakistan</span>
-            </div>
-            <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-slate-200 shadow-sm hover:border-[#22C55E]/40 transition">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Target Language</span>
-              <span className="text-sm font-black text-slate-950 mt-1 block">Urdu Localization</span>
-            </div>
-            <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-slate-200 shadow-sm hover:border-[#22C55E]/40 transition">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block">Primary Platform</span>
-              <span className="text-sm font-black text-slate-950 mt-1 block">YouTube / Digital AVOD</span>
-            </div>
-            <div className="p-4 rounded-2xl bg-[#FFFFFF] border border-slate-200 shadow-sm hover:border-[#22C55E]/40 transition">
-              <span className="text-[10px] font-black text-[#22C55E] uppercase tracking-widest block">Commercial Model</span>
-              <span className="text-sm font-black text-slate-950 mt-1 block">Revenue-Share Model</span>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 01 — THE MARKET OPPORTUNITY */}
-      {/* ============================================================ */}
-      <section id="the-opportunity" className="py-20 border-b border-slate-200 bg-[#FAFAF8]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-10">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              01 / MARKET OPPORTUNITY
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              TURKISH CONTENT ALREADY HAS THE STORY.<br />
-              WE BUILD THE LOCAL DIGITAL CHANNEL.
-            </h2>
-          </div>
-
-          <div className="p-8 sm:p-10 rounded-3xl bg-[#FFFFFF] border border-slate-200 shadow-sm space-y-6">
-            <p className="text-base sm:text-lg text-slate-700 leading-relaxed">
-              Turkish television has achieved unprecedented popularity across South Asia, particularly in Pakistan, where cultural affinity, production values, and dramatic depth resonate with a population of over 240 million people.
-            </p>
-            <p className="text-base sm:text-lg text-slate-700 leading-relaxed">
-              FEVIQO's objective is to partner with rights holders to extend their premier titles into the Pakistani Urdu-speaking digital ecosystem through an authorized, locally operated distribution model that captures latent demand and converts it into sustained, legitimate commercial value.
-            </p>
-            <p className="text-base sm:text-lg text-slate-700 leading-relaxed">
-              Rather than traditional static licensing where masters are simply transferred, FEVIQO handles end-to-end local digital execution:
-            </p>
-
-            {/* Execution Process Chain */}
-            <div className="py-4">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm font-black text-slate-950 uppercase tracking-wider">
-                <span className="px-4 py-2.5 rounded-xl bg-slate-100 border border-slate-200">LOCALIZE</span>
-                <span className="text-[#22C55E] font-bold">→</span>
-                <span className="px-4 py-2.5 rounded-xl bg-slate-100 border border-slate-200">PUBLISH</span>
-                <span className="text-[#22C55E] font-bold">→</span>
-                <span className="px-4 py-2.5 rounded-xl bg-slate-100 border border-slate-200">PROMOTE</span>
-                <span className="text-[#22C55E] font-bold">→</span>
-                <span className="px-4 py-2.5 rounded-xl bg-slate-100 border border-slate-200">MONETIZE</span>
-                <span className="text-[#22C55E] font-bold">→</span>
-                <span className="px-4 py-2.5 rounded-xl bg-[#22C55E]/15 border border-[#22C55E]/40 text-slate-950 font-black">REPORT</span>
-              </div>
-            </div>
-
-            {/* Credibility statement */}
-            <div className="pt-4 border-t border-slate-100">
-              <p className="text-xs sm:text-sm text-slate-500 font-medium italic">
-                All distribution operates strictly within defined territory, language, platform, and term parameters established under written licensing contracts with authorized rights holders.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 02 — THE PARTNERSHIP ARCHITECTURE */}
-      {/* ============================================================ */}
-      <section id="partnership-model" className="py-20 border-b border-slate-200 bg-[#FFFFFF]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-12">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              02 / CO-DEVELOPMENT ARCHITECTURE
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              WE DON'T JUST LOCALIZE THE CONTENT.<br />
-              WE BUILD THE DISTRIBUTION BUSINESS AROUND IT.
-            </h2>
-          </div>
-
-          {/* Premium Visual Flow Banner with Header-Style Palette */}
-          <div className="mb-14 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-[#032415] via-[#064e3b] to-[#032415] text-[#FFFFFF] border border-[#064e3b] shadow-2xl">
-            <div className="text-xs uppercase tracking-widest text-[#22C55E] font-black mb-4 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-[#22C55E]" />
-              <span>Value Creation Architecture</span>
-            </div>
-            
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-center">
-              {[
-                'TURKISH CONTENT',
-                'AUTHORIZED RIGHTS',
-                'FEVIQO LOCALIZATION',
-                'OFFICIAL DIGITAL CHANNEL',
-                'PAKISTAN / URDU AUDIENCE',
-                'ADVERTISING + SPONSORSHIPS',
-                'TRANSPARENT REVENUE SHARE',
-              ].map((step, idx, arr) => (
-                <React.Fragment key={step}>
-                  <div className="w-full md:w-auto px-3.5 py-2.5 rounded-xl bg-white/10 border border-white/15 text-[11px] font-black uppercase tracking-wider text-emerald-100 backdrop-blur-sm">
-                    {step}
-                  </div>
-                  {idx < arr.length - 1 && (
-                    <div className="text-[#22C55E] font-black text-xs md:text-sm my-1 md:my-0">
-                      <span className="hidden md:inline">→</span>
-                      <span className="md:hidden">↓</span>
-                    </div>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-
-            {/* Core Message Callout */}
-            <div className="mt-8 pt-6 border-t border-white/10 text-center">
-              <p className="text-sm sm:text-base font-black tracking-wide text-[#FFFFFF] uppercase">
-                YOU RETAIN 100% OWNERSHIP OF YOUR INTELLECTUAL PROPERTY. WE EXECUTE THE LOCAL DIGITAL OPERATIONS. <span className="text-[#22C55E]">WE SHARE THE UPSIDE.</span>
-              </p>
-            </div>
-          </div>
-
-          {/* 6 Structured Workflow Steps */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            <div className="p-6 rounded-2xl bg-[#FAFAF8] border border-slate-200 hover:border-[#22C55E]/40 transition">
-              <div className="text-xs font-black text-[#22C55E] uppercase tracking-wider mb-2">
-                01 — RIGHTS HOLDER
-              </div>
-              <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                Provides the agreed master content and authorized digital distribution rights for Pakistan under defined territorial and language terms.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#FAFAF8] border border-slate-200 hover:border-[#22C55E]/40 transition">
-              <div className="text-xs font-black text-[#22C55E] uppercase tracking-wider mb-2">
-                02 — FEVIQO EXECUTION
-              </div>
-              <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                Manages complete local digital execution: studio Urdu subtitle translation, dubbing supervision, thumbnail design, and channel management.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#FAFAF8] border border-slate-200 hover:border-[#22C55E]/40 transition">
-              <div className="text-xs font-black text-[#22C55E] uppercase tracking-wider mb-2">
-                03 — AUDIENCE ACCUMULATION
-              </div>
-              <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                Reaches millions of Urdu-speaking viewers through a verified, official destination rather than unauthorized low-resolution uploads.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#FAFAF8] border border-slate-200 hover:border-[#22C55E]/40 transition">
-              <div className="text-xs font-black text-[#22C55E] uppercase tracking-wider mb-2">
-                04 — MONETIZATION
-              </div>
-              <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                Generates programmatic advertising revenue through YouTube AVOD alongside rights-holder approved local brand sponsorships.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#FAFAF8] border border-slate-200 hover:border-[#22C55E]/40 transition">
-              <div className="text-xs font-black text-[#22C55E] uppercase tracking-wider mb-2">
-                05 — AUDITED REPORTING
-              </div>
-              <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                Regular transparent analytics and revenue statements delivered directly to the rights holder's international commercial desk.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#FAFAF8] border border-slate-200 hover:border-[#22C55E]/40 transition">
-              <div className="text-xs font-black text-[#22C55E] uppercase tracking-wider mb-2">
-                06 — REVENUE SETTLEMENT
-              </div>
-              <p className="text-sm text-slate-700 leading-relaxed font-medium">
-                Agreed revenue-share percentages distributed punctually, creating a recurring international income stream from previously untapped viewers.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 03 — WHAT FEVIQO DELIVERS */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FAFAF8]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-12">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              03 / CAPABILITIES & OPERATIONS
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              ONE LOCAL PARTNER.<br />
-              THE FULL DIGITAL EXECUTION LAYER.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            <div className="p-7 rounded-2xl bg-[#FFFFFF] border border-slate-200 space-y-3 shadow-sm hover:border-[#22C55E]/40 transition">
-              <div className="w-10 h-10 rounded-xl bg-[#22C55E]/10 flex items-center justify-center text-[#22C55E]">
-                <Languages className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <h3 className="text-base font-black text-slate-950 uppercase tracking-wider">
-                URDU LOCALIZATION
-              </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Professional Urdu subtitle translation preserving cultural nuance and emotional cadence, with capacity for coordinated studio Urdu dubbing upon mutual agreement.
-              </p>
-            </div>
-
-            <div className="p-7 rounded-2xl bg-[#FFFFFF] border border-slate-200 space-y-3 shadow-sm hover:border-[#22C55E]/40 transition">
-              <div className="w-10 h-10 rounded-xl bg-[#22C55E]/10 flex items-center justify-center text-[#22C55E]">
-                <Tv className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <h3 className="text-base font-black text-slate-950 uppercase tracking-wider">
-                YOUTUBE CHANNEL MANAGEMENT
-              </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Official verified channel deployment, scheduled episode publishing, SEO metadata, playlist architectures, and automated rights compliance.
-              </p>
-            </div>
-
-            <div className="p-7 rounded-2xl bg-[#FFFFFF] border border-slate-200 space-y-3 shadow-sm hover:border-[#22C55E]/40 transition">
-              <div className="w-10 h-10 rounded-xl bg-[#22C55E]/10 flex items-center justify-center text-[#22C55E]">
-                <Film className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <h3 className="text-base font-black text-slate-950 uppercase tracking-wider">
-                PACKAGING & PROMOS
-              </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                High-CTR thumbnail creation, localized episodic teaser reels, YouTube Shorts, and promotional trailers engineered to drive viewing retention.
-              </p>
-            </div>
-
-            <div className="p-7 rounded-2xl bg-[#FFFFFF] border border-slate-200 space-y-3 shadow-sm hover:border-[#22C55E]/40 transition">
-              <div className="w-10 h-10 rounded-xl bg-[#22C55E]/10 flex items-center justify-center text-[#22C55E]">
-                <TrendingUp className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <h3 className="text-base font-black text-slate-950 uppercase tracking-wider">
-                AUDIENCE DEVELOPMENT
-              </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Active community building, comment moderation, cross-platform social clip distribution, and sustained engagement to elevate subscriber loyalty.
-              </p>
-            </div>
-
-            <div className="p-7 rounded-2xl bg-[#FFFFFF] border border-slate-200 space-y-3 shadow-sm hover:border-[#22C55E]/40 transition">
-              <div className="w-10 h-10 rounded-xl bg-[#22C55E]/10 flex items-center justify-center text-[#22C55E]">
-                <Sparkles className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <h3 className="text-base font-black text-slate-950 uppercase tracking-wider">
-                COMMERCIAL EXPANSION
-              </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Optimized YouTube ad placement and, subject to rights-holder approval, introductions to major Pakistani corporate advertisers for brand integration.
-              </p>
-            </div>
-
-            <div className="p-7 rounded-2xl bg-[#FFFFFF] border border-slate-200 space-y-3 shadow-sm hover:border-[#22C55E]/40 transition">
-              <div className="w-10 h-10 rounded-xl bg-[#22C55E]/10 flex items-center justify-center text-[#22C55E]">
-                <BarChart3 className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <h3 className="text-base font-black text-slate-950 uppercase tracking-wider">
-                TRANSPARENT REPORTING
-              </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Regular, auditable reports on watch time, geographical breakdown, monetization RPM, and revenue allocation according to contractual milestones.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 04 — THE PROBLEM FEVIQO SOLVES */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FFFFFF]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-12">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              04 / THE BOTTLENECK
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              THE STATUS QUO HURTS BOTH RIGHTS HOLDERS AND AUDIENCES.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            
-            {/* For Rights Holders */}
-            <div className="p-8 rounded-3xl bg-[#FAFAF8] border border-slate-200">
-              <h3 className="text-sm font-black uppercase tracking-wider text-slate-950 mb-4 pb-2 border-b border-slate-200 flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-slate-600" />
-                <span>FOR RIGHTS HOLDERS CURRENTLY</span>
-              </h3>
-              <ul className="space-y-3 text-sm text-slate-700">
-                <li className="flex items-center gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                  <span>Unmonetized viewership across third-party pirated uploads</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                  <span>Fragmented audience with zero direct subscriber relationship</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                  <span>No control over localized brand presentation or creative quality</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                  <span>Lost commercial opportunities in a 240M+ consumer territory</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* For Viewers */}
-            <div className="p-8 rounded-3xl bg-[#FAFAF8] border border-slate-200">
-              <h3 className="text-sm font-black uppercase tracking-wider text-slate-950 mb-4 pb-2 border-b border-slate-200 flex items-center gap-2">
-                <Tv className="w-4 h-4 text-slate-600" />
-                <span>FOR PAKISTANI VIEWERS CURRENTLY</span>
-              </h3>
-              <ul className="space-y-3 text-sm text-slate-700">
-                <li className="flex items-center gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                  <span>Poor, machine-translated Urdu subtitles that damage dialogue</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                  <span>Missing episodes and incomplete season catalogs</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                  <span>Low-resolution, re-encoded video uploads on dubious channels</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                  <span>Lack of an official, verified destination to watch the drama</span>
-                </li>
-              </ul>
-            </div>
-
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#F4FDF7] border border-[#22C55E]/30">
-            <p className="text-sm font-bold text-slate-900 leading-relaxed">
-              FEVIQO's proposed solution transforms this fragmented, lost viewership into an official, professionally managed, authorized channel that generates legitimate recurring revenue for the rights holder.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 05 — COMPARISON MATRIX */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FAFAF8]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-12">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              05 / VALUE COMPARISON
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              TURN FRAGMENTED DIGITAL DEMAND INTO AN OFFICIAL DESTINATION.
-            </h2>
-          </div>
-
-          {/* Comparison Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            
-            {/* Without Official Distribution */}
-            <div className="p-8 rounded-3xl bg-[#FFFFFF] border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 text-slate-700 text-xs font-bold uppercase tracking-wider mb-6">
-                <X className="w-4 h-4 text-rose-500" />
-                <span>WITHOUT OFFICIAL LOCALIZED DISTRIBUTION</span>
-              </div>
-              <ul className="space-y-3.5 text-sm text-slate-600">
-                <li className="flex items-start gap-2.5">
-                  <span className="text-slate-400">•</span>
-                  <span>Unverified, random third-party uploads across YouTube</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="text-slate-400">•</span>
-                  <span>Fragmented audiences with zero data or subscriber loyalty</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="text-slate-400">•</span>
-                  <span>Inconsistent, pirated Urdu subtitles destroying dialogue quality</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="text-slate-400">•</span>
-                  <span>Zero commercial monetization reaching the original studio</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="text-slate-400">•</span>
-                  <span>Uncontrolled brand presentation and low visual fidelity</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* With FEVIQO Authorized Partnership */}
-            <div className="p-8 rounded-3xl bg-[#FFFFFF] border-2 border-[#22C55E] shadow-md">
-              <div className="flex items-center gap-2 text-slate-950 text-xs font-black uppercase tracking-wider mb-6">
-                <span className="w-5 h-5 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center font-bold text-xs">✓</span>
-                <span>WITH FEVIQO AUTHORIZED PARTNERSHIP</span>
-              </div>
-              <ul className="space-y-3.5 text-sm text-slate-900 font-medium">
-                <li className="flex items-start gap-2.5">
-                  <span className="text-[#22C55E] font-black">✓</span>
-                  <span>100% Authorized licensing agreement and copyright compliance</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="text-[#22C55E] font-black">✓</span>
-                  <span>High-fidelity localized Urdu experience crafted by professionals</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="text-[#22C55E] font-black">✓</span>
-                  <span>Official verified channel publishing with full brand protection</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="text-[#22C55E] font-black">✓</span>
-                  <span>Aggregated audience data and community ownership</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="text-[#22C55E] font-black">✓</span>
-                  <span>Punctual, auditable revenue-share statements and settlements</span>
-                </li>
-              </ul>
-            </div>
-
-          </div>
-
-          <div className="p-6 rounded-2xl bg-slate-100 border border-slate-200">
-            <p className="text-sm font-semibold text-slate-800 leading-relaxed">
-              FEVIQO's objective is never to compete with a rights holder's global streaming platforms. Our model provides incremental, rights-compliant digital reach in Pakistan where authorized local-language distribution is not yet established.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 06 — LOCAL COMMERCIAL OPPORTUNITY */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FFFFFF]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-10">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              06 / COMMERCIAL UPSIDE
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              BEYOND YOUTUBE ADVERTISING:<br />
-              COMPREHENSIVE LOCAL COMMERCIALIZATION.
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 mt-3 leading-relaxed">
-              Subject to rights-holder approval and contractual rights parameters, FEVIQO can explore additional commercial avenues to maximize content returns in the local market:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div className="p-6 rounded-2xl bg-[#FAFAF8] border border-slate-200 hover:border-[#22C55E]/40 transition">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-950 mb-2">
-                PAKISTANI BRAND SPONSORSHIPS
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Coordinated title and episodic sponsorships with leading FMCG, banking, and telecom advertisers in Pakistan.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#FAFAF8] border border-slate-200 hover:border-[#22C55E]/40 transition">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-950 mb-2">
-                PROMOTIONAL BRAND INTEGRATIONS
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Pre-roll segment endorsements and custom thumbnail sponsor badges, fully compliant with rights-holder guidelines.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-[#FAFAF8] border border-slate-200 hover:border-[#22C55E]/40 transition">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-950 mb-2">
-                SHORT-FORM SOCIAL MONETIZATION
-              </h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                YouTube Shorts, TikTok, and Instagram promotional clips driving high-conversion discovery to the official episodes.
-              </p>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <p className="text-xs text-slate-600 italic">
-              All commercial partners and brand associations are strictly subject to advance review and written approval by the rights holder.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 07 — TEŞKİLAT (PRIORITY LICENSING EXPLORATION) */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FAFAF8]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-8 sm:p-12 rounded-3xl bg-[#FFFFFF] border border-slate-200 shadow-sm">
-            
-            <div className="max-w-3xl mb-8">
-              <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-                PRIORITY LICENSING INTEREST
+          {/* Left Column: Hero Title & Value Proposition */}
+          <div className="lg:col-span-6 text-left">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-6 text-emerald-900 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                SOLUTIONS &bull; INTERNATIONAL CONTENT ACQUISITION
               </span>
-              <h3 className="text-3xl sm:text-5xl font-black text-slate-950 mt-2 mb-4 tracking-tight">
-                TEŞKİLAT
-              </h3>
-              <p className="text-base sm:text-lg text-slate-700 leading-relaxed">
-                FEVIQO would like to explore the availability of authorized digital distribution and Urdu localization rights for <strong>Teşkilat</strong> in Pakistan.
-              </p>
             </div>
 
-            {/* Specifications Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">TARGET TERRITORY</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Pakistan</div>
+            <motion.div
+              key="turkish-hero-text"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="mb-5">
+                <WordFadeUpHeadline
+                  className="font-coolvetica text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#0B0B0D] leading-[1.06]"
+                  words={[
+                    { text: "Turkish" },
+                    { text: "Drama." },
+                    { text: "Urdu" },
+                    { text: "Localization." },
+                    { text: "Pakistan", className: "font-editorial-italic font-normal text-[#16a34a]" },
+                    { text: "Distribution.", className: "font-editorial-italic font-normal text-[#16a34a]" },
+                  ]}
+                />
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">LANGUAGE</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Urdu Localization</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">PRIMARY PLATFORM</div>
-                <div className="text-sm font-black text-slate-950 mt-1">YouTube / Digital AVOD</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">LOCALIZATION SCOPE</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Urdu Subtitles and/or Approved Dubbing</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-[11px] font-bold text-[#22C55E] uppercase tracking-wider">COMMERCIAL MODEL</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Advertising-supported Revenue Share</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">RIGHTS STATUS</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Subject to Rights Availability</div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-slate-100">
-              <p className="text-xs text-slate-500 italic">
-                Notice: FEVIQO does not represent or claim existing rights to Teşkilat. This is an exploratory licensing inquiry directed to the rights holder.
+              <p className="font-neue text-base sm:text-lg text-slate-600 max-w-xl mb-8 font-normal leading-relaxed">
+                FEVIQO partners with Turkish producers, studios, distributors, and rights holders to bring licensed Turkish content to Urdu-speaking audiences in Pakistan through professional localization and authorized digital distribution.
               </p>
+            </motion.div>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-8">
               <a
-                href={`mailto:${PARTNERSHIP_EMAIL}?subject=${encodeURIComponent('Licensing Inquiry: Teşkilat (Pakistan Urdu Rights)')}&body=${encodeURIComponent('Hello FEVIQO Team,\n\nWe represent / manage rights for Teşkilat and would like to discuss potential licensing for Pakistan.\n\nOrganization:\nContact Person:\n\nBest regards,')}`}
-                className="px-6 py-3 rounded-full bg-[#22C55E] hover:bg-[#1eb054] text-slate-950 font-black text-xs uppercase tracking-wider transition cursor-pointer shrink-0 shadow-sm"
+                href={PARTNERSHIP_MAILTO}
+                className="px-8 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-base shadow-lg shadow-[#22C55E]/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
               >
-                Discuss a Licensing Partnership
+                <span>Inquire About Licensing</span>
+                <ArrowRight className="w-4 h-4" />
               </a>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 08 — FATIH: SULTAN OF CONQUESTS */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FFFFFF]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-8 sm:p-12 rounded-3xl bg-[#FAFAF8] border border-slate-200 shadow-sm">
-            
-            <div className="max-w-3xl mb-8">
-              <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-                ADDITIONAL PRIORITY INTEREST
-              </span>
-              <h3 className="text-3xl sm:text-5xl font-black text-slate-950 mt-2 mb-4 tracking-tight">
-                FATIH: SULTAN OF CONQUESTS
-              </h3>
-              <p className="text-base sm:text-lg text-slate-700 leading-relaxed">
-                FEVIQO would like to explore whether digital distribution and Urdu localization rights may be available for <strong>Fatih: Sultan of Conquests (Mehmed: Fetihler Sultanı)</strong> for Pakistan.
-              </p>
-            </div>
-
-            {/* Specifications Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              <div className="p-4 rounded-xl bg-[#FFFFFF] border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">TARGET TERRITORY</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Pakistan</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#FFFFFF] border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">LANGUAGE</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Urdu Localization</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#FFFFFF] border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">PRIMARY PLATFORM</div>
-                <div className="text-sm font-black text-slate-950 mt-1">YouTube / Digital AVOD</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#FFFFFF] border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">LOCALIZATION SCOPE</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Urdu Subtitles and/or Approved Dubbing</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#FFFFFF] border border-slate-200">
-                <div className="text-[11px] font-bold text-[#22C55E] uppercase tracking-wider">COMMERCIAL MODEL</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Advertising-supported Revenue Share</div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#FFFFFF] border border-slate-200">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">RIGHTS STATUS</div>
-                <div className="text-sm font-black text-slate-950 mt-1">Non-exclusive, Subject to Availability</div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-4 border-t border-slate-200">
-              <p className="text-xs text-slate-500 italic">
-                Notice: FEVIQO does not represent or claim existing rights to Fatih. This is an exploratory licensing proposal to the rights holder.
-              </p>
-              <a
-                href={`mailto:${PARTNERSHIP_EMAIL}?subject=${encodeURIComponent('Licensing Inquiry: Fatih Sultan of Conquests (Pakistan Urdu Rights)')}&body=${encodeURIComponent('Hello FEVIQO Team,\n\nWe represent / manage rights for Fatih: Sultan of Conquests and would like to discuss potential licensing for Pakistan.\n\nOrganization:\nContact Person:\n\nBest regards,')}`}
-                className="px-6 py-3 rounded-full bg-[#22C55E] hover:bg-[#1eb054] text-slate-950 font-black text-xs uppercase tracking-wider transition cursor-pointer shrink-0 shadow-sm"
-              >
-                Discuss a Licensing Partnership
-              </a>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 09 — BROADER CATALOG SCOPE */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FAFAF8]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-10">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              09 / CATALOG EXPANSION
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              ONE TITLE CAN EXPAND INTO A FULL CATALOG DESTINATION.
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 mt-3 leading-relaxed">
-              While Teşkilat and Fatih: Sultan of Conquests represent priority licensing interests, FEVIQO is interested in exploring broader Turkish television libraries with rights holders who seek to establish a long-term presence in Pakistan.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-            {[
-              'Historical & Epic Dramas',
-              'Action & Crime Thrillers',
-              'Family Sagas',
-              'Romantic Drama',
-              'Period Series',
-              'Archive Catalogs',
-            ].map((cat) => (
-              <div key={cat} className="p-4 rounded-2xl bg-[#FFFFFF] border border-slate-200 text-center flex items-center justify-center min-h-[90px] shadow-sm hover:border-[#22C55E]/40 transition">
-                <span className="text-xs font-bold text-slate-900 leading-snug">{cat}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-5 rounded-2xl bg-slate-100 border border-slate-200">
-            <p className="text-sm font-bold text-slate-900">
-              Our ambition is to cultivate an enduring, mutually beneficial distribution alliance rather than negotiate isolated, one-off releases.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 10 — WHY FEVIQO */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FFFFFF]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-10">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              10 / LOCAL ADVANTAGE
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              LOCAL MARKET EXECUTION.<br />
-              INTERNATIONAL CONTENT STANDARDS.
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 mt-3 leading-relaxed">
-              FEVIQO provides the missing local operating layer for international rights holders:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-10">
-            {[
-              'Native Urdu Localization',
-              'Creative Packaging',
-              'YouTube Algorithm Mastery',
-              'Audience Development',
-              'Brand Safety Control',
-              'Transparent Accounting',
-            ].map((cap) => (
-              <div key={cap} className="p-4 rounded-2xl bg-[#FAFAF8] border border-slate-200 text-center flex items-center justify-center min-h-[85px] hover:border-[#22C55E]/40 transition">
-                <span className="text-xs font-bold text-slate-900">{cap}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200">
-            <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-              This enables FEVIQO to serve as an accountable local bridge between the Turkish production house and the millions of passionate Pakistani fans awaiting their series.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 11 — RIGHTS & COMPLIANCE */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FAFAF8]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-10">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              11 / RIGOROUS LEGAL INTEGRITY
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              EVERYTHING BEGINS AND OPERATES WITHIN CONTRACTUAL RIGHTS.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 mb-10">
-            {[
-              'Formal written licensing contract',
-              'Strictly defined territory (Pakistan)',
-              'Defined language rights (Urdu)',
-              'Defined digital platforms (YouTube)',
-              'Defined license term & renewals',
-              'Defined monetization rights',
-              'Studio-approved localization standards',
-              'Zero unauthorized publishing',
-              'Rights-holder approval on all campaigns',
-              'Transparent quarterly revenue audits',
-            ].map((rule) => (
-              <div key={rule} className="p-4 rounded-xl bg-[#FFFFFF] border border-slate-200 flex items-start gap-2.5 shadow-sm">
-                <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0 mt-0.5" />
-                <span className="text-xs font-semibold text-slate-800">{rule}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-6 rounded-2xl bg-[#032415] text-[#FFFFFF] border border-[#064e3b] shadow-lg">
-            <div className="flex items-center gap-3">
-              <ShieldCheck className="w-6 h-6 text-[#22C55E] shrink-0" />
-              <p className="text-xs sm:text-sm font-bold tracking-wide text-emerald-100">
-                FEVIQO will never publish or distribute third-party content without formal, authorized written licensing agreements executed with the verified rights holder.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 12 — COMMERCIAL REVENUE-SHARE MODEL */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FFFFFF]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-10">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              12 / COMMERCIAL FRAMEWORK
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              A FLEXIBLE, ALIGNED REVENUE-SHARE MODEL.
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="p-5 rounded-2xl bg-[#FAFAF8] border border-slate-200">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">TERRITORY</div>
-              <div className="text-sm font-black text-slate-950 mt-1">Pakistan</div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#FAFAF8] border border-slate-200">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">LANGUAGE</div>
-              <div className="text-sm font-black text-slate-950 mt-1">Urdu Localization</div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#FAFAF8] border border-slate-200">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">PLATFORM</div>
-              <div className="text-sm font-black text-slate-950 mt-1">YouTube / Digital AVOD</div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#FAFAF8] border border-slate-200">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">RIGHTS SCOPE</div>
-              <div className="text-sm font-black text-slate-950 mt-1">Digital Distribution + Subtitles/Dubbing</div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#FAFAF8] border border-slate-200">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">LICENSE STRUCTURE</div>
-              <div className="text-sm font-black text-slate-950 mt-1">Non-exclusive preferred</div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#FAFAF8] border border-slate-200">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">MONETIZATION</div>
-              <div className="text-sm font-black text-slate-950 mt-1">Advertising-supported (AVOD)</div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#FAFAF8] border border-slate-200">
-              <div className="text-[11px] font-bold text-[#22C55E] uppercase tracking-wider">REVENUE SPLIT</div>
-              <div className="text-sm font-black text-slate-950 mt-1">Mutually agreed percentage</div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#FAFAF8] border border-slate-200">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">CONTRACT TERM</div>
-              <div className="text-sm font-black text-slate-950 mt-1">Flexible & Renewable</div>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <p className="text-xs sm:text-sm text-slate-700 font-medium">
-              FEVIQO welcomes alternative partnership structures tailored to the rights holder's prevailing global distribution strategy.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 13 — THE LONG-TERM VISION */}
-      {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-200 bg-[#FAFAF8]">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mb-8">
-            <span className="text-xs font-black uppercase tracking-widest text-[#22C55E]">
-              13 / STRATEGIC ROADMAP
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-950 mt-2 leading-tight">
-              START WITH ONE KEY TITLE.<br />
-              BUILD THE PREMIER URDU HOME FOR TURKISH DRAMA.
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 mt-3 leading-relaxed">
-              Our vision is to build a repeatable, trusted operating model where licensed Turkish dramas are introduced to Pakistani audiences through high-quality localized infrastructure.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mb-10">
-            {[
-              'Expanding localized catalog depth',
-              'Accumulating a loyal millions-strong Urdu subscriber base',
-              'Maximizing programmatic AVOD ad inventory',
-              'Capturing premium Pakistani brand sponsorships',
-              'Deep audience demographic and viewer behavioral insights',
-              'Long-term international goodwill between Turkish studios & Pakistani fans',
-            ].map((item) => (
-              <div key={item} className="p-4 rounded-xl bg-[#FFFFFF] border border-slate-200 flex items-center gap-2.5 shadow-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]"></span>
-                <span className="text-xs font-bold text-slate-800">{item}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-6 rounded-2xl bg-slate-950 text-[#FFFFFF]">
-            <p className="text-sm sm:text-base font-semibold leading-relaxed">
-              FEVIQO aims to be the dedicated local execution partner that Turkish rights holders trust when expanding their footprint into Pakistan's rapidly expanding digital entertainment landscape.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* THE COMMITMENT SECTION — APPLE-INSPIRED DISPLAY MANIFESTO */}
-      {/* ============================================================ */}
-      <section 
-        id="feviqo-commitment-section"
-        className="relative py-24 sm:py-32 bg-gradient-to-b from-[#02180E] via-[#032415] to-[#02180E] border-y border-[#064e3b]/80 text-[#FFFFFF] overflow-hidden"
-      >
-        {/* Apple-style atmospheric overhead spotlight */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#22C55E]/20 via-[#22C55E]/5 to-transparent blur-3xl pointer-events-none" />
-
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          
-          {/* Eyebrow Label */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/[0.07] border border-white/15 text-[#22C55E] text-[11px] font-black uppercase tracking-[0.2em] mb-12 backdrop-blur-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse"></span>
-            <span>THE COMMITMENT</span>
-          </div>
-
-          {/* Core Execution Pillars — Apple Keynote Cadence */}
-          <div className="space-y-4 sm:space-y-6 text-lg sm:text-2xl md:text-3xl font-black uppercase tracking-tight text-white/80 leading-tight">
-            <p className="hover:text-white transition-colors duration-300">
-              WE CAN HELP YOU LOCALIZE IT.
-            </p>
-            <p className="hover:text-white transition-colors duration-300">
-              WE CAN DISTRIBUTE IT.
-            </p>
-            <p className="hover:text-white transition-colors duration-300">
-              WE CAN BUILD THE AUDIENCE.
-            </p>
-            <p className="hover:text-white transition-colors duration-300">
-              WE CAN DEVELOP LOCAL COMMERCIAL OPPORTUNITIES.
-            </p>
-            <p className="hover:text-white transition-colors duration-300">
-              WE CAN REPORT THE RESULTS.
-            </p>
-          </div>
-
-          {/* Minimalist Apple-grade hairline separator */}
-          <div className="w-16 h-px bg-gradient-to-r from-transparent via-[#22C55E] to-transparent mx-auto my-12 opacity-80" />
-
-          {/* Climax Statement — Monumental Typography, Zero Chunky Boxes */}
-          <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-[#FFFFFF] leading-none drop-shadow-sm">
-              YOU RETAIN OWNERSHIP.
-            </h3>
-            <h3 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-[#22C55E] leading-none drop-shadow-sm">
-              WE SHARE THE UPSIDE.
-            </h3>
-          </div>
-
-        </div>
-      </section>
-
-      {/* ============================================================ */}
-      {/* SECTION 14 — EXECUTIVE CONTACT & ONE SIMPLE CTA */}
-      {/* ============================================================ */}
-      <section id="licensing-partnership" className="py-24 bg-[#FFFFFF] border-b border-slate-200 relative">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="p-8 sm:p-14 rounded-3xl bg-gradient-to-b from-[#FFFFFF] via-[#F4FDF7] to-[#FFFFFF] border-2 border-[#22C55E]/40 shadow-xl text-center space-y-8">
-            
-            {/* Header Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest bg-[#22C55E]/15 text-slate-950 border border-[#22C55E]/30">
-              <Building2 className="w-3.5 h-3.5 text-[#22C55E]" />
-              <span>International Content Acquisition</span>
-            </div>
-
-            {/* Title & Proposal Message */}
-            <div className="max-w-2xl mx-auto space-y-4">
-              <h2 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tight leading-tight uppercase">
-                DISCUSS A LICENSING PARTNERSHIP WITH FEVIQO
-              </h2>
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
-                If you represent Turkish television content, production studios, or international distribution agencies and would like to explore licensing opportunities for Urdu localization and digital distribution in Pakistan, our acquisitions desk is ready to connect with you.
-              </p>
-            </div>
-
-            {/* Direct Email Card */}
-            <div className="max-w-md mx-auto p-4 rounded-2xl bg-[#FFFFFF] border border-slate-200 shadow-sm flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 text-left">
-                <div className="w-10 h-10 rounded-xl bg-[#22C55E]/10 text-slate-950 flex items-center justify-center shrink-0">
-                  <Mail className="w-5 h-5 text-[#22C55E] stroke-[2.5]" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Acquisitions Desk</span>
-                  <a 
-                    href={PARTNERSHIP_MAILTO} 
-                    className="text-sm font-black text-slate-950 hover:text-[#22C55E] transition underline-offset-2 hover:underline"
-                  >
-                    {PARTNERSHIP_EMAIL}
-                  </a>
-                </div>
-              </div>
 
               <button
-                type="button"
                 onClick={handleCopyEmail}
-                className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                title="Copy Email Address"
+                className="px-6 py-4 rounded-xl sm:rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base border border-slate-200 transition-colors cursor-pointer flex items-center justify-center gap-2"
               >
-                {copiedEmail ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-[#22C55E] stroke-[3]" />
-                    <span className="text-[#22C55E] font-black">Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy</span>
-                  </>
-                )}
+                {copiedEmail ? <Check className="w-4 h-4 text-[#16a34a]" /> : <Copy className="w-4 h-4 text-slate-500" />}
+                <span>{copiedEmail ? 'Email Copied!' : PARTNERSHIP_EMAIL}</span>
               </button>
             </div>
 
-            {/* THE ONE SIMPLE CTA REQUESTED BY USER */}
-            <div className="pt-2">
-              <a
-                id="cta-discuss-licensing-partnership"
-                href={PARTNERSHIP_MAILTO}
-                className="w-full sm:w-auto px-10 py-5 rounded-full bg-[#22C55E] hover:bg-[#1eb054] text-slate-950 font-black text-sm uppercase tracking-wider transition-all shadow-xl shadow-[#22C55E]/20 hover:shadow-2xl hover:shadow-[#22C55E]/30 inline-flex items-center justify-center gap-3 cursor-pointer"
-              >
-                <Mail className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-                <span>Discuss a Licensing Partnership</span>
-                <ArrowRight className="w-4 h-4 text-slate-950 stroke-[3]" />
-              </a>
+            {/* Key Trust Signals */}
+            <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-slate-100 text-xs text-slate-600 font-medium">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-900 font-bold">100% Authorized Rights</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-900 font-bold">Broadcast-Quality Urdu Dubs</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-900 font-bold">AVOD Digital Distribution</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Hero Video Showcase Card */}
+          <div className="lg:col-span-6 relative">
+            <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-950 border border-slate-200/90 shadow-2xl shadow-slate-900/10 group">
+              <div className="aspect-[16/10] sm:aspect-[16/9] w-full relative overflow-hidden bg-slate-900">
+                <img
+                  src="https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=1200&auto=format&fit=crop&q=80"
+                  alt="Turkish Drama Cinema Showcase"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                  referrerPolicy="no-referrer"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+
+                {/* Status Badges */}
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                  <div className="bg-slate-950/80 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+                    <span>URDU LOCALIZATION SUITE</span>
+                  </div>
+                </div>
+
+                <div className="absolute top-4 right-4">
+                  <div className="bg-emerald-500/90 text-slate-950 text-xs font-extrabold px-3 py-1.5 rounded-full border border-emerald-300">
+                    AUTHORIZED
+                  </div>
+                </div>
+
+                {/* Play Button Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <button
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-xl shadow-[#22C55E]/40 hover:scale-110 transition-transform cursor-pointer"
+                  >
+                    <Play className="w-8 h-8 ml-1 fill-slate-950" />
+                  </button>
+                </div>
+
+                {/* Bottom Overlay Info */}
+                <div className="absolute bottom-4 left-4 right-4 text-white">
+                  <div className="font-coolvetica text-xl sm:text-2xl font-bold tracking-tight">
+                    Turkish Premium TV Series &bull; Pakistan Digital Rights
+                  </div>
+                  <div className="text-xs text-slate-300 mt-1 flex items-center gap-3 font-mono">
+                    <span>Market: Pakistan</span>
+                    <span>&bull;</span>
+                    <span>Language: Urdu</span>
+                    <span>&bull;</span>
+                    <span>Distribution: YouTube &amp; AVOD</span>
+                    <span>&bull;</span>
+                    <span>Rights: Licensed &amp; Contractual</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Key Stats Counter Bar */}
+      <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-6 sm:p-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/80 text-center">
+            <div className="pt-4 sm:pt-0">
+              <div className="font-neue text-4xl sm:text-5xl font-extrabold text-[#16a34a] tracking-tight">
+                240M+
+              </div>
+              <div className="font-neue text-xs sm:text-sm font-bold text-slate-800 mt-1.5">
+                Urdu-Speaking Market
+              </div>
             </div>
 
-            {/* Direct Notice */}
-            <p className="text-xs text-slate-500 max-w-lg mx-auto leading-relaxed">
-              Clicking above opens your email client directly addressed to <strong>partner@feviqo.com</strong>. We look forward to reviewing catalog availability, territory restrictions, and commercial structures.
-            </p>
+            <div className="pt-4 sm:pt-0">
+              <div className="font-neue text-4xl sm:text-5xl font-extrabold text-[#16a34a] tracking-tight">
+                100%
+              </div>
+              <div className="font-neue text-xs sm:text-sm font-bold text-slate-800 mt-1.5">
+                Authorized Rights
+              </div>
+            </div>
 
+            <div className="pt-4 sm:pt-0">
+              <div className="font-neue text-4xl sm:text-5xl font-extrabold text-[#16a34a] tracking-tight">
+                24–48h
+              </div>
+              <div className="font-neue text-xs sm:text-sm font-bold text-slate-800 mt-1.5">
+                Localization Turnaround
+              </div>
+            </div>
+
+            <div className="pt-4 sm:pt-0">
+              <div className="font-neue text-4xl sm:text-5xl font-extrabold text-[#16a34a] tracking-tight">
+                AVOD
+              </div>
+              <div className="font-neue text-xs sm:text-sm font-bold text-slate-800 mt-1.5">
+                Digital Distribution
+              </div>
+            </div>
           </div>
-
         </div>
       </section>
 
-      {/* ============================================================ */}
-      {/* SECTION 15 — MANDATORY LEGAL DISCLAIMER */}
-      {/* ============================================================ */}
-      <section className="py-12 bg-[#FAFAF8] border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="p-6 rounded-2xl bg-[#FFFFFF] border border-slate-200 shadow-sm">
-            <p className="text-xs text-slate-500 leading-relaxed text-center sm:text-left">
-              <strong>Mandatory Legal Notice:</strong> FEVIQO is a digital distribution and creative localization company. FEVIQO does not claim, represent, or imply existing ownership, exclusive representation, or active licensing rights to any third-party television series, characters, trademarks, or intellectual property mentioned on this page. All proposals regarding territory, language localization, distribution channels, and commercial revenue shares are exploratory inquiries subject to formal written authorization and bilateral licensing agreements executed with the respective rights holder.
-            </p>
+      {/* Full Turnkey Section */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="text-center max-w-3xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-4 text-emerald-900 shadow-xs">
+            <Sparkles className="w-4 h-4 text-[#22C55E]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+              FULL TURNKEY ACQUISITION &amp; OPERATION
+            </span>
+          </div>
+          <h2 className="font-coolvetica text-3xl sm:text-5xl font-bold text-slate-950 tracking-tight leading-tight">
+            From Turkish Rights to Urdu Digital Distribution
+          </h2>
+          <p className="font-neue text-slate-600 text-base sm:text-lg mt-3 leading-relaxed">
+            FEVIQO manages the operational workflow behind licensed Turkish content — from catalog evaluation and Urdu localization to digital publishing, channel operations, audience development, and rights-holder reporting.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Step 01 */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-8 border border-slate-200/90 shadow-sm shadow-slate-900/5 hover:border-emerald-300 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <span className="px-3 py-1 rounded-md bg-emerald-50 border border-emerald-200/80 text-[#16a34a] font-mono text-xs font-extrabold tracking-wider">
+                  01
+                </span>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50/80 border border-emerald-100 text-[#16a34a] flex items-center justify-center">
+                  <FileCheck className="w-5 h-5" />
+                </div>
+              </div>
+              <h3 className="font-coolvetica text-2xl sm:text-3xl font-bold text-slate-950 mb-3 tracking-tight">
+                Rights &amp; Catalog Evaluation
+              </h3>
+              <p className="font-neue text-slate-600 text-sm sm:text-base leading-relaxed mb-6 font-normal">
+                We evaluate Turkish catalogs for Pakistan and Urdu-language digital opportunities, including territory, language, platform, term, and exclusivity requirements.
+              </p>
+
+              <div className="space-y-2.5 mb-6 text-xs sm:text-sm text-slate-700">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E] shrink-0" />
+                  <span>Territory, platform &amp; exclusivity scoping</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E] shrink-0" />
+                  <span>Pakistan &amp; Urdu-language market validation</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 text-xs font-bold uppercase tracking-wider text-[#16a34a] flex items-center justify-between">
+              <span>CATALOG EVALUATION</span>
+              <FileCheck className="w-4 h-4 text-[#16a34a]" />
+            </div>
+          </div>
+
+          {/* Step 02 */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-8 border border-slate-200/90 shadow-sm shadow-slate-900/5 hover:border-emerald-300 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <span className="px-3 py-1 rounded-md bg-emerald-50 border border-emerald-200/80 text-[#16a34a] font-mono text-xs font-extrabold tracking-wider">
+                  02
+                </span>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50/80 border border-emerald-100 text-[#16a34a] flex items-center justify-center">
+                  <Globe className="w-5 h-5" />
+                </div>
+              </div>
+              <h3 className="font-coolvetica text-2xl sm:text-3xl font-bold text-slate-950 mb-3 tracking-tight">
+                Professional Urdu Localization
+              </h3>
+              <p className="font-neue text-slate-600 text-sm sm:text-base leading-relaxed mb-6 font-normal">
+                Approved titles are adapted for Urdu-speaking audiences through script localization, native Urdu voice talent, recording, editing, synchronization, and final audio mastering.
+              </p>
+
+              <div className="space-y-2.5 mb-6 text-xs sm:text-sm text-slate-700">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E] shrink-0" />
+                  <span>Native Urdu dubbing talent &amp; script translation</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E] shrink-0" />
+                  <span>Broadcast-grade audio mixing &amp; synchronization</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 text-xs font-bold uppercase tracking-wider text-[#16a34a] flex items-center justify-between">
+              <span>URDU LOCALIZATION</span>
+              <Globe className="w-4 h-4 text-[#16a34a]" />
+            </div>
+          </div>
+
+          {/* Step 03 */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-8 border border-slate-200/90 shadow-sm shadow-slate-900/5 hover:border-emerald-300 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <span className="px-3 py-1 rounded-md bg-emerald-50 border border-emerald-200/80 text-[#16a34a] font-mono text-xs font-extrabold tracking-wider">
+                  03
+                </span>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50/80 border border-emerald-100 text-[#16a34a] flex items-center justify-center">
+                  <Film className="w-5 h-5" />
+                </div>
+              </div>
+              <h3 className="font-coolvetica text-2xl sm:text-3xl font-bold text-slate-950 mb-3 tracking-tight">
+                Digital Channel Management
+              </h3>
+              <p className="font-neue text-slate-600 text-sm sm:text-base leading-relaxed mb-6 font-normal">
+                We manage authorized digital publishing across YouTube and AVOD platforms, including localized metadata, thumbnails, episode scheduling, channel operations, and audience development.
+              </p>
+
+              <div className="space-y-2.5 mb-6 text-xs sm:text-sm text-slate-700">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E] shrink-0" />
+                  <span>High-CTR localized thumbnails &amp; SEO metadata</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E] shrink-0" />
+                  <span>Automated episode scheduling &amp; AVOD operations</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 text-xs font-bold uppercase tracking-wider text-[#16a34a] flex items-center justify-between">
+              <span>DIGITAL DISTRIBUTION</span>
+              <Film className="w-4 h-4 text-[#16a34a]" />
+            </div>
+          </div>
+
+          {/* Step 04 */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl p-8 border border-slate-200/90 shadow-sm shadow-slate-900/5 hover:border-emerald-300 transition-all flex flex-col justify-between group">
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <span className="px-3 py-1 rounded-md bg-emerald-50 border border-emerald-200/80 text-[#16a34a] font-mono text-xs font-extrabold tracking-wider">
+                  04
+                </span>
+                <div className="w-10 h-10 rounded-xl bg-emerald-50/80 border border-emerald-100 text-[#16a34a] flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+              </div>
+              <h3 className="font-coolvetica text-2xl sm:text-3xl font-bold text-slate-950 mb-3 tracking-tight">
+                Reporting &amp; Rights Management
+              </h3>
+              <p className="font-neue text-slate-600 text-sm sm:text-base leading-relaxed mb-6 font-normal">
+                Rights holders receive transparent reporting covering published content, geographic performance, monetization activity, and contractual settlements.
+              </p>
+
+              <div className="space-y-2.5 mb-6 text-xs sm:text-sm text-slate-700">
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E] shrink-0" />
+                  <span>Monthly performance &amp; revenue statement audits</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-[#22C55E] shrink-0" />
+                  <span>Contractual royalty settlements &amp; analytics</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 text-xs font-bold uppercase tracking-wider text-[#16a34a] flex items-center justify-between">
+              <span>RIGHTS HOLDER REPORTING</span>
+              <ShieldCheck className="w-4 h-4 text-[#16a34a]" />
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Featured Titles Showcase */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="text-center max-w-3xl mx-auto mb-14">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-4 text-emerald-900 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-[#22C55E]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+              INITIAL LICENSING INTEREST
+            </span>
+          </div>
+          <h2 className="font-coolvetica text-3xl sm:text-5xl font-bold text-slate-950 tracking-tight leading-tight">
+            Turkish Series for Urdu Digital Distribution
+          </h2>
+          <p className="font-neue text-slate-600 text-base sm:text-lg mt-3 leading-relaxed">
+            FEVIQO is evaluating Turkish drama catalogs for authorized Urdu localization and digital distribution in Pakistan. Availability of individual titles is subject to rights verification and licensing.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Title 1 Card: Teşkilat */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 shadow-md shadow-slate-900/5 group flex flex-col">
+            <div className="aspect-[16/9] overflow-hidden relative bg-slate-900">
+              <img
+                src="https://images.unsplash.com/photo-1527838832700-5059252407fa?w=1000&auto=format&fit=crop&q=80"
+                alt="Teşkilat Turkish Drama"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute top-4 left-4">
+                <span className="bg-slate-950/80 text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/20">
+                  ACTION / INTELLIGENCE DRAMA
+                </span>
+              </div>
+              <div className="absolute top-4 right-4">
+                <span className="bg-[#22C55E] text-slate-950 text-xs font-black px-3 py-1.5 rounded-full uppercase">
+                  LICENSING OPPORTUNITY
+                </span>
+              </div>
+            </div>
+
+            <div className="p-8 flex-1 flex flex-col justify-between">
+              <div>
+                <h3 className="font-coolvetica text-3xl font-bold text-slate-950 mb-2">
+                  TEŞKİLAT
+                </h3>
+                <div className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-4">
+                  Territory: Pakistan &bull; Language: Urdu &bull; Format: AVOD / YouTube
+                </div>
+                <p className="font-neue text-slate-600 text-sm leading-relaxed mb-6">
+                  A high-stakes intelligence drama centered on national security operations, strategic missions, and complex characters.
+                </p>
+              </div>
+
+              <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs font-bold text-[#16a34a] uppercase">Subject to Rights Availability</span>
+                <a
+                  href={PARTNERSHIP_MAILTO}
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-[#16a34a] text-white font-bold text-xs transition-colors flex items-center gap-1.5"
+                >
+                  <span>Discuss Licensing</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Title 2 Card: Fatih */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 shadow-md shadow-slate-900/5 group flex flex-col">
+            <div className="aspect-[16/9] overflow-hidden relative bg-slate-900">
+              <img
+                src="https://images.unsplash.com/photo-1564507592333-c60657eea523?w=1000&auto=format&fit=crop&q=80"
+                alt="Fatih Turkish Drama"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute top-4 left-4">
+                <span className="bg-slate-950/80 text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/20">
+                  HISTORICAL DRAMA
+                </span>
+              </div>
+              <div className="absolute top-4 right-4">
+                <span className="bg-[#22C55E] text-slate-950 text-xs font-black px-3 py-1.5 rounded-full uppercase">
+                  LICENSING OPPORTUNITY
+                </span>
+              </div>
+            </div>
+
+            <div className="p-8 flex-1 flex flex-col justify-between">
+              <div>
+                <h3 className="font-coolvetica text-3xl font-bold text-slate-950 mb-2">
+                  FATİH: SULTAN OF CONQUESTS
+                </h3>
+                <div className="text-xs font-mono text-slate-500 uppercase tracking-wider mb-4">
+                  Territory: Pakistan &bull; Language: Urdu &bull; Format: AVOD / YouTube
+                </div>
+                <p className="font-neue text-slate-600 text-sm leading-relaxed mb-6">
+                  A historical drama centered on Sultan Mehmed II and the conquest of Constantinople, combining historical storytelling with large-scale production.
+                </p>
+              </div>
+
+              <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs font-bold text-[#16a34a] uppercase">Subject to Rights Availability</span>
+                <a
+                  href={PARTNERSHIP_MAILTO}
+                  className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-[#16a34a] text-white font-bold text-xs transition-colors flex items-center gap-1.5"
+                >
+                  <span>Discuss Licensing</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Rights Compliance Section */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="bg-slate-50/90 border border-emerald-200/80 text-slate-950 rounded-2xl sm:rounded-3xl p-8 sm:p-14 relative overflow-hidden shadow-xs">
+          <div className="absolute -right-10 -bottom-10 w-72 h-72 bg-[#22C55E]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -left-10 -top-10 w-72 h-72 bg-emerald-100/50 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="max-w-4xl mx-auto relative z-10 space-y-6 text-center">
+            <div className="flex justify-center">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/80 text-[#15803d] text-xs font-extrabold uppercase tracking-wider border border-emerald-200 shadow-2xs">
+                <ShieldCheck className="w-4 h-4 text-[#16a34a]" />
+                <span>STRICT RIGHTS COMPLIANCE</span>
+              </div>
+            </div>
+            
+            <h3 className="font-coolvetica text-3xl sm:text-5xl font-bold text-slate-950 tracking-tight leading-tight text-center">
+              Authorized Content. Clear Agreements. Transparent Distribution.
+            </h3>
+            
+            <p className="font-neue text-slate-600 text-sm sm:text-base leading-relaxed text-center max-w-3xl mx-auto font-normal">
+              FEVIQO does not publish, subtitle, dub, or monetize third-party content without appropriate authorization from the relevant rights holder. Each title is evaluated and distributed under formal licensing terms covering the applicable territory, language, platforms, and licensing period.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-8 border-t border-emerald-200/80 text-left">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition-colors">
+                <div className="text-xs font-bold text-[#16a34a] uppercase mb-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
+                  Territory Rights
+                </div>
+                <div className="text-xs text-slate-600 leading-relaxed font-medium">Pakistan and other territories only where contractually authorized.</div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition-colors">
+                <div className="text-xs font-bold text-[#16a34a] uppercase mb-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
+                  Language Rights
+                </div>
+                <div className="text-xs text-slate-600 leading-relaxed font-medium">Urdu localization and distribution rights.</div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition-colors">
+                <div className="text-xs font-bold text-[#16a34a] uppercase mb-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
+                  Platform Rights
+                </div>
+                <div className="text-xs text-slate-600 leading-relaxed font-medium">YouTube, AVOD, and other mutually agreed digital platforms.</div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition-colors">
+                <div className="text-xs font-bold text-[#16a34a] uppercase mb-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
+                  Licensing Terms
+                </div>
+                <div className="text-xs text-slate-600 leading-relaxed font-medium">Term, exclusivity, commercial structure, and usage rights are agreed privately with each rights holder.</div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-emerald-300 transition-colors sm:col-span-2 lg:col-span-2">
+                <div className="text-xs font-bold text-[#16a34a] uppercase mb-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]" />
+                  Reporting
+                </div>
+                <div className="text-xs text-slate-600 leading-relaxed font-medium">Transparent performance and revenue reporting according to the applicable agreement.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FINAL CTA SECTION */}
+      <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="bg-slate-50 border border-slate-200/80 rounded-2xl sm:rounded-3xl p-8 sm:p-14 text-center max-w-4xl mx-auto shadow-sm">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-6 text-emerald-900 shadow-xs">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+              LICENSING INQUIRIES
+            </span>
+          </div>
+
+          <h2 className="font-coolvetica text-3xl sm:text-5xl font-bold text-slate-950 tracking-tight leading-tight mb-4">
+            Have Turkish Content Available for Pakistan?
+          </h2>
+
+          <p className="font-neue text-slate-600 text-base sm:text-lg max-w-2xl mx-auto mb-8 leading-relaxed">
+            If you represent a Turkish studio, producer, distributor, or rights holder with content available for international licensing, FEVIQO would like to review your catalog and discuss potential Urdu localization and digital distribution opportunities.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a
+              href={PARTNERSHIP_MAILTO}
+              className="w-full sm:w-auto px-8 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-base shadow-lg shadow-[#22C55E]/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Submit Licensing Inquiry</span>
+              <ArrowRight className="w-4 h-4" />
+            </a>
+
+            <button
+              onClick={handleCopyEmail}
+              className="w-full sm:w-auto px-6 py-4 rounded-xl sm:rounded-2xl bg-white hover:bg-slate-100 text-slate-800 font-bold text-sm sm:text-base border border-slate-200 transition-colors cursor-pointer flex items-center justify-center gap-2"
+            >
+              {copiedEmail ? <Check className="w-4 h-4 text-[#16a34a]" /> : <Copy className="w-4 h-4 text-slate-500" />}
+              <span>{copiedEmail ? 'Email Copied!' : PARTNERSHIP_EMAIL}</span>
+            </button>
+          </div>
+
+          <div className="mt-6 text-xs font-mono text-slate-500">
+            Direct Licensing Inquiries: <a href={PARTNERSHIP_MAILTO} className="text-[#16a34a] font-bold hover:underline">{PARTNERSHIP_EMAIL}</a>
+          </div>
+        </div>
+      </section>
+
+      {/* Standard FEVIQO Footer */}
+      <footer className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full border-t border-slate-200 mt-auto text-xs font-mono text-slate-500">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <span className="font-neue text-sm font-bold text-slate-900">FEVIQO</span>
+            <span>&bull; International Content Acquisitions Desk</span>
+          </div>
+          <div className="text-slate-600 font-medium">
+            Turkish Content &bull; Urdu Localization &bull; Pakistan Digital Distribution
+          </div>
+          <div>
+            Direct Licensing Inquiries: <a href={PARTNERSHIP_MAILTO} className="text-[#16a34a] font-bold hover:underline">{PARTNERSHIP_EMAIL}</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

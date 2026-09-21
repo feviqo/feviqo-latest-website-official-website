@@ -174,6 +174,7 @@ export interface SimulatedEmail {
 export type AppRoute = 
   | 'home' 
   | 'pricing' 
+  | 'booking'
   | 'flow' 
   | 'admin'
   | 'gallery' 

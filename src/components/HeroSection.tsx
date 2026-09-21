@@ -60,22 +60,22 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
   };
 
   return (
-    <section className="relative pt-12 sm:pt-16 pb-12 sm:pb-16 bg-white text-[#0B0B0D] overflow-hidden">
+    <section className="relative pt-14 sm:pt-20 pb-14 sm:pb-20 bg-white text-[#0B0B0D] overflow-hidden">
       {/* Background Subtle Doodle Texture (from index.html doodles.png) */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-[0.03] bg-repeat bg-center"
         style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '24px 24px' }}
       />
 
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         
-        {/* Exact Hero Title from index.html (elementor-element-330c8a2) */}
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#0B0B0D] leading-[1.08] max-w-4xl mx-auto mb-4">
-          Unlimited Video Editing Service
+        {/* Dual-Typography Hero Title */}
+        <h1 className="font-coolvetica text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-[#0B0B0D] leading-[1.06] max-w-4xl mx-auto mb-4">
+          Unlimited Video Editing <span className="font-editorial-italic font-bold text-[#16a34a]">Service</span>
         </h1>
 
-        {/* Exact Hero Subtitle from index.html (elementor-element-3b7c63b) */}
-        <p className="text-base sm:text-xl text-[#4A4A5A] max-w-2xl mx-auto mb-8 font-normal leading-relaxed">
+        {/* Hero Subtitle */}
+        <p className="font-neue text-base sm:text-xl text-[#4A4A5A] max-w-2xl mx-auto mb-8 font-normal leading-relaxed">
           Tailored for modern-day video editing, so you can create video content without the hassle of managing.
         </p>
 
@@ -90,14 +90,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
         </div>
 
         {/* 
-          Main Video Showcase Container with Right-Hand Social Proof Boxes
-          Widescreen horizontal 16:9 video with matching height horizontal side boxes
+          Main Video Showcase Container with Right-Hand Social Proof Column
+          Expanded container (+100px) provides an ultra-premium large video showcase
         */}
-        <div className="relative mx-auto max-w-6xl w-full mb-6">
+        <div className="relative mx-auto max-w-[1360px] w-full mb-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-stretch">
             
             {/* Left: Large Horizontal Widescreen 16:9 Video Player */}
-            <div className="lg:col-span-7 xl:col-span-8 flex flex-col justify-center">
+            <div className="lg:col-span-8 flex flex-col justify-center">
               <div className="relative w-full aspect-[16/9] rounded-[24px] sm:rounded-[32px] overflow-hidden bg-black shadow-2xl border border-slate-200/90 flex items-center justify-center">
                 
                 {/* Top-Right Sound Box */}
@@ -146,40 +146,37 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
               </div>
             </div>
 
-            {/* Right Side: Two Separate Boxes with Free-Standing Review Rating in Between (Matches User Reference) */}
-            <div className="lg:col-span-5 xl:col-span-4 flex flex-col justify-between gap-4 sm:gap-5 text-left h-full">
+            {/* Right Side: Exact Reference Layout (Top Card with Top Rated, Free-standing Review in Middle, Centered Bottom Stats Card) */}
+            <div className="lg:col-span-4 flex flex-col justify-between gap-4 text-left h-full">
               
-              {/* Separate Box 1: Trusted by many! */}
-              <div className="bg-white rounded-2xl sm:rounded-[28px] p-6 sm:p-7 border border-slate-200/90 shadow-lg shadow-slate-900/5 flex flex-col justify-center gap-4">
+              {/* Top Card: Overlapping Avatars + Top Rated Badge + 'Trusted by many!' */}
+              <div className="bg-white rounded-2xl sm:rounded-[26px] p-6 border border-slate-200/90 shadow-md shadow-slate-900/5 flex flex-col justify-center gap-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex -space-x-2.5 overflow-hidden p-0.5 shrink-0">
                     <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=85"
+                      src="/images/avatars/lais-deleon.webp"
                       alt="Creator 1"
-                      className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full ring-2 ring-emerald-500 object-cover shadow-sm"
+                      className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full ring-2 ring-white object-cover shadow-sm"
                       loading="lazy"
                     />
                     <img
-                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=85"
+                      src="/images/avatars/alex-tubio.webp"
                       alt="Creator 2"
                       className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full ring-2 ring-white object-cover shadow-sm"
                       loading="lazy"
                     />
                     <img
-                      src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&h=120&q=85"
+                      src="/images/avatars/jenna-kutcher.webp"
                       alt="Creator 3"
-                      className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full ring-2 ring-emerald-500 object-cover shadow-sm"
+                      className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full ring-2 ring-white object-cover shadow-sm"
                       loading="lazy"
                     />
-                    <div className="relative inline-block">
-                      <img
-                        src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&h=120&q=85"
-                        alt="Creator 4"
-                        className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full ring-2 ring-white object-cover shadow-sm"
-                        loading="lazy"
-                      />
-                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#22C55E] ring-2 ring-white" />
-                    </div>
+                    <img
+                      src="/images/avatars/patrick-anghel.webp"
+                      alt="Creator 4"
+                      className="inline-block h-10 w-10 sm:h-11 sm:w-11 rounded-full ring-2 ring-white object-cover shadow-sm"
+                      loading="lazy"
+                    />
                   </div>
 
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[#15803d] text-xs font-extrabold shadow-2xs shrink-0">
@@ -193,14 +190,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
                 </h3>
               </div>
 
-              {/* Middle (No Box): 4.7 • Reviews 75 • Excellent + Green Stars (Free-standing as in reference) */}
-              <div className="px-2 py-1 flex flex-col gap-2">
+              {/* Middle Section: 4.9 • Reviews 75 • Excellent + Green Stars */}
+              <div className="px-1 py-1 flex flex-col gap-1.5">
                 <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-slate-600">
-                  <span className="font-black text-slate-950 text-base sm:text-lg">4.7</span>
+                  <span className="font-black text-slate-950 text-base">4.9</span>
                   <span className="text-slate-300">•</span>
                   <span className="text-slate-600">Reviews 75</span>
                   <span className="text-slate-300">•</span>
-                  <span className="text-[#16a34a] font-extrabold">Excellent</span>
+                  <span className="text-slate-600">Excellent</span>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -210,23 +207,23 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
                 </div>
               </div>
 
-              {/* Separate Box 2: 50+ Monthly clients | 30k+ Videos edited in Vibrant Green */}
-              <div className="bg-white rounded-2xl sm:rounded-[28px] p-6 sm:p-7 border border-slate-200/90 shadow-lg shadow-slate-900/5">
+              {/* Bottom Card: 50+ Monthly clients | 30k+ Videos edited (Centered, in Brand Green) */}
+              <div className="bg-white rounded-2xl sm:rounded-[26px] p-6 border border-slate-200/90 shadow-md shadow-slate-900/5">
                 <div className="grid grid-cols-2 divide-x divide-slate-200 text-center items-center">
-                  <div className="px-2">
-                    <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#16a34a] tracking-tight">
+                  <div className="px-2 flex flex-col items-center justify-center">
+                    <div className="font-neue text-5xl sm:text-6xl font-extrabold text-[#16a34a] tracking-tight">
                       50+
                     </div>
-                    <div className="text-xs sm:text-sm font-bold text-slate-700 mt-1 whitespace-nowrap">
+                    <div className="font-neue text-base sm:text-lg font-bold text-slate-900 mt-2 whitespace-nowrap">
                       Monthly clients
                     </div>
                   </div>
 
-                  <div className="px-2">
-                    <div className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#16a34a] tracking-tight">
+                  <div className="px-2 flex flex-col items-center justify-center">
+                    <div className="font-neue text-5xl sm:text-6xl font-extrabold text-[#16a34a] tracking-tight">
                       30k+
                     </div>
-                    <div className="text-xs sm:text-sm font-bold text-slate-700 mt-1 whitespace-nowrap">
+                    <div className="font-neue text-base sm:text-lg font-bold text-slate-900 mt-2 whitespace-nowrap">
                       Videos edited
                     </div>
                   </div>

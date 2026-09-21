@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
+import { WordFadeUpHeadline } from './WordFadeUpHeadline';
 import { 
-  Check, X, Sparkles, ArrowRight, ShieldCheck, Zap, 
-  HelpCircle, ChevronDown, ChevronUp, Clock, Users, 
-  MessageSquare, Star, ArrowLeft
+  Sparkles, Star, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { FeviqoHeaderLogo } from './FeviqoLogo';
-import { PricingShowcaseCollage } from './PricingShowcaseCollage';
 import { Navbar } from './Navbar';
+import { PricingMatrixSection } from './PricingMatrixSection';
 import { AppRoute, PreselectedPlan } from '../types';
 
 interface PricingPageProps {
@@ -27,170 +25,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
   onNavigatePricing,
   onNavigatePage
 }) => {
-  const [billingCycle, setBillingCycle] = useState<'yearly' | 'quarterly' | 'monthly'>('yearly');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-
-  const plans = [
-    {
-      id: 'scale',
-      name: 'Scale',
-      tag: 'Steady Growth',
-      icon: '/images/pricing-scale.webp',
-      description: 'Ideal for creators and growing brands requiring consistent, high-retention video output.',
-      monthlyPrice: 1299,
-      quarterlyMonthlyRate: 999,
-      quarterlyTotal: 2997,
-      quarterlySavings: 900,
-      yearlyMonthlyRate: 899,
-      yearlyTotal: 10788,
-      yearlySavings: 4800,
-      featured: false,
-      turnaround: '2–3 business days delivery',
-      features: [
-        'Dedicated Video Editing Team',
-        '2–3 business days turnaround',
-        'Unlimited revisions included',
-        'Up to 2 active brands',
-        'Up to 2 team member seats',
-        'FEVIQO Flow Portal dashboard',
-        'Licensed music, SFX & stock footage',
-        'Standard Slack support channel',
-      ],
-    },
-    {
-      id: 'pro',
-      name: 'Pro',
-      tag: 'Most Popular',
-      icon: '/images/pricing-pro.webp',
-      description: 'Engineered for high-volume content operations demanding rapid daily turnaround.',
-      monthlyPrice: 2299,
-      quarterlyMonthlyRate: 1999,
-      quarterlyTotal: 5997,
-      quarterlySavings: 900,
-      yearlyMonthlyRate: 1799,
-      yearlyTotal: 21588,
-      yearlySavings: 6000,
-      featured: true,
-      turnaround: '1 business day (sub-24h for shorts)',
-      features: [
-        'Sub-24h turnaround for short-form',
-        '1 business day for long-form content',
-        'Unlimited revisions until perfect',
-        'Dedicated Lead Editor + Creative Director',
-        'Unlimited brand profiles & workspaces',
-        'Unlimited team user seats',
-        'Direct Slack channel with your editor',
-        'Native FEVIQO Flow private workspace',
-        'Bespoke motion graphics & custom titles',
-      ],
-    },
-    {
-      id: 'inhouse',
-      name: 'In-House Studio',
-      tag: 'Maximum Scale',
-      icon: '/images/pricing-inhouse.webp',
-      description: 'Your own full creative production department, minus the hiring and operational overhead.',
-      monthlyPrice: 5999,
-      quarterlyMonthlyRate: 4999,
-      quarterlyTotal: 14997,
-      quarterlySavings: 3000,
-      yearlyMonthlyRate: 4699,
-      yearlyTotal: 56388,
-      yearlySavings: 15600,
-      featured: false,
-      turnaround: 'Same-day / Custom queue speed',
-      features: [
-        'Everything in Pro included',
-        'Multiple edits delivered daily',
-        'Dedicated full-time senior video editor',
-        'Daily Slack standups & video syncs',
-        'Simultaneous project requests running',
-        'Priority queue fast-track placement',
-        'Custom 3D / 2D animation packages',
-        'Raw source project files (Premiere/AE)',
-      ],
-    },
-  ];
-
-  const competitors = [
-    {
-      name: 'FEVIQO',
-      logo: '/feviqo1.png',
-      price: '$1,299 / mo',
-      dedicated: true,
-      humanAi: true,
-      fastTurnaround: true,
-      nativePlatform: true,
-      pmCheck: true,
-      isFeviqo: true,
-    },
-    {
-      name: 'Vidpros',
-      logo: '/images/competitors/vidpros.webp',
-      price: '$1,000 / mo',
-      dedicated: false,
-      humanAi: false,
-      fastTurnaround: false,
-      nativePlatform: false,
-      pmCheck: true,
-      isFeviqo: false,
-    },
-    {
-      name: 'Vidchops',
-      logo: '/images/competitors/vidchops.webp',
-      price: '$495 / mo',
-      dedicated: false,
-      humanAi: false,
-      fastTurnaround: false,
-      nativePlatform: false,
-      pmCheck: false,
-      isFeviqo: false,
-    },
-    {
-      name: 'Video Husky',
-      logo: '/images/competitors/videohusky.webp',
-      price: '$849 / mo',
-      dedicated: true,
-      humanAi: false,
-      fastTurnaround: false,
-      nativePlatform: false,
-      pmCheck: false,
-      isFeviqo: false,
-    },
-    {
-      name: 'Edit Crew',
-      logo: '/images/competitors/editcrew.webp',
-      price: '$1,599 / mo',
-      dedicated: false,
-      humanAi: false,
-      fastTurnaround: false,
-      nativePlatform: false,
-      pmCheck: true,
-      isFeviqo: false,
-    },
-    {
-      name: 'Freelancers (Fiverr)',
-      logo: '/images/competitors/fiverr.webp',
-      price: '$1,500+ / mo',
-      dedicated: true,
-      humanAi: false,
-      fastTurnaround: false,
-      nativePlatform: false,
-      pmCheck: false,
-      isFeviqo: false,
-    },
-    {
-      name: 'In-House Full-Time',
-      logo: '/images/pricing-inhouse.webp',
-      price: '$5,000+ / mo',
-      dedicated: true,
-      humanAi: false,
-      fastTurnaround: true,
-      nativePlatform: false,
-      pmCheck: false,
-      isFeviqo: false,
-    },
-  ];
 
   const pricingFaqs = [
     {
@@ -211,7 +46,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
     },
     {
       q: 'What types of videos do you NOT edit, and do you provide voiceovers?',
-      a: "We don't edit music videos, wedding movies, or extensive animations. For voiceovers, we are happy to use your recorded audio, or we can also use AI for voiceovers, but that will add up a cost.",
+      a: "We don't edit music videos, wedding movies, or extensive 3D character animations. For voiceovers, we are happy to use your recorded audio or studio-grade AI voice generation.",
     },
     {
       q: 'Are revisions genuinely unlimited?',
@@ -222,7 +57,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
   return (
     <div className="min-h-screen bg-[#FBFBFC] text-slate-900 font-sans flex flex-col selection:bg-[#22C55E] selection:text-slate-950">
       
-      {/* Global Green Header with all options */}
+      {/* Global Navbar */}
       <Navbar 
         onBookCall={() => onBookCall()}
         onNavigateSection={onNavigateSection || onBackToHome}
@@ -233,311 +68,36 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         })}
       />
 
-      {/* 
-        Pricing Section Only: No extraneous hero, no headings
-        Directly leads to billing cycle toggle and pricing tiers
-      */}
-      <section className="pt-8 sm:pt-12 pb-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        {/* Billing Cycle Toggle with Fluid Sliding Indicator */}
-        <div className="text-center mb-6 sm:mb-10 max-w-xl mx-auto px-2">
-          <div className="relative grid grid-cols-3 p-1 sm:p-1.5 rounded-2xl sm:rounded-full bg-slate-200/85 border border-slate-300/80 shadow-inner box-border max-w-full overflow-hidden">
-            {(['yearly', 'quarterly', 'monthly'] as const).map((cycle) => {
-              const isActive = billingCycle === cycle;
-              return (
-                <button
-                  key={cycle}
-                  onClick={() => setBillingCycle(cycle)}
-                  className="relative z-10 py-1.5 sm:py-2.5 px-0.5 sm:px-3 rounded-xl sm:rounded-full transition-colors cursor-pointer flex flex-col items-center justify-center text-center select-none min-w-0"
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeBillingCycleIndicator"
-                      className="absolute inset-0 bg-white rounded-xl sm:rounded-full shadow-md border border-slate-200/60"
-                      transition={{ type: 'spring', stiffness: 450, damping: 35 }}
-                    />
-                  )}
-                  <span className={`relative z-10 text-xs sm:text-sm font-black transition-colors ${isActive ? 'text-slate-950' : 'text-slate-600 hover:text-slate-900'}`}>
-                    {cycle === 'yearly' ? 'Yearly' : cycle === 'quarterly' ? 'Quarterly' : 'Monthly'}
-                  </span>
-                  <span className={`relative z-10 text-[8px] sm:text-[10px] font-bold px-1 sm:px-2 py-0.5 rounded-full mt-0.5 tracking-tight truncate max-w-full transition-colors ${
-                    cycle === 'yearly'
-                      ? 'bg-emerald-500 text-slate-950 font-black'
-                      : cycle === 'quarterly'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-slate-100 text-slate-500'
-                  }`}>
-                    {cycle === 'yearly' ? 'Save $15.6k' : cycle === 'quarterly' ? 'Save $3k' : 'Flexible'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Official Payoneer Payment Trust Badge */}
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mt-4 text-xs font-semibold text-slate-600">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-[#032415] via-[#064e3b] to-[#032415] border border-emerald-500/40 text-white shadow-xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" />
-              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-100">
-                Payoneer Invoicing & ACH
-              </span>
-            </div>
-            <span className="text-slate-400 hidden sm:inline">•</span>
-            <span className="text-[11px] sm:text-xs text-slate-500">
-              Major Corporate Cards, Wire & Custom Invoicing Accepted
-            </span>
-          </div>
+      {/* Hero Header */}
+      <section className="pt-12 sm:pt-16 pb-4 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-5 text-emerald-900 shadow-xs">
+          <Sparkles className="w-4 h-4 text-[#22C55E]" />
+          <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+            Transparent Pricing &bull; Dedicated Video Pods
+          </span>
         </div>
+        <div className="mb-4 flex justify-center">
+          <WordFadeUpHeadline
+            className="font-coolvetica text-3xl sm:text-5xl md:text-6xl font-bold text-slate-950 tracking-tight leading-[1.08] justify-center"
+            words={[
+              { text: "Predictable" },
+              { text: "flat" },
+              { text: "pricing." },
+              { text: "High-retention", className: "font-editorial-italic font-normal text-[#16a34a]" },
+              { text: "video", className: "font-editorial-italic font-normal text-[#16a34a]" },
+              { text: "production.", className: "font-editorial-italic font-normal text-[#16a34a]" },
+            ]}
+          />
+        </div>
+        <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+          Scale your video pipeline with dedicated senior editors, rapid 24–48h turnarounds, and zero management overhead. Pause or cancel anytime.
+        </p>
       </section>
 
-      {/* 
-        ==================================================
-        PRICING CARDS GRID (Apple Aesthetic)
-        Crisp white surfaces, refined typography, subtle borders
-        ==================================================
-      */}
-      <section className="py-6 sm:py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <motion.div 
-          key={billingCycle}
-          initial={{ opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: 'easeOut' }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-stretch"
-        >
-          {plans.map((plan) => {
-            const price = billingCycle === 'yearly'
-              ? plan.yearlyMonthlyRate
-              : billingCycle === 'quarterly'
-              ? plan.quarterlyMonthlyRate
-              : plan.monthlyPrice;
+      {/* Pricing Matrix Component (Cards, Billing Switcher, Compare Table, Retainer Banner, Trial Video) */}
+      <PricingMatrixSection onBookCall={onBookCall} showCompetitorTable={true} />
 
-            const handlePlanGetStarted = () => {
-              const selectedPlanData: PreselectedPlan = {
-                id: plan.id,
-                name: plan.name,
-                cycle: billingCycle,
-                monthlyRate: price,
-                totalPrice: billingCycle === 'yearly' ? plan.yearlyTotal : billingCycle === 'quarterly' ? plan.quarterlyTotal : plan.monthlyPrice,
-                savingsText: billingCycle === 'yearly' 
-                  ? `Save $${plan.yearlySavings.toLocaleString()}/yr` 
-                  : billingCycle === 'quarterly' 
-                  ? `Save $${plan.quarterlySavings.toLocaleString()}/quarter` 
-                  : 'Month-to-month, pause anytime',
-                turnaround: plan.turnaround,
-              };
-              onBookCall(selectedPlanData);
-            };
-
-            return (
-              <div
-                key={plan.id}
-                className={`rounded-[32px] p-6 sm:p-9 flex flex-col justify-between relative transition-all duration-300 ${
-                  plan.featured
-                    ? 'bg-white border-2 border-[#22C55E] shadow-2xl shadow-emerald-500/10 lg:scale-[1.02] z-10'
-                    : 'bg-white border border-slate-200/90 hover:border-slate-300 shadow-lg shadow-slate-200/50'
-                }`}
-              >
-                {plan.featured && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-[#22C55E] text-slate-950 text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-1">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    <span>Recommended</span>
-                  </div>
-                )}
-
-                <div>
-                  {/* Plan Icon Artwork */}
-                  {plan.icon && (
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-50/70 p-1.5 mb-4 flex items-center justify-center border border-emerald-100">
-                      <img
-                        src={plan.icon}
-                        alt={plan.name}
-                        className="w-full h-full object-contain"
-                        loading="lazy"
-                      />
-                    </div>
-                  )}
-
-                  {/* Plan Name & Tag */}
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-2xl font-black text-slate-950 tracking-tight">{plan.name}</h3>
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                      plan.featured ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {plan.tag}
-                    </span>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-slate-600 min-h-[40px] mb-6 leading-relaxed font-normal">
-                    {plan.description}
-                  </p>
-
-                  {/* Price Box */}
-                  <div className="mb-6 pb-6 border-b border-slate-100">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight">
-                        ${price.toLocaleString()}
-                      </span>
-                      <span className="text-slate-500 text-sm font-semibold">/ month</span>
-                    </div>
-
-                    {billingCycle === 'yearly' ? (
-                      <p className="text-xs text-emerald-700 font-bold mt-1.5 flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-[#22C55E]" />
-                        <span>${plan.yearlyTotal.toLocaleString()} billed annually (You save ${plan.yearlySavings.toLocaleString()}/yr)</span>
-                      </p>
-                    ) : billingCycle === 'quarterly' ? (
-                      <p className="text-xs text-emerald-700 font-semibold mt-1.5">
-                        ${plan.quarterlyTotal.toLocaleString()} billed quarterly (You save ${plan.quarterlySavings})
-                      </p>
-                    ) : (
-                      <p className="text-xs text-slate-500 mt-1.5 font-medium">
-                        Billed month-to-month. Pause or cancel anytime.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Turnaround Pill */}
-                  <div className="mb-6 p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-2.5 text-xs text-slate-800 font-semibold">
-                    <Clock className="w-4 h-4 text-[#22C55E] shrink-0" />
-                    <span>{plan.turnaround}</span>
-                  </div>
-
-                  {/* Feature Checklist */}
-                  <div className="space-y-3 mb-8 text-xs sm:text-sm text-slate-700">
-                    {plan.features.map((feat, idx) => (
-                      <div key={idx} className="flex items-start gap-3">
-                        <div className="w-4 h-4 rounded-full bg-emerald-50 text-[#22C55E] border border-emerald-200 flex items-center justify-center shrink-0 mt-0.5 font-bold">
-                          <Check className="w-2.5 h-2.5 stroke-[3]" />
-                        </div>
-                        <span className="leading-snug">{feat}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Call to Actions */}
-                <div className="space-y-2.5 pt-4">
-                  <button
-                    onClick={handlePlanGetStarted}
-                    className={`w-full py-3.5 rounded-full font-black text-sm transition-all cursor-pointer flex items-center justify-center gap-2 shadow-sm ${
-                      plan.featured
-                        ? 'bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 shadow-lg shadow-[#22C55E]/30 hover:scale-[1.02]'
-                        : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border border-emerald-300/80 font-bold'
-                    }`}
-                  >
-                    <span>Get Started</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={handlePlanGetStarted}
-                    className="w-full py-2.5 rounded-full text-xs text-slate-500 hover:text-[#16a34a] font-semibold transition-colors cursor-pointer"
-                  >
-                    Book a consultation call
-                  </button>
-                </div>
-
-              </div>
-            );
-          })}
-        </motion.div>
-
-        {/* Dedicated Yearly Enterprise & Retainer Section - Styled in signature FEVIQO deep forest green */}
-        <div className="mt-8 bg-gradient-to-r from-[#032415] via-[#064e3b] to-[#032415] border border-emerald-500/40 rounded-[32px] p-6 sm:p-10 text-white shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#22C55E]/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
-          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-            <div className="space-y-3 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-950/80 text-[#22C55E] border border-emerald-500/50 text-xs font-black uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-[#22C55E]" />
-                <span>Annual Studio Retainers & Custom Volumes</span>
-              </div>
-              <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                Scale for the entire year with a <span className="text-[#22C55E]">Dedicated Video Pod</span>
-              </h3>
-              <p className="text-sm text-emerald-100/90 leading-relaxed">
-                Save across all tiers when committing annually (equivalent to 1 full month free). Receive a retained Senior Creative Director, lock your monthly editing rates for 12 months, and get priority holiday & Q4 production fast-tracking with zero queue delays.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-xs font-semibold text-emerald-100">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-[#22C55E]" />
-                  <span>1 Month Free Included</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-[#22C55E]" />
-                  <span>Dedicated Lead Editor</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-[#22C55E]" />
-                  <span>Custom Invoicing & ACH</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 w-full lg:w-auto shrink-0">
-              <button
-                onClick={() => {
-                  setBillingCycle('yearly');
-                  window.scrollTo({ top: 300, behavior: 'smooth' });
-                }}
-                className="px-7 py-3.5 rounded-full bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-sm text-center cursor-pointer transition-all shadow-lg shadow-[#22C55E]/30 hover:scale-105"
-              >
-                View Annual Package Rates
-              </button>
-              <button
-                onClick={() => onBookCall({
-                  id: 'inhouse',
-                  name: 'In-House Studio (Annual Retainer)',
-                  cycle: 'yearly',
-                  monthlyRate: 4699,
-                  totalPrice: 56388,
-                  savingsText: 'Save $15,600/yr (1 Month Free Included)',
-                  turnaround: 'Same-day / Dedicated Video Pod',
-                })}
-                className="px-7 py-3 rounded-full bg-emerald-950/90 hover:bg-emerald-900 text-white font-bold text-xs text-center border border-emerald-500/50 cursor-pointer transition-all hover:border-emerald-400"
-              >
-                Discuss Custom Annual Retainer
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* $89 Trial Video Banner (Apple-styled Clean Card) */}
-        <div className="mt-8 bg-white border border-emerald-200/80 rounded-[32px] p-6 sm:p-9 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-emerald-950/5">
-          <div className="space-y-1.5 text-center md:text-left">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold uppercase tracking-wider border border-emerald-200/80">
-              <Sparkles className="w-3.5 h-3.5 text-[#22C55E]" />
-              <span>Low-Risk Assessment</span>
-            </div>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight">
-              Test drive our editing speed with an <span className="text-[#22C55E]">$89 Trial Video</span>
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-600 max-w-xl leading-relaxed">
-              Order one video. Evaluate our pacing, grading, and turnaround speed. If you choose to subscribe to any plan, your $89 is 100% credited toward your first month.
-            </p>
-          </div>
-
-          <button
-            onClick={() => onBookCall({
-              id: 'trial',
-              name: 'Trial Video',
-              monthlyRate: 89,
-              cycle: 'monthly',
-              totalPrice: 89,
-              savingsText: '100% credited toward your first subscription',
-              turnaround: '24–48h turnaround',
-            })}
-            className="px-7 py-3.5 rounded-full bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-sm whitespace-nowrap cursor-pointer transition-all shadow-lg shadow-[#22C55E]/25 shrink-0 hover:scale-105 active:scale-95"
-          >
-            Order $89 Trial Video
-          </button>
-        </div>
-      </section>
-
-      {/* 
-        ==================================================
-        3 HIGH-AUTHORITY TESTIMONIALS (For Reliability & Trust)
-        Open, Apple-grade editorial presentation with zero generic boxes
-        ==================================================
-      */}
+      {/* 3 HIGH-AUTHORITY TESTIMONIALS */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full border-t border-slate-200/80">
         <div className="max-w-3xl mx-auto text-center mb-14 sm:mb-16">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-bold uppercase tracking-wider mb-3">
@@ -620,111 +180,6 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                 <div className="text-xs text-slate-500 font-medium">CEO, Concrete Agency &bull; 500+ Videos</div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 
-        ==================================================
-        HOW FEVIQO COMPARES (Appealing, Modern Matrix)
-        Clean Apple-grade comparison table with clear winning accents
-        ==================================================
-      */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wider mb-3">
-            <span>Transparent Benchmarks</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">
-            How FEVIQO Compares
-          </h2>
-          <p className="text-sm sm:text-base text-slate-600 mt-2 font-normal">
-            Why leading brands and top creators choose FEVIQO over traditional agencies, marketplaces, and in-house hires.
-          </p>
-        </div>
-
-        {/* Clean Apple Matrix Card */}
-        <div className="bg-white border border-slate-200 rounded-[32px] overflow-hidden shadow-xl shadow-slate-200/50">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs sm:text-sm text-slate-700">
-              <thead className="bg-slate-50/80 text-slate-500 uppercase font-bold tracking-wider text-[11px] border-b border-slate-200">
-                <tr>
-                  <th className="py-4 px-4 sm:px-6">Editing Model</th>
-                  <th className="py-4 px-4">Starting Price</th>
-                  <th className="py-4 px-4 text-center">Dedicated Editor</th>
-                  <th className="py-4 px-4 text-center">Human + AI Speed</th>
-                  <th className="py-4 px-4 text-center">&lt;24h Turnaround</th>
-                  <th className="py-4 px-4 text-center">Private Portal</th>
-                  <th className="py-4 px-4 text-center">Creative Director Check</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {competitors.map((item, idx) => (
-                  <tr 
-                    key={idx}
-                    className={
-                      item.isFeviqo 
-                        ? 'bg-emerald-50/60 font-bold text-slate-950 border-y-2 border-emerald-500/40' 
-                        : 'hover:bg-slate-50/60 transition-colors'
-                    }
-                  >
-                    <td className="py-4 px-4 sm:px-6 font-extrabold text-slate-950 flex items-center gap-3">
-                      {item.isFeviqo ? (
-                        <div className="w-7 h-7 rounded-lg bg-slate-950 p-1 flex items-center justify-center shrink-0 shadow-sm border border-emerald-500/40">
-                          <img src={item.logo} alt="FEVIQO" className="w-full h-full object-contain" />
-                        </div>
-                      ) : (
-                        <div className="w-7 h-7 rounded-lg bg-slate-100 p-0.5 flex items-center justify-center shrink-0 border border-slate-200 overflow-hidden">
-                          <img src={item.logo} alt={item.name} className="w-full h-full object-contain" />
-                        </div>
-                      )}
-                      <span>{item.name}</span>
-                    </td>
-                    <td className="py-4 px-4 font-semibold text-slate-800">{item.price}</td>
-                    
-                    <td className="py-4 px-4 text-center">
-                      {item.dedicated ? (
-                        <Check className="w-4 h-4 text-[#22C55E] mx-auto stroke-[3]" />
-                      ) : (
-                        <X className="w-4 h-4 text-slate-300 mx-auto" />
-                      )}
-                    </td>
-
-                    <td className="py-4 px-4 text-center">
-                      {item.humanAi ? (
-                        <Check className="w-4 h-4 text-[#22C55E] mx-auto stroke-[3]" />
-                      ) : (
-                        <X className="w-4 h-4 text-slate-300 mx-auto" />
-                      )}
-                    </td>
-
-                    <td className="py-4 px-4 text-center">
-                      {item.fastTurnaround ? (
-                        <Check className="w-4 h-4 text-[#22C55E] mx-auto stroke-[3]" />
-                      ) : (
-                        <X className="w-4 h-4 text-slate-300 mx-auto" />
-                      )}
-                    </td>
-
-                    <td className="py-4 px-4 text-center">
-                      {item.nativePlatform ? (
-                        <Check className="w-4 h-4 text-[#22C55E] mx-auto stroke-[3]" />
-                      ) : (
-                        <X className="w-4 h-4 text-slate-300 mx-auto" />
-                      )}
-                    </td>
-
-                    <td className="py-4 px-4 text-center">
-                      {item.pmCheck ? (
-                        <Check className="w-4 h-4 text-[#22C55E] mx-auto stroke-[3]" />
-                      ) : (
-                        <X className="w-4 h-4 text-slate-300 mx-auto" />
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       </section>

@@ -19,7 +19,8 @@ import {
   Sparkles,
   Info,
   Users,
-  Crown
+  Crown,
+  Trash2
 } from 'lucide-react';
 import { ChatMessage, ClientProject } from '../../types';
 
@@ -30,6 +31,7 @@ interface WhatsAppChatProps {
   onSendMessage: (projectId: string, message: Omit<ChatMessage, 'id' | 'projectId'>) => void;
   onUpdateMessageStatus?: (projectId: string, messageId: string, status: 'sent' | 'delivered' | 'read') => void;
   onMarkMessagesRead?: (projectId: string, readerRole: 'client' | 'editor' | 'admin') => void;
+  onDeleteMessage?: (projectId: string, messageId: string) => void;
   editorName?: string;
   clientName?: string;
   className?: string;
@@ -43,6 +45,7 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
   onSendMessage,
   onUpdateMessageStatus,
   onMarkMessagesRead,
+  onDeleteMessage,
   editorName = 'Marco Silvestri',
   clientName = 'Client',
   className = '',
@@ -466,7 +469,22 @@ export const WhatsAppChat: React.FC<WhatsAppChatProps> = ({
                 )}
 
                 {/* Compact Timestamp & WhatsApp Double Ticks Display */}
-                <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-slate-500 select-none">
+                <div className="flex items-center justify-end gap-1.5 mt-1 text-[10px] text-slate-500 select-none">
+                  {onDeleteMessage && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm('Delete this message?')) {
+                          onDeleteMessage(project.id, msg.id);
+                        }
+                      }}
+                      className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity p-0.5"
+                      title="Delete message"
+                    >
+                      <Trash2 className="w-3 h-3 text-slate-400 hover:text-red-500" />
+                    </button>
+                  )}
                   <span>{msg.timestamp}</span>
                   {isMe && (
                     <span className="inline-flex items-center ml-0.5" title={

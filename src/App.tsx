@@ -25,6 +25,7 @@ import { PricingPage } from './components/PricingPage';
 import { FeviqoFlowApp } from './components/FeviqoFlowApp';
 
 // Dedicated Sub-Pages
+import { BookingPage } from './components/pages/BookingPage';
 import { VideoGalleryPage } from './components/pages/VideoGalleryPage';
 import { ContentCreatorsPage } from './components/pages/ContentCreatorsPage';
 import { BusinessOwnersPage } from './components/pages/BusinessOwnersPage';
@@ -47,6 +48,7 @@ export default function App() {
       if (path.includes('/admin') || hash.includes('#admin')) return 'flow';
       if (path.includes('/flow') || hash.includes('#flow')) return 'flow';
       if (path.includes('/pricing') || hash.includes('#pricing')) return 'pricing';
+      if (path.includes('/booking') || hash.includes('#booking')) return 'booking';
       if (path.includes('/gallery') || hash.includes('#gallery')) return 'gallery';
       if (path.includes('/creators') || hash.includes('#creators')) return 'creators';
       if (path.includes('/business') || hash.includes('#business')) return 'business';
@@ -86,6 +88,8 @@ export default function App() {
         setCurrentRoute('flow');
       } else if (path.includes('/pricing') || hash.includes('#pricing')) {
         setCurrentRoute('pricing');
+      } else if (path.includes('/booking') || hash.includes('#booking')) {
+        setCurrentRoute('booking');
       } else if (path.includes('/gallery') || hash.includes('#gallery')) {
         setCurrentRoute('gallery');
       } else if (path.includes('/creators') || path.includes('/for-creators') || hash.includes('#creators')) {
@@ -151,12 +155,16 @@ export default function App() {
   };
 
   const handleOpenBookCall = (plan?: any) => {
-    if (plan && typeof plan === 'object' && typeof plan.name === 'string' && typeof plan.monthlyRate === 'number') {
+    if (plan && typeof plan === 'object' && typeof plan.name === 'string') {
       setPreselectedPlanForBooking(plan as PreselectedPlan);
+    } else if (typeof plan === 'string') {
+      const lower = plan.toLowerCase();
+      const name = lower.includes('scale') ? 'Scale Plan' : lower.includes('in-house') || lower.includes('inhouse') ? 'In-House Studio' : 'Pro Plan';
+      setPreselectedPlanForBooking({ name, monthlyRate: 0, cycle: 'quarterly', details: '' });
     } else {
       setPreselectedPlanForBooking(null);
     }
-    setIsBookCallModalOpen(true);
+    navigateTo('booking');
   };
 
   const handleCloseBookCall = () => {
@@ -182,6 +190,17 @@ export default function App() {
 
   const renderCurrentRoute = () => {
     switch (currentRoute) {
+      case 'booking':
+        return (
+          <BookingPage 
+            preselectedPlan={preselectedPlanForBooking}
+            onNavigateHome={() => navigateTo('home')}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigatePage={(route) => navigateTo(route)}
+            onOpenFlow={(view) => navigateTo('flow', view)}
+          />
+        );
+
       case 'pricing':
         return (
           <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-900 text-white font-sans selection:bg-[#22C55E] selection:text-white">

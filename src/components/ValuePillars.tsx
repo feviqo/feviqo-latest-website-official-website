@@ -23,7 +23,7 @@ export const ValuePillars: React.FC<ValuePillarsProps> = ({ onGetStarted }) => {
     borderRadius: assets.displaySettings?.pillarImageRadius !== undefined && assets.displaySettings.pillarImageRadius > 0
       ? `${assets.displaySettings.pillarImageRadius}px` 
       : undefined,
-    objectFit: assets.displaySettings?.pillarImageFit || 'contain',
+    objectFit: 'contain',
   };
 
   return (
@@ -57,13 +57,13 @@ export const ValuePillars: React.FC<ValuePillarsProps> = ({ onGetStarted }) => {
               </p>
             </div>
             <div className="order-1 lg:order-2 flex justify-center">
-              <div className="w-full max-w-3xl flex justify-center items-center">
+              <div className="w-full max-w-2xl flex justify-center items-center">
                 <SafeImage
                   src={assets.creativeDecisionsImage}
-                  fallbackSrc="/images/1st-image.jpeg"
+                  fallbackSrc="/images/1 Creative Decisions.png"
                   alt="Creative Decisions"
                   style={pillarImageStyle}
-                  className="max-w-full w-auto h-auto object-contain transition-all duration-300"
+                  className="w-full h-auto max-h-[460px] object-contain transition-all duration-300 rounded-xl"
                 />
               </div>
             </div>
@@ -72,13 +72,13 @@ export const ValuePillars: React.FC<ValuePillarsProps> = ({ onGetStarted }) => {
           {/* Pillar 2: Faster Turnaround */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
             <div className="order-1 flex justify-center">
-              <div className="w-full max-w-3xl flex justify-center items-center">
+              <div className="w-full max-w-2xl flex justify-center items-center">
                 <SafeImage
                   src={assets.fasterTurnaroundImage}
-                  fallbackSrc="/images/2nd.jpeg"
+                  fallbackSrc="/images/2 Faster Turnaround.png"
                   alt="Faster Turnaround"
                   style={pillarImageStyle}
-                  className="max-w-full w-auto h-auto object-contain transition-all duration-300"
+                  className="w-full h-auto max-h-[460px] object-contain transition-all duration-300 rounded-xl"
                 />
               </div>
             </div>
@@ -119,13 +119,13 @@ export const ValuePillars: React.FC<ValuePillarsProps> = ({ onGetStarted }) => {
               </div>
             </div>
             <div className="order-1 lg:order-2 flex justify-center">
-              <div className="w-full max-w-3xl flex justify-center items-center">
+              <div className="w-full max-w-2xl flex justify-center items-center">
                 <SafeImage
                   src={assets.streamlinedProcessImage}
-                  fallbackSrc="/images/3rd.jpeg"
+                  fallbackSrc="/images/3 Streamlined Process.png"
                   alt="Streamlined Process"
                   style={pillarImageStyle}
-                  className="max-w-full w-auto h-auto object-contain transition-all duration-300"
+                  className="w-full h-auto max-h-[460px] object-contain transition-all duration-300 rounded-xl"
                 />
               </div>
             </div>

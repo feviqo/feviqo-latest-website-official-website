@@ -222,21 +222,47 @@ function saveEditors(editors: any[]) {
 let smtpTransporter: any = null;
 
 function getSmtpTransporter(): any {
-  if (!smtpTransporter && process.env.SMTP_HOST) {
-    try {
+  if (smtpTransporter) return smtpTransporter;
+
+  const rawUser = process.env.SMTP_USER || '';
+  const rawPass = process.env.SMTP_PASS || '';
+  const rawHost = process.env.SMTP_HOST || '';
+  const rawService = process.env.SMTP_SERVICE || '';
+
+  if (!rawUser || !rawPass) {
+    return null;
+  }
+
+  try {
+    const user = rawUser.trim();
+    // Auto-clean spaces from Google App Password (e.g. "abcd efgh ijkl mnop" -> "abcdefghijklmnop")
+    const pass = rawPass.trim().replace(/\s+/g, '');
+    const isGmail = rawService.toLowerCase() === 'gmail' || rawHost.toLowerCase().includes('gmail') || user.toLowerCase().includes('@gmail.com');
+
+    if (isGmail) {
       smtpTransporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
+        service: 'gmail',
+        auth: { user, pass },
+      });
+      console.log(`[SMTP] Initialized Gmail transporter for ${user}`);
+    } else {
+      const host = rawHost.trim() || 'smtp.gmail.com';
+      const port = parseInt(process.env.SMTP_PORT || '587', 10);
+      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+
+      smtpTransporter = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: { user, pass },
+        tls: {
+          rejectUnauthorized: false,
         },
       });
-      console.log(`[SMTP] Initialized transporter for ${process.env.SMTP_HOST}`);
-    } catch (err) {
-      console.error('[SMTP] Failed to initialize transporter:', err);
+      console.log(`[SMTP] Initialized SMTP transporter for ${host}:${port}`);
     }
+  } catch (err) {
+    console.error('[SMTP] Failed to initialize transporter:', err);
   }
   return smtpTransporter;
 }
@@ -263,15 +289,15 @@ async function sendServerEmail(params: {
   html: string;
   type?: string;
   data?: any;
-}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+}): Promise<{ success: boolean; messageId?: string; provider?: string; error?: string }> {
   const { to, subject, html, type = 'general', data = {} } = params;
   const messageId = `email-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-  // 1. Try Nodemailer SMTP
+  // 1. Try Nodemailer SMTP (Gmail App Password or custom SMTP)
   const transporter = getSmtpTransporter();
   if (transporter) {
     try {
-      const from = process.env.SMTP_FROM || process.env.SMTP_USER || '"FEVIQO Production" <partner@feviqo.com>';
+      const from = process.env.SMTP_FROM || process.env.SMTP_USER || '"FEVIQO Production" <rexanmedia01@gmail.com>';
       const info = await transporter.sendMail({
         from,
         to,
@@ -280,9 +306,9 @@ async function sendServerEmail(params: {
       });
       console.log(`[SMTP Sent] messageId: ${info.messageId} to ${to}`);
       logDispatchedEmail({ id: info.messageId, to, subject, type, provider: 'smtp', sentAt: new Date().toISOString() });
-      return { success: true, messageId: info.messageId };
-    } catch (err) {
-      console.warn('[SMTP Dispatch Error, falling back]:', err);
+      return { success: true, messageId: info.messageId, provider: 'smtp' };
+    } catch (err: any) {
+      console.warn('[SMTP Dispatch Error, falling back]:', err.message || err);
     }
   }
 
@@ -306,7 +332,7 @@ async function sendServerEmail(params: {
         const json = await res.json();
         console.log(`[Resend Sent] id: ${json.id} to ${to}`);
         logDispatchedEmail({ id: json.id, to, subject, type, provider: 'resend', sentAt: new Date().toISOString() });
-        return { success: true, messageId: json.id };
+        return { success: true, messageId: json.id, provider: 'resend' };
       }
     } catch (err) {
       console.warn('[Resend Dispatch Error, falling back]:', err);
@@ -323,7 +349,7 @@ async function sendServerEmail(params: {
       },
       body: JSON.stringify({
         _subject: subject,
-        _replyto: 'partner@feviqo.com',
+        _replyto: 'rexanmedia01@gmail.com',
         notificationType: type,
         recipient: to,
         ...data,
@@ -334,7 +360,7 @@ async function sendServerEmail(params: {
     if (res.ok) {
       console.log(`[FormSubmit Sent] to ${to}`);
       logDispatchedEmail({ id: messageId, to, subject, type, provider: 'formsubmit', sentAt: new Date().toISOString() });
-      return { success: true, messageId };
+      return { success: true, messageId, provider: 'formsubmit' };
     }
   } catch (err) {
     console.warn('[FormSubmit Dispatch Error]:', err);
@@ -342,7 +368,7 @@ async function sendServerEmail(params: {
 
   // Always log even in sandbox mode so operations succeed
   logDispatchedEmail({ id: messageId, to, subject, type, provider: 'local_recorded', sentAt: new Date().toISOString() });
-  return { success: true, messageId };
+  return { success: true, messageId, provider: 'local_recorded' };
 }
 
 // --- RECURSIVE BLOB URL SANITIZER ---
@@ -1309,6 +1335,38 @@ app.get('/api/chat/:projectId', (req, res) => {
   }
 });
 
+app.delete('/api/chat/:projectId/:msgId', (req, res) => {
+  try {
+    const { projectId, msgId } = req.params;
+    const all = getProjects();
+    const proj = all.find((p) => p.id === projectId);
+    if (!proj) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+    proj.chatMessages = (proj.chatMessages || []).filter((m: any) => m.id !== msgId);
+    saveProject(proj);
+    return res.json({ success: true, message: 'Message removed' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to delete message' });
+  }
+});
+
+app.delete('/api/chat/:projectId', (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const all = getProjects();
+    const proj = all.find((p) => p.id === projectId);
+    if (!proj) {
+      return res.status(404).json({ success: false, error: 'Project not found' });
+    }
+    proj.chatMessages = [];
+    saveProject(proj);
+    return res.json({ success: true, message: 'Chat history cleared' });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to clear chat history' });
+  }
+});
+
 // List all uploaded media assets (from uploads/ and public/videos/)
 app.get('/api/uploads', (req, res) => {
   try {
@@ -1459,28 +1517,75 @@ app.post('/api/notifications/send-email', async (req, res) => {
   console.log(`[FEVIQO Email Dispatch] Sending ${type} email to ${to}: "${subject}"`);
   const result = await sendServerEmail({ to, subject, html: html || `<p>${subject}</p>`, type, data });
 
-  // Automatically mirror all notifications to primary partner Gmail
-  const PRIMARY_STUDIO_EMAIL = 'partner@feviqo.com';
-  if (to.toLowerCase() !== PRIMARY_STUDIO_EMAIL.toLowerCase()) {
-    sendServerEmail({
-      to: PRIMARY_STUDIO_EMAIL,
-      subject: `[FEVIQO Alert] ${subject}`,
-      html: `
-        <div style="font-family:sans-serif; background:#0B0B0D; color:#FFFFFF; padding:24px; border-radius:12px;">
-          <h3 style="color:#22C55E; margin-top:0;">Notification Dispatch Record</h3>
-          <p><strong>To:</strong> ${to}</p>
-          <p><strong>Event:</strong> ${type}</p>
-          <p><strong>Subject:</strong> ${subject}</p>
-          <hr style="border-color:#27272A; margin:16px 0;" />
-          ${html || `<p>${subject}</p>`}
-        </div>
-      `,
-      type,
-      data,
-    }).catch((e) => console.warn('[Partner Mirror Email Warning]:', e));
+  // Automatically mirror all notifications to Studio Owner (Rexan) & Partner inbox
+  const STUDIO_EMAILS = Array.from(new Set([
+    process.env.NOTIFICATION_EMAIL || 'rexanmedia01@gmail.com',
+    'rexanmedia01@gmail.com',
+    'partner@feviqo.com',
+  ].map(e => e.toLowerCase())));
+
+  for (const studioEmail of STUDIO_EMAILS) {
+    if (to.toLowerCase() !== studioEmail) {
+      sendServerEmail({
+        to: studioEmail,
+        subject: `[FEVIQO Alert] ${subject}`,
+        html: `
+          <div style="font-family:sans-serif; background:#0B0B0D; color:#FFFFFF; padding:24px; border-radius:12px;">
+            <h3 style="color:#22C55E; margin-top:0;">Notification Dispatch Record</h3>
+            <p><strong>To:</strong> ${to}</p>
+            <p><strong>Event:</strong> ${type}</p>
+            <p><strong>Subject:</strong> ${subject}</p>
+            <hr style="border-color:#27272A; margin:16px 0;" />
+            ${html || `<p>${subject}</p>`}
+          </div>
+        `,
+        type,
+        data,
+      }).catch((e) => console.warn(`[Studio Mirror Email Warning to ${studioEmail}]:`, e));
+    }
   }
 
   return res.json(result);
+});
+
+// Diagnostic endpoint to verify email delivery setup
+app.post('/api/notifications/test-email', async (req, res) => {
+  const targetEmail = req.body.to || process.env.NOTIFICATION_EMAIL || 'rexanmedia01@gmail.com';
+  console.log(`[Diagnostic] Testing email dispatch to ${targetEmail}...`);
+
+  const transporter = getSmtpTransporter();
+  const hasSmtp = !!transporter;
+  const hasResend = !!process.env.RESEND_API_KEY;
+
+  const result = await sendServerEmail({
+    to: targetEmail,
+    subject: `FEVIQO Email Test - ${new Date().toLocaleTimeString()}`,
+    html: `
+      <div style="font-family:sans-serif; background:#04150D; color:#FFFFFF; padding:24px; border-radius:12px; border:1px solid #22C55E;">
+        <h2 style="color:#22C55E; margin-top:0;">FEVIQO Email System Verified!</h2>
+        <p>This is a test notification confirming that email sending and receiving is fully operational.</p>
+        <p><strong>Configured Transporters:</strong></p>
+        <ul>
+          <li>SMTP Configured: ${hasSmtp ? 'YES (Active)' : 'NO (Set SMTP_USER & SMTP_PASS)'}</li>
+          <li>Resend Configured: ${hasResend ? 'YES' : 'NO'}</li>
+          <li>Fallback HTTP Webhook: Active</li>
+        </ul>
+        <p style="color:#A7F3D0; font-size:12px;">Dispatched at: ${new Date().toISOString()}</p>
+      </div>
+    `,
+    type: 'test_notification',
+    data: { testTime: new Date().toISOString() },
+  });
+
+  return res.json({
+    ...result,
+    diagnostics: {
+      targetEmail,
+      smtpConfigured: hasSmtp,
+      resendConfigured: hasResend,
+      smtpUser: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 4)}***` : 'Not Set',
+    },
+  });
 });
 
 // 3. Strategy Call Bookings & Client Lead Management API
@@ -1513,31 +1618,139 @@ app.post('/api/strategy-calls', async (req, res) => {
     leads.unshift(newLead);
     fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2), 'utf-8');
 
-    // Notify agency team at partner@feviqo.com
+    const clientFullName = newLead.fullName || [newLead.firstName, newLead.lastName].filter(Boolean).join(' ') || newLead.name || 'Valued Client';
+    const clientPhone = newLead.phoneNumber || newLead.phone || 'N/A';
+    const clientCompany = newLead.company || newLead.businessName || 'N/A';
+    const clientWebsite = newLead.website || newLead.channelUrl || 'N/A';
+    const selectedPlan = newLead.selectedPackage || newLead.packageTier || newLead.plan || 'Custom Consultation';
+    const bookingDate = newLead.preferredDate || newLead.bookingDate || 'Flexible';
+    const bookingTime = newLead.preferredTime || newLead.bookingTime || 'Flexible';
+    const videoGoals = newLead.videoType || newLead.videoFormat || 'Brand Video Production';
+    const monthlyVolume = newLead.monthlyVolume || 'Standard';
+    const clientNotes = newLead.notes || newLead.creativeInstructions || 'None provided';
+
+    // 1. Comprehensive Admin Notification Email HTML
     const agencyHtml = `
-      <div style="font-family:sans-serif; background:#0B0B0D; color:#FFFFFF; padding:24px; border-radius:12px;">
-        <h2 style="color:#22C55E; margin-top:0;">🔥 New Strategy Call Booked</h2>
-        <p>A new client has scheduled a strategy call on FEVIQO:</p>
-        <table style="width:100%; border-collapse:collapse; color:#F1F5F9; font-size:14px;">
-          <tr><td style="padding:6px 0; color:#94A3B8;">Full Name:</td><td><strong>${newLead.fullName || newLead.firstName + ' ' + (newLead.lastName || '')}</strong></td></tr>
-          <tr><td style="padding:6px 0; color:#94A3B8;">Email:</td><td><a href="mailto:${newLead.email}" style="color:#22C55E;">${newLead.email}</a></td></tr>
-          <tr><td style="padding:6px 0; color:#94A3B8;">Phone:</td><td>${newLead.phone || 'N/A'}</td></tr>
-          <tr><td style="padding:6px 0; color:#94A3B8;">Industry:</td><td>${newLead.industry || 'N/A'}</td></tr>
-          <tr><td style="padding:6px 0; color:#94A3B8;">Video Format:</td><td>${newLead.videoFormat || newLead.videoType || 'N/A'}</td></tr>
-          <tr><td style="padding:6px 0; color:#94A3B8;">Monthly Volume:</td><td>${newLead.monthlyVolume || 'N/A'}</td></tr>
-          <tr><td style="padding:6px 0; color:#94A3B8;">Booking Slot:</td><td><strong>${newLead.bookingDate || newLead.preferredDate || 'N/A'} at ${newLead.bookingTime || newLead.preferredTime || 'N/A'}</strong></td></tr>
-        </table>
-        <p style="margin-top:20px;"><a href="https://feviqo.com/flow" style="display:inline-block; padding:10px 20px; background:#22C55E; color:#000000; text-decoration:none; font-weight:bold; border-radius:8px;">Open FEVIQO Flow Portal</a></p>
+      <div style="font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#0B0B0D; color:#FFFFFF; padding:32px; border-radius:16px; border:1px solid #22C55E; max-width:600px; margin:0 auto;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:16px;">
+          <span style="background:#22C55E; color:#051D10; font-size:11px; font-weight:900; padding:4px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:1px;">NEW STRATEGY CALL</span>
+        </div>
+        <h2 style="color:#FFFFFF; font-size:24px; font-weight:800; margin:0 0 8px 0; letter-spacing:-0.5px;">
+          🔥 New Strategy Call Booked: <span style="color:#22C55E;">${clientFullName}</span>
+        </h2>
+        <p style="color:#94A3B8; font-size:14px; margin:0 0 24px 0;">
+          A prospective client has submitted all project details through the FEVIQO booking portal.
+        </p>
+
+        <div style="background:#131316; border:1px solid #27272A; border-radius:12px; padding:20px; margin-bottom:24px;">
+          <h3 style="color:#22C55E; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin:0 0 14px 0;">
+            Client &amp; Company Overview
+          </h3>
+          <table style="width:100%; border-collapse:collapse; color:#F1F5F9; font-size:14px;">
+            <tr><td style="padding:7px 0; color:#71717A; width:140px;">Full Name:</td><td><strong style="color:#FFFFFF;">${clientFullName}</strong></td></tr>
+            <tr><td style="padding:7px 0; color:#71717A;">Direct Email:</td><td><a href="mailto:${newLead.email}" style="color:#22C55E; font-weight:600; text-decoration:none;">${newLead.email}</a></td></tr>
+            <tr><td style="padding:7px 0; color:#71717A;">Phone Number:</td><td><strong style="color:#FFFFFF;">${clientPhone}</strong></td></tr>
+            <tr><td style="padding:7px 0; color:#71717A;">Company / Channel:</td><td><strong style="color:#FFFFFF;">${clientCompany}</strong></td></tr>
+            <tr><td style="padding:7px 0; color:#71717A;">Website / Link:</td><td>${clientWebsite !== 'N/A' ? `<a href="${clientWebsite.startsWith('http') ? clientWebsite : `https://${clientWebsite}`}" style="color:#38BDF8;" target="_blank">${clientWebsite}</a>` : 'N/A'}</td></tr>
+            <tr><td style="padding:7px 0; color:#71717A;">Industry:</td><td><strong style="color:#FFFFFF;">${newLead.industry || 'Content & Video'}</strong></td></tr>
+          </table>
+        </div>
+
+        <div style="background:#131316; border:1px solid #27272A; border-radius:12px; padding:20px; margin-bottom:24px;">
+          <h3 style="color:#22C55E; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin:0 0 14px 0;">
+            Project Requirements &amp; Slot
+          </h3>
+          <table style="width:100%; border-collapse:collapse; color:#F1F5F9; font-size:14px;">
+            <tr><td style="padding:7px 0; color:#71717A; width:140px;">Target Package:</td><td><strong style="color:#22C55E;">${selectedPlan}</strong></td></tr>
+            <tr><td style="padding:7px 0; color:#71717A;">Video Format:</td><td><strong style="color:#FFFFFF;">${videoGoals}</strong></td></tr>
+            <tr><td style="padding:7px 0; color:#71717A;">Monthly Volume:</td><td><strong style="color:#FFFFFF;">${monthlyVolume}</strong></td></tr>
+            <tr><td style="padding:7px 0; color:#71717A;">Preferred Date/Time:</td><td><strong style="color:#FBBF24;">${bookingDate} at ${bookingTime}</strong></td></tr>
+            <tr><td style="padding:7px 0; color:#71717A; vertical-align:top;">Client Notes:</td><td style="color:#CBD5E1; line-height:1.5;">${clientNotes}</td></tr>
+          </table>
+        </div>
+
+        <div style="text-align:center; padding-top:8px;">
+          <a href="https://feviqo.com/admin" style="display:inline-block; padding:14px 28px; background:#22C55E; color:#051D10; text-decoration:none; font-weight:800; font-size:14px; border-radius:10px; box-shadow:0 4px 14px rgba(34, 197, 94, 0.4);">
+            View Lead in FEVIQO Admin Portal &rarr;
+          </a>
+        </div>
       </div>
     `;
 
-    sendServerEmail({
-      to: 'partner@feviqo.com',
-      subject: `🔥 [FEVIQO Strategy Call] ${newLead.fullName || newLead.email} (${newLead.industry || 'Lead'})`,
-      html: agencyHtml,
-      type: 'strategy_call_booked',
-      data: newLead,
-    }).catch((e) => console.warn('Failed to send partner notification:', e));
+    // 2. Client Confirmation Email HTML
+    const clientConfirmationHtml = `
+      <div style="font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background:#0B0B0D; color:#FFFFFF; padding:32px; border-radius:16px; border:1px solid #22C55E; max-width:600px; margin:0 auto;">
+        <div style="text-align:center; margin-bottom:24px;">
+          <h1 style="color:#22C55E; font-size:28px; font-weight:900; margin:0; letter-spacing:-0.5px;">FEVIQO</h1>
+          <p style="color:#94A3B8; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-top:4px;">Premium Video Post-Production</p>
+        </div>
+
+        <h2 style="color:#FFFFFF; font-size:22px; font-weight:800; margin:0 0 12px 0;">
+          Your 1-on-1 Strategy Call is Confirmed! 🎬
+        </h2>
+        <p style="color:#E2E8F0; font-size:15px; line-height:1.6; margin:0 0 20px 0;">
+          Hi ${newLead.firstName || clientFullName}, thanks for booking with FEVIQO. Our senior creative production team has received your details and we look forward to discussing your video scaling strategy.
+        </p>
+
+        <div style="background:#131316; border:1px solid #27272A; border-radius:12px; padding:20px; margin-bottom:24px;">
+          <h3 style="color:#22C55E; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin:0 0 14px 0;">
+            Scheduled Consultation Summary
+          </h3>
+          <table style="width:100%; border-collapse:collapse; color:#F1F5F9; font-size:14px;">
+            <tr><td style="padding:6px 0; color:#71717A; width:140px;">Selected Package:</td><td><strong style="color:#22C55E;">${selectedPlan}</strong></td></tr>
+            <tr><td style="padding:6px 0; color:#71717A;">Proposed Date &amp; Time:</td><td><strong style="color:#FBBF24;">${bookingDate} at ${bookingTime}</strong></td></tr>
+            <tr><td style="padding:6px 0; color:#71717A;">Format / Scope:</td><td><strong style="color:#FFFFFF;">${videoGoals}</strong></td></tr>
+            <tr><td style="padding:6px 0; color:#71717A;">Meeting Location:</td><td><strong style="color:#38BDF8;">Google Meet / Private Studio Link (sent before call)</strong></td></tr>
+          </table>
+        </div>
+
+        <div style="background:#062315; border:1px solid #166534; border-radius:12px; padding:18px; margin-bottom:24px;">
+          <h4 style="color:#4ADE80; font-size:14px; font-weight:700; margin:0 0 8px 0;">⚡ What We Will Cover:</h4>
+          <ul style="color:#D1FAE5; font-size:13px; line-height:1.7; margin:0; padding-left:20px;">
+            <li>Matching you with your dedicated Lead Video Editor</li>
+            <li>Establishing brand pacing, color palettes &amp; motion style guide</li>
+            <li>Setting up your private FEVIQO Flow client portal &amp; Slack channel</li>
+            <li>Turnaround workflows (sub-24h for Shorts, 24–48h for Long-form)</li>
+          </ul>
+        </div>
+
+        <p style="color:#94A3B8; font-size:13px; line-height:1.6; margin:0 0 24px 0;">
+          Need to reschedule or have questions before our chat? Reply directly to this email or reach us at <a href="mailto:partner@feviqo.com" style="color:#22C55E;">partner@feviqo.com</a>.
+        </p>
+
+        <div style="border-top:1px solid #27272A; padding-top:16px; text-align:center; font-size:12px; color:#52525B;">
+          FEVIQO Studio • Dedicated High-Retention Video Post-Production
+        </div>
+      </div>
+    `;
+
+    // 3. Dispatch to Studio Owner (Rexan) and Partner Inboxes
+    const ADMIN_RECIPIENTS = Array.from(new Set([
+      'partner@feviqo.com',
+      'rexanmedia01@gmail.com',
+      process.env.NOTIFICATION_EMAIL || 'rexanmedia01@gmail.com',
+    ].map(e => e.toLowerCase())));
+
+    for (const adminEmail of ADMIN_RECIPIENTS) {
+      sendServerEmail({
+        to: adminEmail,
+        subject: `🔥 [FEVIQO Strategy Call] ${clientFullName} (${newLead.industry || 'Lead'}) - ${selectedPlan}`,
+        html: agencyHtml,
+        type: 'strategy_call_booked',
+        data: newLead,
+      }).catch((e) => console.warn(`Failed to send partner notification to ${adminEmail}:`, e));
+    }
+
+    // 4. Dispatch Confirmation to the Client
+    if (newLead.email && newLead.email.includes('@')) {
+      sendServerEmail({
+        to: newLead.email,
+        subject: `Your FEVIQO 1-on-1 Strategy Call is Confirmed 🎬`,
+        html: clientConfirmationHtml,
+        type: 'client_booking_confirmation',
+        data: newLead,
+      }).catch((e) => console.warn('Failed to send client confirmation email:', e));
+    }
 
     return res.json({ success: true, lead: newLead });
   } catch (err) {

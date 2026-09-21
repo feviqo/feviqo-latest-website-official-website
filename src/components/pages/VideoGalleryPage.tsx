@@ -443,31 +443,37 @@ export const VideoGalleryPage: React.FC<VideoGalleryPageProps> = ({
             <span className="text-xs font-bold text-emerald-700">500M+ Organic Views Driven</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl font-black text-slate-950 tracking-tight leading-[1.08]">
-            The Master <span className="bg-gradient-to-r from-slate-950 via-slate-800 to-[#16a34a] bg-clip-text text-transparent">Video Gallery</span>
+          <h1 className="font-coolvetica text-4xl sm:text-6xl font-bold text-slate-950 tracking-tight leading-[1.06]">
+            The Master <span className="font-editorial-italic font-normal text-[#16a34a]">Video Gallery</span>
           </h1>
 
           <p className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed font-normal">
             Browse actual client edits produced by FEVIQO across YouTube long-form, viral TikToks, conversion video ads, and high-retention social content.
           </p>
 
-          {/* Styled Stats Ribbon: 16 Verified Client Cuts */}
-          <div className="inline-flex flex-wrap items-center justify-center gap-4 sm:gap-8 py-3 px-7 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-sm text-xs">
+          {/* Styled Stats Ribbon: Ultra-Premium Glassmorphic Stats Capsule */}
+          <div className="inline-flex flex-wrap items-center justify-center gap-3 sm:gap-6 py-2.5 sm:py-3 px-5 sm:px-8 rounded-2xl sm:rounded-full bg-white/90 backdrop-blur-xl border border-slate-200/80 shadow-lg shadow-slate-200/40 text-xs">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-black text-xs">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-[#16a34a] to-[#22C55E] text-white font-black text-xs shadow-sm shadow-emerald-500/20">
                 {filteredVideos.length}
               </span>
-              <span className="font-bold text-slate-900">Verified Client Cuts</span>
+              <span className="font-extrabold text-slate-900 tracking-tight">Verified Client Cuts</span>
             </div>
-            <span className="hidden sm:inline text-slate-300">|</span>
-            <div className="flex items-center gap-2">
-              <span className="font-black text-slate-900 text-sm">4.9 / 5</span>
-              <span className="text-slate-600 font-medium">Client Rating</span>
+            
+            <div className="hidden sm:block h-3.5 w-px bg-slate-200/90" />
+            
+            <div className="flex items-center gap-1.5">
+              <span className="text-amber-500 font-black">★</span>
+              <span className="font-black text-slate-950 text-sm tracking-tight">4.9 / 5</span>
+              <span className="text-slate-500 font-medium">Client Rating</span>
             </div>
-            <span className="hidden sm:inline text-slate-300">|</span>
-            <div className="flex items-center gap-2">
-              <span className="font-black text-[#16a34a] text-sm">Sub-24h</span>
-              <span className="text-slate-600 font-medium">Average Turnaround</span>
+            
+            <div className="hidden sm:block h-3.5 w-px bg-slate-200/90" />
+            
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+              <span className="font-black text-[#15803d] text-sm tracking-tight">Sub-24h</span>
+              <span className="text-slate-500 font-medium">Average Turnaround</span>
             </div>
           </div>
 

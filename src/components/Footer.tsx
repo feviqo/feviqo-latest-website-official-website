@@ -13,7 +13,7 @@ import {
   Check,
   Copy
 } from 'lucide-react';
-import { FeviqoWordmark } from './FeviqoLogo';
+import { FeviqoHeaderLogo } from './FeviqoLogo';
 import { AppRoute } from '../types';
 
 interface FooterProps {
@@ -164,14 +164,14 @@ export const Footer: React.FC<FooterProps> = ({
               className="inline-block group"
               aria-label="FEVIQO Home"
             >
-              <FeviqoWordmark theme="dark" className="h-8 sm:h-9 w-auto object-contain transition-opacity group-hover:opacity-90" />
+              <FeviqoHeaderLogo theme="dark" className="h-8 sm:h-9 w-auto object-contain transition-opacity group-hover:opacity-90" />
             </a>
             <p className="text-emerald-100/90 text-xs sm:text-sm leading-relaxed font-normal max-w-sm">
               Unlimited professional video editing service for creators, businesses, and high-growth brands worldwide.
             </p>
             <div className="flex items-center gap-3 pt-2">
               <a 
-                href="https://facebook.com/feviqoofficial" 
+                href="https://www.facebook.com/people/Feviqo/61588711067413/" 
                 target="_blank" 
                 rel="noreferrer" 
                 aria-label="FEVIQO Facebook"
@@ -180,7 +180,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <Facebook className="w-4 h-4" />
               </a>
               <a 
-                href="https://instagram.com/feviqoofficial" 
+                href="https://www.instagram.com/feviqo.co/" 
                 target="_blank" 
                 rel="noreferrer" 
                 aria-label="FEVIQO Instagram"
@@ -189,7 +189,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <Instagram className="w-4 h-4" />
               </a>
               <a 
-                href="https://linkedin.com/company/feviqo" 
+                href="https://www.linkedin.com/company/feviqo" 
                 target="_blank" 
                 rel="noreferrer" 
                 aria-label="FEVIQO LinkedIn"
@@ -198,7 +198,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <Linkedin className="w-4 h-4" />
               </a>
               <a 
-                href="https://youtube.com/@feviqo" 
+                href="https://www.youtube.com/@feviqo" 
                 target="_blank" 
                 rel="noreferrer" 
                 aria-label="FEVIQO YouTube"

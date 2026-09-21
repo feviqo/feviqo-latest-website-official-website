@@ -1,8 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
+import { WordFadeUpHeadline } from '../WordFadeUpHeadline';
 import { ArrowRight, Check, Volume2, VolumeX, TrendingUp, ShieldCheck, DollarSign, Layers, Star } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { SolutionsSwitcher } from '../SolutionsSwitcher';
+import { HorizontalVideoShowcase } from '../HorizontalVideoShowcase';
+import { StillHavingDoubtsBanner } from '../StillHavingDoubtsBanner';
 import { AppRoute } from '../../types';
 
 interface BusinessOwnersPageProps {
@@ -14,6 +17,27 @@ interface BusinessOwnersPageProps {
   onNavigateFlow?: (view?: 'login' | 'register' | 'admin') => void;
   onNavigatePage?: (route: AppRoute) => void;
 }
+
+const BUSINESS_SHOWCASE_VIDEOS = [
+  {
+    id: 'horiz-4',
+    src: 'https://stream.mux.com/OWmigFb1rqJZ7H3cjtFkEWYbLs2vBQDyNCmm1V4lnEc.m3u8',
+    poster: 'https://image.mux.com/OWmigFb1rqJZ7H3cjtFkEWYbLs2vBQDyNCmm1V4lnEc/thumbnail.jpg?time=1',
+    title: 'Commercial SaaS Product Launch & Feature Reel',
+  },
+  {
+    id: 'horiz-5',
+    src: 'https://stream.mux.com/KA56Y3M8FLwvVDX91p012krrmMftMnLQSwlar01QlEkqc.m3u8',
+    poster: 'https://image.mux.com/KA56Y3M8FLwvVDX91p012krrmMftMnLQSwlar01QlEkqc/thumbnail.jpg?time=1',
+    title: 'Founder Vision & Brand Documentary Profile',
+  },
+  {
+    id: 'horiz-2',
+    src: 'https://stream.mux.com/K2FDm6cIXH1hmj00KDCoVtmUP00WfWqS8E5QrioFZt1LE.m3u8',
+    poster: 'https://image.mux.com/K2FDm6cIXH1hmj00KDCoVtmUP00WfWqS8E5QrioFZt1LE/thumbnail.jpg?time=1',
+    title: 'Narrative Brand Storytelling & Color Grading',
+  },
+];
 
 export const BusinessOwnersPage: React.FC<BusinessOwnersPageProps> = ({
   onBackToHome,
@@ -51,73 +75,102 @@ export const BusinessOwnersPage: React.FC<BusinessOwnersPageProps> = ({
         onSelectTab={(tab) => onNavigatePage(tab)}
       />
 
-      {/* Hero Section */}
-      <section className="pt-8 sm:pt-14 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-6 text-emerald-900">
-          <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
-            SOLUTIONS &bull; BUSINESS OWNERS &amp; FOUNDERS
-          </span>
-        </div>
+      {/* Hero Section - Split 2-Column Text Left / Video Right */}
+      <section className="pt-8 sm:pt-14 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          {/* Left Column: Two-Typography Headline & Value Props */}
+          <div className="lg:col-span-6 text-left">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-6 text-emerald-900 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
+                SOLUTIONS &bull; BUSINESS OWNERS &amp; FOUNDERS
+              </span>
+            </div>
 
-        {/* Text-only transition animation on switch */}
-        <motion.div
-          key="business-hero-text"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#0B0B0D] leading-[1.08] max-w-4xl mx-auto mb-5">
-            Video Editing for <span className="text-[#22C55E]">Business Owners</span>
-          </h1>
-
-          <p className="text-base sm:text-xl text-slate-600 max-w-2xl mx-auto mb-8 font-normal leading-relaxed">
-            Scale your revenue, brand authority, and customer trust with video. High-converting ads, customer testimonials, and brand assets edited on demand.
-          </p>
-        </motion.div>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-          <button
-            onClick={onBookCall}
-            className="w-full sm:w-auto px-9 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-base sm:text-lg shadow-lg shadow-[#22C55E]/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
-          >
-            <span>Get Started!</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onNavigatePricing}
-            className="w-full sm:w-auto px-7 py-4 rounded-xl sm:rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base border border-slate-200 transition-colors cursor-pointer"
-          >
-            Explore Business Plans
-          </button>
-        </div>
-
-        {/* Video Showcase with Sound Toggle */}
-        <div className="relative mx-auto max-w-4xl w-full mb-14">
-          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl border border-slate-200">
-            <button
-              type="button"
-              onClick={toggleSound}
-              className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/80 text-white text-xs font-semibold backdrop-blur-md border border-white/20 shadow-md cursor-pointer hover:bg-black"
+            {/* Text-only transition animation with Two Typography Styles */}
+            <motion.div
+              key="business-hero-text"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
             >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-[#22C55E]" />}
-              <span>{isMuted ? 'Click for sound' : 'Sound on'}</span>
-            </button>
-            <video
-              ref={videoRef}
-              src="/videos/Sequence-01.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="w-full h-full object-cover"
-              onClick={toggleSound}
-            />
+            <div className="mb-5">
+              <WordFadeUpHeadline
+                className="font-coolvetica text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#0B0B0D] leading-[1.06]"
+                words={[
+                  { text: "Video" },
+                  { text: "Production" },
+                  { text: "for" },
+                  { text: "Visionary", className: "font-editorial-italic font-normal text-[#16a34a]" },
+                  { text: "Founders", className: "font-editorial-italic font-normal text-[#16a34a]" },
+                ]}
+              />
+            </div>
+
+              <p className="font-neue text-base sm:text-lg text-slate-600 max-w-xl mb-8 font-normal leading-relaxed">
+                Scale your revenue, brand authority, and customer trust with video. High-converting direct response ads, customer testimonials, and master brand assets edited on demand.
+              </p>
+            </motion.div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-8">
+              <button
+                onClick={onBookCall}
+                className="px-9 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-base shadow-lg shadow-[#22C55E]/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>Get Started!</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onNavigatePricing}
+                className="px-7 py-4 rounded-xl sm:rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base border border-slate-200 transition-colors cursor-pointer text-center"
+              >
+                Explore Business Plans
+              </button>
+            </div>
+
+            <div className="flex items-center gap-6 pt-4 border-t border-slate-100 text-xs text-slate-500 font-medium">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-800 font-bold">24–48h Delivery</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-800 font-bold">Commercial License</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-800 font-bold">Dedicated Pod</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Hero Video Showcase */}
+          <div className="lg:col-span-6">
+            <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-slate-200/90 group">
+              <button
+                type="button"
+                onClick={toggleSound}
+                className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/80 hover:bg-black text-white text-xs font-semibold backdrop-blur-md border border-white/20 shadow-md cursor-pointer transition"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 text-slate-300" /> : <Volume2 className="w-4 h-4 text-[#22C55E]" />}
+                <span>{isMuted ? 'Click for sound' : 'Sound on'}</span>
+              </button>
+              <video
+                ref={videoRef}
+                src="/videos/Sequence-01.mp4"
+                autoPlay
+                muted={isMuted}
+                loop
+                playsInline
+                className="w-full h-full object-cover cursor-pointer"
+                onClick={toggleSound}
+              />
+            </div>
           </div>
         </div>
 
         {/* 4 Business Highlights Strip - Clean Open Typography (No Boxes) */}
-        <div className="pt-10 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-8 text-left">
+        <div className="pt-14 mt-12 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-8 text-left">
           <div className="space-y-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#16a34a] block">Turnaround</span>
             <div className="font-extrabold text-slate-950 text-2xl">Under 24–48h</div>
@@ -268,6 +321,19 @@ export const BusinessOwnersPage: React.FC<BusinessOwnersPageProps> = ({
 
       {/* 
         ==================================================
+        RECENT HORIZONTAL COMMERCIAL & B2B PRODUCTIONS
+        ==================================================
+      */}
+      <HorizontalVideoShowcase
+        onOpenVideo={(src, title, aspect) => onOpenVideo?.(src)}
+        videos={BUSINESS_SHOWCASE_VIDEOS}
+        title="B2B Case Studies, Founder Video Vlogs & Paid Ads"
+        subtitle="High-converting visual assets, client case breakdowns, and executive video vlogs edited to build enterprise trust."
+        tag="PROVEN COMMERCIAL &amp; VLOG PRODUCTIONS"
+      />
+
+      {/* 
+        ==================================================
         HIGH-AUTHORITY BUSINESS TESTIMONIALS SECTION
         Apple-grade open editorial presentation (NO CHEAP BOXES)
         ==================================================
@@ -332,6 +398,12 @@ export const BusinessOwnersPage: React.FC<BusinessOwnersPageProps> = ({
 
         </div>
       </section>
+
+      {/* Still Having Doubts Banner */}
+      <StillHavingDoubtsBanner
+        onScheduleCall={onBookCall}
+        onChoosePlan={onNavigatePricing}
+      />
 
       {/* Bottom CTA */}
       <section className="border-t border-slate-200 py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 text-center">

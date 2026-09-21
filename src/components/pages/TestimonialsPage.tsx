@@ -101,7 +101,7 @@ const DEFAULT_SECONDARY_REVIEWS: TestimonialItem[] = [
     role: 'DTC Brand Founder',
     company: 'Kumo Living',
     quote: 'Our TikTok and Reels ad creative fatigue was killing profitability. FEVIQO delivers 6-8 fresh high-converting hooks weekly without missing a single deadline. Our ROAS spiked 2.8x in 60 days.',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=256&h=256&fit=crop&crop=faces&q=80',
+    avatar: '/images/avatars/clhppy-avatar1.png',
     vimeoId: '1003651372',
     rating: 5,
     highlight: '2.8x Blended ROAS',
@@ -175,8 +175,8 @@ export const TestimonialsPage: React.FC<TestimonialsPageProps> = ({
           <span>Client Proof &amp; Retention Records</span>
         </div>
 
-        <h1 className="text-4xl sm:text-6xl font-black text-[#0B0B0D] tracking-tight leading-[1.05] mb-6">
-          Loved by <span className="text-[#22C55E]">creators</span> and <span className="text-[#22C55E]">brands</span> who refuse to compromise on craft.
+        <h1 className="font-coolvetica text-4xl sm:text-6xl font-bold text-[#0B0B0D] tracking-tight leading-[1.05] mb-6">
+          Loved by <span className="font-editorial-italic font-normal text-[#16a34a]">creators</span> and <span className="font-editorial-italic font-normal text-[#16a34a]">brands</span> who refuse to compromise on craft.
         </h1>
 
         <p className="text-base sm:text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">

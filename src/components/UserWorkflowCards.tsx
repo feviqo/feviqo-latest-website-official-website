@@ -12,10 +12,10 @@ export const Step1NeedEditorCard: React.FC<{ className?: string }> = ({ classNam
   return (
     <div className={`relative rounded-3xl overflow-hidden bg-gradient-to-b from-[#112A1F] to-[#0A1812] border-2 border-emerald-500/50 shadow-2xl p-4 sm:p-6 flex flex-col justify-between aspect-[4/3] sm:aspect-[16/10] ${className}`}>
       
-      {/* Background Graphic / Photo */}
+      {/* Background Graphic / Photo - Uses exact local project image */}
       <div className="absolute inset-0 z-0">
         <img
-          src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=1200&q=85"
+          src="/images/1st-image.jpeg"
           alt="Creator with laptop on yellow chair"
           className="w-full h-full object-cover object-center opacity-85"
         />
@@ -82,10 +82,10 @@ export const Step2EditorCallingCard: React.FC<{ className?: string }> = ({ class
   return (
     <div className={`relative rounded-3xl overflow-hidden bg-[#0A1812] border-2 border-emerald-500/50 shadow-2xl p-4 sm:p-6 flex flex-col justify-between aspect-[4/3] sm:aspect-[16/10] ${className}`}>
       
-      {/* Background Graphic / Photo */}
+      {/* Background Graphic / Photo - Uses exact local project image */}
       <div className="absolute inset-0 z-0">
         <img
-          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85"
+          src="/images/2nd.jpeg"
           alt="Woman in green shirt"
           className="w-full h-full object-cover object-right opacity-80"
         />
@@ -160,10 +160,10 @@ export const Step3JohnReviewCard: React.FC<{ className?: string }> = ({ classNam
   return (
     <div className={`relative rounded-3xl overflow-hidden bg-[#0A1812] border-2 border-emerald-500/50 shadow-2xl p-4 sm:p-6 flex flex-col justify-between aspect-[4/3] sm:aspect-[16/10] ${className}`}>
       
-      {/* Background Graphic / Photo */}
+      {/* Background Graphic / Photo - Uses exact local project image */}
       <div className="absolute inset-0 z-0">
         <img
-          src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1200&q=85"
+          src="/images/3rd.jpeg"
           alt="Young man smiling with sneaker"
           className="w-full h-full object-cover object-center opacity-85"
         />
@@ -257,10 +257,10 @@ export const Step4MultiPlatformCard: React.FC<{ className?: string }> = ({ class
   return (
     <div className={`relative rounded-3xl overflow-hidden bg-[#0A1812] border-2 border-emerald-500/50 shadow-2xl p-4 sm:p-6 flex flex-col justify-between aspect-[4/3] sm:aspect-[16/10] ${className}`}>
       
-      {/* Background Graphic / Photo */}
+      {/* Background Graphic / Photo - Uses exact local project image */}
       <div className="absolute inset-0 z-0">
         <img
-          src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=85"
+          src="/images/last.jpeg"
           alt="Woman in green with curly hair"
           className="w-full h-full object-cover object-center opacity-90"
         />

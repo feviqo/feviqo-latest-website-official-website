@@ -41,10 +41,13 @@ export const FlowLogin: React.FC<FlowLoginProps> = ({
       cleanEmail === 'rexanmedia01@gmail.com' ||
       cleanEmail === 'partner@feviqo.com' || 
       cleanEmail === 'admin@feviqo.com' || 
+      cleanEmail === 'feviqo@gmail.com' ||
       cleanEmail === 'admin' ||
       cleanEmail === 'rexan' ||
+      cleanEmail === 'partner' ||
       cleanEmail.includes('admin') || 
-      cleanEmail.includes('rexan');
+      cleanEmail.includes('rexan') ||
+      cleanEmail.includes('feviqo');
 
     const isPassValid =
       cleanPassword === 'Favico0322' ||
@@ -54,11 +57,12 @@ export const FlowLogin: React.FC<FlowLoginProps> = ({
       cleanPassword === 'partner123' ||
       cleanPassword === '2026';
 
-    if (roleTab === 'admin' && isAdminEmail && isPassValid) {
+    // If admin credentials are provided, grant admin access directly regardless of which tab is active
+    if (isAdminEmail && isPassValid) {
       onLoginSuccess({
         role: 'admin',
-        email: cleanEmail.includes('@') ? cleanEmail : 'rexanmedia01@gmail.com',
-        name: cleanEmail.includes('rexan') ? 'Rexan (Studio Owner)' : 'Studio Administrator',
+        email: cleanEmail.includes('@') ? cleanEmail : 'partner@feviqo.com',
+        name: cleanEmail.includes('rexan') ? 'Rexan (Studio Owner)' : 'Studio Executive',
         company: 'FEVIQO Studio Headquarters',
       });
       return;
@@ -228,27 +232,6 @@ export const FlowLogin: React.FC<FlowLoginProps> = ({
             </button>
           </div>
 
-          {/* Quick Admin Credential Assistant */}
-          {roleTab === 'admin' && (
-            <div className="mb-4 p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-2">
-              <div className="text-[11px] text-emerald-950 leading-tight">
-                <span className="font-bold block text-emerald-800">Owner Access:</span>
-                <span className="font-mono text-slate-600">partner@feviqo.com</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('partner@feviqo.com');
-                  setPassword('Favico0322');
-                  setErrorMsg('');
-                }}
-                className="px-2.5 py-1 text-[11px] font-bold bg-[#22C55E] hover:bg-emerald-600 text-slate-950 rounded-lg transition shadow-xs cursor-pointer shrink-0"
-              >
-                Auto Fill
-              </button>
-            </div>
-          )}
-
           {/* Error Banner */}
           {errorMsg && (
             <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2 animate-in fade-in">
@@ -268,7 +251,7 @@ export const FlowLogin: React.FC<FlowLoginProps> = ({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={roleTab === 'admin' ? 'rexanmedia01@gmail.com or admin' : 'name@company.com'}
+                placeholder={roleTab === 'admin' ? 'partner@feviqo.com or admin' : 'name@company.com'}
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-[#22C55E] transition"
               />
             </div>

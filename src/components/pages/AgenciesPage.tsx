@@ -1,8 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
+import { WordFadeUpHeadline } from '../WordFadeUpHeadline';
 import { ArrowRight, Check, Volume2, VolumeX, Shield, Users, Zap, Briefcase, Star, X } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { SolutionsSwitcher } from '../SolutionsSwitcher';
+import { HorizontalVideoShowcase } from '../HorizontalVideoShowcase';
+import { StillHavingDoubtsBanner } from '../StillHavingDoubtsBanner';
 import { AppRoute } from '../../types';
 
 interface AgenciesPageProps {
@@ -14,6 +17,27 @@ interface AgenciesPageProps {
   onNavigateFlow?: (view?: 'login' | 'register' | 'admin') => void;
   onNavigatePage?: (route: AppRoute) => void;
 }
+
+const AGENCY_SHOWCASE_VIDEOS = [
+  {
+    id: 'horiz-8',
+    src: 'https://stream.mux.com/x4EDg00kQy500i66WJzz4OXT2hMluOCUd6XE23t4Ts4aw.m3u8',
+    poster: 'https://image.mux.com/x4EDg00kQy500i66WJzz4OXT2hMluOCUd6XE23t4Ts4aw/thumbnail.jpg?time=1',
+    title: 'Brand Commercial & Motion Graphics Launch Cut',
+  },
+  {
+    id: 'horiz-6',
+    src: 'https://stream.mux.com/U02eycl00wLlvS6xpkRcIMmlceX4tr726fxssHMKbYFnM.m3u8',
+    poster: 'https://image.mux.com/U02eycl00wLlvS6xpkRcIMmlceX4tr726fxssHMKbYFnM/thumbnail.jpg?time=1',
+    title: 'Cinematic Visual Showcase & Color Grade Cut',
+  },
+  {
+    id: 'horiz-2',
+    src: 'https://stream.mux.com/K2FDm6cIXH1hmj00KDCoVtmUP00WfWqS8E5QrioFZt1LE.m3u8',
+    poster: 'https://image.mux.com/K2FDm6cIXH1hmj00KDCoVtmUP00WfWqS8E5QrioFZt1LE/thumbnail.jpg?time=1',
+    title: 'Narrative Brand Storytelling & Color Grading',
+  },
+];
 
 const AGENCY_SPECS = [
   { label: 'Turnaround SLA', val: '24–48 Hours', sub: 'Guaranteed delivery' },
@@ -91,73 +115,102 @@ export const AgenciesPage: React.FC<AgenciesPageProps> = ({
         onSelectTab={(tab) => onNavigatePage(tab)}
       />
 
-      {/* Hero Section */}
-      <section className="pt-8 sm:pt-14 pb-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto text-center">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-6 text-emerald-900">
-          <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
-            SOLUTIONS &bull; PERFORMANCE MARKETING AGENCIES
-          </span>
-        </div>
+      {/* Hero Section - Split 2-Column Text Left / Video Right */}
+      <section className="pt-8 sm:pt-14 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          {/* Left Column: Two-Typography Headline & Value Props */}
+          <div className="lg:col-span-6 text-left">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 mb-6 text-emerald-900 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
+                SOLUTIONS &bull; PERFORMANCE MARKETING AGENCIES
+              </span>
+            </div>
 
-        {/* Text-only transition animation on switch */}
-        <motion.div
-          key="agencies-hero-text"
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#0B0B0D] leading-[1.08] max-w-4xl mx-auto mb-5">
-            Video Editing for <span className="text-[#22C55E]">Marketing Agencies</span>
-          </h1>
-
-          <p className="text-base sm:text-xl text-slate-600 max-w-2xl mx-auto mb-8 font-normal leading-relaxed">
-            Elastic video editing capacity for growth marketing teams. Dedicated senior pods integrated into your agency with white-label delivery and 24–48h turnarounds.
-          </p>
-        </motion.div>
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-          <button
-            onClick={onBookCall}
-            className="w-full sm:w-auto px-9 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-base sm:text-lg shadow-lg shadow-[#22C55E]/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
-          >
-            <span>Get Started!</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
-          <button
-            onClick={onNavigatePricing}
-            className="w-full sm:w-auto px-7 py-4 rounded-xl sm:rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base border border-slate-200 transition-colors cursor-pointer"
-          >
-            Review Retainer Plans
-          </button>
-        </div>
-
-        {/* Video Showcase with Sound Toggle */}
-        <div className="relative mx-auto max-w-4xl w-full mb-14">
-          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-2xl border border-slate-200">
-            <button
-              type="button"
-              onClick={toggleSound}
-              className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/80 text-white text-xs font-semibold backdrop-blur-md border border-white/20 shadow-md cursor-pointer hover:bg-black"
+            {/* Text-only transition animation with Two Typography Styles */}
+            <motion.div
+              key="agencies-hero-text"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
             >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-[#22C55E]" />}
-              <span>{isMuted ? 'Click for sound' : 'Sound on'}</span>
-            </button>
-            <video
-              ref={videoRef}
-              src="/videos/Sequence-01.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="w-full h-full object-cover"
-              onClick={toggleSound}
-            />
+            <div className="mb-5">
+              <WordFadeUpHeadline
+                className="font-coolvetica text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#0B0B0D] leading-[1.06]"
+                words={[
+                  { text: "Video" },
+                  { text: "Editing" },
+                  { text: "for" },
+                  { text: "Marketing", className: "font-editorial-italic font-normal text-[#16a34a]" },
+                  { text: "Agencies", className: "font-editorial-italic font-normal text-[#16a34a]" },
+                ]}
+              />
+            </div>
+
+              <p className="font-neue text-base sm:text-lg text-slate-600 max-w-xl mb-8 font-normal leading-relaxed">
+                Elastic video editing capacity for growth marketing teams. Dedicated senior pods integrated into your agency workflow with white-label master delivery and 24–48h SLA turnarounds.
+              </p>
+            </motion.div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-8">
+              <button
+                onClick={onBookCall}
+                className="px-9 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black text-base shadow-lg shadow-[#22C55E]/25 hover:shadow-xl hover:scale-[1.02] transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>Get Started!</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+              <button
+                onClick={onNavigatePricing}
+                className="px-7 py-4 rounded-xl sm:rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base border border-slate-200 transition-colors cursor-pointer text-center"
+              >
+                Review Retainer Plans
+              </button>
+            </div>
+
+            <div className="flex items-center gap-6 pt-4 border-t border-slate-100 text-xs text-slate-500 font-medium">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-800 font-bold">100% White-Label</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-800 font-bold">Unlimited Brands</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#22C55E]"></span>
+                <span className="text-slate-800 font-bold">Private Slack Pod</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Hero Video Showcase */}
+          <div className="lg:col-span-6">
+            <div className="relative w-full aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-slate-200/90 group">
+              <button
+                type="button"
+                onClick={toggleSound}
+                className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/80 hover:bg-black text-white text-xs font-semibold backdrop-blur-md border border-white/20 shadow-md cursor-pointer transition"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4 text-slate-300" /> : <Volume2 className="w-4 h-4 text-[#22C55E]" />}
+                <span>{isMuted ? 'Click for sound' : 'Sound on'}</span>
+              </button>
+              <video
+                ref={videoRef}
+                src="/videos/Sequence-01.mp4"
+                autoPlay
+                muted={isMuted}
+                loop
+                playsInline
+                className="w-full h-full object-cover cursor-pointer"
+                onClick={toggleSound}
+              />
+            </div>
           </div>
         </div>
 
         {/* Agency Spec Strip - Clean Open Typography (No Boxes) */}
-        <div className="pt-10 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-8 text-left">
+        <div className="pt-14 mt-12 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-8 text-left">
           {AGENCY_SPECS.map((p) => (
             <div key={p.label} className="space-y-1">
               <span className="text-xs font-semibold tracking-wider text-[#16a34a] uppercase block">
@@ -302,6 +355,19 @@ export const AgenciesPage: React.FC<AgenciesPageProps> = ({
 
       {/* 
         ==================================================
+        RECENT HORIZONTAL WHITE-LABEL AGENCY PRODUCTIONS
+        ==================================================
+      */}
+      <HorizontalVideoShowcase
+        onOpenVideo={(src, title, aspect) => onOpenVideo?.(src)}
+        videos={AGENCY_SHOWCASE_VIDEOS}
+        title="Marketing Freelance Growth, Client Video Vlogs & Campaign Cuts"
+        subtitle="High-impact marketing breakdowns, client vlogs, and performance ad deliverables produced white-label under your agency brand."
+        tag="WHITE-LABEL MARKETING &amp; VLOG PRODUCTIONS"
+      />
+
+      {/* 
+        ==================================================
         HIGH-AUTHORITY AGENCY TESTIMONIALS SECTION
         Apple-grade open editorial presentation (NO CHEAP BOXES)
         ==================================================
@@ -366,6 +432,12 @@ export const AgenciesPage: React.FC<AgenciesPageProps> = ({
 
         </div>
       </section>
+
+      {/* Still Having Doubts Banner */}
+      <StillHavingDoubtsBanner
+        onScheduleCall={onBookCall}
+        onChoosePlan={onNavigatePricing}
+      />
 
       {/* Bottom CTA */}
       <section className="border-t border-slate-200 py-20 px-4 sm:px-6 lg:px-8 bg-slate-50 text-center">

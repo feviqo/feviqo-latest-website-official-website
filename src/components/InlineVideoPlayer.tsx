@@ -64,7 +64,39 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
   const [showPhoneActions, setShowPhoneActions] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [isInView, setIsInView] = useState(false);
   const phoneHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Lazy loading observer: only initialize video stream when near or in viewport
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          setIsInView(true);
+        } else {
+          // Auto-pause when scrolled out of screen to conserve bandwidth & memory
+          const video = videoRef.current;
+          if (video && !video.paused) {
+            video.pause();
+            setIsPlaying(false);
+          }
+        }
+      },
+      { rootMargin: '300px 0px', threshold: 0.05 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Aspect ratio container: strict 9:16 for portrait, 16:9 for landscape
   const containerAspect = aspectRatioClass || (isVertical ? 'aspect-[9/16]' : 'aspect-video');
@@ -75,7 +107,7 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
     if (phoneHideTimerRef.current) clearTimeout(phoneHideTimerRef.current);
     phoneHideTimerRef.current = setTimeout(() => {
       setShowPhoneActions(false);
-    }, 6000); // 6s window so users on phone can easily tap volume or fullscreen
+    }, 4500); // 4.5s window
   }, []);
 
   useEffect(() => {
@@ -85,23 +117,15 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
   }, []);
 
   const handleContainerClick = (e: React.MouseEvent) => {
-    // On phone tap: ALWAYS reveal volume and full screen controls
     triggerShowPhoneActions();
-
     if (resolvedDriveId) return;
-
-    if (!showPhoneActions) {
-      if (!isPlaying) {
-        togglePlay(e);
-      }
-    } else {
-      togglePlay(e);
-    }
+    // Tap directly toggles play / pause immediately
+    togglePlay(e);
   };
 
   // Handle HLS stream or standard video attachment and Autoplay safely
   useEffect(() => {
-    if (resolvedDriveId) return; // Google drive iframe handles its own lifecycle
+    if (resolvedDriveId || !isInView) return; // Wait until visible in viewport
     const video = videoRef.current;
     if (!video) return;
 
@@ -135,7 +159,7 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
     return () => {
       if (cleanupHls) cleanupHls();
     };
-  }, [playableSrc, autoPlay, resolvedDriveId]);
+  }, [playableSrc, autoPlay, resolvedDriveId, isInView]);
 
   // Sync mute state with video element
   const toggleMute = useCallback((e: React.MouseEvent) => {
@@ -309,9 +333,8 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
       )}
 
       {/* 3. ACTION BUTTONS (Volume & Full Screen) */}
-      {/* On phone UI: removed/hidden by default until user taps/clicks on that particular video */}
       <div 
-        className={`absolute top-2.5 right-2.5 sm:top-3 sm:right-3 z-30 flex items-center gap-2 transition-all duration-200 ${
+        className={`absolute top-2 right-2 sm:top-2.5 sm:right-2.5 z-30 flex items-center gap-1.5 transition-all duration-200 ${
           showPhoneActions
             ? 'opacity-100 scale-100 pointer-events-auto'
             : 'opacity-0 scale-95 pointer-events-none sm:opacity-100 sm:scale-100 sm:pointer-events-auto'
@@ -327,16 +350,16 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
             }}
             title={isMuted ? 'Unmute audio' : 'Mute audio'}
             aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
-            className={`w-9 h-9 sm:w-9 sm:h-9 rounded-full backdrop-blur-md border transition-all duration-200 flex items-center justify-center cursor-pointer shadow-xl active:scale-90 ${
+            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full backdrop-blur-md border transition-all duration-200 flex items-center justify-center cursor-pointer shadow-md active:scale-90 ${
               isMuted
-                ? 'bg-black/85 hover:bg-black text-white border-white/25 hover:border-white/40'
-                : 'bg-emerald-950/90 hover:bg-emerald-900 text-[#22C55E] border-emerald-500/50 shadow-[0_0_12px_rgba(34,197,94,0.35)]'
+                ? 'bg-black/75 hover:bg-black text-white border-white/20'
+                : 'bg-emerald-950/90 hover:bg-emerald-900 text-[#22C55E] border-emerald-500/50 shadow-[0_0_10px_rgba(34,197,94,0.35)]'
             }`}
           >
             {isMuted ? (
-              <VolumeX className="w-4 h-4 text-white/90" />
+              <VolumeX className="w-3.5 h-3.5 text-white/90" />
             ) : (
-              <Volume2 className="w-4 h-4 text-[#22C55E]" />
+              <Volume2 className="w-3.5 h-3.5 text-[#22C55E]" />
             )}
           </button>
         )}
@@ -350,9 +373,9 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
             }}
             title="Open full screen"
             aria-label="Full screen video"
-            className="w-9 h-9 sm:w-9 sm:h-9 rounded-full bg-black/85 hover:bg-[#22C55E] text-white hover:text-black backdrop-blur-md border border-white/25 transition-all flex items-center justify-center cursor-pointer shadow-xl active:scale-90"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/75 hover:bg-[#22C55E] text-white hover:text-black backdrop-blur-md border border-white/20 transition-all flex items-center justify-center cursor-pointer shadow-md active:scale-90"
           >
-            <Maximize2 className="w-4 h-4" />
+            <Maximize2 className="w-3.5 h-3.5" />
           </button>
         )}
       </div>

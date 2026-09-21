@@ -77,9 +77,9 @@ const RIGHT_BENEFITS: WorkflowBenefit[] = [
 ];
 
 const PHASE_IMAGES = [
-  '/images/last.jpeg',
-  '/images/1st-image.jpeg',
-  '/images/2nd.jpeg',
+  '/images/last test.png',
+  '/images/1 Creative Decisions.png',
+  '/images/2 Faster Turnaround.png',
 ];
 
 const PHASES = [
@@ -88,21 +88,21 @@ const PHASES = [
     title: 'Phase 01',
     subtitle: 'Format & Social Reach',
     summary: 'Mastering short-form (9:16) & long-form (16:9) video cuts.',
-    image: '/images/last.jpeg',
+    image: '/images/last test.png',
   },
   {
     idx: 1,
     title: 'Phase 02',
     subtitle: 'Brand Style & Dedicated Lead',
     summary: 'Tailoring every cut to your aesthetic with your assigned editor.',
-    image: '/images/1st-image.jpeg',
+    image: '/images/1 Creative Decisions.png',
   },
   {
     idx: 2,
     title: 'Phase 03',
     subtitle: 'Sound FX & 24–48h Delivery',
     summary: 'Complete sound FX, motion design, and rapid sprint delivery.',
-    image: '/images/2nd.jpeg',
+    image: '/images/2 Faster Turnaround.png',
   },
 ];
 
@@ -226,24 +226,24 @@ export const ProcessFeatures: React.FC = () => {
               className="w-full flex items-center justify-center transition-all duration-300"
               style={{
                 maxWidth: assets.displaySettings?.workflowImageHeight 
-                  ? `${Math.round(assets.displaySettings.workflowImageHeight * 1.25)}px` 
-                  : '390px',
+                  ? `${Math.round(assets.displaySettings.workflowImageHeight * 1.25) + 100}px` 
+                  : '490px',
               }}
             >
               <img
-                src={assets.structuredWorkflowImage}
+                src={assets.structuredWorkflowImage || '/images/last test.png'}
                 alt="Video Creation Should be Easy"
                 referrerPolicy="no-referrer"
-                onError={(e) => { e.currentTarget.src = "/images/creating-hard.png"; }}
+                onError={(e) => { e.currentTarget.src = "/images/last test.png"; }}
                 style={{
                   maxHeight: assets.displaySettings?.workflowImageHeight 
-                    ? `${assets.displaySettings.workflowImageHeight}px` 
+                    ? `${assets.displaySettings.workflowImageHeight + 100}px` 
                     : undefined,
                   borderRadius: assets.displaySettings?.workflowImageRadius !== undefined 
                     ? `${assets.displaySettings.workflowImageRadius}px` 
                     : undefined,
                 }}
-                className="w-full h-auto object-contain block mx-auto drop-shadow-xl transition-all"
+                className="w-full h-auto max-h-[560px] object-contain block mx-auto drop-shadow-2xl rounded-2xl transition-all"
               />
             </div>
           </motion.div>
@@ -291,7 +291,7 @@ export const ProcessFeatures: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-20px' }}
           transition={{ duration: 0.45 }}
-          className="sm:hidden block max-w-sm mx-auto"
+          className="sm:hidden block max-w-md mx-auto"
         >
           <div 
             className="bg-white rounded-[32px] border border-slate-200 shadow-xl p-5"
@@ -300,13 +300,13 @@ export const ProcessFeatures: React.FC = () => {
             onTouchEnd={handleTouchEnd}
           >
             {/* Artwork Card */}
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center p-1">
               <img
-                src={assets.structuredWorkflowImage}
+                src={assets.structuredWorkflowImage || '/images/last test.png'}
                 alt="Video Creation Should be Easy"
                 referrerPolicy="no-referrer"
-                onError={(e) => { e.currentTarget.src = "/images/creating-hard.png"; }}
-                className="w-full h-auto object-contain block mx-auto drop-shadow-md"
+                onError={(e) => { e.currentTarget.src = "/images/last test.png"; }}
+                className="w-full h-auto max-h-[460px] object-contain block mx-auto drop-shadow-lg rounded-2xl"
               />
             </div>
 

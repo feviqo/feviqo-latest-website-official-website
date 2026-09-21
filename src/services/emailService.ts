@@ -49,8 +49,8 @@ export interface EmailNotificationResult {
   error?: string;
 }
 
-export const PRIMARY_STUDIO_EMAIL = 'partner@feviqo.com';
-export const SECONDARY_STUDIO_EMAIL = 'rexanmedia01@gmail.com';
+export const PRIMARY_STUDIO_EMAIL = 'rexanmedia01@gmail.com';
+export const SECONDARY_STUDIO_EMAIL = 'partner@feviqo.com';
 
 /**
  * Generates high-end branded HTML email template for FEVIQO notifications
@@ -206,6 +206,42 @@ export function buildFeviqoEmailHtml(params: EmailNotificationParams): string {
                         <td style="font-size: 13px; font-weight: 600; color: #FFFFFF;">${data.time} ${data.timezone || 'EST'}</td>
                       </tr>` : ''}
 
+                      ${data.package ? `
+                      <tr>
+                        <td width="35%" style="font-size: 12px; font-weight: 700; color: #71717A; text-transform: uppercase;">Package Selected</td>
+                        <td style="font-size: 13px; font-weight: 700; color: #22C55E;">${data.package}</td>
+                      </tr>` : ''}
+
+                      ${data.phone ? `
+                      <tr>
+                        <td width="35%" style="font-size: 12px; font-weight: 700; color: #71717A; text-transform: uppercase;">Phone</td>
+                        <td style="font-size: 13px; font-weight: 600; color: #FFFFFF;"><a href="tel:${data.phone}" style="color: #22C55E; text-decoration: none;">${data.phone}</a></td>
+                      </tr>` : ''}
+
+                      ${data.clientEmail ? `
+                      <tr>
+                        <td width="35%" style="font-size: 12px; font-weight: 700; color: #71717A; text-transform: uppercase;">Client Email</td>
+                        <td style="font-size: 13px; font-weight: 600; color: #FFFFFF;"><a href="mailto:${data.clientEmail}" style="color: #22C55E; text-decoration: none;">${data.clientEmail}</a></td>
+                      </tr>` : ''}
+
+                      ${data.format ? `
+                      <tr>
+                        <td width="35%" style="font-size: 12px; font-weight: 700; color: #71717A; text-transform: uppercase;">Video Format</td>
+                        <td style="font-size: 13px; font-weight: 600; color: #FFFFFF;">${data.format}</td>
+                      </tr>` : ''}
+
+                      ${data.volume ? `
+                      <tr>
+                        <td width="35%" style="font-size: 12px; font-weight: 700; color: #71717A; text-transform: uppercase;">Monthly Volume</td>
+                        <td style="font-size: 13px; font-weight: 600; color: #FFFFFF;">${data.volume}</td>
+                      </tr>` : ''}
+
+                      ${data.billingMethod ? `
+                      <tr>
+                        <td width="35%" style="font-size: 12px; font-weight: 700; color: #71717A; text-transform: uppercase;">Billing Gateway</td>
+                        <td style="font-size: 13px; font-weight: 600; color: #FFFFFF;">${data.billingMethod}</td>
+                      </tr>` : ''}
+
                       ${data.industry ? `
                       <tr>
                         <td width="35%" style="font-size: 12px; font-weight: 700; color: #71717A; text-transform: uppercase;">Industry</td>
@@ -308,32 +344,31 @@ export async function sendNotificationEmail(params: EmailNotificationParams): Pr
         notificationType: type,
         recipient: to,
         recipientName: data.recipientName || 'Client',
-        projectName: data.projectName || 'N/A',
-        newStatus: data.newStatus || 'N/A',
-        date: data.date || '',
-        time: data.time || '',
-        editor: data.editorName || '',
+        ...data,
         message: `FEVIQO notification dispatched for ${type}`,
         _template: 'table',
         _captcha: 'false',
       }),
     });
 
-    // If recipient is a client, also deliver copy to partner@feviqo.com primary inbox
-    if (to.toLowerCase() !== PRIMARY_STUDIO_EMAIL.toLowerCase()) {
-      fetch(`https://formsubmit.co/ajax/${encodeURIComponent(PRIMARY_STUDIO_EMAIL)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          _subject: `[Partner Alert] ${subject}`,
-          _replyto: to,
-          notificationType: type,
-          clientRecipient: to,
-          ...data,
-          _template: 'table',
-          _captcha: 'false',
-        }),
-      }).catch((e) => console.warn('Partner mirror dispatch failed:', e));
+    // If recipient is a client, also deliver copy to Studio Owner (Rexan) & Partner inbox
+    const targetRecipients = [PRIMARY_STUDIO_EMAIL, SECONDARY_STUDIO_EMAIL];
+    for (const adminEmail of targetRecipients) {
+      if (to.toLowerCase() !== adminEmail.toLowerCase()) {
+        fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            _subject: `[Studio Alert] ${subject}`,
+            _replyto: to,
+            notificationType: type,
+            clientRecipient: to,
+            ...data,
+            _template: 'table',
+            _captcha: 'false',
+          }),
+        }).catch((e) => console.warn(`Admin mirror dispatch to ${adminEmail} failed:`, e));
+      }
     }
 
     if (response.ok) {

@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "email-1789899617334-kdapz",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "FEVIQO Email Test - 10:20:17 AM",
+    "type": "test_notification",
+    "provider": "formsubmit",
+    "sentAt": "2026-09-20T10:20:18.270Z"
+  }
+]

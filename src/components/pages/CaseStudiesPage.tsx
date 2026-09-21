@@ -126,9 +126,9 @@ export const CaseStudiesPage: React.FC<CaseStudiesPageProps> = ({
             </span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-950 leading-[1.08] max-w-4xl mx-auto mb-5">
+          <h1 className="font-coolvetica text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-slate-950 leading-[1.06] max-w-4xl mx-auto mb-5">
             Real Creators. Real Brands. <br />
-            <span className="text-[#22C55E]">Real Measurable Results.</span>
+            <span className="font-editorial-italic font-normal text-[#16a34a]">Real Measurable Results.</span>
           </h1>
 
           <p className="text-base sm:text-xl text-slate-600 max-w-2xl mx-auto mb-10 font-normal leading-relaxed">
@@ -151,33 +151,33 @@ export const CaseStudiesPage: React.FC<CaseStudiesPageProps> = ({
             </button>
           </div>
 
-          {/* Highlight Metrics Strip in Hero - Clean Apple-Grade Typography with Counting Animation */}
+          {/* Highlight Metrics Strip in Hero - Clean Apple-Grade Typography */}
           <div className="pt-10 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-8 text-left">
             <div className="space-y-1">
-              <span className="text-xs font-semibold tracking-wider text-[#16a34a] uppercase block">Total Views</span>
-              <div className="font-extrabold text-slate-950 text-3xl sm:text-4xl tracking-tight">
+              <span className="text-xs font-semibold text-[#16a34a] uppercase block">Total Views</span>
+              <div className="font-black text-slate-950 text-3xl sm:text-4xl">
                 <AnimatedCounter value={50} delay={0} />M+
               </div>
               <p className="text-xs text-slate-500 font-medium">Across client channels</p>
             </div>
             <div className="space-y-1">
-              <span className="text-xs font-semibold tracking-wider text-[#16a34a] uppercase block">Ad Pipeline</span>
-              <div className="font-extrabold text-slate-950 text-3xl sm:text-4xl tracking-tight">
+              <span className="text-xs font-semibold text-[#16a34a] uppercase block">Ad Pipeline</span>
+              <div className="font-black text-slate-950 text-3xl sm:text-4xl">
                 $<AnimatedCounter value={10} delay={100} />M+
               </div>
               <p className="text-xs text-slate-500 font-medium">Generated for brand campaigns</p>
             </div>
             <div className="space-y-1">
-              <span className="text-xs font-semibold tracking-wider text-[#16a34a] uppercase block">Delivered Cuts</span>
-              <div className="font-extrabold text-slate-950 text-3xl sm:text-4xl tracking-tight">
+              <span className="text-xs font-semibold text-[#16a34a] uppercase block">Delivered Cuts</span>
+              <div className="font-black text-slate-950 text-3xl sm:text-4xl">
                 <AnimatedCounter value={50000} useCommas={true} delay={200} />+
               </div>
               <p className="text-xs text-slate-500 font-medium">Master ProRes deliverables</p>
             </div>
             <div className="space-y-1">
-              <span className="text-xs font-semibold tracking-wider text-[#16a34a] uppercase block">Satisfaction</span>
-              <div className="font-extrabold text-slate-950 text-3xl sm:text-4xl tracking-tight">
-                <AnimatedCounter value={4.9} decimals={1} delay={300} /> / 5.0
+              <span className="text-xs font-semibold text-[#16a34a] uppercase block">Satisfaction</span>
+              <div className="font-black text-slate-950 text-3xl sm:text-4xl">
+                <AnimatedCounter value={4.9} decimals={1} delay={300} />/5.0
               </div>
               <p className="text-xs text-slate-500 font-medium">Over 200+ active partners</p>
             </div>

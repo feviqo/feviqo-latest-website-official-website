@@ -132,12 +132,19 @@ export const ComparisonSection: React.FC<ComparisonSectionProps> = ({ onChooseOp
                       <Sparkles className="w-3 h-3 text-[#22C55E]" />
                       <span>The Winner</span>
                     </span>
-                    <span className="text-xs font-black text-[#22C55E] tracking-wider">FEVIQO</span>
                   </div>
 
-                  <h3 className="text-lg font-black text-white mb-3 tracking-tight">
-                    Scale Without Headaches
-                  </h3>
+                  <div className="flex items-center gap-2.5 mb-3 flex-wrap">
+                    <img
+                      src="/images/feviqo1.png"
+                      alt="FEVIQO Logo"
+                      className="h-7 w-auto object-contain shrink-0"
+                      onError={(e) => { e.currentTarget.src = '/feviqo1.png'; }}
+                    />
+                    <h3 className="text-base sm:text-lg font-black text-white tracking-tight">
+                      FEVIQO (Our Model)
+                    </h3>
+                  </div>
 
                   <div className="space-y-2 text-xs text-emerald-100 mb-4 leading-relaxed font-medium">
                     <div className="flex items-center gap-2">
@@ -214,9 +221,17 @@ export const ComparisonSection: React.FC<ComparisonSectionProps> = ({ onChooseOp
                   <span>The Clear Winner</span>
                 </div>
 
-                <h3 className="text-3xl sm:text-4xl font-black text-white mb-6 tracking-tight">
-                  Choose FEVIQO
-                </h3>
+                <div className="flex items-center gap-3 mb-6 flex-wrap">
+                  <img
+                    src="/images/feviqo1.png"
+                    alt="FEVIQO Logo"
+                    className="h-8 sm:h-10 w-auto object-contain shrink-0"
+                    onError={(e) => { e.currentTarget.src = '/feviqo1.png'; }}
+                  />
+                  <h3 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                    FEVIQO (Our Model)
+                  </h3>
+                </div>
 
                 <div className="space-y-4 text-base text-emerald-100 mb-8 leading-relaxed">
                   <div className="flex items-start gap-3">
