@@ -171,6 +171,8 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
       email: formData.email,
       countryCode: formData.countryCode,
       phoneNumber: formData.phoneNumber,
+      company: formData.company,
+      website: formData.website,
       industry: formData.industry,
       videoType: formData.videoType,
       monthlyVolume: formData.monthlyVolume,
@@ -460,22 +462,22 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
                 </div>
               </div>
 
-              {/* Work Email */}
+              {/* Work / Channel Email */}
               <div className="min-w-0">
-                <label className="block text-xs font-bold text-slate-700 mb-1">Work Email *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Work / Channel Email *</label>
                 <input
                   type="email"
                   required
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="alex@company.com"
+                  placeholder="rexanmedia01@gmail.com"
                   className="w-full min-w-0 max-w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-[#22C55E] focus:bg-white transition box-border"
                 />
               </div>
 
-              {/* Phone with Country Code (Responsive Grid, Never Overflows) */}
+              {/* Phone / WhatsApp with Country Code */}
               <div className="min-w-0">
-                <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number (with Country Code) *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Phone / WhatsApp *</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full min-w-0">
                   <div className="sm:col-span-1 min-w-0">
                     <select
@@ -496,10 +498,37 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
                       required
                       value={formData.phoneNumber}
                       onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                      placeholder="555 123 4567"
+                      placeholder="313123123"
                       className="w-full min-w-0 max-w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-[#22C55E] focus:bg-white transition box-border"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Brand / Company Name & Website / YouTube / Social Link */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Brand / Company / Channel *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.company}
+                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    placeholder="e.g. Feviqo"
+                    className="w-full min-w-0 max-w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-[#22C55E] focus:bg-white transition box-border"
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Website / YouTube / Social Link *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.website}
+                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    placeholder="e.g. feviqo.com or youtube.com/@channel"
+                    className="w-full min-w-0 max-w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-[#22C55E] focus:bg-white transition box-border"
+                  />
                 </div>
               </div>
 

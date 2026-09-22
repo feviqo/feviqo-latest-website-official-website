@@ -400,7 +400,7 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
               />
               <div>
                 <strong className="font-coolvetica text-base font-bold text-slate-950 block">Lais DeLeon</strong>
-                <span className="text-xs text-slate-500 font-medium block">Fitness &amp; Lifestyle Creator (1.2M)</span>
+                <span className="text-xs text-slate-500 font-medium block">Fitness Brand Founder, Lais Fitness</span>
               </div>
             </div>
           </div>
@@ -425,7 +425,7 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
               />
               <div>
                 <strong className="font-coolvetica text-base font-bold text-slate-950 block">Alex Tubio</strong>
-                <span className="text-xs text-slate-500 font-medium block">Founder, Media Scale Agency</span>
+                <span className="text-xs text-slate-500 font-medium block">YouTube Creator &amp; Strategist, Tubio Media</span>
               </div>
             </div>
           </div>
@@ -450,7 +450,7 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
               />
               <div>
                 <strong className="font-coolvetica text-base font-bold text-slate-950 block">Patrick Anghel</strong>
-                <span className="text-xs text-slate-500 font-medium block">Tech YouTuber &amp; Educator</span>
+                <span className="text-xs text-slate-500 font-medium block">Creator &amp; Founder, Anghel Consulting</span>
               </div>
             </div>
           </div>

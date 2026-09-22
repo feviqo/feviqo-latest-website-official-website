@@ -131,7 +131,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
               />
               <div>
                 <div className="font-extrabold text-sm text-slate-950">Alex Tubio</div>
-                <div className="text-xs text-slate-500 font-medium">Creator &amp; Educator &bull; 450K+ Subs</div>
+                <div className="text-xs text-slate-500 font-medium">YouTube Creator &amp; Strategist, Tubio Media</div>
               </div>
             </div>
           </div>
@@ -154,7 +154,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
               />
               <div>
                 <div className="font-extrabold text-sm text-slate-950">Patrick Anghel</div>
-                <div className="text-xs text-slate-500 font-medium">Founder, Advisory Growth &bull; $60K Pipeline</div>
+                <div className="text-xs text-slate-500 font-medium">Creator &amp; Founder, Anghel Consulting</div>
               </div>
             </div>
           </div>
@@ -177,7 +177,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
               />
               <div>
                 <div className="font-extrabold text-sm text-slate-950">Danny Barrera</div>
-                <div className="text-xs text-slate-500 font-medium">CEO, Concrete Agency &bull; 500+ Videos</div>
+                <div className="text-xs text-slate-500 font-medium">Agency Founder &amp; CEO, Concrete Agency</div>
               </div>
             </div>
           </div>

@@ -83,7 +83,7 @@ export const CaseStudiesSlider: React.FC = () => {
 
             {/* Huge KPI Stat in Green Brand Color */}
             <div className="text-center mb-5">
-              <div className="text-5xl font-black text-[#22C55E] tracking-tight font-display mb-1">
+              <div className="text-5xl font-black text-[#22C55E] tracking-tighter proportional-nums font-sans mb-1">
                 {currentStudy.kpi}
               </div>
               <div className="text-sm font-semibold text-slate-600">
@@ -156,7 +156,7 @@ export const CaseStudiesSlider: React.FC = () => {
 
                 {/* Huge KPI Stat */}
                 <div className="text-center mb-5">
-                  <div className="text-4xl sm:text-5xl font-black text-[#22C55E] tracking-tight font-display mb-1">
+                  <div className="text-4xl sm:text-5xl font-black text-[#22C55E] tracking-tighter proportional-nums font-sans mb-1">
                     {study.kpi}
                   </div>
                   <div className="text-sm font-semibold text-slate-600">

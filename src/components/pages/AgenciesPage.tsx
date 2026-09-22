@@ -402,7 +402,7 @@ export const AgenciesPage: React.FC<AgenciesPageProps> = ({
               />
               <div>
                 <div className="font-extrabold text-base text-slate-950">Danny Barrera</div>
-                <div className="text-xs text-slate-500 font-medium">CEO, Concrete Agency &bull; 500+ Delivered</div>
+                <div className="text-xs text-slate-500 font-medium">Agency Founder &amp; CEO, Concrete Agency</div>
               </div>
             </div>
           </div>
@@ -419,13 +419,13 @@ export const AgenciesPage: React.FC<AgenciesPageProps> = ({
             </blockquote>
             <div className="flex items-center gap-4 pt-2">
               <img
-                src="/images/avatars/alex-tubio.webp"
+                src="/images/avatars/justin-knopp.webp"
                 alt="Marcus Vance"
                 className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500 shadow-sm"
               />
               <div>
                 <div className="font-extrabold text-base text-slate-950">Marcus Vance</div>
-                <div className="text-xs text-slate-500 font-medium">Creative Director, Apex Performance</div>
+                <div className="text-xs text-slate-500 font-medium">Head of Growth, Hypergrowth.io</div>
               </div>
             </div>
           </div>

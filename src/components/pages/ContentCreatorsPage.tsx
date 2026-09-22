@@ -357,7 +357,7 @@ export const ContentCreatorsPage: React.FC<ContentCreatorsPageProps> = ({
               />
               <div>
                 <div className="font-extrabold text-base text-slate-950">Alex Tubio</div>
-                <div className="text-xs text-slate-500 font-medium">Content Creator &bull; 800K+ Views</div>
+                <div className="text-xs text-slate-500 font-medium">YouTube Creator &amp; Strategist, Tubio Media</div>
               </div>
             </div>
           </div>
@@ -380,7 +380,7 @@ export const ContentCreatorsPage: React.FC<ContentCreatorsPageProps> = ({
               />
               <div>
                 <div className="font-extrabold text-base text-slate-950">Jenna Kutcher</div>
-                <div className="text-xs text-slate-500 font-medium">NYT Best-Selling Author &bull; Goal Digger Podcast</div>
+                <div className="text-xs text-slate-500 font-medium">Podcast Host &amp; Author, Goal Digger Media</div>
               </div>
             </div>
           </div>

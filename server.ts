@@ -297,7 +297,7 @@ async function sendServerEmail(params: {
   const transporter = getSmtpTransporter();
   if (transporter) {
     try {
-      const from = process.env.SMTP_FROM || process.env.SMTP_USER || '"FEVIQO Production" <rexanmedia01@gmail.com>';
+      const from = process.env.SMTP_FROM || process.env.SMTP_USER || '"FEVIQO Production" <partner@feviqo.com>';
       const info = await transporter.sendMail({
         from,
         to,
@@ -349,7 +349,7 @@ async function sendServerEmail(params: {
       },
       body: JSON.stringify({
         _subject: subject,
-        _replyto: 'rexanmedia01@gmail.com',
+        _replyto: 'partner@feviqo.com',
         notificationType: type,
         recipient: to,
         ...data,
@@ -1517,10 +1517,9 @@ app.post('/api/notifications/send-email', async (req, res) => {
   console.log(`[FEVIQO Email Dispatch] Sending ${type} email to ${to}: "${subject}"`);
   const result = await sendServerEmail({ to, subject, html: html || `<p>${subject}</p>`, type, data });
 
-  // Automatically mirror all notifications to Studio Owner (Rexan) & Partner inbox
+  // Automatically mirror all notifications to Studio Owner & Partner inbox
   const STUDIO_EMAILS = Array.from(new Set([
-    process.env.NOTIFICATION_EMAIL || 'rexanmedia01@gmail.com',
-    'rexanmedia01@gmail.com',
+    process.env.NOTIFICATION_EMAIL || 'partner@feviqo.com',
     'partner@feviqo.com',
   ].map(e => e.toLowerCase())));
 
@@ -1550,7 +1549,7 @@ app.post('/api/notifications/send-email', async (req, res) => {
 
 // Diagnostic endpoint to verify email delivery setup
 app.post('/api/notifications/test-email', async (req, res) => {
-  const targetEmail = req.body.to || process.env.NOTIFICATION_EMAIL || 'rexanmedia01@gmail.com';
+  const targetEmail = req.body.to || process.env.NOTIFICATION_EMAIL || 'partner@feviqo.com';
   console.log(`[Diagnostic] Testing email dispatch to ${targetEmail}...`);
 
   const transporter = getSmtpTransporter();

@@ -368,12 +368,12 @@ export const BusinessOwnersPage: React.FC<BusinessOwnersPageProps> = ({
               />
               <div>
                 <div className="font-extrabold text-base text-slate-950">Patrick Anghel</div>
-                <div className="text-xs text-slate-500 font-medium">Founder, Advisory Growth &bull; $60K Closed</div>
+                <div className="text-xs text-slate-500 font-medium">Creator &amp; Founder, Anghel Consulting</div>
               </div>
             </div>
           </div>
 
-          {/* Testimonial 2: Sarah Jenkins */}
+          {/* Testimonial 2: David Chen */}
           <div className="space-y-6">
             <div className="flex items-center gap-1 text-[#22C55E]">
               {[...Array(5)].map((_, i) => (
@@ -381,17 +381,18 @@ export const BusinessOwnersPage: React.FC<BusinessOwnersPageProps> = ({
               ))}
             </div>
             <blockquote className="text-xl sm:text-2xl font-bold text-[#0B0B0D] leading-snug">
-              "Hiring an internal editor would have cost us $85K/year plus benefits and management headache. With FEVIQO, we submit raw clips via Slack and get broadcast cuts by tomorrow."
+              "Our TikTok and Reels ad creative fatigue was killing profitability. FEVIQO delivers 6-8 fresh high-converting hooks weekly. Our ROAS spiked 2.8x in 60 days."
             </blockquote>
             <div className="flex items-center gap-4 pt-2">
               <img
-                src="/images/avatars/jenna-kutcher.webp"
-                alt="Sarah Jenkins"
+                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80"
+                alt="David Chen"
                 className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500 shadow-sm"
+                referrerPolicy="no-referrer"
               />
               <div>
-                <div className="font-extrabold text-base text-slate-950">Sarah Jenkins</div>
-                <div className="text-xs text-slate-500 font-medium">VP Marketing, SaaS ScaleOps</div>
+                <div className="font-extrabold text-base text-slate-950">David Chen</div>
+                <div className="text-xs text-slate-500 font-medium">DTC Brand Founder, Kumo Living</div>
               </div>
             </div>
           </div>

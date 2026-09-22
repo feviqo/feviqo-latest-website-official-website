@@ -330,7 +330,7 @@ export const BookingPage: React.FC<BookingPageProps> = ({
                     <div className="space-y-3 bg-slate-50/70 border border-slate-200/80 p-4.5 rounded-2xl">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                          Target Package Plan
+                          Target Package Plan *
                         </label>
                         <span className="text-[11px] text-[#15803d] font-bold bg-emerald-100/70 px-2.5 py-0.5 rounded-full">
                           {currentTierInfo.savings}
@@ -466,13 +466,14 @@ export const BookingPage: React.FC<BookingPageProps> = ({
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                           <Building className="w-3.5 h-3.5 text-[#16a34a]" />
-                          <span>Brand / Company / Channel</span>
+                          <span>Brand / Company / Channel *</span>
                         </label>
                         <input
                           type="text"
+                          required
                           value={formData.company}
                           onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                          placeholder="e.g. Apex Media or @AlexVlogs"
+                          placeholder="e.g. Feviqo or @AlexVlogs"
                           className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-950 placeholder-slate-400 text-sm focus:outline-none focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/20 transition"
                         />
                       </div>
@@ -480,13 +481,14 @@ export const BookingPage: React.FC<BookingPageProps> = ({
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                           <Globe className="w-3.5 h-3.5 text-[#16a34a]" />
-                          <span>Website / YouTube / Social Link</span>
+                          <span>Website / YouTube / Social Link *</span>
                         </label>
                         <input
                           type="text"
+                          required
                           value={formData.website}
                           onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                          placeholder="youtube.com/@channel or brand.com"
+                          placeholder="youtube.com/@channel or feviqo.com"
                           className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-950 placeholder-slate-400 text-sm focus:outline-none focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/20 transition"
                         />
                       </div>

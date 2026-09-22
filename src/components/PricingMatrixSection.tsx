@@ -436,7 +436,7 @@ export const PricingMatrixSection: React.FC<PricingMatrixSectionProps> = ({
                         <div className="w-4 h-4 rounded-full bg-emerald-50 text-[#22C55E] border border-emerald-200 flex items-center justify-center shrink-0 mt-0.5">
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </div>
-                        <span className="font-neue text-sm sm:text-base font-medium text-slate-800 leading-relaxed">{feat}</span>
+                        <span className="font-neue text-sm sm:text-base font-medium text-slate-600 leading-relaxed">{feat}</span>
                       </div>
                     ))}
 
@@ -447,7 +447,7 @@ export const PricingMatrixSection: React.FC<PricingMatrixSectionProps> = ({
                             <div className="w-4 h-4 rounded-full bg-emerald-100 text-[#15803d] border border-emerald-300 flex items-center justify-center shrink-0 mt-0.5">
                               <Check className="w-2.5 h-2.5 stroke-[3]" />
                             </div>
-                            <span className="font-neue text-sm sm:text-base font-medium text-slate-800 leading-relaxed">{extraFeat}</span>
+                            <span className="font-neue text-sm sm:text-base font-medium text-slate-600 leading-relaxed">{extraFeat}</span>
                           </div>
                         ))}
                       </div>
@@ -617,7 +617,7 @@ export const PricingMatrixSection: React.FC<PricingMatrixSectionProps> = ({
                         <div className="w-4 h-4 rounded-full bg-emerald-50 text-[#22C55E] border border-emerald-200 flex items-center justify-center shrink-0 mt-0.5">
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </div>
-                        <span className="font-neue text-sm sm:text-base font-medium text-slate-800 leading-relaxed">{feat}</span>
+                        <span className="font-neue text-sm sm:text-base font-medium text-slate-600 leading-relaxed">{feat}</span>
                       </div>
                     ))}
 
@@ -628,7 +628,7 @@ export const PricingMatrixSection: React.FC<PricingMatrixSectionProps> = ({
                             <div className="w-4 h-4 rounded-full bg-emerald-100 text-[#15803d] border border-emerald-300 flex items-center justify-center shrink-0 mt-0.5">
                               <Check className="w-2.5 h-2.5 stroke-[3]" />
                             </div>
-                            <span className="font-neue text-sm sm:text-base font-medium text-slate-800 leading-relaxed">{extraFeat}</span>
+                            <span className="font-neue text-sm sm:text-base font-medium text-slate-600 leading-relaxed">{extraFeat}</span>
                           </div>
                         ))}
                       </div>

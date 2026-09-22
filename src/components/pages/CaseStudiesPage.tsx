@@ -74,7 +74,7 @@ const AnimatedCounter: React.FC<{
     : Math.round(displayNumber).toString();
 
   return (
-    <span ref={ref} className="tabular-nums">
+    <span ref={ref} className="proportional-nums tracking-tighter">
       {formatted}
     </span>
   );
@@ -151,32 +151,32 @@ export const CaseStudiesPage: React.FC<CaseStudiesPageProps> = ({
             </button>
           </div>
 
-          {/* Highlight Metrics Strip in Hero - Clean Apple-Grade Typography */}
+          {/* Highlight Metrics Strip in Hero - Clean Tight Proportional Typography */}
           <div className="pt-10 border-t border-slate-200/80 grid grid-cols-2 md:grid-cols-4 gap-8 text-left">
             <div className="space-y-1">
               <span className="text-xs font-semibold text-[#16a34a] uppercase block">Total Views</span>
-              <div className="font-black text-slate-950 text-3xl sm:text-4xl">
+              <div className="font-black text-slate-950 text-3xl sm:text-4xl tracking-tighter proportional-nums font-sans">
                 <AnimatedCounter value={50} delay={0} />M+
               </div>
               <p className="text-xs text-slate-500 font-medium">Across client channels</p>
             </div>
             <div className="space-y-1">
               <span className="text-xs font-semibold text-[#16a34a] uppercase block">Ad Pipeline</span>
-              <div className="font-black text-slate-950 text-3xl sm:text-4xl">
+              <div className="font-black text-slate-950 text-3xl sm:text-4xl tracking-tighter proportional-nums font-sans">
                 $<AnimatedCounter value={10} delay={100} />M+
               </div>
               <p className="text-xs text-slate-500 font-medium">Generated for brand campaigns</p>
             </div>
             <div className="space-y-1">
               <span className="text-xs font-semibold text-[#16a34a] uppercase block">Delivered Cuts</span>
-              <div className="font-black text-slate-950 text-3xl sm:text-4xl">
+              <div className="font-black text-slate-950 text-3xl sm:text-4xl tracking-tighter proportional-nums font-sans">
                 <AnimatedCounter value={50000} useCommas={true} delay={200} />+
               </div>
               <p className="text-xs text-slate-500 font-medium">Master ProRes deliverables</p>
             </div>
             <div className="space-y-1">
               <span className="text-xs font-semibold text-[#16a34a] uppercase block">Satisfaction</span>
-              <div className="font-black text-slate-950 text-3xl sm:text-4xl">
+              <div className="font-black text-slate-950 text-3xl sm:text-4xl tracking-tighter proportional-nums font-sans">
                 <AnimatedCounter value={4.9} decimals={1} delay={300} />/5.0
               </div>
               <p className="text-xs text-slate-500 font-medium">Over 200+ active partners</p>
@@ -226,7 +226,7 @@ export const CaseStudiesPage: React.FC<CaseStudiesPageProps> = ({
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-3xl font-black text-[#22C55E] block leading-none">{study.kpi}</span>
+                    <span className="text-3xl font-black text-[#22C55E] block leading-none tracking-tighter proportional-nums font-sans">{study.kpi}</span>
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{study.kpiType}</span>
                   </div>
                 </div>

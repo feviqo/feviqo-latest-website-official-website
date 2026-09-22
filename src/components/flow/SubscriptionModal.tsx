@@ -268,7 +268,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="mt-3 pt-3 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-slate-700">
+                    <div className="mt-3 pt-3 border-t border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-slate-600">
                       {plan.features.map((feat, idx) => (
                         <div key={idx} className="flex items-center gap-1.5">
                           <Check className="w-3.5 h-3.5 text-[#22C55E] shrink-0" />

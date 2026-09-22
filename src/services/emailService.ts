@@ -49,7 +49,7 @@ export interface EmailNotificationResult {
   error?: string;
 }
 
-export const PRIMARY_STUDIO_EMAIL = 'rexanmedia01@gmail.com';
+export const PRIMARY_STUDIO_EMAIL = 'partner@feviqo.com';
 export const SECONDARY_STUDIO_EMAIL = 'partner@feviqo.com';
 
 /**

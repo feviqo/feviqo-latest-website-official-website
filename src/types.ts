@@ -68,6 +68,8 @@ export interface LeadBooking {
   email: string;
   countryCode: string;
   phoneNumber: string;
+  company?: string;
+  website?: string;
   industry: string;
   videoType: string;
   monthlyVolume: string;

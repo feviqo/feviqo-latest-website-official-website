@@ -21,14 +21,16 @@ const AVATAR_FALLBACK_MAP: Record<string, string> = {
   'alex-tubio': '/images/avatars/alex-tubio.webp',
   'danny-barrera': '/images/avatars/danny-barrera.webp',
   'patrick-anghel': '/images/avatars/patrick-anghel.webp',
-  'fund-founders': '/images/avatars/clhppy-avatar1.png',
+  'marcus-vance': '/images/avatars/justin-knopp.webp',
+  'david-chen': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
+  'fund-founders': '/images/avatars/fund-founders.webp',
 };
 
 const DEFAULT_SECONDARY_REVIEWS: TestimonialItem[] = [
   {
     id: 'test-2',
     name: 'Danny Barrera',
-    role: 'Agency Founder',
+    role: 'Agency Founder & CEO',
     company: 'Concrete Agency',
     quote: 'We scaled our short-form content output from 8 videos a month to over 45 without hiring an in-house editor. FEVIQO delivers consistent, brand-accurate revisions within 24 hours.',
     avatar: '/images/avatars/danny-barrera.webp',
@@ -42,8 +44,8 @@ const DEFAULT_SECONDARY_REVIEWS: TestimonialItem[] = [
   {
     id: 'test-3',
     name: 'Patrick Anghel',
-    role: 'Creator & Consultant',
-    company: 'Patrick Media',
+    role: 'Creator & Founder',
+    company: 'Anghel Consulting',
     quote: 'The caliber of motion graphics and retention pacing they add to my videos is unmatched. My retention curve jumped 23% in the first 3 weeks.',
     avatar: '/images/avatars/patrick-anghel.webp',
     vimeoId: '922887065',
@@ -55,8 +57,8 @@ const DEFAULT_SECONDARY_REVIEWS: TestimonialItem[] = [
   },
   {
     id: 'test-4',
-    name: 'Jenna Kutcher Team',
-    role: 'Podcast & Content Lead',
+    name: 'Jenna Kutcher',
+    role: 'Podcast Host & Author',
     company: 'Goal Digger Media',
     quote: 'Managing video editors was our single largest operational bottleneck. Partnering with FEVIQO gave us dependable turnarounds and master-quality color grading.',
     avatar: '/images/avatars/jenna-kutcher.webp',
@@ -73,7 +75,7 @@ const DEFAULT_SECONDARY_REVIEWS: TestimonialItem[] = [
     role: 'Head of Growth',
     company: 'Hypergrowth.io',
     quote: 'Our paid social CPA dropped by 42% because FEVIQO helped us rapidly test 15+ hook variations every week. It feels like having an in-house production team on tap.',
-    avatar: '/images/avatars/clhppy-avatar1.png',
+    avatar: '/images/avatars/justin-knopp.webp',
     vimeoId: '1003651372',
     rating: 5,
     highlight: '42% Lower CPA',
@@ -101,7 +103,7 @@ const DEFAULT_SECONDARY_REVIEWS: TestimonialItem[] = [
     role: 'DTC Brand Founder',
     company: 'Kumo Living',
     quote: 'Our TikTok and Reels ad creative fatigue was killing profitability. FEVIQO delivers 6-8 fresh high-converting hooks weekly without missing a single deadline. Our ROAS spiked 2.8x in 60 days.',
-    avatar: '/images/avatars/clhppy-avatar1.png',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
     vimeoId: '1003651372',
     rating: 5,
     highlight: '2.8x Blended ROAS',
@@ -246,7 +248,9 @@ export const TestimonialsPage: React.FC<TestimonialsPageProps> = ({
             const avatarKey = t.name.toLowerCase().includes('kutcher') ? 'jenna-kutcher' :
                               t.name.toLowerCase().includes('lais') ? 'lais-deleon' :
                               t.name.toLowerCase().includes('danny') ? 'danny-barrera' :
-                              t.name.toLowerCase().includes('patrick') ? 'patrick-anghel' : 'fund-founders';
+                              t.name.toLowerCase().includes('patrick') ? 'patrick-anghel' :
+                              t.name.toLowerCase().includes('marcus') ? 'marcus-vance' :
+                              t.name.toLowerCase().includes('david') ? 'david-chen' : 'fund-founders';
             const fallback = AVATAR_FALLBACK_MAP[avatarKey] || '/images/avatars/alex-tubio.webp';
             const isLastOdd = (secondary.length % 2 !== 0) && (idx === secondary.length - 1);
 
