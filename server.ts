@@ -42,6 +42,17 @@ const PORT = 3000;
 app.use(express.json({ limit: '2048mb' }));
 app.use(express.urlencoded({ limit: '2048mb', extended: true }));
 
+// Enable global CORS for feviqo.com, www.feviqo.com, preview URLs, and external webhooks
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Ensure data and upload directories exist
 const DATA_DIR = path.join(process.cwd(), 'data');
 if (!fs.existsSync(DATA_DIR)) {
@@ -219,52 +230,84 @@ function saveEditors(editors: any[]) {
 }
 
 // --- SMTP EMAIL CONFIGURATION ---
-let smtpTransporter: any = null;
+const SMTP_CONFIG_FILE = path.join(DATA_DIR, 'smtp_config.json');
 
-function getSmtpTransporter(): any {
-  if (smtpTransporter) return smtpTransporter;
-
-  const rawUser = process.env.SMTP_USER || '';
-  const rawPass = process.env.SMTP_PASS || '';
-  const rawHost = process.env.SMTP_HOST || '';
-  const rawService = process.env.SMTP_SERVICE || '';
-
-  if (!rawUser || !rawPass) {
-    return null;
-  }
-
+// Get active SMTP configuration (from saved config file or process.env)
+function getActiveSmtpConfig(): { user: string; pass: string; host: string; port: number; from: string; source: 'file' | 'env' } | null {
   try {
-    const user = rawUser.trim();
-    // Auto-clean spaces from Google App Password (e.g. "abcd efgh ijkl mnop" -> "abcdefghijklmnop")
-    const pass = rawPass.trim().replace(/\s+/g, '');
-    const isGmail = rawService.toLowerCase() === 'gmail' || rawHost.toLowerCase().includes('gmail') || user.toLowerCase().includes('@gmail.com');
-
-    if (isGmail) {
-      smtpTransporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user, pass },
-      });
-      console.log(`[SMTP] Initialized Gmail transporter for ${user}`);
-    } else {
-      const host = rawHost.trim() || 'smtp.gmail.com';
-      const port = parseInt(process.env.SMTP_PORT || '587', 10);
-      const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-
-      smtpTransporter = nodemailer.createTransport({
-        host,
-        port,
-        secure,
-        auth: { user, pass },
-        tls: {
-          rejectUnauthorized: false,
-        },
-      });
-      console.log(`[SMTP] Initialized SMTP transporter for ${host}:${port}`);
+    if (fs.existsSync(SMTP_CONFIG_FILE)) {
+      const saved = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
+      if (saved && saved.user && saved.pass) {
+        return {
+          user: saved.user.trim(),
+          pass: saved.pass.trim().replace(/\s+/g, ''),
+          host: saved.host ? saved.host.trim() : 'smtp.gmail.com',
+          port: Number(saved.port) || 465,
+          from: saved.from ? saved.from.trim() : `FEVIQO Studio <${saved.user.trim()}>`,
+          source: 'file',
+        };
+      }
     }
   } catch (err) {
-    console.error('[SMTP] Failed to initialize transporter:', err);
+    console.warn('Failed to read saved SMTP config file:', err);
   }
-  return smtpTransporter;
+
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
+  if (!user || !pass) return null;
+
+  const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+  const port = parseInt(process.env.SMTP_PORT || '465', 10);
+  const from = process.env.SMTP_FROM || `FEVIQO Studio <${user}>`;
+
+  return { user, pass, host, port, from, source: 'env' };
+}
+
+function getActiveResendKey(): string | null {
+  try {
+    if (fs.existsSync(SMTP_CONFIG_FILE)) {
+      const saved = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
+      if (saved && saved.resendApiKey) return saved.resendApiKey.trim();
+    }
+  } catch (err) {}
+  return (process.env.RESEND_API_KEY || '').trim() || null;
+}
+
+function getActiveResendFrom(): string {
+  try {
+    if (fs.existsSync(SMTP_CONFIG_FILE)) {
+      const saved = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
+      if (saved && saved.resendFrom) return saved.resendFrom.trim();
+    }
+  } catch (err) {}
+  return process.env.RESEND_FROM || 'FEVIQO Studio <onboarding@resend.dev>';
+}
+
+function createNodemailerTransporter(config: { user: string; pass: string; host?: string; port?: number }) {
+  const host = (config.host || 'smtp.gmail.com').trim();
+  const port = Number(config.port) || 465;
+  const secure = port === 465;
+  const user = config.user.trim();
+  const pass = config.pass.trim().replace(/\s+/g, '');
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    connectionTimeout: 12000,
+    greetingTimeout: 12000,
+    socketTimeout: 12000,
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+}
+
+function getSmtpTransporter(): any {
+  const config = getActiveSmtpConfig();
+  if (!config) return null;
+  return createNodemailerTransporter(config);
 }
 
 // Helper to record dispatched emails locally
@@ -289,40 +332,23 @@ async function sendServerEmail(params: {
   html: string;
   type?: string;
   data?: any;
-}): Promise<{ success: boolean; messageId?: string; provider?: string; error?: string }> {
+}): Promise<{ success: boolean; messageId?: string; provider?: string; error?: string; smtpError?: string }> {
   const { to, subject, html, type = 'general', data = {} } = params;
-  const messageId = `email-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  let smtpErrorDetails: string | null = null;
 
-  // 1. Try Nodemailer SMTP (Gmail App Password or custom SMTP)
-  const transporter = getSmtpTransporter();
-  if (transporter) {
+  // 1. Try Resend HTTP API FIRST (Fastest, instant 200ms REST delivery)
+  const resendApiKey = getActiveResendKey();
+  if (resendApiKey) {
     try {
-      const from = process.env.SMTP_FROM || process.env.SMTP_USER || '"FEVIQO Production" <partner@feviqo.com>';
-      const info = await transporter.sendMail({
-        from,
-        to,
-        subject,
-        html,
-      });
-      console.log(`[SMTP Sent] messageId: ${info.messageId} to ${to}`);
-      logDispatchedEmail({ id: info.messageId, to, subject, type, provider: 'smtp', sentAt: new Date().toISOString() });
-      return { success: true, messageId: info.messageId, provider: 'smtp' };
-    } catch (err: any) {
-      console.warn('[SMTP Dispatch Error, falling back]:', err.message || err);
-    }
-  }
-
-  // 2. Try Resend if configured
-  if (process.env.RESEND_API_KEY) {
-    try {
+      const resendFrom = getActiveResendFrom();
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          Authorization: `Bearer ${resendApiKey.trim()}`,
         },
         body: JSON.stringify({
-          from: 'FEVIQO Production <partner@feviqo.com>',
+          from: resendFrom,
           to: [to],
           subject,
           html,
@@ -333,9 +359,32 @@ async function sendServerEmail(params: {
         console.log(`[Resend Sent] id: ${json.id} to ${to}`);
         logDispatchedEmail({ id: json.id, to, subject, type, provider: 'resend', sentAt: new Date().toISOString() });
         return { success: true, messageId: json.id, provider: 'resend' };
+      } else {
+        const resendErr = await res.json().catch(() => ({}));
+        console.warn('[Resend Rejected Dispatch, falling back]:', resendErr);
       }
     } catch (err) {
-      console.warn('[Resend Dispatch Error, falling back]:', err);
+      console.warn('[Resend Dispatch Exception, falling back]:', err);
+    }
+  }
+
+  // 2. Try Nodemailer SMTP (Gmail App Password or custom SMTP)
+  const smtpConfig = getActiveSmtpConfig();
+  if (smtpConfig && smtpConfig.pass) {
+    try {
+      const transporter = createNodemailerTransporter(smtpConfig);
+      const info = await transporter.sendMail({
+        from: smtpConfig.from,
+        to,
+        subject,
+        html,
+      });
+      console.log(`[SMTP Sent] messageId: ${info.messageId} to ${to}`);
+      logDispatchedEmail({ id: info.messageId, to, subject, type, provider: 'smtp', sentAt: new Date().toISOString() });
+      return { success: true, messageId: info.messageId, provider: 'smtp' };
+    } catch (err: any) {
+      smtpErrorDetails = err.message || err.toString();
+      console.warn('[SMTP Dispatch Error, falling back]:', smtpErrorDetails);
     }
   }
 
@@ -353,22 +402,23 @@ async function sendServerEmail(params: {
         notificationType: type,
         recipient: to,
         ...data,
+        message: html,
         _template: 'table',
         _captcha: 'false',
       }),
     });
+
     if (res.ok) {
+      const msgId = 'fs-' + Date.now();
       console.log(`[FormSubmit Sent] to ${to}`);
-      logDispatchedEmail({ id: messageId, to, subject, type, provider: 'formsubmit', sentAt: new Date().toISOString() });
-      return { success: true, messageId, provider: 'formsubmit' };
+      logDispatchedEmail({ id: msgId, to, subject, type, provider: 'formsubmit', sentAt: new Date().toISOString() });
+      return { success: true, messageId: msgId, provider: 'formsubmit', smtpError: smtpErrorDetails || undefined };
     }
   } catch (err) {
-    console.warn('[FormSubmit Dispatch Error]:', err);
+    console.error('[FormSubmit Dispatch Error]:', err);
   }
 
-  // Always log even in sandbox mode so operations succeed
-  logDispatchedEmail({ id: messageId, to, subject, type, provider: 'local_recorded', sentAt: new Date().toISOString() });
-  return { success: true, messageId, provider: 'local_recorded' };
+  return { success: false, error: 'All email delivery channels failed', smtpError: smtpErrorDetails || undefined };
 }
 
 // --- RECURSIVE BLOB URL SANITIZER ---
@@ -1507,6 +1557,151 @@ app.get('/api/media/:id', (req, res) => {
 });
 
 // 2. Real Email Notification API
+app.get('/api/notifications/dispatched', (req, res) => {
+  try {
+    let emails = [];
+    if (fs.existsSync(EMAILS_FILE)) {
+      emails = JSON.parse(fs.readFileSync(EMAILS_FILE, 'utf-8'));
+    }
+    return res.json({ success: true, emails });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: 'Failed to read emails log' });
+  }
+});
+
+app.get('/api/notifications/smtp-config', (req, res) => {
+  const config = getActiveSmtpConfig();
+  const resendKey = getActiveResendKey();
+  const resendFrom = getActiveResendFrom();
+
+  if (!config && !resendKey) {
+    return res.json({ isConfigured: false });
+  }
+  return res.json({
+    isConfigured: true,
+    user: config?.user || '',
+    host: config?.host || 'smtp.gmail.com',
+    port: config?.port || 465,
+    from: config?.from || 'FEVIQO Studio <partner@feviqo.com>',
+    source: config?.source || 'json',
+    resendApiKey: resendKey ? `${resendKey.substring(0, 7)}...` : '',
+    resendFrom,
+  });
+});
+
+app.post('/api/notifications/save-smtp-config', async (req, res) => {
+  const { user, pass, host = 'smtp.gmail.com', port = 465, from, resendApiKey, resendFrom, testRecipient } = req.body;
+
+  const cleanUser = user ? user.trim() : '';
+  const cleanPass = pass ? pass.trim().replace(/\s+/g, '') : '';
+  const cleanHost = (host || 'smtp.gmail.com').trim();
+  const numPort = Number(port) || 465;
+  const cleanFrom = from ? from.trim() : `FEVIQO Studio <${cleanUser || 'partner@feviqo.com'}>`;
+  const cleanResendKey = resendApiKey ? resendApiKey.trim() : '';
+  const cleanResendFrom = resendFrom ? resendFrom.trim() : 'FEVIQO Studio <onboarding@resend.dev>';
+  const recipient = testRecipient ? testRecipient.trim() : (cleanUser || 'partner@feviqo.com');
+
+  if (!cleanUser && !cleanPass && !cleanResendKey) {
+    return res.status(400).json({ success: false, error: 'Please enter SMTP details or Resend API Key.' });
+  }
+
+  let smtpSuccess = false;
+  let smtpErrorDetails = '';
+  let resendSuccess = false;
+  let resendErrorDetails = '';
+
+  // 1. Try SMTP if user & pass provided
+  if (cleanUser && cleanPass) {
+    const testTransporter = createNodemailerTransporter({
+      user: cleanUser,
+      pass: cleanPass,
+      host: cleanHost,
+      port: numPort,
+    });
+
+    try {
+      await testTransporter.verify();
+      const info = await testTransporter.sendMail({
+        from: cleanFrom,
+        to: recipient,
+        subject: `✅ FEVIQO SMTP Connected: Test Email`,
+        html: `<p>SMTP connected for ${cleanUser}!</p>`,
+      });
+      smtpSuccess = true;
+      logDispatchedEmail({ id: info.messageId, to: recipient, subject: 'SMTP Config Verified', type: 'smtp_verification', provider: 'smtp', sentAt: new Date().toISOString() });
+    } catch (verifyErr: any) {
+      smtpErrorDetails = verifyErr.message;
+      if (verifyErr.message?.includes('535') || verifyErr.code === 'EAUTH') {
+        smtpErrorDetails = 'Gmail auth failed (535 Bad Credentials). You MUST generate a 16-character App Password at https://myaccount.google.com/apppasswords.';
+      }
+    }
+  }
+
+  // 2. Try Resend if key provided
+  if (cleanResendKey) {
+    try {
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${cleanResendKey}`,
+        },
+        body: JSON.stringify({
+          from: cleanResendFrom,
+          to: [recipient],
+          subject: `✅ FEVIQO Resend Connected: Test Email`,
+          html: `<p>Resend API Key verified!</p>`,
+        }),
+      });
+
+      if (resendRes.ok) {
+        const json = await resendRes.json();
+        resendSuccess = true;
+        logDispatchedEmail({ id: json.id, to: recipient, subject: 'Resend Config Verified', type: 'resend_verification', provider: 'resend', sentAt: new Date().toISOString() });
+      } else {
+        const errJson = await resendRes.json().catch(() => ({}));
+        resendErrorDetails = errJson.message || `Resend error status ${resendRes.status}`;
+      }
+    } catch (err: any) {
+      resendErrorDetails = err.message || 'Resend API fetch failed';
+    }
+  }
+
+  if (!smtpSuccess && !resendSuccess) {
+    return res.status(400).json({
+      success: false,
+      error: smtpErrorDetails || resendErrorDetails || 'Failed to verify email provider credentials.',
+      smtpError: smtpErrorDetails || undefined,
+      resendError: resendErrorDetails || undefined,
+    });
+  }
+
+  // Preserve existing config
+  let existing: any = {};
+  try {
+    if (fs.existsSync(SMTP_CONFIG_FILE)) {
+      existing = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
+    }
+  } catch (e) {}
+
+  const updatedConfig = {
+    ...existing,
+    ...(cleanUser && cleanPass ? { user: cleanUser, pass: cleanPass, host: cleanHost, port: numPort, from: cleanFrom } : {}),
+    ...(cleanResendKey ? { resendApiKey: cleanResendKey, resendFrom: cleanResendFrom } : {}),
+    updatedAt: new Date().toISOString(),
+  };
+
+  fs.writeFileSync(SMTP_CONFIG_FILE, JSON.stringify(updatedConfig, null, 2), 'utf-8');
+
+  return res.json({
+    success: true,
+    message: `Email configuration saved! Test email sent to ${recipient}.`,
+    smtpSuccess,
+    resendSuccess,
+    config: updatedConfig,
+  });
+});
+
 app.post('/api/notifications/send-email', async (req, res) => {
   const { to, subject, type, data, html } = req.body;
 
@@ -1519,7 +1714,8 @@ app.post('/api/notifications/send-email', async (req, res) => {
 
   // Automatically mirror all notifications to Studio Owner & Partner inbox
   const STUDIO_EMAILS = Array.from(new Set([
-    process.env.NOTIFICATION_EMAIL || 'partner@feviqo.com',
+    process.env.NOTIFICATION_EMAIL || 'rexanmedia01@gmail.com',
+    'rexanmedia01@gmail.com',
     'partner@feviqo.com',
   ].map(e => e.toLowerCase())));
 
@@ -1554,7 +1750,7 @@ app.post('/api/notifications/test-email', async (req, res) => {
 
   const transporter = getSmtpTransporter();
   const hasSmtp = !!transporter;
-  const hasResend = !!process.env.RESEND_API_KEY;
+  const hasResend = !!getActiveResendKey();
 
   const result = await sendServerEmail({
     to: targetEmail,

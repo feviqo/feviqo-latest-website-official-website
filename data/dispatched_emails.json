@@ -1,5 +1,117 @@
 [
   {
+    "id": "01a0c819-f5da-70a2-85fe-99d758311733",
+    "to": "partner@feviqo.com",
+    "subject": "🎉 Verified Domain Test - FEVIQO Studio",
+    "type": "verified_domain_test",
+    "provider": "resend",
+    "sentAt": "2026-09-22T07:52:19.840Z"
+  },
+  {
+    "id": "01a0c819-d805-7128-971f-1ee20e31a73f",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "Resend Config Verified",
+    "type": "resend_verification",
+    "provider": "resend",
+    "sentAt": "2026-09-22T07:52:12.211Z"
+  },
+  {
+    "id": "fs-1790063196531",
+    "to": "partner@feviqo.com",
+    "subject": "🎬 New Client Booking Received - FEVIQO Studio",
+    "type": "booking_notification",
+    "provider": "formsubmit",
+    "sentAt": "2026-09-22T07:46:36.531Z"
+  },
+  {
+    "id": "01a0c813-aeb8-71cc-af56-251f7900af39",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "🎬 Strategy Session Booked with FEVIQO Studio",
+    "type": "strategy_session_booked",
+    "provider": "resend",
+    "sentAt": "2026-09-22T07:45:28.427Z"
+  },
+  {
+    "id": "01a0c813-97ca-7d70-8a76-9aa5313e3d71",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "Resend Config Verified",
+    "type": "resend_verification",
+    "provider": "resend",
+    "sentAt": "2026-09-22T07:45:22.543Z"
+  },
+  {
+    "id": "01a0c813-6cc7-7658-9457-91ab1bfcd138",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "Resend Config Verified",
+    "type": "resend_verification",
+    "provider": "resend",
+    "sentAt": "2026-09-22T07:45:11.536Z"
+  },
+  {
+    "id": "01a0c813-4b61-7369-a802-e49afaca9f7d",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "Resend Config Verified",
+    "type": "resend_verification",
+    "provider": "resend",
+    "sentAt": "2026-09-22T07:45:03.007Z"
+  },
+  {
+    "id": "fs-1790062755935",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "FEVIQO Email Test - 7:39:14 AM",
+    "type": "test_notification",
+    "provider": "formsubmit",
+    "sentAt": "2026-09-22T07:39:15.935Z"
+  },
+  {
+    "id": "email-1790060558450-ssgiv",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "Your FEVIQO 1-on-1 Strategy Call is Confirmed 🎬",
+    "type": "client_booking_confirmation",
+    "provider": "formsubmit",
+    "sentAt": "2026-09-22T07:02:40.535Z"
+  },
+  {
+    "id": "email-1790060558448-i2h92",
+    "to": "partner@feviqo.com",
+    "subject": "🔥 [FEVIQO Strategy Call] Rehana Kashif (Content Creator / YouTuber / Influencer) - Pro Plan (QUARTERLY • $1999/mo • Total: $5997)",
+    "type": "strategy_call_booked",
+    "provider": "formsubmit",
+    "sentAt": "2026-09-22T07:02:39.463Z"
+  },
+  {
+    "id": "email-1790060558449-h2gam",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "🔥 [FEVIQO Strategy Call] Rehana Kashif (Content Creator / YouTuber / Influencer) - Pro Plan (QUARTERLY • $1999/mo • Total: $5997)",
+    "type": "strategy_call_booked",
+    "provider": "formsubmit",
+    "sentAt": "2026-09-22T07:02:39.155Z"
+  },
+  {
+    "id": "email-1790060556688-odlrp",
+    "to": "partner@feviqo.com",
+    "subject": "🔥 [Strategy Call] Rehana Kashif (Pro Plan (QUARTERLY • $1999/mo • Total: $5997))",
+    "type": "strategy_call_booked",
+    "provider": "formsubmit",
+    "sentAt": "2026-09-22T07:02:37.993Z"
+  },
+  {
+    "id": "email-1790060556170-2o55g",
+    "to": "partner@feviqo.com",
+    "subject": "[FEVIQO Alert] Confirmed: Your FEVIQO Strategy Call for Pro Plan (QUARTERLY • $1999/mo • Total: $5997) on 2026-09-23",
+    "type": "strategy_call_booked",
+    "provider": "formsubmit",
+    "sentAt": "2026-09-22T07:02:37.676Z"
+  },
+  {
+    "id": "email-1790060554460-u1htz",
+    "to": "rexanmedia01@gmail.com",
+    "subject": "Confirmed: Your FEVIQO Strategy Call for Pro Plan (QUARTERLY • $1999/mo • Total: $5997) on 2026-09-23",
+    "type": "strategy_call_booked",
+    "provider": "formsubmit",
+    "sentAt": "2026-09-22T07:02:36.169Z"
+  },
+  {
     "id": "email-1789899617334-kdapz",
     "to": "rexanmedia01@gmail.com",
     "subject": "FEVIQO Email Test - 10:20:17 AM",

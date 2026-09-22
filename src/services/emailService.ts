@@ -20,6 +20,7 @@ export interface EmailNotificationParams {
     clientName?: string;
     clientEmail?: string;
     company?: string;
+    website?: string;
     projectName?: string;
     previousStatus?: string;
     newStatus?: string;
@@ -329,8 +330,55 @@ export async function sendNotificationEmail(params: EmailNotificationParams): Pr
     console.warn('Server email route unreachable, proceeding to direct dispatch:', serverErr);
   }
 
-  // 2. Direct real email delivery via FormSubmit HTTP provider
-  // This delivers directly to real inboxes over the wire
+  // 2. Direct Resend REST API fallback (works on static hosts like Netlify/Hostinger without backend)
+  const CLIENT_RESEND_KEY = 're_6TAbwf3D_AyPZMQv8eei5n4hKLiD1WaM9';
+  let resendSent = false;
+  try {
+    const resendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${CLIENT_RESEND_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'FEVIQO Studio <partner@feviqo.com>',
+        to: [to],
+        subject,
+        html: htmlContent,
+      }),
+    });
+
+    if (resendRes.ok) {
+      const resendJson = await resendRes.json();
+      resendSent = true;
+
+      // Also mirror to studio admins if sending to a client
+      const targetAdmins = [PRIMARY_STUDIO_EMAIL, SECONDARY_STUDIO_EMAIL];
+      for (const adminEmail of targetAdmins) {
+        if (to.toLowerCase() !== adminEmail.toLowerCase()) {
+          fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${CLIENT_RESEND_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: 'FEVIQO Studio <partner@feviqo.com>',
+              to: [adminEmail],
+              subject: `[Studio Alert] ${subject}`,
+              html: `<div style="font-family:sans-serif; background:#0B0B0D; color:#FFF; padding:20px; border-radius:10px;"><p><strong>To:</strong> ${to}</p><hr/>${htmlContent}</div>`,
+            }),
+          }).catch(() => {});
+        }
+      }
+
+      return { success: true, messageId: resendJson.id || 'resend-client-ok' };
+    }
+  } catch (resendErr) {
+    console.warn('Direct Resend client dispatch error:', resendErr);
+  }
+
+  // 3. Backup delivery via FormSubmit HTTP provider
   try {
     const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
       method: 'POST',

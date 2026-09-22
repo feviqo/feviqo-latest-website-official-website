@@ -175,14 +175,82 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
       })
       .catch((err) => console.warn('Failed to load server projects:', err));
 
-    fetch('/api/strategy-calls')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.leads && Array.isArray(data.leads)) {
-          setLeads(data.leads);
+    const fetchLeadsAndEmails = () => {
+      fetch('/api/strategy-calls')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.leads && Array.isArray(data.leads) && data.leads.length > 0) {
+            setLeads(data.leads);
+          }
+        })
+        .catch((err) => console.warn('Failed to load server strategy calls:', err));
+
+      fetch('/api/notifications/dispatched')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.emails && Array.isArray(data.emails) && data.emails.length > 0) {
+            setEmails((prev) => {
+              const serverEmails = data.emails.map((se: any) => ({
+                id: se.id || `em-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                fromName: 'FEVIQO Dispatch',
+                fromEmail: 'partner@feviqo.com',
+                toEmail: se.to,
+                subject: se.subject,
+                timestamp: se.sentAt ? new Date(se.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+                preview: `Dispatched via ${se.provider || 'system'} to ${se.to}`,
+                body: `Email Subject: ${se.subject}\nRecipient: ${se.to}\nType: ${se.type || 'Notification'}\nProvider: ${se.provider || 'server'}\nTimestamp: ${se.sentAt || new Date().toISOString()}`,
+                isRead: true,
+                type: se.type || 'system',
+              }));
+
+              // Merge unique by subject + toEmail
+              const combined = [...prev];
+              for (const se of serverEmails) {
+                if (!combined.some((e) => e.toEmail === se.toEmail && e.subject === se.subject)) {
+                  combined.unshift(se);
+                }
+              }
+              return combined;
+            });
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchLeadsAndEmails();
+
+    // Poll for new leads & email dispatches every 8 seconds on live portal
+    const pollInterval = setInterval(fetchLeadsAndEmails, 8000);
+
+    // Custom window listener for instant real-time lead updates from booking modals
+    const handleLeadCreated = (e: any) => {
+      if (e?.detail) {
+        setLeads((prev) => {
+          if (prev.some((l) => l.id === e.detail.id)) return prev;
+          return [e.detail, ...prev];
+        });
+      }
+      fetchLeadsAndEmails();
+    };
+
+    const handleStorageChange = () => {
+      try {
+        const saved = localStorage.getItem('feviqo_leads_v6') || localStorage.getItem('feviqo_leads');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setLeads(parsed);
         }
-      })
-      .catch((err) => console.warn('Failed to load server strategy calls:', err));
+      } catch {}
+    };
+
+    window.addEventListener('feviqo_lead_created', handleLeadCreated);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('feviqo_lead_created', handleLeadCreated);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const handleUpdateLead = (updatedLead: LeadBooking) => {

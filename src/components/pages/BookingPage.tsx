@@ -6,9 +6,10 @@ import {
   Sparkles, ArrowLeft, Globe, Video, User, Building, MessageSquare, 
   Star, ChevronRight, Award, Lock, ArrowRight, Zap, CheckCheck
 } from 'lucide-react';
-import { AppRoute, PreselectedPlan } from '../../types';
+import { AppRoute, PreselectedPlan, LeadBooking } from '../../types';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
+import { sendNotificationEmail } from '../../services/emailService';
 
 interface BookingPageProps {
   preselectedPlan?: PreselectedPlan | null;
@@ -133,13 +134,15 @@ export const BookingPage: React.FC<BookingPageProps> = ({
     const fullPackageName = `${selectedTier} Plan (${billingCadence.toUpperCase()} • $${currentTierInfo.monthlyRate}/mo • Total: $${currentTierInfo.totalBilled})`;
     const fullClientName = `${formData.firstName} ${formData.lastName}`.trim();
 
-    const payload = {
+    const payload: LeadBooking = {
+      id: 'lead-' + Date.now(),
       fullName: fullClientName,
       firstName: formData.firstName,
       lastName: formData.lastName,
       email: formData.email,
       phone: `${formData.countryCode} ${formData.phoneNumber}`.trim(),
       phoneNumber: `${formData.countryCode} ${formData.phoneNumber}`.trim(),
+      countryCode: formData.countryCode,
       company: formData.company,
       website: formData.website,
       industry: formData.industry,
@@ -151,26 +154,92 @@ export const BookingPage: React.FC<BookingPageProps> = ({
       packageTier: selectedTier,
       billingCycle: billingCadence,
       notes: formData.notes,
+      createdAt: new Date().toISOString(),
       source: 'booking_subpage',
       status: 'New',
     };
 
+    // 1. Dispatch real email notification to client and studio team
     try {
-      const response = await fetch('/api/strategy-calls', {
+      await sendNotificationEmail({
+        to: formData.email,
+        type: 'strategy_call_booked',
+        subject: `Confirmed: Your FEVIQO Strategy Call for ${fullPackageName} on ${formData.preferredDate}`,
+        data: {
+          recipientName: `${formData.firstName} ${formData.lastName}`,
+          date: formData.preferredDate,
+          time: formData.preferredTime,
+          industry: formData.industry,
+          phone: `${formData.countryCode} ${formData.phoneNumber}`,
+          package: fullPackageName,
+          billingMethod: 'Payoneer',
+        },
+      });
+
+      await sendNotificationEmail({
+        to: 'partner@feviqo.com',
+        type: 'strategy_call_booked',
+        subject: `🔥 [Strategy Call] ${formData.firstName} ${formData.lastName} (${fullPackageName})`,
+        data: {
+          recipientName: 'FEVIQO Production Partner',
+          clientName: `${formData.firstName} ${formData.lastName}`,
+          clientEmail: formData.email,
+          phone: `${formData.countryCode} ${formData.phoneNumber}`,
+          company: formData.company,
+          website: formData.website,
+          package: fullPackageName,
+          industry: formData.industry,
+          format: formData.videoType,
+          volume: `${formData.monthlyVolume} videos/mo`,
+          date: formData.preferredDate,
+          time: formData.preferredTime,
+          billingMethod: 'Payoneer',
+        },
+      });
+    } catch (err) {
+      console.warn('Email dispatch notice:', err);
+    }
+
+    // 2. Persist to API, LocalStorage, and fire event
+    try {
+      await fetch('/api/strategy-calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to submit booking request');
-      }
+      const existingRaw = localStorage.getItem('feviqo_leads_v6') || localStorage.getItem('feviqo_leads');
+      const leads: LeadBooking[] = existingRaw ? JSON.parse(existingRaw) : [];
+      leads.unshift(payload);
+      localStorage.setItem('feviqo_leads_v6', JSON.stringify(leads));
+      localStorage.setItem('feviqo_leads_v4', JSON.stringify(leads));
+      localStorage.setItem('feviqo_leads', JSON.stringify(leads));
+
+      // Push simulated email item
+      const existingEmailsRaw = localStorage.getItem('feviqo_emails_v6') || localStorage.getItem('feviqo_emails_v4');
+      const existingEmails = existingEmailsRaw ? JSON.parse(existingEmailsRaw) : [];
+      existingEmails.unshift({
+        id: 'email-' + Date.now(),
+        fromName: `${formData.firstName} ${formData.lastName}`,
+        fromEmail: formData.email,
+        toEmail: 'partner@feviqo.com',
+        subject: `🔥 Strategy Call Booking: ${formData.firstName} ${formData.lastName}`,
+        timestamp: 'Just now',
+        preview: `Booked for ${formData.preferredDate} at ${formData.preferredTime}. Package: ${fullPackageName}`,
+        body: `Hello Team FEVIQO,\n\nA new client strategy session has been scheduled via Booking Page:\n\n• Name: ${formData.firstName} ${formData.lastName}\n• Email: ${formData.email}\n• Phone: ${formData.countryCode} ${formData.phoneNumber}\n• Company: ${formData.company || 'N/A'}\n• Website: ${formData.website || 'N/A'}\n• Industry: ${formData.industry}\n• Format: ${formData.videoType}\n• Monthly Volume: ${formData.monthlyVolume} videos/mo\n• Date: ${formData.preferredDate} at ${formData.preferredTime}\n• Selected Package: ${fullPackageName}\n\nClient notes: ${formData.notes || 'None'}`,
+        isRead: false,
+        type: 'booking_lead'
+      });
+      localStorage.setItem('feviqo_emails_v6', JSON.stringify(existingEmails));
+      localStorage.setItem('feviqo_emails_v4', JSON.stringify(existingEmails));
+
+      // Dispatch custom window event
+      window.dispatchEvent(new CustomEvent('feviqo_lead_created', { detail: payload }));
 
       setStep('success');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error('Booking submission error:', err);
-      // Graceful transition so client is not blocked
       setStep('success');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {

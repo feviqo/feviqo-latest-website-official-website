@@ -232,16 +232,17 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
         body: JSON.stringify(newLead),
       }).catch(() => {});
 
-      const existingRaw = localStorage.getItem('feviqo_leads');
+      const existingRaw = localStorage.getItem('feviqo_leads_v6') || localStorage.getItem('feviqo_leads');
       const leads: LeadBooking[] = existingRaw ? JSON.parse(existingRaw) : [];
       leads.unshift(newLead);
-      localStorage.setItem('feviqo_leads', JSON.stringify(leads));
+      localStorage.setItem('feviqo_leads_v6', JSON.stringify(leads));
       localStorage.setItem('feviqo_leads_v4', JSON.stringify(leads));
+      localStorage.setItem('feviqo_leads', JSON.stringify(leads));
 
       // Also push to in-app simulated email inbox for live notifications
-      const existingEmailsRaw = localStorage.getItem('feviqo_emails_v4');
+      const existingEmailsRaw = localStorage.getItem('feviqo_emails_v6') || localStorage.getItem('feviqo_emails_v4');
       const existingEmails = existingEmailsRaw ? JSON.parse(existingEmailsRaw) : [];
-      existingEmails.unshift({
+      const newEmailItem = {
         id: 'email-' + Date.now(),
         fromName: `${formData.firstName} ${formData.lastName}`,
         fromEmail: formData.email,
@@ -252,8 +253,13 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
         body: `Hello Team FEVIQO,\n\nA new client strategy session has been scheduled:\n\n• Name: ${formData.firstName} ${formData.lastName}\n• Email: ${formData.email}\n• Phone: ${formData.countryCode} ${formData.phoneNumber}\n• Industry: ${formData.industry}\n• Format: ${formData.videoType}\n• Monthly Volume: ${formData.monthlyVolume} videos/mo\n• Date: ${formData.preferredDate} at ${formData.preferredTime}\n\nClient has requested an intro strategy chat.`,
         isRead: false,
         type: 'booking_lead'
-      });
+      };
+      existingEmails.unshift(newEmailItem);
+      localStorage.setItem('feviqo_emails_v6', JSON.stringify(existingEmails));
       localStorage.setItem('feviqo_emails_v4', JSON.stringify(existingEmails));
+
+      // Dispatch custom window event so FeviqoFlowApp catches it live instantly
+      window.dispatchEvent(new CustomEvent('feviqo_lead_created', { detail: newLead }));
     } catch {
       // Fallback safe
     }

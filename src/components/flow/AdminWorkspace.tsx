@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, Globe, Mail, Phone, ExternalLink, Plus, 
   KeyRound, Check, Copy, UserCheck, ShieldCheck, X, Sparkles, Send, Lock, Image as ImageIcon,
@@ -60,6 +60,97 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
   const [isOnboardEditorModalOpen, setIsOnboardEditorModalOpen] = useState(false);
   const [editingEditor, setEditingEditor] = useState<any | null>(null);
   const [toastMsg, setToastMsg] = useState('');
+  const [testEmailRecipient, setTestEmailRecipient] = useState('partner@feviqo.com');
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<any | null>(null);
+
+  // SMTP & Resend Configurator State
+  const [smtpUser, setSmtpUser] = useState('partner@feviqo.com');
+  const [smtpPass, setSmtpPass] = useState('');
+  const [smtpHost, setSmtpHost] = useState('smtp.gmail.com');
+  const [smtpPort, setSmtpPort] = useState('465');
+  const [resendApiKey, setResendApiKey] = useState('');
+  const [resendFrom, setResendFrom] = useState('FEVIQO Studio <partner@feviqo.com>');
+  const [isSavingSmtp, setIsSavingSmtp] = useState(false);
+  const [smtpSaveResult, setSmtpSaveResult] = useState<any | null>(null);
+  const [activeSmtpInfo, setActiveSmtpInfo] = useState<any | null>(null);
+
+  useEffect(() => {
+    fetch('/api/notifications/smtp-config')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.isConfigured) {
+          setActiveSmtpInfo(data);
+          if (data.user) setSmtpUser(data.user);
+          if (data.host) setSmtpHost(data.host);
+          if (data.port) setSmtpPort(String(data.port));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveSmtp = async () => {
+    if ((!smtpUser || !smtpPass) && !resendApiKey) {
+      setToastMsg('Please enter either your SMTP Email & App Password OR Resend API Key.');
+      setTimeout(() => setToastMsg(''), 3000);
+      return;
+    }
+    setIsSavingSmtp(true);
+    setSmtpSaveResult(null);
+    try {
+      const res = await fetch('/api/notifications/save-smtp-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user: smtpUser,
+          pass: smtpPass,
+          host: smtpHost,
+          port: Number(smtpPort),
+          resendApiKey,
+          resendFrom,
+          testRecipient: testEmailRecipient || smtpUser,
+        }),
+      });
+      const json = await res.json();
+      setSmtpSaveResult(json);
+      if (json.success) {
+        setToastMsg(`✅ Email Provider Connected & Verified! Test email sent.`);
+        setActiveSmtpInfo({ isConfigured: true, user: smtpUser || 'Resend API', host: smtpHost, port: Number(smtpPort) });
+      } else {
+        setToastMsg(`❌ Connection failed. Check error details below.`);
+      }
+      setTimeout(() => setToastMsg(''), 5000);
+    } catch (err: any) {
+      setSmtpSaveResult({ success: false, error: err.message || 'Failed to connect to server.' });
+    } finally {
+      setIsSavingSmtp(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailRecipient || !testEmailRecipient.includes('@')) {
+      setToastMsg('Please enter a valid recipient email address.');
+      setTimeout(() => setToastMsg(''), 3000);
+      return;
+    }
+    setIsSendingTestEmail(true);
+    setTestEmailResult(null);
+    try {
+      const res = await fetch('/api/notifications/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: testEmailRecipient }),
+      });
+      const json = await res.json();
+      setTestEmailResult(json);
+      setToastMsg(json.success ? `Test email sent to ${testEmailRecipient}!` : 'Dispatch failed. See details below.');
+      setTimeout(() => setToastMsg(''), 4000);
+    } catch (err: any) {
+      setTestEmailResult({ success: false, error: err.message || 'Network error sending test email' });
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
 
   // Editor CRUD Form State
   const [newEditorName, setNewEditorName] = useState('');
@@ -637,14 +728,26 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
               {leads.map((l) => (
                 <div key={l.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-bold text-slate-950 text-sm">{l.firstName} {l.lastName}</span>
                       <span className="text-slate-400">•</span>
                       <a href={`mailto:${l.email}`} className="text-emerald-700 font-semibold hover:underline">{l.email}</a>
                       {l.phoneNumber && (
                         <>
                           <span className="text-slate-400">•</span>
-                          <span className="text-slate-600 font-mono">{l.countryCode} {l.phoneNumber}</span>
+                          <span className="text-slate-600 font-mono">{l.countryCode ? `${l.countryCode} ` : ''}{l.phoneNumber}</span>
+                        </>
+                      )}
+                      {l.company && (
+                        <>
+                          <span className="text-slate-400">•</span>
+                          <span className="bg-slate-200/80 px-2 py-0.5 rounded-md font-bold text-slate-800 text-[11px]">{l.company}</span>
+                        </>
+                      )}
+                      {l.website && (
+                        <>
+                          <span className="text-slate-400">•</span>
+                          <a href={l.website.startsWith('http') ? l.website : `https://${l.website}`} target="_blank" rel="noopener noreferrer" className="text-sky-600 font-medium hover:underline text-[11px]">{l.website}</a>
                         </>
                       )}
                     </div>
@@ -713,16 +816,197 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
         </div>
       )}
 
-      {/* TAB 4: EMAILS (Automated Email Dispatches with Delete Option) */}
+      {/* TAB 4: EMAILS (Automated Email Dispatches with Live SMTP Setup & Diagnostics) */}
       {adminTab === 'emails' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-black text-slate-950">Automated Status Email Dispatch Log</h3>
-              <p className="text-xs text-slate-500">
-                Live audit trail of automated status notifications and deliverables dispatched to clients and studio partners.
-              </p>
+        <div className="space-y-6">
+          {/* Live SMTP Configurator & Verification Panel */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 text-white space-y-5 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-emerald-400" />
+                  <span>Live SMTP Configurator & Email Diagnostic Center</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Connect your Gmail / Workspace App Password or SMTP server to send live strategy call booking alerts directly to your inbox.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                {activeSmtpInfo?.isConfigured ? (
+                  <span className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    SMTP Connected ({activeSmtpInfo.user})
+                  </span>
+                ) : (
+                  <span className="bg-amber-500/10 border border-amber-500/30 text-amber-400 px-3 py-1 rounded-full text-xs font-bold">
+                    ⚠️ SMTP Pending
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Config Fields Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">SMTP Email Address</label>
+                <input
+                  type="email"
+                  value={smtpUser}
+                  onChange={(e) => setSmtpUser(e.target.value)}
+                  placeholder="e.g. partner@feviqo.com or rexanmedia01@gmail.com"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                  Google 16-Char App Password
+                </label>
+                <input
+                  type="password"
+                  value={smtpPass}
+                  onChange={(e) => setSmtpPass(e.target.value)}
+                  placeholder="e.g. abcd efgh ijkl mnop"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">SMTP Host</label>
+                <input
+                  type="text"
+                  value={smtpHost}
+                  onChange={(e) => setSmtpHost(e.target.value)}
+                  placeholder="smtp.gmail.com"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">Port & Protocol</label>
+                <select
+                  value={smtpPort}
+                  onChange={(e) => setSmtpPort(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                >
+                  <option value="465">Port 465 (SSL / Recommended)</option>
+                  <option value="587">Port 587 (TLS / STARTTLS)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Resend API Key Section */}
+            <div className="pt-3 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-amber-400 mb-1 flex items-center gap-1.5">
+                  <span>Resend API Key (Optional HTTP Fallback)</span>
+                </label>
+                <input
+                  type="password"
+                  value={resendApiKey}
+                  onChange={(e) => setResendApiKey(e.target.value)}
+                  placeholder="re_123456789..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 mb-1">Resend Verified Sender</label>
+                <input
+                  type="text"
+                  value={resendFrom}
+                  onChange={(e) => setResendFrom(e.target.value)}
+                  placeholder="FEVIQO Studio <partner@feviqo.com> or <onboarding@resend.dev>"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Action Bar & Quick Instructions */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
+              <div className="text-[11px] text-slate-400 bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 leading-relaxed max-w-xl">
+                <strong className="text-emerald-400 block mb-0.5">💡 Gmail App Password Setup (30 Seconds):</strong>
+                Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-sky-400 underline hover:text-sky-300">myaccount.google.com/apppasswords</a> with 2-Step Verification ON $\rightarrow$ Create an App Password $\rightarrow$ Paste the 16 letters above.
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSaveSmtp}
+                  disabled={isSavingSmtp}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-xs transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                >
+                  {isSavingSmtp ? 'Verifying Connection...' : 'Verify & Connect Live SMTP'}
+                </button>
+              </div>
+            </div>
+
+            {/* Test Send Section */}
+            <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 shrink-0">Test Recipient:</span>
+              <input
+                type="email"
+                value={testEmailRecipient}
+                onChange={(e) => setTestEmailRecipient(e.target.value)}
+                placeholder="Where to send test email (e.g. partner@feviqo.com)"
+                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+              />
+              <button
+                type="button"
+                onClick={handleSendTestEmail}
+                disabled={isSendingTestEmail}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-4 py-1.5 rounded-xl text-xs transition cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                {isSendingTestEmail ? 'Sending Test...' : 'Send Test Notification'}
+              </button>
+            </div>
+
+            {/* Save / Verify Result Diagnostic Box */}
+            {smtpSaveResult && (
+              <div className={`p-4 rounded-2xl text-xs font-mono space-y-2 ${smtpSaveResult.success ? 'bg-emerald-950/70 border border-emerald-500/40 text-emerald-200' : 'bg-rose-950/80 border border-rose-500/40 text-rose-200'}`}>
+                <div className="flex items-center justify-between font-bold text-sm">
+                  <span>{smtpSaveResult.success ? '✅ SMTP Connection Verified & Saved!' : '❌ SMTP Connection Handshake Failed'}</span>
+                  {smtpSaveResult.config && <span>{smtpSaveResult.config.host}:{smtpSaveResult.config.port}</span>}
+                </div>
+                {smtpSaveResult.message && (
+                  <div className="text-emerald-300 font-semibold">{smtpSaveResult.message}</div>
+                )}
+                {smtpSaveResult.error && (
+                  <div className="text-rose-300 space-y-1">
+                    <div><strong>Error Detail:</strong> {smtpSaveResult.error}</div>
+                    {smtpSaveResult.rawError && <div className="text-[11px] opacity-80">Raw Error: {smtpSaveResult.rawError}</div>}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Quick Test Result Diagnostic Box */}
+            {testEmailResult && (
+              <div className={`p-4 rounded-2xl text-xs font-mono space-y-2 ${testEmailResult.success ? 'bg-emerald-950/60 border border-emerald-500/30 text-emerald-300' : 'bg-rose-950/60 border border-rose-500/30 text-rose-300'}`}>
+                <div className="flex items-center justify-between font-bold">
+                  <span>{testEmailResult.success ? '✅ Dispatch Succeeded' : '❌ Test Dispatch Result'}</span>
+                  <span>Provider: {testEmailResult.provider || testEmailResult.diagnostics?.provider || 'SMTP'}</span>
+                </div>
+                {testEmailResult.diagnostics && (
+                  <div className="text-[11px] space-y-1 pt-1 border-t border-slate-800 text-slate-300">
+                    <div>Target Recipient: <strong>{testEmailResult.diagnostics.targetEmail}</strong></div>
+                    <div>SMTP Active: <strong>{testEmailResult.diagnostics.smtpConfigured ? 'YES' : 'NO'}</strong></div>
+                  </div>
+                )}
+                {testEmailResult.error && (
+                  <div className="text-rose-400 text-[11px]">Error: {testEmailResult.error}</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-black text-slate-950">Automated Status Email Dispatch Log</h3>
+                <p className="text-xs text-slate-500">
+                  Live audit trail of automated status notifications and deliverables dispatched to clients and studio partners.
+                </p>
+              </div>
 
             {emails.length > 0 && onClearAllEmails && (
               <button
@@ -783,6 +1067,7 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
             </div>
           )}
         </div>
+      </div>
       )}
 
       {/* TAB 5: EDITORS ROSTER & CRUD ACCESS */}

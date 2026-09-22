@@ -65,9 +65,11 @@ export interface LeadBooking {
   id: string;
   firstName: string;
   lastName: string;
+  fullName?: string;
   email: string;
   countryCode: string;
   phoneNumber: string;
+  phone?: string;
   company?: string;
   website?: string;
   industry: string;
@@ -76,9 +78,12 @@ export interface LeadBooking {
   preferredDate: string;
   preferredTime: string;
   selectedPackage?: string;
+  packageTier?: string;
+  billingCycle?: string;
   notes?: string;
   createdAt: string;
-  status: 'New' | 'Contacted' | 'Call Scheduled' | 'Converted';
+  source?: string;
+  status: 'New' | 'Contacted' | 'Call Scheduled' | 'Scheduled' | 'Proposal Sent' | 'Closed Won' | 'Converted' | 'Archived' | string;
 }
 
 export interface RawFootageFile {
