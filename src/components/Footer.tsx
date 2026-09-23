@@ -280,6 +280,11 @@ export const Footer: React.FC<FooterProps> = ({
                   Testimonials & Reviews
                 </button>
               </li>
+              <li>
+                <button onClick={() => nav('about')} className="hover:text-white transition cursor-pointer text-[#22C55E] font-bold">
+                  About Us (Leadership & Vetting)
+                </button>
+              </li>
             </ul>
           </div>
 

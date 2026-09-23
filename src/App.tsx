@@ -35,6 +35,7 @@ import { CaseStudiesPage } from './components/pages/CaseStudiesPage';
 import { UnlimitedEditingPage } from './components/pages/UnlimitedEditingPage';
 import { PlatformOverviewPage } from './components/pages/PlatformOverviewPage';
 import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
+import { AboutUsPage } from './components/pages/AboutUsPage';
 
 import { AppRoute, PreselectedPlan } from './types';
 import { initializeAssetSync } from './services/assetService';
@@ -58,6 +59,7 @@ export default function App() {
       if (path.includes('/unlimited-editing') || hash.includes('#unlimited-editing')) return 'unlimited-editing';
       if (path.includes('/platform') || hash.includes('#platform')) return 'platform';
       if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) return 'turkish-drama';
+      if (path.includes('/about') || hash.includes('#about')) return 'about';
     }
     return 'home';
   });
@@ -396,6 +398,31 @@ export default function App() {
               onNavigatePricing={() => navigateTo('pricing')}
               onNavigateSection={handleNavigateSection}
               onNavigatePage={(route) => navigateTo(route)}
+            />
+            <Footer 
+              onBookCall={handleOpenBookCall}
+              onGetStarted={handleOpenBookCall}
+              onNavigateSection={handleNavigateSection}
+              onNavigatePricing={() => navigateTo('pricing')}
+              onNavigateFlow={() => navigateTo('flow')}
+              onNavigatePage={(route) => navigateTo(route)}
+            />
+          </div>
+        );
+
+      case 'about':
+        return (
+          <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#070709] text-white font-sans selection:bg-[#22C55E] selection:text-white flex flex-col">
+            <Navbar 
+              onBookCall={handleOpenBookCall} 
+              onNavigateSection={handleNavigateSection}
+              onNavigatePricing={() => navigateTo('pricing')}
+              onNavigateFlow={(view) => navigateTo('flow', view)}
+              onNavigatePage={(route) => navigateTo(route)}
+            />
+            <AboutUsPage 
+              onBookCall={handleOpenBookCall}
+              onNavigatePricing={() => navigateTo('pricing')}
             />
             <Footer 
               onBookCall={handleOpenBookCall}

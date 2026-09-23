@@ -221,6 +221,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             Pricing
           </button>
 
+          {/* About Us */}
+          <button 
+            onClick={() => onNavigatePage('about')}
+            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer font-semibold text-white flex items-center gap-1.5"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>About Us</span>
+          </button>
+
           {/* Resources Dropdown */}
           <div 
             className="relative"

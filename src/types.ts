@@ -180,6 +180,7 @@ export interface SimulatedEmail {
 
 export type AppRoute = 
   | 'home' 
+  | 'about'
   | 'pricing' 
   | 'booking'
   | 'flow' 
