@@ -105,6 +105,7 @@ export default function App() {
         setActiveVideoModal(cleanId);
         setActiveVideoTitle(item?.title || '');
         setActiveVideoAspect(item?.orientation === 'vertical' ? '9/16' : '16/9');
+        setCurrentRoute('gallery');
       }
 
       if (path.includes('/admin') || hash.includes('#admin')) {
@@ -183,9 +184,8 @@ export default function App() {
     setActiveVideoAspect(cleanAspect);
 
     try {
-      const url = new URL(window.location.href);
-      url.searchParams.set('v', cleanId);
-      window.history.pushState({ v: cleanId }, '', url.toString());
+      const sharePath = `/watch?v=${encodeURIComponent(cleanId)}`;
+      window.history.pushState({ v: cleanId }, '', sharePath);
     } catch {}
   };
 

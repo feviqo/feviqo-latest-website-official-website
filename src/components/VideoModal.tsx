@@ -63,20 +63,14 @@ export const VideoModal: React.FC<VideoModalProps> = ({
   const videoIdForShare = cleanId || propVimeoId || 'reel-3';
 
   const handleCopyShareLink = () => {
-    // Professional domain base (prefer feviqo.com or actual origin if on custom domain)
-    const baseOrigin = window.location.hostname.includes('feviqo.com')
-      ? window.location.origin
-      : 'https://feviqo.com';
+    // Generate clean short link (e.g. feviqo.com/watch?v=reel-3 or window.location.origin/watch?v=reel-3)
+    const shareUrl = `${window.location.origin}/watch?v=${videoIdForShare}`;
 
-    const shareUrl = `${baseOrigin}/gallery?v=${videoIdForShare}`;
-
-    // Copy strictly the clean URL string to clipboard (no extra titles or description text attached)
     navigator.clipboard.writeText(shareUrl).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     }).catch(() => {});
 
-    // Trigger mobile native share sheet if supported (passing url only)
     if (navigator.share) {
       navigator.share({
         url: shareUrl,
