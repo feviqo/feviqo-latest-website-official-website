@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Maximize, Minimize } from 'lucide-react';
+import { X, Maximize, Minimize, Share2, Check } from 'lucide-react';
 import { NativeVideoPlayer } from './NativeVideoPlayer';
 import { resolvePlayableVideo, extractDriveId, buildGoogleDrivePreviewUrl } from '../utils/videoResolver';
 import { findVideoItem } from '../data/videoRegistry';
@@ -39,6 +39,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({
 }) => {
   const modalContainerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const handleFsChange = () => {
@@ -57,6 +58,31 @@ export const VideoModal: React.FC<VideoModalProps> = ({
   const vimeoId = !driveId ? extractVimeoId(source) : null;
   const youtubeId = (!driveId && !vimeoId) ? extractYoutubeId(source) : null;
   const directPlayableSrc = resolvePlayableVideo(driveId, source, isVertical);
+
+  const cleanId = matchedItem?.id || (source.startsWith('http') ? undefined : source);
+  const videoIdForShare = cleanId || propVimeoId || 'reel-3';
+
+  const handleCopyShareLink = () => {
+    // Professional domain base (prefer feviqo.com or actual origin if on custom domain)
+    const baseOrigin = window.location.hostname.includes('feviqo.com')
+      ? window.location.origin
+      : 'https://feviqo.com';
+
+    const shareUrl = `${baseOrigin}/gallery?v=${videoIdForShare}`;
+
+    // Copy strictly the clean URL string to clipboard (no extra titles or description text attached)
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }).catch(() => {});
+
+    // Trigger mobile native share sheet if supported (passing url only)
+    if (navigator.share) {
+      navigator.share({
+        url: shareUrl,
+      }).catch(() => {});
+    }
+  };
 
   // Toggle true in-website browser fullscreen
   const toggleFullscreen = () => {
@@ -90,6 +116,29 @@ export const VideoModal: React.FC<VideoModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Share / Copy Link Button */}
+            <button
+              onClick={handleCopyShareLink}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                copied 
+                  ? 'bg-[#22C55E] text-slate-950 shadow-md' 
+                  : 'bg-white/10 hover:bg-white/20 text-white border border-white/15'
+              }`}
+              title="Copy shareable link for this video"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-slate-950" />
+                  <span>Copied Link!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-emerald-300" />
+                  <span className="hidden sm:inline">Share Link</span>
+                </>
+              )}
+            </button>
+
             {/* Website Fullscreen Button (Stays on website) */}
             <button
               onClick={toggleFullscreen}

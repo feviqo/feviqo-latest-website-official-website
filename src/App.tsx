@@ -39,6 +39,7 @@ import { AboutUsPage } from './components/pages/AboutUsPage';
 
 import { AppRoute, PreselectedPlan } from './types';
 import { initializeAssetSync } from './services/assetService';
+import { findVideoItem } from './data/videoRegistry';
 
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
@@ -79,9 +80,32 @@ export default function App() {
   const [preselectedPlanForBooking, setPreselectedPlanForBooking] = useState<PreselectedPlan | null>(null);
 
   useEffect(() => {
-    const handlePopState = () => {
+    const handleUrlStateAndVideo = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
+      
+      let videoQueryParam: string | null = null;
+      const params = new URLSearchParams(window.location.search);
+      videoQueryParam = params.get('v') || params.get('video') || params.get('watch');
+
+      if (!videoQueryParam && hash.includes('v=')) {
+        const hashSearch = hash.includes('?') ? hash.substring(hash.indexOf('?')) : hash.replace('#', '?');
+        const hashParams = new URLSearchParams(hashSearch);
+        videoQueryParam = hashParams.get('v') || hashParams.get('video');
+      }
+
+      if (!videoQueryParam) {
+        const pathMatch = path.match(/\/(?:v|watch|video)\/([a-zA-Z0-9_-]+)/);
+        if (pathMatch) videoQueryParam = pathMatch[1];
+      }
+
+      if (videoQueryParam) {
+        const item = findVideoItem(videoQueryParam);
+        const cleanId = item ? item.id : videoQueryParam;
+        setActiveVideoModal(cleanId);
+        setActiveVideoTitle(item?.title || '');
+        setActiveVideoAspect(item?.orientation === 'vertical' ? '9/16' : '16/9');
+      }
 
       if (path.includes('/admin') || hash.includes('#admin')) {
         setCurrentRoute('flow');
@@ -110,14 +134,17 @@ export default function App() {
         setCurrentRoute('platform');
       } else if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) {
         setCurrentRoute('turkish-drama');
+      } else if (path.includes('/about') || hash.includes('#about')) {
+        setCurrentRoute('about');
       } else {
         setCurrentRoute('home');
       }
     };
 
-    window.addEventListener('popstate', handlePopState);
+    handleUrlStateAndVideo();
+    window.addEventListener('popstate', handleUrlStateAndVideo);
     initializeAssetSync();
-    return () => window.removeEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handleUrlStateAndVideo);
   }, []);
 
   const navigateTo = (route: AppRoute, initialFlowView?: 'login' | 'register' | 'admin') => {
@@ -146,14 +173,33 @@ export default function App() {
   };
 
   const handleOpenVideo = (vimeoIdOrSource: string, title?: string, aspect?: '16/9' | '9/16') => {
-    setActiveVideoModal(vimeoIdOrSource);
-    setActiveVideoTitle(title || '');
-    setActiveVideoAspect(aspect || '16/9');
+    const item = findVideoItem(vimeoIdOrSource);
+    const cleanId = item ? item.id : (vimeoIdOrSource.startsWith('http') ? 'reel-3' : vimeoIdOrSource);
+    const cleanTitle = title || item?.title || '';
+    const cleanAspect = aspect || (item?.orientation === 'vertical' ? '9/16' : '16/9');
+
+    setActiveVideoModal(cleanId);
+    setActiveVideoTitle(cleanTitle);
+    setActiveVideoAspect(cleanAspect);
+
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', cleanId);
+      window.history.pushState({ v: cleanId }, '', url.toString());
+    } catch {}
   };
 
   const handleCloseVideo = () => {
     setActiveVideoModal(null);
     setActiveVideoTitle('');
+
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('v');
+      url.searchParams.delete('video');
+      url.searchParams.delete('watch');
+      window.history.pushState({}, '', url.toString());
+    } catch {}
   };
 
   const handleOpenBookCall = (plan?: any) => {

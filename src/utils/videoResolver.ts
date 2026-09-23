@@ -1,3 +1,5 @@
+import { findVideoItem } from '../data/videoRegistry';
+
 /**
  * Video Source Resolver
  * Maps external Google Drive IDs, Vimeo placeholders, YouTube links, and direct files
@@ -255,6 +257,15 @@ export const resolvePlayableVideo = (
 ): string => {
   if (videoUrl) {
     const cleanUrl = videoUrl.trim();
+
+    // 1. Check if it's a registered video ID in videoRegistry (e.g. 'reel-3', 'reel-1', 'horiz-1', etc.)
+    const matched = findVideoItem(cleanUrl);
+    if (matched) {
+      const matchedSrc = matched.src || matched.videoUrl || (matched.driveId ? DRIVE_TO_DIRECT_VIDEO_MAP[matched.driveId] : undefined);
+      if (matchedSrc) return matchedSrc;
+    }
+
+    // 2. Direct playable file or HLS stream
     if (
       cleanUrl.startsWith('/') ||
       cleanUrl.endsWith('.mp4') ||
@@ -277,10 +288,10 @@ export const resolvePlayableVideo = (
   }
 
   if (isVertical) {
-    return '/videos/reel-talking-head.mp4';
+    return 'https://stream.mux.com/2XO015Sw1RdYlJgjM6OS009uhQNiJycsmbilSY2MeDNis.m3u8';
   }
 
-  return '/videos/Sequence-01.mp4';
+  return 'https://stream.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M.m3u8';
 };
 
 /**
@@ -292,8 +303,14 @@ export const resolveVideoPoster = (
 ): string => {
   if (!source) {
     return isVertical
-      ? '/images/posters/poster-reel-talking-head.jpg'
-      : '/images/posters/poster-horiz-cinematic-landscape.jpg';
+      ? 'https://image.mux.com/2XO015Sw1RdYlJgjM6OS009uhQNiJycsmbilSY2MeDNis/thumbnail.jpg?time=1'
+      : 'https://image.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M/thumbnail.jpg?time=1';
+  }
+
+  // Check if it's a registered video ID
+  const matched = findVideoItem(source);
+  if (matched?.poster || matched?.thumbnail) {
+    return matched.poster || matched.thumbnail || '';
   }
 
   // Handle Mux Stream Posters directly

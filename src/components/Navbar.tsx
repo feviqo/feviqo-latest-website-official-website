@@ -106,44 +106,44 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {solutionsOpen && (
-              <div className="absolute top-full left-0 w-80 bg-white border border-slate-200/80 rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-[#0B0B0D]">
+              <div className="absolute top-full left-0 w-80 bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border border-[#064e3b] rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-emerald-500/20 backdrop-blur-xl">
                 <div className="space-y-1">
                   <button 
                     onClick={() => { onNavigatePage('creators'); setSolutionsOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">Content Creators</div>
-                      <div className="text-slate-500 text-xs mt-0.5">High-retention editing for YouTubers & streamers.</div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Content Creators</div>
+                      <div className="text-emerald-100/70 text-xs mt-0.5">High-retention editing for YouTubers & streamers.</div>
                     </div>
                   </button>
 
                   <button 
                     onClick={() => { onNavigatePage('business'); setSolutionsOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
                       <Briefcase className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">Business Owners</div>
-                      <div className="text-slate-500 text-xs mt-0.5">Turn 1 founder recording into a multi-channel video suite.</div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Business Owners</div>
+                      <div className="text-emerald-100/70 text-xs mt-0.5">Turn 1 founder recording into a multi-channel video suite.</div>
                     </div>
                   </button>
 
                   <button 
                     onClick={() => { onNavigatePage('agencies'); setSolutionsOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
                       <TrendingUp className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">Marketers & Agencies</div>
-                      <div className="text-slate-500 text-xs mt-0.5">White-label editing pods scaling retainer capacity.</div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Marketers & Agencies</div>
+                      <div className="text-emerald-100/70 text-xs mt-0.5">White-label editing pods scaling retainer capacity.</div>
                     </div>
                   </button>
                 </div>
@@ -165,47 +165,47 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {servicesOpen && (
-              <div className="absolute top-full left-0 w-80 bg-white border border-slate-200/80 rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-[#0B0B0D]">
+              <div className="absolute top-full left-0 w-80 bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border border-[#064e3b] rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-emerald-500/20 backdrop-blur-xl">
                 <div className="space-y-1">
                   <button 
                     onClick={() => { onNavigatePage('unlimited-editing'); setServicesOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
                       <Video className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">Unlimited Video Editing</div>
-                      <div className="text-slate-500 text-xs mt-0.5">Dedicated editor, 4K rendering & 24–48h turnarounds.</div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Unlimited Video Editing</div>
+                      <div className="text-emerald-100/70 text-xs mt-0.5">Dedicated editor, 4K rendering & 24–48h turnarounds.</div>
                     </div>
                   </button>
 
                   <button 
                     onClick={() => { onNavigatePage('platform'); setServicesOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
                       <FileCheck className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider">FEVIQO Flow Platform</div>
-                      <div className="text-slate-500 text-xs mt-0.5">Timestamped client revisions & seamless asset management.</div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">FEVIQO Flow Platform</div>
+                      <div className="text-emerald-100/70 text-xs mt-0.5">Timestamped client revisions & seamless asset management.</div>
                     </div>
                   </button>
 
                   <button 
                     onClick={() => { onNavigatePage('turkish-drama'); setServicesOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-slate-50 flex items-start gap-3 transition group cursor-pointer border-t border-slate-100 mt-1 pt-2.5"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border-t border-emerald-800/40 mt-1 pt-2.5 hover:border-emerald-500/30"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-50 text-[#15803D] group-hover:bg-[#15803D] group-hover:text-white transition">
+                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
                       <Globe className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-[#0B0B0D] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <div className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                         <span>Turkish TV Licensing</span>
-                        <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-[#15803D] text-[9px] font-black">B2B</span>
+                        <span className="px-1.5 py-0.2 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black">B2B</span>
                       </div>
-                      <div className="text-slate-500 text-xs mt-0.5">Urdu dubbing & authorized digital distribution in Pakistan.</div>
+                      <div className="text-emerald-100/70 text-xs mt-0.5">Urdu dubbing & authorized digital distribution in Pakistan.</div>
                     </div>
                   </button>
                 </div>
@@ -244,21 +244,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {resourcesOpen && (
-              <div className="absolute top-full left-0 w-72 bg-white border border-slate-200/80 rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-[#0B0B0D]">
+              <div className="absolute top-full left-0 w-72 bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border border-[#064e3b] rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-emerald-500/20 backdrop-blur-xl">
                 <div className="space-y-1">
                   <button 
                     onClick={() => { onNavigatePage('case-studies'); setResourcesOpen(false); }}
-                    className="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 flex items-center gap-3 transition group cursor-pointer"
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
                   >
-                    <FileCheck className="w-4 h-4 text-[#15803D]" />
-                    <span className="text-xs font-bold text-[#0B0B0D]">Case Studies</span>
+                    <FileCheck className="w-4 h-4 text-[#22C55E]" />
+                    <span className="text-xs font-bold text-white">Case Studies</span>
                   </button>
                   <button 
                     onClick={() => { onNavigatePage('testimonials'); setResourcesOpen(false); }}
-                    className="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 flex items-center gap-3 transition group cursor-pointer"
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
                   >
-                    <MessageSquareQuote className="w-4 h-4 text-[#15803D]" />
-                    <span className="text-xs font-bold text-[#0B0B0D]">Client Reviews</span>
+                    <MessageSquareQuote className="w-4 h-4 text-[#22C55E]" />
+                    <span className="text-xs font-bold text-white">Client Reviews</span>
                   </button>
                 </div>
               </div>
@@ -308,15 +308,15 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile Drawer Menu - Rendered as absolute overlay below header to prevent interference */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-            className="lg:hidden bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border-b border-[#064e3b]/90 px-5 sm:px-6 py-5 space-y-4 shadow-2xl text-white overflow-hidden"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="lg:hidden absolute top-full left-0 right-0 bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border-b border-[#064e3b] px-5 sm:px-6 py-5 space-y-4 shadow-2xl text-white max-h-[80vh] overflow-y-auto z-50 backdrop-blur-2xl ring-1 ring-emerald-500/20"
           >
             <div className="space-y-1">
               <button 
@@ -389,6 +389,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
               >
                 Case Studies
+              </button>
+
+              {/* About Us placed right after Case Studies */}
+              <button 
+                onClick={() => { onNavigatePage('about'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl bg-emerald-950/80 hover:bg-emerald-900/80 font-bold cursor-pointer text-white flex items-center gap-2 border border-emerald-400/30 mt-1.5"
+              >
+                <ShieldCheck className="w-4 h-4 text-[#22C55E]" />
+                <span>About Us & Executive Leadership</span>
               </button>
             </div>
 

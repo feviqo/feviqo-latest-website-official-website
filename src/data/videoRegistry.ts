@@ -154,13 +154,13 @@ export const MASTER_PORTFOLIO_VIDEOS: VideoSourceItem[] = [
   },
   {
     id: 'reel-3',
-    title: 'Fast-Paced Creator Hook Edit',
+    title: 'High-Paced Creator Hook & Luxury Villa Walkthrough',
     category: 'Shorts & Reels',
-    tag: 'Creator Edit',
+    tag: 'Luxury Estate Reel',
     orientation: 'vertical',
     duration: '0:22',
     clientName: 'Ali Growth Network',
-    views: '410K+ views',
+    views: '1.5M+ views',
     src: 'https://stream.mux.com/cg02HdoZ00PbXTb5Xdd2xK7qmarUhZ3Etipet6ZdqwTsc.m3u8',
     poster: 'https://image.mux.com/cg02HdoZ00PbXTb5Xdd2xK7qmarUhZ3Etipet6ZdqwTsc/thumbnail.jpg?time=1',
     driveId: '',
@@ -339,11 +339,44 @@ export const MASTER_PORTFOLIO_VIDEOS: VideoSourceItem[] = [
 ];
 
 /**
- * Returns video details from either ID or direct source.
+ * Returns video details from either ID, URL parameter, or direct source.
  */
 export const findVideoItem = (idOrUrl?: string | null): VideoSourceItem | undefined => {
   if (!idOrUrl) return undefined;
-  return MASTER_PORTFOLIO_VIDEOS.find(
-    (item) => item.id === idOrUrl || item.src === idOrUrl || item.driveId === idOrUrl
+  
+  let cleanKey = idOrUrl.trim();
+
+  // If passed a full URL containing a v parameter or /v/ or /watch/ or /gallery?v=
+  if (cleanKey.includes('v=')) {
+    try {
+      const u = new URL(cleanKey.startsWith('http') ? cleanKey : `https://feviqo.com/${cleanKey.replace(/^\//, '')}`);
+      const v = u.searchParams.get('v') || u.searchParams.get('video');
+      if (v) cleanKey = v;
+    } catch {}
+  } else if (cleanKey.includes('/v/')) {
+    const parts = cleanKey.split('/v/');
+    if (parts[1]) cleanKey = parts[1].split('?')[0].split('#')[0];
+  }
+
+  // 1. Exact ID match
+  const masterMatch = MASTER_PORTFOLIO_VIDEOS.find(
+    (item) => item.id === cleanKey || item.src === cleanKey || (item.driveId && item.driveId === cleanKey)
   );
+  if (masterMatch) return masterMatch;
+
+  for (const col of HOMEPAGE_SHOWCASE_COLUMNS) {
+    const showcaseMatch = col.items.find(
+      (it) => it.id === cleanKey || it.src === cleanKey || (it.driveId && it.driveId === cleanKey)
+    );
+    if (showcaseMatch) return showcaseMatch;
+  }
+
+  // 2. Partial match for Mux ID or stream URL
+  const muxMatch = MASTER_PORTFOLIO_VIDEOS.find((item) => {
+    if (item.src && cleanKey.length > 5 && (item.src.includes(cleanKey) || cleanKey.includes(item.src))) return true;
+    return false;
+  });
+  if (muxMatch) return muxMatch;
+
+  return undefined;
 };

@@ -206,7 +206,7 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
   // Open FEVIQO modal / lightbox
   const handleOpenModal = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    const modalTargetSource = resolvedDriveId || driveId || videoUrl || src || playableSrc;
+    const modalTargetSource = id || resolvedDriveId || driveId || videoUrl || src || playableSrc;
     if (onOpenModal) {
       onOpenModal(modalTargetSource, title, isVertical ? '9/16' : '16/9');
     } else if (containerRef.current) {
@@ -216,7 +216,7 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
         document.exitFullscreen?.().catch(() => {});
       }
     }
-  }, [resolvedDriveId, driveId, videoUrl, src, playableSrc, title, isVertical, onOpenModal]);
+  }, [id, resolvedDriveId, driveId, videoUrl, src, playableSrc, title, isVertical, onOpenModal]);
 
   return (
     <div
