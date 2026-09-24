@@ -148,6 +148,30 @@ export default function App() {
     return () => window.removeEventListener('popstate', handleUrlStateAndVideo);
   }, []);
 
+  // Dynamic SEO title & metadata updates for keyword ranking across routes
+  useEffect(() => {
+    const titles: Record<AppRoute, string> = {
+      'home': 'FEVIQO - Unlimited Video Editing Service & Creative Agency',
+      'unlimited-editing': 'Unlimited Video Editing Service - Flat Monthly Rate | FEVIQO',
+      'gallery': 'Video Editing Portfolio, TikTok & YouTube Reel Samples | FEVIQO',
+      'creators': 'Video Editing for YouTube, TikTok & Reels Creators | FEVIQO',
+      'business': 'Video Editing for Brands, SaaS & E-Commerce Ads | FEVIQO',
+      'agencies': 'White-Label Video Editing Agency Solution | FEVIQO',
+      'pricing': 'Unlimited Video Editing Pricing & Plans | FEVIQO',
+      'booking': 'Schedule Strategy Call - Unlimited Video Editing | FEVIQO',
+      'case-studies': 'Client Case Studies & Video Editing ROI Results | FEVIQO',
+      'testimonials': 'Client Reviews & Top Rated Video Editors | FEVIQO',
+      'about': 'About FEVIQO - Dedicated Senior Video Editors | FEVIQO',
+      'flow': 'FEVIQO Flow - Video Request Portal & Dashboard',
+      'platform': 'FEVIQO Flow Portal - Manage Video Edits & Assets',
+      'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO'
+    };
+
+    if (titles[currentRoute]) {
+      document.title = titles[currentRoute];
+    }
+  }, [currentRoute]);
+
   const navigateTo = (route: AppRoute, initialFlowView?: 'login' | 'register' | 'admin') => {
     if (route === 'admin' || initialFlowView === 'admin') {
       setCurrentRoute('flow');
