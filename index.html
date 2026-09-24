@@ -42,11 +42,53 @@
     <meta name="twitter:description" content="Top-rated unlimited video editing agency for brands, creators, and marketing agencies worldwide. High-converting TikTok, YouTube, and performance ad creatives with 24-48h turnaround." />
     <meta name="twitter:image" content="https://feviqo.com/HEADER-removebg-preview.png" />
 
-    <!-- Schema.org Structured Data (JSON-LD) for Search Engines -->
+    <!-- Schema.org Structured Data (JSON-LD) for Search Engines & Brand Recognition -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://feviqo.com/#website",
+          "url": "https://feviqo.com",
+          "name": "FEVIQO",
+          "alternateName": ["FEVIQO Video Editing", "FEVIQO Agency", "FEVIQO Studio", "FEVIQO.com"],
+          "description": "FEVIQO - Unlimited Video Editing Service & Creative Post-Production Agency for Brands and Creators.",
+          "publisher": {
+            "@id": "https://feviqo.com/#organization"
+          }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://feviqo.com/#organization",
+          "name": "FEVIQO",
+          "legalName": "FEVIQO Unlimited Video Editing Studio",
+          "alternateName": ["Feviqo", "FEVIQO Video", "FEVIQO Media", "FEVIQO Editing Agency"],
+          "url": "https://feviqo.com",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://feviqo.com/feviqo1.png",
+            "caption": "FEVIQO Brand Logo"
+          },
+          "image": "https://feviqo.com/HEADER-removebg-preview.png",
+          "email": "partner@feviqo.com",
+          "disambiguatingDescription": "FEVIQO is a digital video editing agency, creative studio, and post-production platform for creators, brands, and marketing agencies. FEVIQO is NOT an adhesive or glue product.",
+          "knowsAbout": ["Video Editing", "Content Creation", "YouTube Video Editing", "TikTok Video Editing", "Post Production", "Video Marketing", "Performance Ads"],
+          "sameAs": [
+            "https://twitter.com/feviqo",
+            "https://instagram.com/feviqo",
+            "https://linkedin.com/company/feviqo"
+          ]
+        },
+        {
+          "@type": "Brand",
+          "@id": "https://feviqo.com/#brand",
+          "name": "FEVIQO",
+          "alternateName": "FEVIQO Video Editing",
+          "logo": "https://feviqo.com/feviqo1.png",
+          "slogan": "Unlimited Video Editing Service for Modern Creators and Agencies",
+          "description": "FEVIQO is a global video post-production brand providing flat-rate unlimited video editing for creators, brands, and agencies."
+        },
         {
           "@type": "ProfessionalService",
           "@id": "https://feviqo.com/#service",
@@ -97,15 +139,25 @@
           }
         },
         {
-          "@type": "Organization",
-          "@id": "https://feviqo.com/#organization",
-          "name": "FEVIQO",
-          "url": "https://feviqo.com",
-          "email": "partner@feviqo.com",
-          "sameAs": [
-            "https://twitter.com/feviqo",
-            "https://instagram.com/feviqo",
-            "https://linkedin.com/company/feviqo"
+          "@type": "FAQPage",
+          "@id": "https://feviqo.com/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is FEVIQO?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "FEVIQO is a premier unlimited video editing agency and post-production service providing dedicated video editors for creators, e-commerce brands, and marketing agencies with 24-48 hour turnaround."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is FEVIQO an adhesive or glue product?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "No. FEVIQO is strictly a digital media, content creation, and video editing service company for creators, businesses, and advertising agencies worldwide."
+              }
+            }
           ]
         }
       ]
