@@ -42,11 +42,17 @@ const PORT = 3000;
 app.use(express.json({ limit: '2048mb' }));
 app.use(express.urlencoded({ limit: '2048mb', extended: true }));
 
-// Enable global CORS for feviqo.com, www.feviqo.com, preview URLs, and external webhooks
+// Enable global CORS & cellular network compatibility headers (fixes ERR_QUIC_PROTOCOL_ERROR on Jazz, Ufone, Zong)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Explicitly clear QUIC/UDP advertisement so mobile browsers use stable TCP/TLS HTTP/2
+  res.setHeader('Alt-Svc', 'clear');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=30, max=100');
+
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -2196,6 +2202,11 @@ app.delete('/api/editors/:id', (req, res) => {
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to delete editor' });
   }
+});
+
+app.get('/ads.txt', (_req, res) => {
+  res.setHeader('Content-Type', 'text/plain');
+  return res.send('google.com, pub-4691262355758432, DIRECT, f08c47fec0942fa0\n');
 });
 
 import { transformHTMLForRoute } from './src/seo/serverSEO';
