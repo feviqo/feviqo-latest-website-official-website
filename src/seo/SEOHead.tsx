@@ -100,6 +100,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "subtitleLanguage": "Urdu Subtitles",
         "description": "Watch Teşkilat Season 7 Episode 186 in 1080p HD with full Urdu story recap on FEVIQO.",
         "image": "https://feviqo.com/images/teskialt186thumbnIL.png",
+        "mainEntityOfPage": "https://feviqo.com/teskilat/episode-186",
         "isPartOf": {
           "@type": "TVSeries",
           "name": "Teşkilat",
@@ -120,6 +121,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "embedUrl": "https://feviqo.com/teskilat/episode-186",
         "duration": "PT2H32M",
         "isFamilyFriendly": true,
+        "mainEntityOfPage": "https://feviqo.com/teskilat/episode-186",
         "publisher": {
           "@id": "https://feviqo.com/#organization"
         }

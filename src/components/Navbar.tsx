@@ -221,15 +221,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             Pricing
           </button>
 
-          {/* About Us */}
-          <button 
-            onClick={() => onNavigatePage('about')}
-            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer font-semibold text-white flex items-center gap-1.5"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>About Us</span>
-          </button>
-
           {/* Resources Dropdown */}
           <div 
             className="relative"
@@ -280,24 +271,24 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Right CTA & Access */}
         <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Client Portal Login */}
+          {/* Desktop About Us in the Corner */}
           <button 
-            onClick={() => onNavigateFlow('login')}
-            className="hidden xl:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-white/95 hover:text-white bg-white/10 hover:bg-white/20 border border-white/25 transition cursor-pointer"
-            title="Client Portal Login"
+            onClick={() => onNavigatePage('about')}
+            className="hidden lg:inline-flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold text-white/90 hover:bg-white/15 hover:text-emerald-300 transition cursor-pointer"
+            title="About FEVIQO"
           >
-            <Lock className="w-3.5 h-3.5 text-emerald-200" />
-            <span>Login</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>About Us</span>
           </button>
 
-          {/* Admin Control Center */}
+          {/* Client Portal Login (Visible on all laptop/desktop screens, points directly to Client Login first) */}
           <button 
-            onClick={() => onNavigateFlow('admin')}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium text-white bg-black/25 hover:bg-black/40 border border-white/25 transition cursor-pointer"
-            title="Studio Admin Control Center"
+            onClick={() => onNavigateFlow('login')}
+            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/25 transition cursor-pointer"
+            title="Login to FEVIQO Flow"
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-[#DBFF4C]" />
-            <span>Admin</span>
+            <Lock className="w-3.5 h-3.5 text-emerald-300" />
+            <span>Login</span>
           </button>
 
           {/* Primary Action */}
@@ -382,27 +373,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               <button 
-                onClick={() => {
-                  onNavigatePage('teskilat-urdu');
-                  window.dispatchEvent(new Event('teskilat-overview'));
-                  try { window.history.pushState({ route: 'teskilat-urdu' }, '', '/teskilat'); } catch {}
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 font-extrabold cursor-pointer text-amber-300 flex items-center justify-between border border-amber-400/40"
-              >
-                <span>Teşkilat (Urdu Subtitles)</span>
-                <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-200 border border-amber-400/40 font-black">Urdu HD</span>
-              </button>
-
-              <button 
-                onClick={() => { onNavigatePage('turkish-drama'); setMobileMenuOpen(false); }}
-                className="w-full text-left py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 font-bold cursor-pointer text-[#22C55E] flex items-center justify-between"
-              >
-                <span>Turkish TV Licensing (Pakistan)</span>
-                <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">B2B</span>
-              </button>
-
-              <button 
                 onClick={() => { onNavigatePage('testimonials'); setMobileMenuOpen(false); }}
                 className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
               >
@@ -416,13 +386,36 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Case Studies
               </button>
 
-              {/* About Us placed right after Case Studies */}
+              {/* About Us Section */}
               <button 
                 onClick={() => { onNavigatePage('about'); setMobileMenuOpen(false); }}
                 className="w-full text-left py-2.5 px-3 rounded-xl bg-emerald-950/80 hover:bg-emerald-900/80 font-bold cursor-pointer text-white flex items-center gap-2 border border-emerald-400/30 mt-1.5"
               >
                 <ShieldCheck className="w-4 h-4 text-[#22C55E]" />
                 <span>About Us & Executive Leadership</span>
+              </button>
+
+              {/* Teşkilat Drama placed in the end on phone */}
+              <button 
+                onClick={() => {
+                  onNavigatePage('teskilat-urdu');
+                  window.dispatchEvent(new Event('teskilat-overview'));
+                  try { window.history.pushState({ route: 'teskilat-urdu' }, '', '/teskilat'); } catch {}
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 font-extrabold cursor-pointer text-amber-300 flex items-center justify-between border border-amber-400/40 mt-1.5"
+              >
+                <span>Teşkilat (Urdu Subtitles)</span>
+                <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-200 border border-amber-400/40 font-black">Urdu HD</span>
+              </button>
+
+              {/* Turkish TV Licensing placed in the end on phone */}
+              <button 
+                onClick={() => { onNavigatePage('turkish-drama'); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/15 font-bold cursor-pointer text-[#22C55E] flex items-center justify-between border border-emerald-500/20"
+              >
+                <span>Turkish TV Licensing (Pakistan)</span>
+                <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40">B2B</span>
               </button>
             </div>
 
@@ -433,20 +426,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 Start a Project
               </button>
-              <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="grid grid-cols-1 gap-2 mt-1">
                 <button
                   onClick={() => { onNavigateFlow('login'); setMobileMenuOpen(false); }}
-                  className="py-2.5 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-semibold text-center cursor-pointer flex items-center justify-center gap-1.5 border border-white/20"
+                  className="w-full py-3 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold text-center cursor-pointer flex items-center justify-center gap-1.5 border border-white/20"
                 >
-                  <Lock className="w-3.5 h-3.5 text-emerald-200" />
-                  <span>Client Login</span>
-                </button>
-                <button
-                  onClick={() => { onNavigateFlow('admin'); setMobileMenuOpen(false); }}
-                  className="py-2.5 rounded-full bg-black/30 hover:bg-black/45 border border-white/25 text-white text-xs font-semibold text-center cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#22C55E]" />
-                  <span>Admin Panel</span>
+                  <Lock className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Login to FEVIQO Flow</span>
                 </button>
               </div>
             </div>

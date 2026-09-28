@@ -194,7 +194,9 @@ export type AppRoute =
   | 'unlimited-editing' 
   | 'platform'
   | 'turkish-drama'
-  | 'teskilat-urdu';
+  | 'teskilat-urdu'
+  | 'privacy'
+  | 'terms';
 
 export interface PreselectedPlan {
   id: string; // 'scale' | 'pro' | 'inhouse'

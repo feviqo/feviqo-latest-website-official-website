@@ -37,6 +37,8 @@ import { PlatformOverviewPage } from './components/pages/PlatformOverviewPage';
 import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
 import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
 import { AboutUsPage } from './components/pages/AboutUsPage';
+import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
+import { TermsPage } from './components/pages/TermsPage';
 
 import { AppRoute, PreselectedPlan } from './types';
 import { initializeAssetSync } from './services/assetService';
@@ -65,6 +67,8 @@ export default function App() {
       if (path.includes('/platform') || hash.includes('#platform')) return 'platform';
       if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) return 'turkish-drama';
       if (path.includes('/about') || hash.includes('#about')) return 'about';
+      if (path.includes('/privacy') || hash.includes('#privacy')) return 'privacy';
+      if (path.includes('/terms') || hash.includes('#terms')) return 'terms';
     }
     return 'home';
   });
@@ -143,6 +147,10 @@ export default function App() {
         setCurrentRoute('turkish-drama');
       } else if (path.includes('/about') || hash.includes('#about')) {
         setCurrentRoute('about');
+      } else if (path.includes('/privacy') || hash.includes('#privacy')) {
+        setCurrentRoute('privacy');
+      } else if (path.includes('/terms') || hash.includes('#terms')) {
+        setCurrentRoute('terms');
       } else {
         setCurrentRoute('home');
       }
@@ -182,7 +190,9 @@ export default function App() {
       'flow': 'FEVIQO Flow - Video Request Portal & Dashboard',
       'platform': 'FEVIQO Flow Portal - Manage Video Edits & Assets',
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
-      'teskilat-urdu': 'Teşkilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO'
+      'teskilat-urdu': 'Teşkilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO',
+      'privacy': 'Privacy Policy & Cookie Disclosure | FEVIQO',
+      'terms': 'Terms of Service & Usage Agreement | FEVIQO'
     };
 
     if (titles[currentRoute]) {
@@ -544,6 +554,28 @@ export default function App() {
           </div>
         );
 
+      case 'privacy':
+        return (
+          <PrivacyPolicyPage
+            onBackToHome={() => navigateTo('home')}
+            onBookCall={handleOpenBookCall}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
+            onNavigatePage={(route) => navigateTo(route)}
+          />
+        );
+
+      case 'terms':
+        return (
+          <TermsPage
+            onBackToHome={() => navigateTo('home')}
+            onBookCall={handleOpenBookCall}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
+            onNavigatePage={(route) => navigateTo(route)}
+          />
+        );
+
       case 'teskilat-urdu':
         return (
           <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#07090E] text-white font-sans selection:bg-amber-500 selection:text-slate-950 flex flex-col">
@@ -657,6 +689,8 @@ export default function App() {
       case 'flow': return '/admin';
       case 'platform': return '/platform';
       case 'turkish-drama': return '/turkish-drama';
+      case 'privacy': return '/privacy';
+      case 'terms': return '/terms';
       case 'teskilat-urdu':
         if (typeof window !== 'undefined' && window.location.pathname.includes('/episode-186')) {
           return '/teskilat/episode-186';

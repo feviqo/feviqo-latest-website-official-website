@@ -245,10 +245,10 @@ export const Footer: React.FC<FooterProps> = ({
             <button onClick={onNavigateFlow} className="text-[#22C55E] hover:underline font-bold transition cursor-pointer">
               Admin &amp; Flow Portal
             </button>
-            <button onClick={() => onNavigateSection('faq')} className="hover:text-white transition cursor-pointer">
+            <button onClick={() => nav('privacy')} className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer">
               Privacy Policy
             </button>
-            <button onClick={() => onNavigateSection('faq')} className="hover:text-white transition cursor-pointer">
+            <button onClick={() => nav('terms')} className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer">
               Terms of Service
             </button>
             <button onClick={() => onNavigateSection('faq')} className="hover:text-white transition cursor-pointer">

@@ -63,15 +63,27 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "@id": "https://feviqo.com/#organization",
         "name": "FEVIQO",
         "legalName": "FEVIQO Unlimited Video Editing Studio",
+        "alternateName": ["Feviqo", "FEVIQO Video", "FEVIQO Media", "FEVIQO Editing Agency"],
         "url": "https://feviqo.com",
         "logo": "https://feviqo.com/feviqo1.png",
         "image": "https://feviqo.com/HEADER-removebg-preview.png",
-        "email": "partner@feviqo.com"
+        "email": "partner@feviqo.com",
+        "disambiguatingDescription": "FEVIQO is a digital video editing agency, creative studio, and post-production platform for creators, brands, and marketing agencies. FEVIQO is NOT an adhesive or glue product.",
+        "knowsAbout": ["Video Editing", "Content Creation", "YouTube Video Editing", "TikTok Video Editing", "Post Production", "Video Marketing", "Performance Ads"],
+        "sameAs": [
+          "https://www.youtube.com/@feviqo",
+          "https://www.instagram.com/feviqo.co/",
+          "https://www.facebook.com/people/Feviqo/61588711067413/",
+          "https://www.linkedin.com/company/feviqo/"
+        ]
       }
     ]
   };
 
   if (cleanPath === '/teskilat/episode-186') {
+    // Strip the default static homepage JSON-LD script to avoid structured data merging issues
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
     schemaObj["@graph"].push({
       "@type": "TVEpisode",
       "@id": "https://feviqo.com/teskilat/episode-186#episode",
@@ -83,6 +95,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "subtitleLanguage": "Urdu Subtitles",
       "description": "Watch Teşkilat Season 7 Episode 186 in 1080p HD with full Urdu story recap on FEVIQO.",
       "image": "https://feviqo.com/images/teskialt186thumbnIL.png",
+      "mainEntityOfPage": "https://feviqo.com/teskilat/episode-186",
       "isPartOf": {
         "@type": "TVSeries",
         "name": "Teşkilat",
@@ -103,6 +116,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "embedUrl": "https://feviqo.com/teskilat/episode-186",
       "duration": "PT2H32M",
       "isFamilyFriendly": true,
+      "mainEntityOfPage": "https://feviqo.com/teskilat/episode-186",
       "publisher": {
         "@id": "https://feviqo.com/#organization"
       }
