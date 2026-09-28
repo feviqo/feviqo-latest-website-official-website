@@ -107,12 +107,28 @@
     <changefreq>daily</changefreq>
     <priority>0.95</priority>
     <video:video>
-      <video:thumbnail_loc>https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&amp;fit=crop&amp;w=1200&amp;q=80</video:thumbnail_loc>
-      <video:title>Teşkilat Season 7 Episode 186 Urdu Subtitles</video:title>
-      <video:description>Watch Teşkilat Season 7 Episode 186 in HD Urdu Subtitles with story recap and YouTube player on FEVIQO.</video:description>
-      <video:content_loc>https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4</video:content_loc>
+      <video:thumbnail_loc>https://feviqo.com/images/teskialt186thumbnIL.png</video:thumbnail_loc>
+      <video:title>Teşkilat Season 7 Urdu Subtitles Discovery Portal</video:title>
+      <video:description>Watch Teşkilat Season 7 episodes with official Urdu translation on FEVIQO.</video:description>
+      <video:content_loc>https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8</video:content_loc>
       <video:player_loc>https://feviqo.com/teskilat</video:player_loc>
-      <video:duration>8280</video:duration>
+      <video:duration>9120</video:duration>
+      <video:publication_date>2026-09-28T08:00:00+00:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://feviqo.com/teskilat/episode-186</loc>
+    <lastmod>2026-09-28</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <video:video>
+      <video:thumbnail_loc>https://feviqo.com/images/teskialt186thumbnIL.png</video:thumbnail_loc>
+      <video:title>Teşkilat Season 7 Episode 186 Urdu Subtitles</video:title>
+      <video:description>Watch Teşkilat Season 7 Episode 186 in HD Urdu Subtitles with full story recap on FEVIQO.</video:description>
+      <video:content_loc>https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8</video:content_loc>
+      <video:player_loc>https://feviqo.com/teskilat/episode-186</video:player_loc>
+      <video:duration>9120</video:duration>
       <video:publication_date>2026-09-28T08:00:00+00:00</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
     </video:video>
