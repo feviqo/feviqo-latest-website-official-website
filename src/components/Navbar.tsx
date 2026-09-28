@@ -106,44 +106,44 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {solutionsOpen && (
-              <div className="absolute top-full left-0 w-80 bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border border-[#064e3b] rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-emerald-500/20 backdrop-blur-xl">
+              <div className="absolute top-full left-0 w-80 bg-slate-900/60 backdrop-blur-3xl border border-white/20 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-white/10">
                 <div className="space-y-1">
                   <button 
                     onClick={() => { onNavigatePage('creators'); setSolutionsOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-white text-xs font-bold uppercase tracking-wider">Content Creators</div>
-                      <div className="text-emerald-100/70 text-xs mt-0.5">High-retention editing for YouTubers & streamers.</div>
+                      <div className="text-slate-300 text-xs mt-0.5">High-retention editing for YouTubers &amp; streamers.</div>
                     </div>
                   </button>
 
                   <button 
                     onClick={() => { onNavigatePage('business'); setSolutionsOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
                       <Briefcase className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-white text-xs font-bold uppercase tracking-wider">Business Owners</div>
-                      <div className="text-emerald-100/70 text-xs mt-0.5">Turn 1 founder recording into a multi-channel video suite.</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Turn 1 founder recording into a multi-channel video suite.</div>
                     </div>
                   </button>
 
                   <button 
                     onClick={() => { onNavigatePage('agencies'); setSolutionsOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
                       <TrendingUp className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="text-white text-xs font-bold uppercase tracking-wider">Marketers & Agencies</div>
-                      <div className="text-emerald-100/70 text-xs mt-0.5">White-label editing pods scaling retainer capacity.</div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Marketers &amp; Agencies</div>
+                      <div className="text-slate-300 text-xs mt-0.5">White-label editing pods scaling retainer capacity.</div>
                     </div>
                   </button>
                 </div>
@@ -161,51 +161,51 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
             >
               Services
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform text-emerald-200 ${servicesOpen ? 'rotate-180 text-white' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${servicesOpen ? 'rotate-180 text-white' : ''}`} />
             </button>
 
             {servicesOpen && (
-              <div className="absolute top-full left-0 w-80 bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border border-[#064e3b] rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-emerald-500/20 backdrop-blur-xl">
+              <div className="absolute top-full left-0 w-80 bg-slate-900/60 backdrop-blur-3xl border border-white/20 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-white/10">
                 <div className="space-y-1">
                   <button 
                     onClick={() => { onNavigatePage('unlimited-editing'); setServicesOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
                       <Video className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-white text-xs font-bold uppercase tracking-wider">Unlimited Video Editing</div>
-                      <div className="text-emerald-100/70 text-xs mt-0.5">Dedicated editor, 4K rendering & 24–48h turnarounds.</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Dedicated editor, 4K rendering &amp; 24–48h turnarounds.</div>
                     </div>
                   </button>
 
                   <button 
                     onClick={() => { onNavigatePage('platform'); setServicesOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
                       <FileCheck className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-white text-xs font-bold uppercase tracking-wider">FEVIQO Flow Platform</div>
-                      <div className="text-emerald-100/70 text-xs mt-0.5">Timestamped client revisions & seamless asset management.</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Timestamped client revisions &amp; seamless asset management.</div>
                     </div>
                   </button>
 
                   <button 
                     onClick={() => { onNavigatePage('turkish-drama'); setServicesOpen(false); }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-white/10 flex items-start gap-3 transition group cursor-pointer border-t border-emerald-800/40 mt-1 pt-2.5 hover:border-emerald-500/30"
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border-t border-white/10 mt-1 pt-2.5"
                   >
-                    <div className="p-2 rounded-lg bg-emerald-950/80 text-[#22C55E] border border-emerald-500/30 group-hover:bg-[#22C55E] group-hover:text-slate-950 transition">
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
                       <Globe className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                         <span>Turkish TV Licensing</span>
-                        <span className="px-1.5 py-0.2 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black">B2B</span>
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 text-[9px] font-black">B2B</span>
                       </div>
-                      <div className="text-emerald-100/70 text-xs mt-0.5">Urdu dubbing & authorized digital distribution in Pakistan.</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Urdu dubbing &amp; authorized digital distribution in Pakistan.</div>
                     </div>
                   </button>
                 </div>
@@ -240,30 +240,42 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
             >
               Resources
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform text-emerald-200 ${resourcesOpen ? 'rotate-180 text-white' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${resourcesOpen ? 'rotate-180 text-white' : ''}`} />
             </button>
 
             {resourcesOpen && (
-              <div className="absolute top-full left-0 w-72 bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border border-[#064e3b] rounded-2xl p-2.5 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-emerald-500/20 backdrop-blur-xl">
+              <div className="absolute top-full left-0 w-72 bg-slate-900/60 backdrop-blur-3xl border border-white/20 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-white/10">
                 <div className="space-y-1">
                   <button 
                     onClick={() => { onNavigatePage('case-studies'); setResourcesOpen(false); }}
-                    className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-white/15 flex items-center gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
                   >
-                    <FileCheck className="w-4 h-4 text-[#22C55E]" />
+                    <FileCheck className="w-4 h-4 text-emerald-400" />
                     <span className="text-xs font-bold text-white">Case Studies</span>
                   </button>
                   <button 
                     onClick={() => { onNavigatePage('testimonials'); setResourcesOpen(false); }}
-                    className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center gap-3 transition group cursor-pointer border border-transparent hover:border-emerald-500/30"
+                    className="w-full text-left p-2.5 rounded-xl hover:bg-white/15 flex items-center gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
                   >
-                    <MessageSquareQuote className="w-4 h-4 text-[#22C55E]" />
+                    <MessageSquareQuote className="w-4 h-4 text-emerald-400" />
                     <span className="text-xs font-bold text-white">Client Reviews</span>
                   </button>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Teşkilat Drama - Always navigates to Teşkilat overview portal */}
+          <button 
+            onClick={() => {
+              onNavigatePage('teskilat-urdu');
+              window.dispatchEvent(new Event('teskilat-overview'));
+              try { window.history.pushState({ route: 'teskilat-urdu' }, '', '/teskilat'); } catch {}
+            }}
+            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300"
+          >
+            Teşkilat Drama
+          </button>
         </nav>
 
         {/* Right CTA & Access */}
@@ -367,6 +379,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-medium cursor-pointer text-white"
               >
                 FEVIQO Flow Platform
+              </button>
+
+              <button 
+                onClick={() => {
+                  onNavigatePage('teskilat-urdu');
+                  window.dispatchEvent(new Event('teskilat-overview'));
+                  try { window.history.pushState({ route: 'teskilat-urdu' }, '', '/teskilat'); } catch {}
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 font-extrabold cursor-pointer text-amber-300 flex items-center justify-between border border-amber-400/40"
+              >
+                <span>Teşkilat (Urdu Subtitles)</span>
+                <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-200 border border-amber-400/40 font-black">Urdu HD</span>
               </button>
 
               <button 

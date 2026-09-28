@@ -193,7 +193,8 @@ export type AppRoute =
   | 'case-studies' 
   | 'unlimited-editing' 
   | 'platform'
-  | 'turkish-drama';
+  | 'turkish-drama'
+  | 'teskilat-urdu';
 
 export interface PreselectedPlan {
   id: string; // 'scale' | 'pro' | 'inhouse'

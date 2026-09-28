@@ -80,6 +80,22 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Noto Nastaliq Urdu';
+  src: url('/fonts/NotoNastaliqUrdu-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Jameel Noori Nastaleeq';
+  src: url('/fonts/Jameel Noori Nastaleeq Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 .font-neue {
   font-family: 'Neue Montreal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -96,6 +112,41 @@
 .font-editorial-italic {
   font-family: 'Saol Display', 'Playfair Display', Georgia, serif;
   font-style: italic;
+}
+
+.font-urdu-slim {
+  font-family: 'Noto Nastaliq Urdu', 'Jameel Noori Nastaleeq', 'Noto Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.9;
+}
+
+/* Custom YouTube-style range slider */
+input[type=range].yt-range {
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.25);
+  height: 4px;
+  border-radius: 2px;
+  transition: height 0.15s ease;
+}
+
+input[type=range].yt-range:hover {
+  height: 6px;
+}
+
+input[type=range].yt-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  background: #FF0000;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+  transition: transform 0.15s ease;
+}
+
+input[type=range].yt-range:hover::-webkit-slider-thumb {
+  transform: scale(1.3);
 }
 
 @layer base {

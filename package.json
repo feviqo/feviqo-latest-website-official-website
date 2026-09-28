@@ -13,10 +13,15 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@mux/mux-player-react": "^3.13.4",
     "@tailwindcss/vite": "^4.1.14",
     "@types/nodemailer": "^8.0.1",
+    "@videojs/html": "10.0.0-rc.4",
+    "@videojs/mux-data": "10.0.0-rc.4",
+    "@videojs/mux-video": "10.0.0-rc.4",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
+    "esbuild": "^0.25.0",
     "express": "^4.21.2",
     "hls.js": "^1.7.3",
     "lucide-react": "^0.546.0",
@@ -25,7 +30,6 @@
     "nodemailer": "^10.0.2",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "esbuild": "^0.25.0",
     "vite": "^6.2.3"
   },
   "devDependencies": {

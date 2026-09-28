@@ -35,6 +35,7 @@ import { CaseStudiesPage } from './components/pages/CaseStudiesPage';
 import { UnlimitedEditingPage } from './components/pages/UnlimitedEditingPage';
 import { PlatformOverviewPage } from './components/pages/PlatformOverviewPage';
 import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
+import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
 import { AboutUsPage } from './components/pages/AboutUsPage';
 
 import { AppRoute, PreselectedPlan } from './types';
@@ -133,6 +134,8 @@ export default function App() {
         setCurrentRoute('unlimited-editing');
       } else if (path.includes('/platform') || hash.includes('#platform')) {
         setCurrentRoute('platform');
+      } else if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/teskilat-186') || hash.includes('#teskilat')) {
+        setCurrentRoute('teskilat-urdu');
       } else if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) {
         setCurrentRoute('turkish-drama');
       } else if (path.includes('/about') || hash.includes('#about')) {
@@ -164,7 +167,8 @@ export default function App() {
       'about': 'About FEVIQO - Dedicated Senior Video Editors | FEVIQO',
       'flow': 'FEVIQO Flow - Video Request Portal & Dashboard',
       'platform': 'FEVIQO Flow Portal - Manage Video Edits & Assets',
-      'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO'
+      'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
+      'teskilat-urdu': 'Teşkilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO'
     };
 
     if (titles[currentRoute]) {
@@ -509,6 +513,27 @@ export default function App() {
         return (
           <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white text-slate-900 font-sans selection:bg-[#22C55E] selection:text-white flex flex-col">
             <TurkishDramaPage 
+              onBackToHome={() => navigateTo('home')}
+              onBookCall={handleOpenBookCall}
+              onNavigatePricing={() => navigateTo('pricing')}
+              onNavigateFlow={(view) => navigateTo('flow', view)}
+              onNavigatePage={(route) => navigateTo(route)}
+            />
+            <Footer 
+              onBookCall={handleOpenBookCall}
+              onGetStarted={handleOpenBookCall}
+              onNavigateSection={handleNavigateSection}
+              onNavigatePricing={() => navigateTo('pricing')}
+              onNavigateFlow={() => navigateTo('flow')}
+              onNavigatePage={(route) => navigateTo(route)}
+            />
+          </div>
+        );
+
+      case 'teskilat-urdu':
+        return (
+          <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#07090E] text-white font-sans selection:bg-amber-500 selection:text-slate-950 flex flex-col">
+            <TeskilatDramaPage 
               onBackToHome={() => navigateTo('home')}
               onBookCall={handleOpenBookCall}
               onNavigatePricing={() => navigateTo('pricing')}
