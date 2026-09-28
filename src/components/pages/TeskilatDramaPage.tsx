@@ -564,11 +564,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
                 {/* Hero Right Visual Art */}
                 <div className="lg:col-span-5 relative">
-                  <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-900 group">
+                  <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-950 group p-1">
                     <img 
                       src="/images/image .jpeg" 
                       alt="Teşkilat Season 7 Official Poster" 
-                      className="w-full h-auto object-cover max-h-[520px] transition-transform duration-700 group-hover:scale-105"
+                      className="w-full h-auto object-contain max-h-[520px] mx-auto rounded-xl transition-transform duration-700 group-hover:scale-105"
                     />
                   </div>
                 </div>
@@ -595,12 +595,12 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <a 
                     href="/teskilat/episode-186"
                     onClick={(e) => { e.preventDefault(); handleOpenEpisode(FEATURED_SEASON7_EPISODE); }}
-                    className="lg:col-span-6 relative rounded-2xl overflow-hidden bg-slate-900 shadow-xl border border-slate-200 block group"
+                    className="lg:col-span-6 relative rounded-2xl overflow-hidden bg-black shadow-xl border border-slate-200 block group aspect-video"
                   >
                     <img 
                       src={FEATURED_SEASON7_EPISODE.thumbnailUrl} 
                       alt="Teşkilat Season 7 Episode 186 Thumbnail" 
-                      className="w-full h-72 sm:h-80 object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-slate-950/10 transition-colors flex items-center justify-center">
                       <div className="w-14 h-14 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
@@ -697,11 +697,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   onClick={() => handleOpenEpisode(FEATURED_SEASON7_EPISODE)}
                   className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-[#22C55E]/60 hover:shadow-lg transition-all duration-300 group cursor-pointer text-left flex flex-col sm:flex-row items-center gap-6"
                 >
-                  <div className="relative w-full sm:w-60 h-36 rounded-xl overflow-hidden bg-slate-900 shrink-0">
+                  <div className="relative w-full sm:w-64 aspect-video rounded-xl overflow-hidden bg-black shrink-0">
                     <img 
                       src={FEATURED_SEASON7_EPISODE.thumbnailUrl} 
                       alt="Teşkilat Episode 186 Thumbnail" 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-slate-950/20 flex items-center justify-center">
                       <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -793,7 +793,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     <img 
                       src="/images/teskialt186thumbnIL.png" 
                       alt="Teşkilat Season 7 Episode 186 Thumbnail Poster" 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-slate-950/20 transition-colors flex items-center justify-center">
                       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
