@@ -125,6 +125,18 @@ export const HOMEPAGE_SHOWCASE_COLUMNS: { colIndex: number; items: VideoSourceIt
 
 // Full Master Gallery Collection for VideoGalleryPage
 export const MASTER_PORTFOLIO_VIDEOS: VideoSourceItem[] = [
+  {
+    id: 'hero',
+    title: 'FEVIQO Unlimited Video Editing Showreel',
+    category: 'Showreel',
+    tag: 'FEVIQO SHOWREEL',
+    orientation: 'horizontal',
+    duration: '0:45',
+    clientName: 'FEVIQO Studio',
+    views: '1.2M+ views',
+    src: '/videos/Sequence-01.mp4',
+    poster: '/images/feviqo-hero-poster.jpg',
+  },
   // Vertical Reels
   {
     id: 'reel-1',
@@ -356,6 +368,10 @@ export const findVideoItem = (idOrUrl?: string | null): VideoSourceItem | undefi
   } else if (cleanKey.includes('/v/')) {
     const parts = cleanKey.split('/v/');
     if (parts[1]) cleanKey = parts[1].split('?')[0].split('#')[0];
+  }
+
+  if (cleanKey === 'hero' || cleanKey === 'showreel' || cleanKey.includes('Sequence-01.mp4')) {
+    return MASTER_PORTFOLIO_VIDEOS[0];
   }
 
   // 1. Exact ID match

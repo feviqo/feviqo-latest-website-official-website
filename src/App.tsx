@@ -42,6 +42,9 @@ import { AppRoute, PreselectedPlan } from './types';
 import { initializeAssetSync } from './services/assetService';
 import { findVideoItem } from './data/videoRegistry';
 
+import { SEOHead } from './seo/SEOHead';
+import { SEOAdminModal } from './components/admin/SEOAdminModal';
+
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
     if (typeof window !== 'undefined') {
@@ -145,10 +148,21 @@ export default function App() {
       }
     };
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.altKey && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        setIsSEOAdminOpen(prev => !prev);
+      }
+    };
+
     handleUrlStateAndVideo();
     window.addEventListener('popstate', handleUrlStateAndVideo);
+    window.addEventListener('keydown', handleKeyDown);
     initializeAssetSync();
-    return () => window.removeEventListener('popstate', handleUrlStateAndVideo);
+    return () => {
+      window.removeEventListener('popstate', handleUrlStateAndVideo);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   // Dynamic SEO title & metadata updates for keyword ranking across routes
@@ -624,11 +638,48 @@ export default function App() {
     }
   };
 
+  const [isSEOAdminOpen, setIsSEOAdminOpen] = useState(false);
+
+  // Map AppRoute enum to canonical path
+  const getPathForRoute = (route: AppRoute): string => {
+    switch (route) {
+      case 'home': return '/';
+      case 'unlimited-editing': return '/unlimited-editing';
+      case 'creators': return '/creators';
+      case 'business': return '/business';
+      case 'agencies': return '/agencies';
+      case 'gallery': return '/gallery';
+      case 'pricing': return '/pricing';
+      case 'booking': return '/booking';
+      case 'case-studies': return '/case-studies';
+      case 'testimonials': return '/testimonials';
+      case 'about': return '/about';
+      case 'flow': return '/admin';
+      case 'platform': return '/platform';
+      case 'turkish-drama': return '/turkish-drama';
+      case 'teskilat-urdu':
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/episode-186')) {
+          return '/teskilat/episode-186';
+        }
+        return '/teskilat';
+      default: return '/';
+    }
+  };
+
   return (
     <>
+      <SEOHead pathname={getPathForRoute(currentRoute)} />
+
       <div className="w-full">
         {renderCurrentRoute()}
       </div>
+
+      {/* Admin SEO CMS Control Modal */}
+      <SEOAdminModal 
+        isOpen={isSEOAdminOpen}
+        onClose={() => setIsSEOAdminOpen(false)}
+        currentPath={getPathForRoute(currentRoute)}
+      />
 
       {/* Global Video Modal Player */}
       {activeVideoModal && (

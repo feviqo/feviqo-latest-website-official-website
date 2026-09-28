@@ -114,5 +114,9 @@ export function attachHlsStream(
 
   // Standard progressive MP4 / WebM fallback
   videoElement.src = src;
+  options.onReady?.();
+  if (options.autoPlay) {
+    videoElement.play().catch(() => {});
+  }
   return undefined;
 }
