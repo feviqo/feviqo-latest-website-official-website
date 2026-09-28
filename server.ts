@@ -2198,6 +2198,8 @@ app.delete('/api/editors/:id', (req, res) => {
   }
 });
 
+import { transformHTMLForRoute } from './src/seo/serverSEO';
+
 // --- VITE DEV / PRODUCTION MIDDLEWARE ---
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
@@ -2205,12 +2207,32 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: 'spa',
     });
-    app.use(vite.middlewares);
+    app.use(async (req, res, next) => {
+      if (req.method === 'GET' && (req.headers.accept || '').includes('text/html')) {
+        try {
+          const indexPath = path.join(process.cwd(), 'index.html');
+          let rawHtml = fs.readFileSync(indexPath, 'utf-8');
+          rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
+          const seoHtml = transformHTMLForRoute(rawHtml, req.path);
+          return res.status(200).set({ 'Content-Type': 'text/html' }).end(seoHtml);
+        } catch (e) {
+          return next(e);
+        }
+      }
+      vite.middlewares(req, res, next);
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      try {
+        const indexPath = path.join(distPath, 'index.html');
+        const rawHtml = fs.readFileSync(indexPath, 'utf-8');
+        const seoHtml = transformHTMLForRoute(rawHtml, req.path);
+        return res.status(200).set({ 'Content-Type': 'text/html' }).end(seoHtml);
+      } catch {
+        return res.sendFile(path.join(distPath, 'index.html'));
+      }
     });
   }
 
