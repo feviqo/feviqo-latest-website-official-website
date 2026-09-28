@@ -95,7 +95,6 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "url": "https://feviqo.com/teskilat/episode-186",
         "name": "Teşkilat Season 7 Episode 186 Urdu Subtitles",
         "episodeNumber": "186",
-        "numEpisodes": "1",
         "seasonNumber": "7",
         "inLanguage": "Urdu",
         "subtitleLanguage": "Urdu Subtitles",
@@ -105,17 +104,24 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
           "@type": "TVSeries",
           "name": "Teşkilat",
           "url": "https://feviqo.com/teskilat"
-        },
-        "video": {
-          "@type": "VideoObject",
-          "name": "Teşkilat Season 7 Episode 186 Urdu Subtitles",
-          "description": "Full Episode 186 streaming in HD with Urdu Subtitles on FEVIQO.",
-          "thumbnailUrl": "https://feviqo.com/images/teskialt186thumbnIL.png",
-          "uploadDate": "2026-09-28T08:00:00+00:00",
-          "contentUrl": "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
-          "embedUrl": "https://feviqo.com/teskilat/episode-186",
-          "duration": "PT2H32M",
-          "isFamilyFriendly": true
+        }
+      });
+
+      schemaGraph.push({
+        "@type": "VideoObject",
+        "@id": "https://feviqo.com/teskilat/episode-186#video",
+        "name": "Teşkilat Season 7 Episode 186 Urdu Subtitles",
+        "description": "Watch Teşkilat Season 7 Episode 186 full episode streaming in HD with Urdu Subtitles on FEVIQO.",
+        "thumbnailUrl": [
+          "https://feviqo.com/images/teskialt186thumbnIL.png"
+        ],
+        "uploadDate": "2026-09-28T08:00:00+00:00",
+        "contentUrl": "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
+        "embedUrl": "https://feviqo.com/teskilat/episode-186",
+        "duration": "PT2H32M",
+        "isFamilyFriendly": true,
+        "publisher": {
+          "@id": "https://feviqo.com/#organization"
         }
       });
     } else if (config.schemaType === 'TVSeries' || pathname === '/teskilat') {
