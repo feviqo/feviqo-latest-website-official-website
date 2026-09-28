@@ -30,6 +30,7 @@ import {
   PictureInPicture2
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
+import { NativeVideoPlayer } from '../NativeVideoPlayer';
 import { AppRoute } from '../../types';
 
 interface TeskilatEpisode {
@@ -803,17 +804,15 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </div>
                 )}
 
-                <video-player style={{ display: 'block', width: '100%', height: '100%', borderRadius: '1rem', overflow: 'hidden' }}>
-                  <video-skin poster="/images/teskialt186thumbnIL.png" style={{ display: 'block', width: '100%', aspectRatio: '16 / 9' }}>
-                    <mux-video
-                      src={selectedEpisode.videoUrl}
-                      playsinline
-                      poster="/images/teskialt186thumbnIL.png"
-                      style={{ width: '100%', height: '100%', display: 'block' }}
-                    ></mux-video>
-                    <mux-data></mux-data>
-                  </video-skin>
-                </video-player>
+                <NativeVideoPlayer
+                  src={selectedEpisode.videoUrl}
+                  poster="/images/teskialt186thumbnIL.png"
+                  title="Teşkilat Season 7 Episode 186 Urdu Subtitles"
+                  autoPlay={false}
+                  muted={false}
+                  aspectRatio="16/9"
+                  className="w-full h-full"
+                />
               </div>
 
               {/* 7. Player Surrounding Info Row */}
