@@ -84,7 +84,9 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "url": "https://feviqo.com",
         "logo": "https://feviqo.com/feviqo1.png",
         "image": "https://feviqo.com/HEADER-removebg-preview.png",
-        "email": "partner@feviqo.com"
+        "email": "partner@feviqo.com",
+        "disambiguatingDescription": "FEVIQO is a digital video editing agency, creative studio, and post-production platform for creators, brands, and marketing agencies. FEVIQO is NOT an adhesive or glue product.",
+        "knowsAbout": ["Video Editing", "Content Creation", "YouTube Video Editing", "TikTok Video Editing", "Post Production", "Video Marketing", "Performance Ads", "Performance Ads Video Editing", "YouTube Content Production", "unlimited video editing subscription", "flat-rate monthly video editors", "Teskilat Urdu Portal"]
       }
     ];
 
