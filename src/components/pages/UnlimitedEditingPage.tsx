@@ -101,7 +101,7 @@ const RECENT_HORIZONTAL_VIDEOS = [
     duration: '14:20',
     views: '420K views',
     thumbnail: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
-    videoSrc: '/videos/Sequence-01.mp4',
+    videoSrc: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
   },
   {
     id: 'hz-2',
@@ -110,7 +110,7 @@ const RECENT_HORIZONTAL_VIDEOS = [
     duration: '08:45',
     views: '185K views',
     thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80',
-    videoSrc: '/videos/Sequence-01.mp4',
+    videoSrc: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
   },
   {
     id: 'hz-3',
@@ -119,7 +119,7 @@ const RECENT_HORIZONTAL_VIDEOS = [
     duration: '22:15',
     views: '630K views',
     thumbnail: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=800&auto=format&fit=crop&q=80',
-    videoSrc: '/videos/Sequence-01.mp4',
+    videoSrc: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
   },
 ];
 
@@ -262,7 +262,7 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
 
               <video
                 ref={heroVideoRef}
-                src="/videos/Sequence-01.mp4"
+                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4"
                 autoPlay
                 muted={isHeroMuted}
                 loop

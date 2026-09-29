@@ -90,7 +90,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "https://feviqo.com/images/feviqo-hero-poster.jpg"
       ],
       "uploadDate": "2026-01-15T08:00:00+00:00",
-      "contentUrl": "https://feviqo.com/videos/Sequence-01.mp4",
+      "contentUrl": "https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8",
       "embedUrl": "https://feviqo.com/",
       "duration": "PT0M45S",
       "isFamilyFriendly": true,

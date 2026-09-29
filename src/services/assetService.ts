@@ -377,9 +377,9 @@ export const DEFAULT_WEBSITE_ASSETS: WebsiteAssets = {
   },
   heroVideoMediaId: 'feviqo-hero-video',
   heroPosterMediaId: 'feviqo-hero-poster',
-  heroVideo: '/videos/Sequence-01.mp4',
-  heroVideoWebm: '/videos/hero-showcase.webm',
-  heroPoster: '/images/feviqo-hero-poster.jpg',
+  heroVideo: 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8',
+  heroVideoWebm: 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8',
+  heroPoster: 'https://feviqo.com/images/feviqo-hero-poster.jpg',
   creativeDecisionsImage: '/images/1 Creative Decisions.png',
   fasterTurnaroundImage: '/images/2 Faster Turnaround.png',
   streamlinedProcessImage: '/images/3 Streamlined Process.png',
@@ -511,13 +511,22 @@ export function sanitizeWebsiteAssets(assets: Partial<WebsiteAssets>): WebsiteAs
     aspectRatio: assets.hero?.aspectRatio || '16:9',
   };
 
+  let cleanHeroVideo = sanitizeUrl(assets.heroVideo, DEFAULT_WEBSITE_ASSETS.heroVideo);
+  if (cleanHeroVideo.includes('/videos/Sequence') || cleanHeroVideo.includes('/videos/hero') || cleanHeroVideo === '/videos/Sequence-01.mp4') {
+    cleanHeroVideo = DEFAULT_WEBSITE_ASSETS.heroVideo;
+  }
+  let cleanHeroVideoWebm = sanitizeUrl(assets.heroVideoWebm, DEFAULT_WEBSITE_ASSETS.heroVideoWebm);
+  if (cleanHeroVideoWebm.includes('/videos/Sequence') || cleanHeroVideoWebm.includes('/videos/hero') || cleanHeroVideoWebm === '/videos/hero-showcase.webm') {
+    cleanHeroVideoWebm = DEFAULT_WEBSITE_ASSETS.heroVideoWebm;
+  }
+
   return {
     headerLogo: sanitizeUrl(assets.headerLogo, DEFAULT_WEBSITE_ASSETS.headerLogo),
     hero: cleanHero,
     heroVideoMediaId: cleanHero.videoMediaId,
     heroPosterMediaId: cleanHero.posterMediaId,
-    heroVideo: sanitizeUrl(assets.heroVideo, DEFAULT_WEBSITE_ASSETS.heroVideo),
-    heroVideoWebm: sanitizeUrl(assets.heroVideoWebm, DEFAULT_WEBSITE_ASSETS.heroVideoWebm),
+    heroVideo: cleanHeroVideo,
+    heroVideoWebm: cleanHeroVideoWebm,
     heroPoster: sanitizeUrl(assets.heroPoster, DEFAULT_WEBSITE_ASSETS.heroPoster),
     creativeDecisionsImage: sanitizeUrl(assets.creativeDecisionsImage, DEFAULT_WEBSITE_ASSETS.creativeDecisionsImage),
     fasterTurnaroundImage: sanitizeUrl(assets.fasterTurnaroundImage, DEFAULT_WEBSITE_ASSETS.fasterTurnaroundImage),

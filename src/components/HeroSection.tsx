@@ -19,7 +19,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
     });
   }, []);
 
-  const heroVideoSrc = assets.heroVideo || 'https://feviqo.com/videos/Sequence-01.mp4';
+  const heroVideoSrc = assets.heroVideo || 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8';
   const heroPosterSrc = assets.heroPoster || 'https://feviqo.com/images/feviqo-hero-poster.jpg';
 
   // Handle HLS stream or native playback with muted autoplay
@@ -30,8 +30,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
     const cleanupHls = attachHlsStream(vid, heroVideoSrc, {
       autoPlay: true,
       onError: () => {
-        if (vid && heroVideoSrc !== '/videos/Sequence-01.mp4') {
-          vid.src = '/videos/Sequence-01.mp4';
+        if (vid && heroVideoSrc !== 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8') {
+          vid.src = 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8';
           vid.play().catch(() => {});
         }
       },

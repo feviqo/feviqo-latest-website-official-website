@@ -158,7 +158,7 @@ export const ContentCreatorsPage: React.FC<ContentCreatorsPageProps> = ({
               </button>
               <video
                 ref={videoRef}
-                src="/videos/Sequence-01.mp4"
+                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4"
                 autoPlay
                 muted={isMuted}
                 loop
