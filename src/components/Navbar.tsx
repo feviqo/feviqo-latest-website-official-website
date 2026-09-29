@@ -256,7 +256,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* Teşkilat Drama - Always navigates to Teşkilat overview portal */}
+          {/* Teskilat Drama - Always navigates to Teskilat overview portal */}
           <button 
             onClick={() => {
               onNavigatePage('teskilat-urdu');
@@ -265,7 +265,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300"
           >
-            Teşkilat Drama
+            Teskilat Drama
           </button>
         </nav>
 
@@ -395,7 +395,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>About Us & Executive Leadership</span>
               </button>
 
-              {/* Teşkilat Drama placed in the end on phone */}
+              {/* Teskilat Drama placed in the end on phone */}
               <button 
                 onClick={() => {
                   onNavigatePage('teskilat-urdu');
@@ -405,7 +405,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }}
                 className="w-full text-left py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 font-extrabold cursor-pointer text-amber-300 flex items-center justify-between border border-amber-400/40 mt-1.5"
               >
-                <span>Teşkilat (Urdu Subtitles)</span>
+                <span>Teskilat (Urdu Subtitles)</span>
                 <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-200 border border-amber-400/40 font-black">Urdu HD</span>
               </button>
 

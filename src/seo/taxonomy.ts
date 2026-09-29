@@ -26,7 +26,18 @@ export const GLOBAL_KEYWORD_TAXONOMY: Record<string, string[]> = {
     "professional video editor",
     "video production",
     "video post production",
-    "video post-production services"
+    "video post-production services",
+    "unlimited video editing subscription",
+    "flat-rate monthly video editors",
+    "dedicated creative editing pods",
+    "e-commerce video ad creators",
+    "vlog and YouTube channel editing",
+    "direct response performance marketing videos",
+    "TikTok virality video editors",
+    "talking head podcast video editor",
+    "4K cinematic video production studio",
+    "Saas product marketing videos",
+    "high retention video editing pods"
   ],
   SHORT_FORM: [
     "short form video editing",
@@ -234,15 +245,15 @@ export const GLOBAL_KEYWORD_TAXONOMY: Record<string, string[]> = {
     "video editing agency Pakistan"
   ],
   TURKISH_DRAMA: [
-    "Teşkilat Season 7",
-    "Teşkilat Episode 186",
-    "Teşkilat Season 7 Urdu Subtitles",
+    "Teskilat Season 7",
+    "Teskilat Episode 186",
+    "Teskilat Season 7 Urdu Subtitles",
     "Teskilat Episode 186 Urdu",
     "Teskilat Season 7 Episode 186 Urdu Subtitles",
     "تشکیلات سیزن 7",
     "تشکیلات سیزن 7 قسط 186",
     "تشکیلات سیزن 7 اردو ترجمہ",
-    "Turkish TV Drama Licensing",
+    "Teskilat Urdu Portal",
     "Urdu Dubbing B2B Distribution"
   ]
 };

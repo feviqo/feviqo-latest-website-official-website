@@ -54,13 +54,13 @@ const FEATURED_SEASON7_EPISODE: TeskilatEpisode = {
   episodeNumber: 186,
   seasonNumber: 7,
   titleUrdu: 'تشکیلات سیزن 7 قسط 186 اردو ترجمہ کے ساتھ',
-  titleEnglish: 'Teşkilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO',
+  titleEnglish: 'Teskilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO',
   releaseDate: 'September 2026',
   duration: '2h 18m',
   thumbnailUrl: '/images/teskialt186thumbnIL.png',
   videoUrl: 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8',
-  storyRecapUrdu: `اینڈر (Ender) کے اغوا کے بعد غصے میں پاگل الپائے (Altay) واپس اپنے ٹھکانے پر لوٹ آتا ہے؛ لیکن اس کی سب سے بڑی ترجیح اپنے بیٹے سے دوبارہ ملنا ہے۔ الپائے کا یہ غصہ اسے صدر طغرل (Tuğrul Başkan) کے آمنے سامنے لے آتا ہے۔\nجہاں ایک طرف کورکوت (Korkut) اور یحییٰ (Yahya) کے درمیان ایک بڑا حساب کتاب (ٹکراؤ) ہو رہا ہے، وہی شاہین (Şahin) کو ان نتائج کا سامنا کرنا پڑ رہا ہے جن کا اس نے اندازہ بھی نہیں لگایا تھا۔ دوسری طرف، بہار (Bahar) کا آخر کار میدانِ عمل میں اترنا کورکوت کے لیے ایک اور بڑی مشکل کھڑی کر دے گا۔\nاولاک (Ulak)، اینڈر کے ذریعے الپائے اور 'تشکیلات' (Teşkilat/ایجنسی) کو شکست دینے کے چکر میں ہے۔ جبکہ عذرا (Azra) اس بڑی مساوات میں سب سے اہم کرداروں میں سے ایک ادا کرے گی۔ دشمن اپنے مقصد میں کامیاب نہیں ہو سکے گا کیونکہ اب بھیڑیا بیدار ہو چکا ہے…`,
-  storyRecapEnglish: `In Teşkilat Season 7 Episode 186 (Urdu Subtitles), following Ender's abduction, an enraged Altay returns to his hideout with a single priority: reuniting with his son. Altay's fury brings him face-to-face with Tuğrul Başkan. As Korkut and Yahya settle scores in a major confrontation, Şahin faces unexpected consequences. Meanwhile, Bahar enters the field, creating a new challenge for Korkut. Ulak schemes to use Ender to defeat Altay and the Teşkilat agency, while Azra plays a pivotal role. But the enemy will not succeed, because the wolf has awakened...`,
+  storyRecapUrdu: `اینڈر (Ender) کے اغوا کے بعد غصے میں پاگل الپائے (Altay) واپس اپنے ٹھکانے پر لوٹ آتا ہے؛ لیکن اس کی سب سے بڑی ترجیح اپنے بیٹے سے دوبارہ ملنا ہے۔ الپائے کا یہ غصہ اسے صدر طغرل (Tuğrul Başkan) کے آمنے سامنے لے آتا ہے۔\nجہاں ایک طرف کورکوت (Korkut) اور یحییٰ (Yahya) کے درمیان ایک بڑا حساب کتاب (ٹکراؤ) ہو رہا ہے، وہی شاہین (Şahin) کو ان نتائج کا سامنا کرنا پڑ رہا ہے جن کا اس نے اندازہ بھی نہیں لگایا تھا۔ دوسری طرف، بہار (Bahar) کا آخر کار میدانِ عمل میں اترنا کورکوت کے لیے ایک اور بڑی مشکل کھڑی کر دے گا۔\nاولاک (Ulak)، اینڈر کے ذریعے الپائے اور 'تشکیلات' (Teskilat/ایجنسی) کو شکست دینے کے چکر میں ہے۔ جبکہ عذرا (Azra) اس بڑی مساوات میں سب سے اہم کرداروں میں سے ایک ادا کرے گی۔ دشمن اپنے مقصد میں کامیاب نہیں ہو سکے گا کیونکہ اب بھیڑیا بیدار ہو چکا ہے…`,
+  storyRecapEnglish: `In Teskilat Season 7 Episode 186 (Urdu Subtitles), following Ender's abduction, an enraged Altay returns to his hideout with a single priority: reuniting with his son. Altay's fury brings him face-to-face with Tuğrul Başkan. As Korkut and Yahya settle scores in a major confrontation, Şahin faces unexpected consequences. Meanwhile, Bahar enters the field, creating a new challenge for Korkut. Ulak schemes to use Ender to defeat Altay and the Teskilat agency, while Azra plays a pivotal role. But the enemy will not succeed, because the wolf has awakened...`,
   views: '342,800',
   isLatest: true
 };
@@ -141,8 +141,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     const keywordsEl = document.querySelector('meta[name="keywords"]');
 
     if (activeView === 'episode-detail') {
-      const pageTitle = "Teşkilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO";
-      const metaDesc = "Watch Teşkilat Season 7 Episode 186 in HD Urdu Subtitles (تشکیلات سیزن 7 قسط 186). Stream full episode with story recap on FEVIQO.";
+      const pageTitle = "Teskilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO";
+      const metaDesc = "Watch Teskilat Season 7 Episode 186 in HD Urdu Subtitles (تشکیلات سیزن 7 قسط 186). Stream full episode with story recap on FEVIQO.";
       const keywords = "teskilat 186, teskilat 186 urdu, teskilat season 7 episode 186 urdu subtitles, teskilat episode 186 urdu, teskilat episode 186 urdu subtitles full, teskilat episode 186 urdu subtitles full episode, teskilat urdu 186, teskilat season 7 186, teskialt new season, teskilat urdu, teskilat drama urdu";
       
       document.title = pageTitle;
@@ -164,8 +164,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
       const twDescEl = document.querySelector('meta[name="twitter:description"]');
       if (twDescEl) twDescEl.setAttribute('content', metaDesc);
     } else {
-      const pageTitle = "Teşkilat Season 7 Urdu Subtitles Full Series | Teskilat Urdu Portal | FEVIQO";
-      const metaDesc = "Watch Teşkilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.";
+      const pageTitle = "Teskilat Season 7 Urdu Subtitles Full Series | Teskilat Urdu Portal | FEVIQO";
+      const metaDesc = "Watch Teskilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.";
       const keywords = "teskilat season 7, teskialt new season, teskilat urdu, teskilat drama urdu, teskilat 186, teskilat 186 urdu, teskilat episode 186 urdu subtitles, teskilat urdu 186";
 
       document.title = pageTitle;
@@ -485,7 +485,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               SPONSORSHIP
             </span>
             <span className="font-semibold text-emerald-100">
-              In-Stream Pre-Roll &amp; Banner Advertising for Teşkilat Urdu Portal
+              In-Stream Pre-Roll &amp; Banner Advertising for Teskilat Urdu Portal
             </span>
           </div>
 
@@ -519,7 +519,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
                   {/* Heading */}
                   <h1 className="text-4xl sm:text-6xl font-black text-[#0B0B0D] tracking-tight leading-[1.1]">
-                    Teşkilat Season 7
+                    Teskilat Season 7
                   </h1>
 
                   {/* Urdu Title */}
@@ -529,7 +529,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
                   {/* Short Description */}
                   <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-xl font-normal">
-                    Watch Teşkilat Season 7 with Urdu Subtitles on FEVIQO. Explore the latest episodes, story recaps, and HD releases.
+                    Watch Teskilat Season 7 with Urdu Subtitles on FEVIQO. Explore the latest episodes, story recaps, and HD releases.
                   </p>
 
                   {/* 4. Hero Metadata Line */}
@@ -568,7 +568,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-950 group p-1">
                     <img 
                       src="/images/image .jpeg" 
-                      alt="Teşkilat Season 7 Official Poster" 
+                      alt="Teskilat Season 7 Official Poster" 
                       className="w-full h-auto object-contain max-h-[520px] mx-auto rounded-xl transition-transform duration-700 group-hover:scale-105"
                     />
                   </div>
@@ -600,7 +600,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   >
                     <img 
                       src={FEATURED_SEASON7_EPISODE.thumbnailUrl} 
-                      alt="Teşkilat Season 7 Episode 186 Thumbnail" 
+                      alt="Teskilat Season 7 Episode 186 Thumbnail" 
                       className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-slate-950/10 transition-colors flex items-center justify-center">
@@ -617,7 +617,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     </div>
 
                     <h3 className="text-2xl sm:text-3xl font-black text-[#0B0B0D]">
-                      Teşkilat Season 7 Episode 186
+                      Teskilat Season 7 Episode 186
                     </h3>
 
                     <div className="text-lg font-urdu-slim text-slate-800 dir-rtl text-right font-normal">
@@ -625,7 +625,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     </div>
 
                     <p className="text-slate-600 text-sm leading-relaxed line-clamp-3">
-                      In Teşkilat Season 7 Episode 186, Altay returns seeking justice for his son following Ender's abduction, leading to a high-stakes confrontation with Tuğrul Başkan.
+                      In Teskilat Season 7 Episode 186, Altay returns seeking justice for his son following Ender's abduction, leading to a high-stakes confrontation with Tuğrul Başkan.
                     </p>
 
                     {/* Minimal Information Strip */}
@@ -668,12 +668,12 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
             {/* 7. SHORT SEASON INTRODUCTION (EDITORIAL) */}
             <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-left">
               <div className="p-8 rounded-3xl bg-slate-50 border border-slate-200/80 space-y-3">
-                <h2 className="text-xl font-black text-[#0B0B0D]">Teşkilat Season 7 Overview</h2>
+                <h2 className="text-xl font-black text-[#0B0B0D]">Teskilat Season 7 Overview</h2>
                 <div className="text-base font-urdu-slim text-slate-800 dir-rtl text-right font-normal">
                   تشکیلات سیزن 7 اردو ترجمہ کے ساتھ
                 </div>
                 <p className="text-slate-600 text-sm leading-relaxed font-normal">
-                  FEVIQO brings you official high-definition streaming for Teşkilat Season 7 with full Urdu subtitles. Stream the latest espionage operations, story recaps, and agent arcs in 1080p HD.
+                  FEVIQO brings you official high-definition streaming for Teskilat Season 7 with full Urdu subtitles. Stream the latest espionage operations, story recaps, and agent arcs in 1080p HD.
                 </p>
               </div>
             </section>
@@ -685,7 +685,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   EPISODE DIRECTORY
                 </div>
                 <h2 className="text-3xl font-black text-[#0B0B0D]">
-                  Teşkilat Season 7 Episodes
+                  Teskilat Season 7 Episodes
                 </h2>
                 <p className="text-slate-600 text-sm">
                   Watch available Season 7 episodes with Urdu subtitles on FEVIQO.
@@ -701,7 +701,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <div className="relative w-full sm:w-64 aspect-video rounded-xl overflow-hidden bg-black shrink-0">
                     <img 
                       src={FEATURED_SEASON7_EPISODE.thumbnailUrl} 
-                      alt="Teşkilat Episode 186 Thumbnail" 
+                      alt="Teskilat Episode 186 Thumbnail" 
                       className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-slate-950/20 flex items-center justify-center">
@@ -720,7 +720,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     </div>
 
                     <h3 className="text-xl font-extrabold text-[#0B0B0D] group-hover:text-[#22C55E] transition">
-                      Teşkilat Season 7 Episode 186
+                      Teskilat Season 7 Episode 186
                     </h3>
 
                     <p className="text-sm font-urdu-slim text-slate-700 dir-rtl line-clamp-1 font-normal">
@@ -750,7 +750,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               <nav className="text-xs text-slate-500 font-medium flex items-center gap-2">
                 <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>FEVIQO</span>
                 <span>/</span>
-                <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>Teşkilat</span>
+                <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>Teskilat</span>
                 <span>/</span>
                 <span>Season 7</span>
                 <span>/</span>
@@ -768,7 +768,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </h1>
 
                 <p className="text-lg sm:text-xl font-bold text-slate-800 pt-1">
-                  Teşkilat Season 7 Episode 186 Urdu Subtitles
+                  Teskilat Season 7 Episode 186 Urdu Subtitles
                 </p>
 
                 <p className="text-lg sm:text-xl font-urdu-slim font-normal text-slate-900 dir-rtl text-right pt-1 leading-relaxed">
@@ -792,8 +792,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     className="absolute inset-0 z-30 bg-slate-950 flex items-center justify-center cursor-pointer group"
                   >
                     <img 
-                      src="/images/teskialt186thumbnIL.png" 
-                      alt="Teşkilat Season 7 Episode 186 Thumbnail Poster" 
+                      src="https://feviqo.com/images/teskialt186thumbnIL.png" 
+                      alt="Teskilat Season 7 Episode 186 Thumbnail Poster" 
                       className="w-full h-full object-contain bg-black group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-slate-950/20 transition-colors flex items-center justify-center">
@@ -805,11 +805,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 )}
 
                 <video-player style={{ display: 'block', width: '100%', height: '100%', borderRadius: '1rem', overflow: 'hidden' }}>
-                  <video-skin poster="/images/teskialt186thumbnIL.png" style={{ display: 'block', width: '100%', aspectRatio: '16 / 9' }}>
+                  <video-skin poster="https://feviqo.com/images/teskialt186thumbnIL.png" style={{ display: 'block', width: '100%', aspectRatio: '16 / 9' }}>
                     <mux-video
                       src={selectedEpisode.videoUrl}
                       playsinline
-                      poster="/images/teskialt186thumbnIL.png"
+                      poster="https://feviqo.com/images/teskialt186thumbnIL.png"
                       style={{ width: '100%', height: '100%', display: 'block' }}
                     ></mux-video>
                     <mux-data></mux-data>
@@ -862,7 +862,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-xs">
                   <div>
                     <div className="text-slate-400 font-medium">Series</div>
-                    <div className="text-[#0B0B0D] font-bold mt-0.5">Teşkilat</div>
+                    <div className="text-[#0B0B0D] font-bold mt-0.5">Teskilat</div>
                   </div>
                   <div>
                     <div className="text-slate-400 font-medium">Season</div>
@@ -922,7 +922,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#0B0B0D] transition cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back to Teşkilat Season 7 Overview</span>
+                  <span>Back to Teskilat Season 7 Overview</span>
                 </button>
               </div>
 
@@ -949,9 +949,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
                     <span>In-Stream Video Ad Placement</span>
                   </div>
-                  <h3 className="text-2xl font-black text-slate-950">Book Teşkilat Ad Setup</h3>
+                  <h3 className="text-2xl font-black text-slate-950">Book Teskilat Ad Setup</h3>
                   <p className="text-slate-600 text-xs">
-                    Sponsor pre-roll video ads, banner placements, or channel dubbing integrations on FEVIQO Teşkilat portal.
+                    Sponsor pre-roll video ads, banner placements, or channel dubbing integrations on FEVIQO Teskilat portal.
                   </p>
                 </div>
 
@@ -1031,7 +1031,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
                 <h3 className="text-2xl font-black text-slate-950">Ad Request Submitted!</h3>
                 <p className="text-slate-600 text-xs max-w-sm mx-auto leading-relaxed">
-                  Thank you! Our team will review your ad placement request for Teşkilat Season 7 and contact you at <strong className="text-slate-900">{adEmail}</strong> within 2 hours.
+                  Thank you! Our team will review your ad placement request for Teskilat Season 7 and contact you at <strong className="text-slate-900">{adEmail}</strong> within 2 hours.
                 </p>
                 <button
                   onClick={() => { setShowAdSetupModal(false); setAdFormSubmitted(false); }}

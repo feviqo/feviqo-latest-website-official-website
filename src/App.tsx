@@ -190,7 +190,7 @@ export default function App() {
       'flow': 'FEVIQO Flow - Video Request Portal & Dashboard',
       'platform': 'FEVIQO Flow Portal - Manage Video Edits & Assets',
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
-      'teskilat-urdu': 'Teşkilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO',
+      'teskilat-urdu': 'Teskilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO',
       'privacy': 'Privacy Policy & Cookie Disclosure | FEVIQO',
       'terms': 'Terms of Service & Usage Agreement | FEVIQO'
     };

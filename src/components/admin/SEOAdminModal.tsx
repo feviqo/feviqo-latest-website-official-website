@@ -284,7 +284,7 @@ export const SEOAdminModal: React.FC<SEOAdminModalProps> = ({ isOpen, onClose, c
                   <option value="WebSite">WebSite (Homepage)</option>
                   <option value="Service">Service (Unlimited Editing, Creators, Agencies)</option>
                   <option value="TVEpisode">TVEpisode (Episode 186 Watch Page)</option>
-                  <option value="TVSeries">TVSeries (Teşkilat Main Page)</option>
+                  <option value="TVSeries">TVSeries (Teskilat Main Page)</option>
                   <option value="Organization">Organization (About Us)</option>
                 </select>
               </div>

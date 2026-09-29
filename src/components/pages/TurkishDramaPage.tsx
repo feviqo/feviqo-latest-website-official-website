@@ -729,7 +729,7 @@ Best regards,`
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-          {/* Title 1 Card: Teşkilat */}
+          {/* Title 1 Card: Teskilat */}
           <div className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 shadow-md shadow-slate-900/5 group flex flex-col">
             <div className="aspect-[16/9] overflow-hidden relative bg-slate-950">
               <img

@@ -19,8 +19,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
     });
   }, []);
 
-  const heroVideoSrc = assets.heroVideo || '/videos/Sequence-01.mp4';
-  const heroPosterSrc = assets.heroPoster || '/images/hero-poster.jpg';
+  const heroVideoSrc = assets.heroVideo || 'https://feviqo.com/videos/Sequence-01.mp4';
+  const heroPosterSrc = assets.heroPoster || 'https://feviqo.com/images/feviqo-hero-poster.jpg';
 
   // Handle HLS stream or native playback with muted autoplay
   useEffect(() => {
