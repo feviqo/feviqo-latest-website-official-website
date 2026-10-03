@@ -890,7 +890,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               </div>
 
               {/* 5 & 6. Main Video Player or Coming Soon Placeholder (Centered max-w-6xl) */}
-              <div className="relative rounded-3xl overflow-hidden bg-[#050508] shadow-2xl border border-slate-800/80 aspect-video flex items-center justify-center">
+              <div className={`relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#050508] shadow-2xl border border-slate-800/80 flex items-center justify-center w-full ${
+                selectedEpisode.episodeNumber === 187 
+                  ? 'min-h-[430px] sm:min-h-0 sm:aspect-video' 
+                  : 'aspect-video'
+              }`}>
                 
                 {/* 100% Machine-Readable Hidden Video Elements to Guarantee Google Search Console Video Indexing Approval */}
                 <div style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: '0' }} aria-hidden="true">
@@ -910,71 +914,71 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
 
                 {selectedEpisode.episodeNumber === 187 ? (
-                  /* ULTRA-PREMIUM APPLE TV / NETFLIX STYLE COMING SOON PRESENTATION */
-                  <div className="absolute inset-0 bg-[#070709] flex flex-col items-center justify-center p-8 sm:p-12 text-center text-white z-20">
+                  /* ULTRA-PREMIUM APPLE TV / NETFLIX STYLE COMING SOON PRESENTATION (FULLY RESPONSIVE) */
+                  <div className="relative sm:absolute inset-0 bg-[#070709] flex flex-col items-center justify-center p-5 sm:p-12 text-center text-white z-20 w-full min-h-[430px] sm:min-h-0">
                     
                     {/* Background Subtle Ambient Glow */}
                     <div className="absolute inset-0 bg-radial-gradient opacity-30 pointer-events-none" />
 
-                    <div className="space-y-6 max-w-xl z-10">
+                    <div className="space-y-4 sm:space-y-6 max-w-xl z-10 w-full px-2 py-4 sm:py-0">
                       
                       {/* 1. EPISODE 187 ACCENT */}
-                      <div className="text-[11px] font-mono tracking-[0.25em] text-[#22C55E] uppercase font-bold flex items-center justify-center gap-2">
+                      <div className="text-[10px] sm:text-[11px] font-mono tracking-[0.2em] sm:tracking-[0.25em] text-[#22C55E] uppercase font-bold flex items-center justify-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
                         <span>EPISODE {selectedEpisode.episodeNumber}</span>
                       </div>
 
                       {/* 2. Coming soon. */}
-                      <h3 className="text-4xl sm:text-6xl font-extralight text-white tracking-tight">
+                      <h3 className="text-3xl sm:text-6xl font-extralight text-white tracking-tight">
                         Coming soon.
                       </h3>
 
                       {/* 3. The Urdu-subtitled premiere is being prepared for release. */}
-                      <p className="text-base sm:text-lg font-light text-slate-400 max-w-md mx-auto leading-relaxed">
+                      <p className="text-xs sm:text-lg font-light text-slate-400 max-w-md mx-auto leading-relaxed px-2">
                         The Urdu-subtitled premiere is being prepared for release.
                       </p>
 
-                      {/* Premium Minimalist Countdown Timer Display (Apple Style) */}
-                      <div className="flex items-center justify-center gap-6 text-white pt-2 pb-2 tracking-widest">
-                        <div className="flex flex-col items-center">
-                          <span className="font-sans font-thin text-4xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 tracking-widest">
+                      {/* Premium Minimalist Countdown Timer Display (Apple Style, Mobile Optimized) */}
+                      <div className="flex items-center justify-center gap-2.5 sm:gap-6 text-white pt-1 pb-1 sm:pt-2 sm:pb-2 tracking-normal sm:tracking-widest">
+                        <div className="flex flex-col items-center min-w-[48px] sm:min-w-[70px]">
+                          <span className="font-sans font-thin text-2xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 tracking-wider sm:tracking-widest">
                             {String(timeLeft.days).padStart(2, '0')}
                           </span>
-                          <span className="text-[10px] font-sans font-light tracking-[0.25em] text-slate-500 uppercase mt-2">Days</span>
+                          <span className="text-[9px] sm:text-[10px] font-sans font-light tracking-[0.15em] sm:tracking-[0.25em] text-slate-500 uppercase mt-1 sm:mt-2">Days</span>
                         </div>
-                        <span className="text-slate-800 text-3xl sm:text-4xl font-extralight self-start mt-2">:</span>
-                        <div className="flex flex-col items-center">
-                          <span className="font-sans font-thin text-4xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 tracking-widest">
+                        <span className="text-slate-800 text-xl sm:text-4xl font-extralight self-start mt-1 sm:mt-2">:</span>
+                        <div className="flex flex-col items-center min-w-[48px] sm:min-w-[70px]">
+                          <span className="font-sans font-thin text-2xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 tracking-wider sm:tracking-widest">
                             {String(timeLeft.hours).padStart(2, '0')}
                           </span>
-                          <span className="text-[10px] font-sans font-light tracking-[0.25em] text-slate-500 uppercase mt-2">Hours</span>
+                          <span className="text-[9px] sm:text-[10px] font-sans font-light tracking-[0.15em] sm:tracking-[0.25em] text-slate-500 uppercase mt-1 sm:mt-2">Hours</span>
                         </div>
-                        <span className="text-slate-800 text-3xl sm:text-4xl font-extralight self-start mt-2">:</span>
-                        <div className="flex flex-col items-center">
-                          <span className="font-sans font-thin text-4xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 tracking-widest">
+                        <span className="text-slate-800 text-xl sm:text-4xl font-extralight self-start mt-1 sm:mt-2">:</span>
+                        <div className="flex flex-col items-center min-w-[48px] sm:min-w-[70px]">
+                          <span className="font-sans font-thin text-2xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 tracking-wider sm:tracking-widest">
                             {String(timeLeft.minutes).padStart(2, '0')}
                           </span>
-                          <span className="text-[10px] font-sans font-light tracking-[0.25em] text-slate-500 uppercase mt-2">Minutes</span>
+                          <span className="text-[9px] sm:text-[10px] font-sans font-light tracking-[0.15em] sm:tracking-[0.25em] text-slate-500 uppercase mt-1 sm:mt-2">Minutes</span>
                         </div>
-                        <span className="text-slate-800 text-3xl sm:text-4xl font-extralight self-start mt-2">:</span>
-                        <div className="flex flex-col items-center">
-                          <span className="font-sans font-light text-4xl sm:text-6xl text-[#22C55E] tracking-widest animate-pulse">
+                        <span className="text-slate-800 text-xl sm:text-4xl font-extralight self-start mt-1 sm:mt-2">:</span>
+                        <div className="flex flex-col items-center min-w-[48px] sm:min-w-[70px]">
+                          <span className="font-sans font-light text-2xl sm:text-6xl text-[#22C55E] tracking-wider sm:tracking-widest animate-pulse">
                             {String(timeLeft.seconds).padStart(2, '0')}
                           </span>
-                          <span className="text-[10px] font-sans font-light tracking-[0.25em] text-[#22C55E] uppercase mt-2">Seconds</span>
+                          <span className="text-[9px] sm:text-[10px] font-sans font-light tracking-[0.15em] sm:tracking-[0.25em] text-[#22C55E] uppercase mt-1 sm:mt-2">Seconds</span>
                         </div>
                       </div>
 
                       {/* Line divider */}
-                      <div className="w-8 h-[1px] bg-slate-800/80 mx-auto my-4" />
+                      <div className="w-8 h-[1px] bg-slate-800/80 mx-auto my-2 sm:my-4" />
 
                       {/* 4. TEŞKİLAT • SEASON 7 • EPISODE 187 */}
-                      <div className="text-[10px] sm:text-xs font-sans font-light tracking-[0.2em] text-slate-500 uppercase">
+                      <div className="text-[9px] sm:text-xs font-sans font-light tracking-[0.15em] sm:tracking-[0.2em] text-slate-500 uppercase">
                         TEŞKİLAT • SEASON {selectedEpisode.seasonNumber} • EPISODE {selectedEpisode.episodeNumber}
                       </div>
 
                       {/* 5. COMING SOON status */}
-                      <div className="inline-block px-4 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-sans font-bold tracking-[0.3em] text-[#22C55E] uppercase shadow-md">
+                      <div className="inline-block px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-full bg-slate-900 border border-slate-800 text-[9px] sm:text-[10px] font-sans font-bold tracking-[0.25em] sm:tracking-[0.3em] text-[#22C55E] uppercase shadow-md">
                         COMING SOON
                       </div>
 

@@ -150,7 +150,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     canonicalUrl: 'https://feviqo.com/teskilat/episode-187',
     ogTitle: 'Teskilat Episode 187 Urdu Subtitles Watch Online',
     ogDescription: 'Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode with story recaps on FEVIQO.',
-    ogImage: '',
+    ogImage: 'https://feviqo.com/images/teskialt186thumbnIL.png',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },
