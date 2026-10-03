@@ -119,24 +119,49 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   });
   const [showPosterOverlay, setShowPosterOverlay] = useState(true);
 
-  // Premium Apple Countdown Timer for Episode 187 (4 hours relative offset)
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 4, minutes: 0, seconds: 0 });
+  // Premium Apple Countdown Timer for Episode 187 (4 hours relative offset, persisted in localStorage)
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
-    let totalSecs = 14400; // 4 hours
-    const interval = setInterval(() => {
-      if (totalSecs <= 0) {
-        clearInterval(interval);
-        return;
+    const STORAGE_KEY = 'feviqo_teskilat_187_target_time';
+    let targetTime = 0;
+
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        targetTime = parseInt(stored, 10);
+      } else {
+        // Set target to exactly 4 hours from now
+        targetTime = Date.now() + 4 * 3600 * 1000;
+        window.localStorage.setItem(STORAGE_KEY, targetTime.toString());
       }
-      totalSecs -= 1;
-      
+    }
+
+    const updateTimer = () => {
+      const diff = targetTime - Date.now();
+      if (diff <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return false;
+      }
+
+      const totalSecs = Math.floor(diff / 1000);
       const d = Math.floor(totalSecs / (3600 * 24));
       const h = Math.floor((totalSecs % (3600 * 24)) / 3600);
       const m = Math.floor((totalSecs % 3600) / 60);
       const s = totalSecs % 60;
 
       setTimeLeft({ days: d, hours: h, minutes: m, seconds: s });
+      return true;
+    };
+
+    // Run immediately
+    updateTimer();
+
+    const interval = setInterval(() => {
+      const active = updateTimer();
+      if (!active) {
+        clearInterval(interval);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
