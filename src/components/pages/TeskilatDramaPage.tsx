@@ -73,7 +73,7 @@ const EPISODE_187: TeskilatEpisode = {
   titleEnglish: 'Teskilat Episode 187 Urdu Subtitles | Watch Season 7 Episode 187 Urdu | FEVIQO',
   releaseDate: 'October 2026',
   duration: '2h 25m',
-  thumbnailUrl: '',
+  thumbnailUrl: 'https://lh3.googleusercontent.com/d/1i-L-pMn0Tz4RuGi5R6AULl0Y6gI-EwMV',
   videoUrl: 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8',
   storyRecapUrdu: `الپائے (Altay) اور صدر طغرل (Tuğrul Başkan) کے درمیان پیدا ہونے والی غلط فہمیاں اب ایک نیا رخ اختیار کر چکی ہیں۔ تشکیلات کی نئی ٹیم نے دشمن کے سب سے اہم مہرے 'اولاک' (Ulak) کو گھیرنے کے لیے ایک خفیہ جال بچھایا ہے۔ دوسری طرف عذرا (Azra) کو بچانے کے لیے شاہین ایک انتہائی خطرناک آپریشن شروع کرتا ہے جس میں سیکنڈز کی تاخیر بھی جان لیوا ثابت ہو سکتی ہے۔\nکپتان کورکوت (Korkut) کو حریف گروہوں کی اندرونی جنگ کا فائدہ اٹھاتے ہوئے ایک حساس فائل حاصل کرنی ہے جس میں غداروں کے نام چھپے ہیں۔ بھیڑیا اب پوری طرح بیدار ہو چکا ہے اور آخری وار کے لیے تیار ہے، لیکن دشمن بھی اپنے آخری مہرے کھیلنے سے پیچھے نہیں ہٹے گا…`,
   storyRecapEnglish: `In Teskilat Season 7 Episode 187 (Urdu Subtitles), the tension between Altay and Tuğrul Başkan reaches an explosive turning point. The special ops team designs a covert trap to corner Ulak, the enemy's master strategist. Meanwhile, Şahin launches a high-stakes, clock-ticking mission to extract Azra from enemy lines, where a single second of delay could cost everything. Korkut navigates a brutal turf war between rival syndicates to retrieve a classified list of deep-cover moles. The wolf is fully awake and ready for the final strike, but the enemy still has a dark card to play...`,
@@ -119,23 +119,12 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   });
   const [showPosterOverlay, setShowPosterOverlay] = useState(true);
 
-  // Premium Apple Countdown Timer for Episode 187 (4 hours relative offset, persisted in localStorage)
+  // Premium Apple Countdown Timer for Episode 187 (Official Release: Monday, October 5, 2026, at 4:00 AM PKT/TRT - Sunday at 4:00 PM PDT)
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
-    const STORAGE_KEY = 'feviqo_teskilat_187_target_time';
-    let targetTime = 0;
-
-    if (typeof window !== 'undefined') {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        targetTime = parseInt(stored, 10);
-      } else {
-        // Set target to exactly 4 hours from now
-        targetTime = Date.now() + 4 * 3600 * 1000;
-        window.localStorage.setItem(STORAGE_KEY, targetTime.toString());
-      }
-    }
+    // Official Release Target Timestamp (Monday, October 5, 2026, at 4:00 AM PKT/TRT, which is Sunday, October 4, 2026, at 4:00 PM PDT -07:00)
+    const targetTime = new Date('2026-10-04T16:00:00-07:00').getTime();
 
     const updateTimer = () => {
       const diff = targetTime - Date.now();
@@ -596,7 +585,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   
                   {/* Eyebrow */}
                   <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                    FEVIQO &bull; TEŞKİLAT
+                    FEVIQO • TEŞKİLAT
                   </div>
 
                   {/* Heading */}
@@ -615,14 +604,14 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </p>
 
                   {/* 4. Hero Metadata Line */}
-                  <div className="text-xs text-slate-500 font-medium flex items-center gap-3 pt-1">
-                    <span className="font-bold text-slate-900">Season 7</span>
-                    <span>&bull;</span>
+                  <div className="text-xs sm:text-sm text-slate-500 font-medium flex flex-wrap items-center gap-2 pt-1">
+                    <span className="font-bold text-slate-950">Season 7</span>
+                    <span>•</span>
                     <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">HD</span>
-                    <span>&bull;</span>
-                    <span>Urdu Subtitles</span>
-                    <span>&bull;</span>
-                    <span className="text-slate-600">Altay &bull; Ender &bull; Korkut</span>
+                    <span>•</span>
+                    <span className="font-medium text-slate-800">Urdu Subtitles</span>
+                    <span>•</span>
+                    <span className="text-slate-600">Altay • Ender • Korkut</span>
                   </div>
 
                   {/* CTAs */}
@@ -649,7 +638,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 <div className="lg:col-span-5 relative">
                   <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-950 group p-1">
                     <img 
-                      src="/images/image .jpeg" 
+                      src="https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2" 
                       alt="Teskilat Season 7 Official Poster" 
                       className="w-full h-auto object-contain max-h-[520px] mx-auto rounded-xl transition-transform duration-700 group-hover:scale-105"
                     />
@@ -915,10 +904,17 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
                 {selectedEpisode.episodeNumber === 187 ? (
                   /* ULTRA-PREMIUM APPLE TV / NETFLIX STYLE COMING SOON PRESENTATION (FULLY RESPONSIVE) */
-                  <div className="relative sm:absolute inset-0 bg-[#070709] flex flex-col items-center justify-center p-5 sm:p-12 text-center text-white z-20 w-full min-h-[430px] sm:min-h-0">
+                  <div className="relative sm:absolute inset-0 bg-[#070709] flex flex-col items-center justify-center p-5 sm:p-12 text-center text-white z-20 w-full min-h-[430px] sm:min-h-0 overflow-hidden">
+                    
+                    {/* Background Subtle Ambient Image Overlay (Restrained & Blurs) */}
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center filter blur-sm scale-105 opacity-[0.22] pointer-events-none transition-opacity duration-700" 
+                      style={{ backgroundImage: `url('https://lh3.googleusercontent.com/d/1i-L-pMn0Tz4RuGi5R6AULl0Y6gI-EwMV')` }} 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#070709] via-transparent to-[#070709] pointer-events-none" />
                     
                     {/* Background Subtle Ambient Glow */}
-                    <div className="absolute inset-0 bg-radial-gradient opacity-30 pointer-events-none" />
+                    <div className="absolute inset-0 bg-radial-gradient opacity-20 pointer-events-none" />
 
                     <div className="space-y-4 sm:space-y-6 max-w-xl z-10 w-full px-2 py-4 sm:py-0">
                       
