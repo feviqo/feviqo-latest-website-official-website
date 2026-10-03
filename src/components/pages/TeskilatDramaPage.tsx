@@ -207,14 +207,14 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.episodeNumber;
       const pageTitle = num === 187 
-        ? `Teskilat Episode 187 Urdu Subtitles | Watch Season 7 Episode 187 Urdu | FEVIQO`
-        : `Teskilat Season 7 Episode ${num} Urdu Subtitles | Watch Online | FEVIQO`;
+        ? `Teskilat Urdu Episode 187 | Watch Season 7 Episode 187 Urdu Subtitles | FEVIQO`
+        : `Teskilat Urdu Episode ${num} | Watch Season 7 Episode ${num} Urdu Subtitles | FEVIQO`;
       const metaDesc = num === 187
         ? `Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teskilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.`
         : `Watch Teskilat Season 7 Episode ${num} with Urdu Subtitles (تشکیلات سیزن 7 قسط ${num}). Enjoy full story recaps and stream high-definition episodes processed by FEVIQO - the world's leading unlimited flat-rate video editing agency for brands, creators, and marketing agencies.`;
       const keywords = num === 187
-        ? `teskilat episode 187 urdu subtitles, teskilat 187, teskilat 187 urdu, teskilat, teskilat urdu, teskilat 187 urdu subtitles, teskilat season 7 urdu, watch teskilat season 7 episode 187 urdu, teskilat episode 187 in urdu, teskilat 187 urdu, teskilat episode 187 urdu subtitles full`
-        : `teskilat ${num}, teskilat ${num} urdu, teskilat season 7 episode ${num} urdu subtitles, teskilat episode ${num} urdu, teskilat episode ${num} urdu subtitles full, teskilat episode ${num} urdu subtitles full episode, teskilat urdu ${num}, teskilat season 7 ${num}, teskialt new season, teskilat urdu, unlimited video editing, flat-rate video editing, video editing agency, professional video editors, premium youtube editing services, outsource video editing, white-label video production`;
+        ? `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat episode 187 urdu subtitles, teskilat 187, teskilat 187 urdu, teskilat, teskilat urdu, teskilat 187 urdu subtitles, teskilat season 7 urdu, watch teskilat season 7 episode 187 urdu, teskilat episode 187 in urdu, teskilat 187 urdu, teskilat episode 187 urdu subtitles full`
+        : `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat ${num}, teskilat ${num} urdu, teskilat season 7 episode ${num} urdu subtitles, teskilat episode ${num} urdu, teskilat episode ${num} urdu subtitles full, teskilat episode ${num} urdu subtitles full episode, teskilat urdu ${num}, teskilat season 7 ${num}, teskialt new season, teskilat urdu, unlimited video editing, flat-rate video editing, video editing agency, professional video editors, premium youtube editing services, outsource video editing, white-label video production`;
       
       document.title = pageTitle;
 
@@ -235,9 +235,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
       const twDescEl = document.querySelector('meta[name="twitter:description"]');
       if (twDescEl) twDescEl.setAttribute('content', metaDesc);
     } else {
-      const pageTitle = "Teskilat Season 7 Urdu Subtitles Full Series | Teskilat Urdu Portal | FEVIQO";
+      const pageTitle = "Teskilat Urdu Subtitles | Teskilat Season 7 Urdu Subtitles | Watch Online | FEVIQO";
       const metaDesc = "Watch Teskilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.";
-      const keywords = "teskilat season 7, teskialt new season, teskilat urdu, teskilat drama urdu, teskilat 186, teskilat 186 urdu, teskilat episode 186 urdu subtitles, teskilat urdu 186, teskilat 187, teskilat 187 urdu, teskilat episode 187 urdu subtitles";
+      const keywords = "teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat season 7, teskialt new season, teskilat urdu, teskilat drama urdu, teskilat 186, teskilat 186 urdu, teskilat episode 186 urdu subtitles, teskilat urdu 186, teskilat 187, teskilat 187 urdu, teskilat episode 187 urdu subtitles";
 
       document.title = pageTitle;
 
@@ -639,7 +639,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-950 group p-1">
                     <img 
                       src="https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2" 
-                      alt="Teskilat Season 7 Official Poster" 
+                      alt="Teskilat Urdu Subtitles Season 7 Official Poster - FEVIQO Portal" 
                       className="w-full h-auto object-contain max-h-[520px] mx-auto rounded-xl transition-transform duration-700 group-hover:scale-105"
                     />
                   </div>
@@ -782,7 +782,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       {ep.thumbnailUrl ? (
                         <img 
                           src={ep.thumbnailUrl} 
-                          alt={`Teskilat Episode ${ep.episodeNumber} Thumbnail`} 
+                          alt={`Teskilat Urdu Episode ${ep.episodeNumber} Subtitles Thumbnail - Season 7`} 
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
@@ -989,7 +989,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       >
                         <img 
                           src={selectedEpisode.thumbnailUrl} 
-                          alt={`Teskilat Season 7 Episode ${selectedEpisode.episodeNumber} Thumbnail Poster`} 
+                          alt={`Teskilat Urdu Episode ${selectedEpisode.episodeNumber} Subtitles - Watch Season 7 Episode ${selectedEpisode.episodeNumber}`} 
                           className="w-full h-full object-cover bg-black group-hover:scale-105 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-slate-950/20 transition-colors flex items-center justify-center">

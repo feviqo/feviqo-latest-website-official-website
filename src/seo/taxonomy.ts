@@ -245,6 +245,10 @@ export const GLOBAL_KEYWORD_TAXONOMY: Record<string, string[]> = {
     "video editing agency Pakistan"
   ],
   TURKISH_DRAMA: [
+    "teskilat urdu",
+    "teskilat urdu subtitles",
+    "watch teskilat urdu",
+    "teskilat urdu series",
     "Teskilat Season 7",
     "Teskilat Episode 186",
     "Teskilat Season 7 Urdu Subtitles",
