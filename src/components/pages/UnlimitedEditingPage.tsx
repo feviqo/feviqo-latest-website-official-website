@@ -30,6 +30,7 @@ import { StillHavingDoubtsBanner } from '../StillHavingDoubtsBanner';
 import { HorizontalVideoShowcase } from '../HorizontalVideoShowcase';
 import { PricingMatrixSection } from '../PricingMatrixSection';
 import { AppRoute } from '../../types';
+import { attachHlsStream } from '../../utils/hlsPlayer';
 
 interface UnlimitedEditingPageProps {
   onBackToHome: () => void;
@@ -149,6 +150,20 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
   const [isHeroMuted, setIsHeroMuted] = useState(true);
   const heroVideoRef = useRef<HTMLVideoElement>(null);
 
+  React.useEffect(() => {
+    const vid = heroVideoRef.current;
+    if (!vid) return;
+
+    vid.muted = true;
+    const cleanup = attachHlsStream(vid, 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8', {
+      autoPlay: true
+    });
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, []);
+
   const toggleHeroSound = () => {
     if (heroVideoRef.current) {
       heroVideoRef.current.muted = !heroVideoRef.current.muted;
@@ -262,7 +277,6 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
 
               <video
                 ref={heroVideoRef}
-                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4"
                 autoPlay
                 muted={isHeroMuted}
                 loop

@@ -7,6 +7,7 @@ import { SolutionsSwitcher } from '../SolutionsSwitcher';
 import { HorizontalVideoShowcase } from '../HorizontalVideoShowcase';
 import { StillHavingDoubtsBanner } from '../StillHavingDoubtsBanner';
 import { AppRoute } from '../../types';
+import { attachHlsStream } from '../../utils/hlsPlayer';
 import { YouTubeBrandLogo, InstagramBrandLogo, CreativePackagingBrandLogo } from '../BrandLogos';
 
 interface ContentCreatorsPageProps {
@@ -50,6 +51,20 @@ export const ContentCreatorsPage: React.FC<ContentCreatorsPageProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
+
+  React.useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    vid.muted = true;
+    const cleanup = attachHlsStream(vid, 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8', {
+      autoPlay: true
+    });
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, []);
 
   const toggleSound = () => {
     const vid = videoRef.current;
@@ -158,7 +173,6 @@ export const ContentCreatorsPage: React.FC<ContentCreatorsPageProps> = ({
               </button>
               <video
                 ref={videoRef}
-                src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4"
                 autoPlay
                 muted={isMuted}
                 loop
