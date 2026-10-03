@@ -101,6 +101,48 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     });
   }
 
+  if (cleanPath === '/teskilat') {
+    // Strip the default static homepage JSON-LD script to avoid structured data merging issues
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVSeries",
+      "@id": "https://feviqo.com/teskilat#series",
+      "url": "https://feviqo.com/teskilat",
+      "name": "Teskilat",
+      "alternativeName": ["Teskilat Season 7", "Teskilat Urdu", "Teskilat Urdu Subtitles", "Teşkilat"],
+      "description": "Watch Teskilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.",
+      "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "genre": ["Action", "Drama", "Espionage"],
+      "actor": [
+        { "@type": "PerformanceRole", "actor": { "@type": "Person", "name": "Altay" } },
+        { "@type": "PerformanceRole", "actor": { "@type": "Person", "name": "Ender" } },
+        { "@type": "PerformanceRole", "actor": { "@type": "Person", "name": "Korkut" } }
+      ],
+      "containsSeason": {
+        "@type": "CreativeWorkSeason",
+        "seasonNumber": "7",
+        "name": "Teskilat Season 7",
+        "episode": [
+          {
+            "@type": "TVEpisode",
+            "episodeNumber": "186",
+            "name": "Teskilat Episode 186 Urdu Subtitles",
+            "url": "https://feviqo.com/teskilat/episode-186"
+          },
+          {
+            "@type": "TVEpisode",
+            "episodeNumber": "187",
+            "name": "Teskilat Episode 187 Urdu Subtitles",
+            "url": "https://feviqo.com/teskilat/episode-187"
+          }
+        ]
+      }
+    });
+  }
+
   if (cleanPath === '/teskilat/episode-186') {
     // Strip the default static homepage JSON-LD script to avoid structured data merging issues
     transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
