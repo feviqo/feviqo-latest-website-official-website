@@ -144,6 +144,49 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     });
   }
 
+  if (cleanPath === '/teskilat/episode-187') {
+    // Strip the default static homepage JSON-LD script to avoid structured data merging issues
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVEpisode",
+      "@id": "https://feviqo.com/teskilat/episode-187#episode",
+      "url": "https://feviqo.com/teskilat/episode-187",
+      "name": "Teskilat Episode 187 Urdu Subtitles",
+      "episodeNumber": "187",
+      "seasonNumber": "7",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "description": "Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teskilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.",
+      "image": "",
+      "mainEntityOfPage": "https://feviqo.com/teskilat/episode-187",
+      "isPartOf": {
+        "@type": "TVSeries",
+        "name": "Teskilat",
+        "url": "https://feviqo.com/teskilat"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "VideoObject",
+      "@id": "https://feviqo.com/teskilat/episode-187#video",
+      "name": "Teskilat Episode 187 Urdu Subtitles Watch Online",
+      "description": "Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teskilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.",
+      "thumbnailUrl": [
+        ""
+      ],
+      "uploadDate": "2026-10-03T08:00:00+00:00",
+      "contentUrl": "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
+      "embedUrl": "https://feviqo.com/teskilat/episode-187",
+      "duration": "PT2H25M",
+      "isFamilyFriendly": true,
+      "mainEntityOfPage": "https://feviqo.com/teskilat/episode-187",
+      "publisher": {
+        "@id": "https://feviqo.com/#organization"
+      }
+    });
+  }
+
   const jsonLdScript = `<script type="application/ld+json" id="feviqo-server-jsonld">${JSON.stringify(schemaObj)}</script>`;
   transformed = transformed.replace('</head>', `  ${jsonLdScript}\n  </head>`);
 

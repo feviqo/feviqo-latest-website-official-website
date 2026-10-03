@@ -66,6 +66,7 @@ export default function App() {
       if (path.includes('/unlimited-editing') || hash.includes('#unlimited-editing')) return 'unlimited-editing';
       if (path.includes('/platform') || hash.includes('#platform')) return 'platform';
       if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) return 'turkish-drama';
+      if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187')) return 'teskilat-urdu';
       if (path.includes('/about') || hash.includes('#about')) return 'about';
       if (path.includes('/privacy') || hash.includes('#privacy')) return 'privacy';
       if (path.includes('/terms') || hash.includes('#terms')) return 'terms';
@@ -141,7 +142,7 @@ export default function App() {
         setCurrentRoute('unlimited-editing');
       } else if (path.includes('/platform') || hash.includes('#platform')) {
         setCurrentRoute('platform');
-      } else if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/teskilat-186') || hash.includes('#teskilat')) {
+      } else if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/teskilat-186') || path.includes('/teskilat-187') || hash.includes('#teskilat')) {
         setCurrentRoute('teskilat-urdu');
       } else if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) {
         setCurrentRoute('turkish-drama');
@@ -692,8 +693,13 @@ export default function App() {
       case 'privacy': return '/privacy';
       case 'terms': return '/terms';
       case 'teskilat-urdu':
-        if (typeof window !== 'undefined' && window.location.pathname.includes('/episode-186')) {
-          return '/teskilat/episode-186';
+        if (typeof window !== 'undefined') {
+          if (window.location.pathname.includes('/episode-187')) {
+            return '/teskilat/episode-187';
+          }
+          if (window.location.pathname.includes('/episode-186')) {
+            return '/teskilat/episode-186';
+          }
         }
         return '/teskilat';
       default: return '/';
