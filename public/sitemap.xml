@@ -147,22 +147,13 @@
   </url>
   <url>
     <loc>https://feviqo.com/teskilat</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.95</priority>
-    <video:video>
-      <video:thumbnail_loc>https://feviqo.com/images/teskialt186thumbnIL.png</video:thumbnail_loc>
-      <video:title>Teskilat Season 7 Urdu Subtitles Discovery Portal</video:title>
-      <video:description>Watch Teskilat Season 7 episodes with official Urdu translation on FEVIQO.</video:description>
-      <video:content_loc>https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8</video:content_loc>
-      <video:duration>9120</video:duration>
-      <video:publication_date>2026-09-28T08:00:00+00:00</video:publication_date>
-      <video:family_friendly>yes</video:family_friendly>
-    </video:video>
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-186</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <video:video>
@@ -177,7 +168,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-187</loc>
-    <lastmod>2026-10-03</lastmod>
+    <lastmod>2026-10-04</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <video:video>

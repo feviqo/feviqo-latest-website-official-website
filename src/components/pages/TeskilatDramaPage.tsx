@@ -590,17 +590,17 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
                   {/* Heading */}
                   <h1 className="text-4xl sm:text-6xl font-black text-[#0B0B0D] tracking-tight leading-[1.1]">
-                    Teskilat Season 7
+                    Teskilat Season 7 Urdu
                   </h1>
 
                   {/* Urdu Title */}
                   <div className="text-2xl sm:text-3xl font-urdu-slim text-slate-800 font-normal dir-rtl">
-                    تشکیلات سیزن 7 اردو ترجمہ کے ساتھ
+                    تشکیلات سیزن 7 اردو ترجمہ کے ساتھ (Teskilat Urdu)
                   </div>
 
                   {/* Short Description */}
                   <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-xl font-normal">
-                    Watch Teskilat Season 7 with Urdu Subtitles on FEVIQO. Explore the latest episodes, story recaps, and HD releases.
+                    Watch Teskilat Season 7 Urdu Subtitles on FEVIQO. Stream official Teskilat Urdu episodes, story recaps, and HD releases weekly.
                   </p>
 
                   {/* 4. Hero Metadata Line */}
@@ -773,10 +773,14 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               {/* Minimal Row Episode Card */}
               <div className="space-y-4">
                 {ALL_EPISODES.map((ep) => (
-                  <div 
+                  <a 
+                    href={`/teskilat/episode-${ep.episodeNumber}`}
                     key={ep.id}
-                    onClick={() => handleOpenEpisode(ep)}
-                    className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-[#22C55E]/60 hover:shadow-lg transition-all duration-300 group cursor-pointer text-left flex flex-col sm:flex-row items-center gap-6"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleOpenEpisode(ep);
+                    }}
+                    className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-[#22C55E]/60 hover:shadow-lg transition-all duration-300 group cursor-pointer text-left flex flex-col sm:flex-row items-center gap-6 block"
                   >
                     <div className="relative w-full sm:w-64 aspect-video rounded-xl overflow-hidden bg-black shrink-0">
                       {ep.thumbnailUrl ? (
@@ -829,7 +833,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </a>
                 ))}
               </div>
             </section>
