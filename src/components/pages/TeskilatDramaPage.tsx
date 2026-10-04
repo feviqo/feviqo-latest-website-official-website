@@ -192,6 +192,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // Run once on mount to handle direct deep-links from Google Search
+    handlePopState();
+
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('teskilat-overview', handleOverviewEvent);
     return () => {
