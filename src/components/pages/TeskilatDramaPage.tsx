@@ -694,28 +694,28 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   {/* Content & Description */}
                   <div className="lg:col-span-6 space-y-4">
                     <div className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-black uppercase tracking-wider">
-                      LATEST RELEASE
+                      LATEST RELEASES
                     </div>
 
                     <h3 className="text-2xl sm:text-3xl font-black text-[#0B0B0D]">
-                      Teskilat Season 7 Episode 187
+                      Teskilat Season 7 Portal
                     </h3>
 
                     <div className="text-lg font-urdu-slim text-slate-800 dir-rtl text-right font-normal leading-relaxed">
-                      تشکیلات سیزن 7 قسط 187 اردو ترجمہ کے ساتھ
+                      تشکیلات سیزن 7 اردو سب ٹائٹلز کے ساتھ دیکھیں۔
                     </div>
 
-                    <p className="text-slate-600 text-sm leading-relaxed line-clamp-3">
-                      In Teskilat Season 7 Episode 187, tension between Altay and Tuğrul Başkan reaches an explosive turning point, launching a high-stakes mission to trap Ulak and extract Azra.
+                    <p className="text-slate-600 text-sm leading-relaxed">
+                      Stream all released episodes of Teskilat Season 7 Turkish drama with premium Urdu subtitles on FEVIQO. Browse our comprehensive directory below to watch individual episodes, view high-definition players, and read full official story recaps.
                     </p>
 
                     {/* Minimal Information Strip */}
                     <div className="text-xs font-bold text-slate-500 flex items-center gap-3 pt-2">
-                      <span className="text-[#0B0B0D]">Episode 187</span>
+                      <span className="text-[#0B0B0D]">Season 7</span>
                       <span>&bull;</span>
-                      <span>2h 25m</span>
+                      <span>Espionage Drama</span>
                       <span>&bull;</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">HD</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">1080p HD</span>
                       <span>&bull;</span>
                       <span>Urdu Subtitles</span>
                     </div>
