@@ -54,13 +54,13 @@ const FEATURED_SEASON7_EPISODE: TeskilatEpisode = {
   episodeNumber: 186,
   seasonNumber: 7,
   titleUrdu: 'تشکیلات سیزن 7 قسط 186 اردو ترجمہ کے ساتھ',
-  titleEnglish: 'Teskilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO',
+  titleEnglish: 'Teşkilat Season 7 Episode 2 (Episode 186) Urdu Subtitles - Watch Online | FEVIQO',
   releaseDate: 'September 2026',
   duration: '2h 18m',
   thumbnailUrl: '/images/teskialt186thumbnIL.png',
   videoUrl: 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8',
-  storyRecapUrdu: `اینڈر (Ender) کے اغوا کے بعد غصے میں پاگل الپائے (Altay) واپس اپنے ٹھکانے پر لوٹ آتا ہے؛ لیکن اس کی سب سے بڑی ترجیح اپنے بیٹے سے دوبارہ ملنا ہے۔ الپائے کا یہ غصہ اسے صدر طغرل (Tuğrul Başkan) کے آمنے سامنے لے آتا ہے۔\nجہاں ایک طرف کورکوت (Korkut) اور یحییٰ (Yahya) کے درمیان ایک بڑا حساب کتاب (ٹکراؤ) ہو رہا ہے، وہی شاہین (Şahin) کو ان نتائج کا سامنا کرنا پڑ رہا ہے جن کا اس نے اندازہ بھی نہیں لگایا تھا۔ دوسری طرف، بہار (Bahar) کا آخر کار میدانِ عمل میں اترنا کورکوت کے لیے ایک اور بڑی مشکل کھڑی کر دے گا۔\nاولاک (Ulak)، اینڈر کے ذریعے الپائے اور 'تشکیلات' (Teskilat/ایجنسی) کو شکست دینے کے چکر میں ہے۔ جبکہ عذرا (Azra) اس بڑی مساوات میں سب سے اہم کرداروں میں سے ایک ادا کرے گی۔ دشمن اپنے مقصد میں کامیاب نہیں ہو سکے گا کیونکہ اب بھیڑیا بیدار ہو چکا ہے…`,
-  storyRecapEnglish: `In Teskilat Season 7 Episode 186 (Urdu Subtitles), following Ender's abduction, an enraged Altay returns to his hideout with a single priority: reuniting with his son. Altay's fury brings him face-to-face with Tuğrul Başkan. As Korkut and Yahya settle scores in a major confrontation, Şahin faces unexpected consequences. Meanwhile, Bahar enters the field, creating a new challenge for Korkut. Ulak schemes to use Ender to defeat Altay and the Teskilat agency, while Azra plays a pivotal role. But the enemy will not succeed, because the wolf has awakened...`,
+  storyRecapUrdu: `اینڈر (Ender) کے اغوا کے بعد غصے میں پاگل الپائے (Altay) واپس اپنے ٹھکانے پر لوٹ آتا ہے؛ لیکن اس کی سب بهی ترجیح اپنے بیٹے سے دوبارہ ملنا ہے۔ الپائے کا یہ غصہ اسے صدر طغرل (Tuğrul Başkan) کے آمنے سامنے لے آتا ہے۔\nجہاں ایک طرف کورکوت (Korkut) اور یحییٰ (Yahya) کے درمیان ایک بڑا حساب کتاب (ٹکراؤ) ہو رہا ہے، وہی شاہین (Şahin) کو ان نتائج کا سامنا کرنا پڑ رہا ہے جن کا اس نے اندازہ بھی نہیں لگایا تھا۔ دوسری طرف، بہار (Bahar) کا آخر کار میدانِ عمل میں اترنا کورکوت کے لیے ایک اور بڑی مشکل کھڑی کر دے گا۔\nاولاک (Ulak)، اینڈر کے ذریعے الپائے اور 'تشکیلات' (Teskilat/ایجنسی) کو شکست دینے کے چکر میں ہے۔ جبکہ عذرا (Azra) اس بڑی مساوات میں سب سے اہم کرداروں میں سے ایک ادا کرے گی۔ دشمن اپنے مقصد میں کامیاب نہیں ہو سکے گا کیونکہ اب بھیڑیا بیدار ہو چکا ہے…`,
+  storyRecapEnglish: `In Teskilat Season 7 Episode 2 (Episode 186) with Urdu Subtitles, following Ender's abduction, an enraged Altay returns to his hideout with a single priority: reuniting with his son. Altay's fury brings him face-to-face with Tuğrul Başkan. As Korkut and Yahya settle scores in a major confrontation, Şahin faces unexpected consequences. Meanwhile, Bahar enters the field, creating a new challenge for Korkut. Ulak schemes to use Ender to defeat Altay and the Teskilat agency, while Azra plays a pivotal role. But the enemy will not succeed, because the wolf has awakened...`,
   views: '342,800',
   isLatest: false
 };
@@ -70,13 +70,13 @@ const EPISODE_187: TeskilatEpisode = {
   episodeNumber: 187,
   seasonNumber: 7,
   titleUrdu: 'تشکیلات سیزن 7 قسط 187 اردو ترجمہ کے ساتھ',
-  titleEnglish: 'Teskilat Episode 187 Urdu Subtitles | Watch Season 7 Episode 187 Urdu | FEVIQO',
+  titleEnglish: 'Teşkilat Season 7 Episode 3 (Episode 187) Urdu Subtitles - Watch Online | FEVIQO',
   releaseDate: 'October 2026',
   duration: '2h 25m',
   thumbnailUrl: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
   videoUrl: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8',
   storyRecapUrdu: `الپائے (Altay) اور صدر طغرل (Tuğrul Başkan) کے درمیان پیدا ہونے والی غلط فہمیاں اب ایک نیا رخ اختیار کر چکی ہیں۔ تشکیلات کی نئی ٹیم نے دشمن کے سب سے اہم مہرے 'اولاک' (Ulak) کو گھیرنے کے لیے ایک خفیہ جال بچھایا ہے۔ دوسری طرف عذرا (Azra) کو بچانے کے لیے شاہین ایک انتہائی خطرناک آپریشن شروع کرتا ہے جس میں سیکنڈز کی تاخیر بھی جان لیوا ثابت ہو سکتی ہے۔\nکپتان کورکوت (Korkut) کو حریف گروہوں کی اندرونی جنگ کا فائدہ اٹھاتے ہوئے ایک حساس فائل حاصل کرنی ہے جس میں غداروں کے نام چھپے ہیں۔ بھیڑیا اب پوری طرح بیدار ہو چکا ہے اور آخری وار کے لیے تیار ہے، لیکن دشمن بھی اپنے آخری مہرے کھیلنے سے پیچھے نہیں ہٹے گا…`,
-  storyRecapEnglish: `In Teskilat Season 7 Episode 187 (Urdu Subtitles), the tension between Altay and Tuğrul Başkan reaches an explosive turning point. The special ops team designs a covert trap to corner Ulak, the enemy's master strategist. Meanwhile, Şahin launches a high-stakes, clock-ticking mission to extract Azra from enemy lines, where a single second of delay could cost everything. Korkut navigates a brutal turf war between rival syndicates to retrieve a classified list of deep-cover moles. The wolf is fully awake and ready for the final strike, but the enemy still has a dark card to play...`,
+  storyRecapEnglish: `In Teskilat Season 7 Episode 3 (Episode 187) with Urdu Subtitles, the tension between Altay and Tuğrul Başkan reaches an explosive turning point. The special ops team designs a covert trap to corner Ulak, the enemy's master strategist. Meanwhile, Şahin launches a high-stakes, clock-ticking mission to extract Azra from enemy lines, where a single second of delay could cost everything. Korkut navigates a brutal turf war between rival syndicates to retrieve a classified list of deep-cover moles. The wolf is fully awake and ready for the final strike, but the enemy still has a dark card to play...`,
   views: '284,500',
   isLatest: true
 };
@@ -1097,6 +1097,10 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 <h3>Popular Search Queries & Tags</h3>
                 <p>
                   Users found this page using search keywords: teskilat episodes 187 urdu, teskilat 187, teskilat 187 urdu, teskilat urdu, teşkilat season 7 episode 187 urdu subtitles, watch teşkilat 187 urdu subtitles, teskilat 186 urdu, teşkilat episode 186 urdu subtitles, and teskilat urdu subtitles online. All image resources including posters, coverage teasers, and video banners are fully crawlable under image search parameters for the keyword: teskilat urdu.
+                </p>
+                {/* Competitor Mirroring Tags (Guarantees Google Index Matching) */}
+                <p>
+                  Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, Turkish Action Series Urdu, Turkish Intelligence Series, TRT1 Teskilat, Teskilat New Season Urdu, Teskilat NiaziPlay, Teskilat Season 7 Episode 3 Urdu Subtitles, Teskilat Episode 187 Urdu Subtitles, Teskilat Bolum 187 Urdu, Teskilat Season 7 Urdu, Teskilat Episode 3 Urdu, Teskilat 187 Urdu, Altay Ender Episode 187, Azra Betrayal Teskilat, Korkut Bahar Episode 187, Yahya Teskilat Season 7, Turkish Series Urdu Subtitles, TRT1 Teskilat Episode 187, Teskilat Bolum 186 Urdu, Teskilat Season 7 Episode 2 Urdu Subtitles.
                 </p>
               </div>
 

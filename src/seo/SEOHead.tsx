@@ -114,20 +114,23 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
     if (config.schemaType === 'TVEpisode' || pathname === '/teskilat/episode-186' || pathname === '/teskilat/episode-187') {
       const is187 = pathname.includes('187');
       const num = is187 ? "187" : "186";
+      const subNum = is187 ? "3" : "2";
       const date = is187 ? "2026-10-03T08:00:00+00:00" : "2026-09-28T08:00:00+00:00";
       const dur = is187 ? "PT2H25M" : "PT2H32M";
       const thumb = is187 ? "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw" : "https://feviqo.com/images/teskialt186thumbnIL.png";
+      const episodeName = `Teşkilat Season 7 Episode ${subNum} (Episode ${num}) Urdu Subtitles`;
+      const episodeDesc = `Watch Teşkilat Season 7 Episode ${subNum} (Episode ${num}) in 1080p HD with full Urdu story recap on FEVIQO.com.`;
 
       schemaGraph.push({
         "@type": "TVEpisode",
         "@id": `https://feviqo.com/teskilat/episode-${num}#episode`,
         "url": `https://feviqo.com/teskilat/episode-${num}`,
-        "name": `Teşkilat Season 7 Episode ${num} Urdu Subtitles`,
+        "name": episodeName,
         "episodeNumber": num,
         "seasonNumber": "7",
         "inLanguage": "Urdu",
         "subtitleLanguage": "Urdu Subtitles",
-        "description": `Watch Teşkilat Season 7 Episode ${num} in 1080p HD with full Urdu story recap on FEVIQO.com.`,
+        "description": episodeDesc,
         "image": thumb,
         "mainEntityOfPage": `https://feviqo.com/teskilat/episode-${num}`,
         "isPartOf": {
@@ -140,11 +143,11 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
       schemaGraph.push({
         "@type": "VideoObject",
         "@id": `https://feviqo.com/teskilat/episode-${num}#video`,
-        "name": `Teşkilat Season 7 Episode ${num} Urdu Subtitles`,
-        "description": `Watch Teşkilat Season 7 Episode ${num} full episode streaming in HD with Urdu Subtitles on FEVIQO.com.`,
+        "name": episodeName,
+        "description": `Watch ${episodeName} full episode streaming in HD with Urdu Subtitles on FEVIQO.com.`,
         "thumbnailUrl": [thumb],
         "uploadDate": date,
-        "contentUrl": "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
+        "contentUrl": is187 ? "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8" : "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
         "embedUrl": `https://feviqo.com/teskilat/episode-${num}`,
         "duration": dur,
         "isFamilyFriendly": true,
