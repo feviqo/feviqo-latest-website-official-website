@@ -32,6 +32,7 @@ import {
 import { Navbar } from '../Navbar';
 import { NativeVideoPlayer } from '../NativeVideoPlayer';
 import { AppRoute } from '../../types';
+import { AdBanner468x60 } from '../AdBanner468x60';
 
 interface TeskilatEpisode {
   id: string;
@@ -1021,6 +1022,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </>
                 )}
               </div>
+
+              {/* High-Converting Horizontal 468x60 Banner Ad */}
+              <AdBanner468x60 />
 
               {/* 7. Player Surrounding Info Row */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 border-b border-slate-200/80">
