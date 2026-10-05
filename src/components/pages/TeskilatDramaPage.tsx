@@ -886,11 +886,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               {/* 5 & 6. Secure Anti-Download Main Video Player */}
               <div 
                 onContextMenu={(e) => e.preventDefault()}
-                className={`relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#050508] shadow-2xl border border-slate-800/80 flex items-center justify-center w-full select-none ${
-                selectedEpisode.episodeNumber === 187 
-                  ? 'min-h-[430px] sm:min-h-0 sm:aspect-video' 
-                  : 'aspect-video'
-              }`}>
+                className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#050508] shadow-2xl border border-slate-800/80 flex items-center justify-center w-full select-none aspect-video">
                 
                 {/* 100% Machine-Readable Hidden Video Elements to Guarantee Google Search Console Video Indexing Approval */}
                 <div style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: '0' }} aria-hidden="true">
@@ -901,7 +897,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     poster="https://feviqo.com/images/teskialt186thumbnIL.png"
                     style={{ width: '100%', height: '100%' }}
                   >
-                    <source src="https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8" type="application/x-mpegURL" />
+                    {/* Decoy HLS source to hijack third-party video grabber tools and force black-screen / empty audio outputs */}
+                    <source src="https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU/decoy_black_screen_silent.m3u8" type="application/x-mpegURL" />
                     <p>Stream Teskilat Season 7 Episode {selectedEpisode.episodeNumber} in HD Urdu Subtitles with FEVIQO's dedicated video player.</p>
                   </video>
                   <a href={`https://feviqo.com/teskilat/episode-${selectedEpisode.episodeNumber}`}>
