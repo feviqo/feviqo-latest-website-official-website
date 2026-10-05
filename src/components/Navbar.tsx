@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ChevronDown, 
+  ChevronRight, 
   Menu, 
   X, 
   Sparkles, 
@@ -36,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [solutionsOpen, setSolutionsOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [dramasOpen, setDramasOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -256,17 +258,60 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* Teskilat Drama - Always navigates to Teskilat overview portal */}
-          <button 
-            onClick={() => {
-              onNavigatePage('teskilat-urdu');
-              window.dispatchEvent(new Event('teskilat-overview'));
-              try { window.history.pushState({ route: 'teskilat-urdu' }, '', '/teskilat'); } catch {}
-            }}
-            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300"
+          {/* Turkish Dramas Dropdown - Dynamically switches between active series hubs */}
+          <div 
+            className="relative"
+            onMouseEnter={() => setDramasOpen(true)}
+            onMouseLeave={() => setDramasOpen(false)}
           >
-            Teskilat Drama
-          </button>
+            <button 
+              onClick={() => onNavigatePage('dramas')}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300"
+            >
+              Turkish Dramas
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${dramasOpen ? 'rotate-180 text-white' : ''}`} />
+            </button>
+
+            {dramasOpen && (
+              <div className="absolute top-full right-0 w-80 bg-slate-900/60 backdrop-blur-3xl border border-white/20 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-white/10">
+                <div className="space-y-1">
+                  <button 
+                    onClick={() => {
+                      onNavigatePage('teskilat-urdu');
+                      window.dispatchEvent(new Event('teskilat-overview'));
+                      try { window.history.pushState({ route: 'teskilat-urdu' }, '', '/teskilat'); } catch {}
+                      setDramasOpen(false);
+                    }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
+                  >
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
+                      <Globe className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Teskilat Drama</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Season 7 Urdu Subtitles. Follow Altay and the special ops team.</div>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      onNavigatePage('gunesin-dogdugu-yer' as any);
+                      setDramasOpen(false);
+                    }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
+                  >
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
+                      <Globe className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Gunesin Dogdugu Yer</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Brand-new Urdu release. Discover Anatolian family secrets.</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Right CTA & Access */}
@@ -395,19 +440,45 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>About Us & Executive Leadership</span>
               </button>
 
-              {/* Teskilat Drama placed in the end on phone */}
-              <button 
-                onClick={() => {
-                  onNavigatePage('teskilat-urdu');
-                  window.dispatchEvent(new Event('teskilat-overview'));
-                  try { window.history.pushState({ route: 'teskilat-urdu' }, '', '/teskilat'); } catch {}
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left py-2.5 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 font-extrabold cursor-pointer text-amber-300 flex items-center justify-between border border-amber-400/40 mt-1.5"
-              >
-                <span>Teskilat (Urdu Subtitles)</span>
-                <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/30 text-amber-200 border border-amber-400/40 font-black">Urdu HD</span>
-              </button>
+              {/* Turkish Dramas Section placed in the end on phone */}
+              <div className="border-t border-[#064e3b] pt-3.5 mt-3.5 space-y-1.5">
+                <div className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Turkish Dramas</div>
+                
+                <button 
+                  onClick={() => {
+                    onNavigatePage('dramas');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-2.5 px-3 rounded-xl bg-emerald-500 text-slate-950 font-black cursor-pointer flex items-center justify-between shadow-md"
+                >
+                  <span>Browse All Turkish Dramas</span>
+                  <ChevronRight className="w-4 h-4 text-slate-950" />
+                </button>
+                
+                <button 
+                  onClick={() => {
+                    onNavigatePage('teskilat-urdu');
+                    window.dispatchEvent(new Event('teskilat-overview'));
+                    try { window.history.pushState({ route: 'teskilat-urdu' }, '', '/teskilat'); } catch {}
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-2.5 px-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/60 font-extrabold cursor-pointer text-emerald-300 flex items-center justify-between border border-emerald-500/10"
+                >
+                  <span>Teskilat (Season 7)</span>
+                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">LIVE</span>
+                </button>
+
+                <button 
+                  onClick={() => {
+                    onNavigatePage('gunesin-dogdugu-yer' as any);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-2.5 px-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/60 font-extrabold cursor-pointer text-emerald-300 flex items-center justify-between border border-emerald-500/10"
+                >
+                  <span>Gunesin Dogdugu Yer</span>
+                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">NEW</span>
+                </button>
+              </div>
 
               {/* Turkish TV Licensing placed in the end on phone */}
               <button 

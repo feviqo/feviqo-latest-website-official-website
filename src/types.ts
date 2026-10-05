@@ -195,6 +195,8 @@ export type AppRoute =
   | 'platform'
   | 'turkish-drama'
   | 'teskilat-urdu'
+  | 'gunesin-dogdugu-yer'
+  | 'dramas'
   | 'privacy'
   | 'terms';
 

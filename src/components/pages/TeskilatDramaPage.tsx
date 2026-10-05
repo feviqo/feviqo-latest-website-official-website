@@ -348,10 +348,10 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.episodeNumber;
-      const pageTitle = `Teşkilat Season 7 Episode ${num} Urdu Subtitles - FEVIQO.com`;
+      const pageTitle = `Teskilat Season 7 Episode ${num} Urdu Subtitles - FEVIQO.com`;
       const metaDesc = num === 187
-        ? `Watch Teşkilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teşkilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.com.`
-        : `Watch Teşkilat Season 7 Episode ${num} with Urdu Subtitles (تشکیلات سیزن 7 قسط ${num}). Enjoy full story recaps and stream high-definition episodes processed by FEVIQO.com.`;
+        ? `Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teskilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.com.`
+        : `Watch Teskilat Season 7 Episode ${num} with Urdu Subtitles (تشکیلات سیزن 7 قسط ${num}). Enjoy full story recaps and stream high-definition episodes processed by FEVIQO.com.`;
       const keywords = num === 187
         ? `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat episode 187 urdu subtitles, teskilat 187, teskilat 187 urdu, teskilat, teskilat urdu, teskilat 187 urdu subtitles, teskilat season 7 urdu, watch teskilat season 7 episode 187 urdu, teskilat episode 187 in urdu, teskilat 187 urdu, teskilat episode 187 urdu subtitles full`
         : `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat ${num}, teskilat ${num} urdu, teskilat season 7 episode ${num} urdu subtitles, teskilat episode ${num} urdu, teskilat episode ${num} urdu subtitles full, teskilat episode ${num} urdu subtitles full episode, teskilat urdu ${num}, teskilat season 7 ${num}, teskialt new season, teskilat urdu, unlimited video editing, flat-rate video editing, video editing agency, professional video editors, premium youtube editing services, outsource video editing, white-label video production`;
@@ -375,8 +375,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
       const twDescEl = document.querySelector('meta[name="twitter:description"]');
       if (twDescEl) twDescEl.setAttribute('content', metaDesc);
     } else {
-      const pageTitle = "Teşkilat Season 7 Urdu Subtitles - Watch Online - FEVIQO.com";
-      const metaDesc = "Watch Teşkilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.com.";
+      const pageTitle = "Teskilat Season 7 Urdu Subtitles - Watch Online - FEVIQO.com";
+      const metaDesc = "Watch Teskilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.com.";
       const keywords = "teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat season 7, teskialt new season, teskilat urdu, teskilat drama urdu, teskilat 186, teskilat 186 urdu, teskilat episode 186 urdu subtitles, teskilat urdu 186, teskilat 187, teskilat 187 urdu, teskilat episode 187 urdu subtitles";
 
       document.title = pageTitle;
@@ -716,49 +716,69 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
           /* MAIN TEŞKİLAT SEASON 7 DISCOVERY HUB - FEVIQO SPEC */
           <div className="bg-white text-[#0B0B0D] min-h-screen">
             
-            {/* 3. CINEMATIC HERO SECTION */}
-            <section className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-                
-                {/* Hero Left Content */}
-                <div className="lg:col-span-7 space-y-6 text-left">
+            {/* 3. STACKED HERO SECTION (IDENTICAL ON PHONE & DESKTOP): 100% PICTURE SIGHT WITH SOLID READABLE DARK PLATE BELOW */}
+            <section className="relative w-full bg-black text-white overflow-hidden">
+              
+              {/* 1. PICTURE PANEL: Displays the widescreen 16:9 banner with absolutely ZERO CROPPING or cutting! */}
+              <div className="w-full aspect-video bg-black relative select-none">
+                <img
+                  src="https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2"
+                  alt="Teskilat Cinematic Backdrop"
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black to-transparent pointer-events-none" />
+              </div>
+
+              {/* 2. BOTTOM DETAILS AREA: Solid, ultra-premium text content block sitting directly below on solid black for perfect readability */}
+              <div className="w-full bg-black py-8 px-6 sm:px-12 lg:px-16 z-20">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-center text-left">
                   
-                  {/* Eyebrow */}
-                  <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                    FEVIQO • TEŞKİLAT
+                  {/* Left text panel */}
+                  <div className="lg:col-span-8 space-y-4 sm:space-y-5">
+                    
+                    {/* Eyebrow */}
+                    <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
+                      FEVIQO • TESKILAT
+                    </div>
+
+                    {/* Official Graphic LOGO of Teskilat */}
+                    <div className="h-14 sm:h-20 w-auto flex items-center justify-start select-none">
+                      <img 
+                        src="https://lh3.googleusercontent.com/d/1hO0OhAjFTt4UPxwURNI8u0Hm7j0xz74Y" 
+                        alt="Teskilat Official Logo"
+                        className="h-full w-auto object-contain max-w-[250px] sm:max-w-[340px]"
+                        loading="eager"
+                      />
+                    </div>
+
+                    {/* Urdu Title below logo */}
+                    <div className="text-xl sm:text-2xl font-urdu-slim text-slate-300 font-normal dir-rtl leading-relaxed">
+                      تشکیلات سیزن 7 اردو ترجمہ کے ساتھ (Teskilat Urdu)
+                    </div>
+
+                    {/* Hero Metadata Line */}
+                    <div className="text-xs sm:text-sm text-slate-300 font-medium flex flex-wrap items-center gap-2.5 pt-1 select-none">
+                      <span className="font-bold text-white">Season 7</span>
+                      <span>•</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">HD</span>
+                      <span>•</span>
+                      <span className="font-medium text-slate-200">Urdu Subtitles</span>
+                      <span>•</span>
+                      <span className="text-slate-300">Altay • Ender • Korkut</span>
+                    </div>
+
+                    {/* Short Description */}
+                    <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal max-w-2xl">
+                      Watch Teskilat Season 7 Urdu Subtitles on FEVIQO. Stream official Teskilat Urdu episodes, story recaps, and HD releases weekly.
+                    </p>
+
                   </div>
 
-                  {/* Heading */}
-                  <h1 className="text-4xl sm:text-6xl font-black text-[#0B0B0D] tracking-tight leading-[1.1]">
-                    Teskilat Season 7 Urdu
-                  </h1>
-
-                  {/* Urdu Title */}
-                  <div className="text-2xl sm:text-3xl font-urdu-slim text-slate-800 font-normal dir-rtl">
-                    تشکیلات سیزن 7 اردو ترجمہ کے ساتھ (Teskilat Urdu)
-                  </div>
-
-                  {/* Short Description */}
-                  <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-xl font-normal">
-                    Watch Teskilat Season 7 Urdu Subtitles on FEVIQO. Stream official Teskilat Urdu episodes, story recaps, and HD releases weekly.
-                  </p>
-
-                  {/* 4. Hero Metadata Line */}
-                  <div className="text-xs sm:text-sm text-slate-500 font-medium flex flex-wrap items-center gap-2 pt-1">
-                    <span className="font-bold text-slate-950">Season 7</span>
-                    <span>•</span>
-                    <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">HD</span>
-                    <span>•</span>
-                    <span className="font-medium text-slate-800">Urdu Subtitles</span>
-                    <span>•</span>
-                    <span className="text-slate-600">Altay • Ender • Korkut</span>
-                  </div>
-
-                  {/* CTAs */}
-                  <div className="flex flex-wrap items-center gap-4 pt-3">
+                  {/* Right button panel */}
+                  <div className="lg:col-span-4 flex items-center lg:justify-end gap-3 flex-wrap sm:flex-nowrap w-full">
                     <button
                       onClick={() => handleOpenEpisode(EPISODE_187)}
-                      className="px-8 py-3.5 rounded-full bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-sm transition shadow-md hover:scale-[1.02] cursor-pointer inline-flex items-center gap-2"
+                      className="w-full lg:w-auto px-8 py-3.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:scale-[1.02]"
                     >
                       <Play className="w-4 h-4 fill-current text-slate-950" />
                       <span>Watch Episode 187</span>
@@ -766,26 +786,15 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
                     <a
                       href="#episode-directory"
-                      className="px-6 py-3.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#0B0B0D] font-extrabold text-sm transition cursor-pointer"
+                      className="w-full lg:w-auto px-6 py-3.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-white font-bold text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 cursor-pointer text-center font-bold"
                     >
-                      Browse Episodes
+                      <span>Browse Episodes</span>
                     </a>
                   </div>
 
                 </div>
-
-                {/* Hero Right Visual Art */}
-                <div className="lg:col-span-5 relative">
-                  <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200 bg-slate-950 group p-1">
-                    <img 
-                      src="https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2" 
-                      alt="Teskilat Urdu Subtitles Season 7 Official Poster - FEVIQO Portal" 
-                      className="w-full h-auto object-contain max-h-[520px] mx-auto rounded-xl transition-transform duration-700 group-hover:scale-105"
-                    />
-                  </div>
-                </div>
-
               </div>
+
             </section>
 
             {/* 5 & 6. LATEST EPISODE FEATURE & KEY EPISODE INFORMATION */}

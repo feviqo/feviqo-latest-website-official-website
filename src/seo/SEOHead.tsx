@@ -40,7 +40,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
     setMeta('property', 'og:description', config.ogDescription);
     setMeta('property', 'og:url', config.canonicalUrl);
     setMeta('property', 'og:image', config.ogImage);
-    setMeta('property', 'og:type', pathname.includes('/teskilat/episode-') ? 'video.episode' : 'website');
+    setMeta('property', 'og:type', (pathname.includes('/teskilat/episode-') || pathname.includes('/gunesin-dogdugu-yer/episode-')) ? 'video.episode' : 'website');
 
     // 6. Twitter / X Cards
     setMeta('name', 'twitter:card', 'summary_large_image');
@@ -160,7 +160,70 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
           "@id": "https://feviqo.com/#organization"
         }
       });
-    } else if (config.schemaType === 'TVSeries' || pathname === '/teskilat') {
+    }
+
+    if (pathname.includes('/gunesin-dogdugu-yer/episode-')) {
+      const match = pathname.match(/episode-(\d+)/);
+      const epNum = match ? parseInt(match[1]) : 1;
+      const epName = epNum === 3 ? "Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3" : `Gunesin Dogdugu Yer Episode ${epNum} Urdu Subtitles | FEVIQO`;
+      const epDesc = epNum === 3 
+        ? "Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO."
+        : `Watch Gunesin Dogdugu Yer Episode ${epNum} in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.`;
+      const date = epNum === 3 ? "2026-10-15T18:00:00+00:00" : (epNum === 1 ? "2026-10-01T18:00:00+00:00" : "2026-10-08T18:00:00+00:00");
+      const thumb = "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw";
+
+      schemaGraph.push({
+        "@type": "TVEpisode",
+        "@id": `https://feviqo.com/gunesin-dogdugu-yer/episode-${epNum}#episode`,
+        "url": `https://feviqo.com/gunesin-dogdugu-yer/episode-${epNum}`,
+        "name": epName,
+        "episodeNumber": epNum.toString(),
+        "seasonNumber": "1",
+        "inLanguage": "Urdu",
+        "subtitleLanguage": "Urdu Subtitles",
+        "description": epDesc,
+        "image": thumb,
+        "mainEntityOfPage": `https://feviqo.com/gunesin-dogdugu-yer/episode-${epNum}`,
+        "isPartOf": {
+          "@type": "TVSeries",
+          "name": "Gunesin Dogdugu Yer",
+          "url": "https://feviqo.com/gunesin-dogdugu-yer"
+        }
+      });
+
+      schemaGraph.push({
+        "@type": "VideoObject",
+        "@id": `https://feviqo.com/gunesin-dogdugu-yer/episode-${epNum}#video`,
+        "name": epName,
+        "description": epDesc,
+        "thumbnailUrl": [thumb],
+        "uploadDate": date,
+        "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",
+        "embedUrl": `https://feviqo.com/gunesin-dogdugu-yer/episode-${epNum}`,
+        "duration": "PT2H15M",
+        "isFamilyFriendly": true,
+        "mainEntityOfPage": `https://feviqo.com/gunesin-dogdugu-yer/episode-${epNum}`,
+        "publisher": {
+          "@id": "https://feviqo.com/#organization"
+        }
+      });
+    } else if (pathname === '/gunesin-dogdugu-yer') {
+      schemaGraph.push({
+        "@type": "TVSeries",
+        "@id": "https://feviqo.com/gunesin-dogdugu-yer#series",
+        "url": "https://feviqo.com/gunesin-dogdugu-yer",
+        "name": "Gunesin Dogdugu Yer",
+        "description": "Watch Gunesin Dogdugu Yer Turkish drama in HD Urdu subtitles. Stream all official episodes online with complete story summaries and recaps on FEVIQO.",
+        "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
+        "containsSeason": {
+          "@type": "TVSeason",
+          "seasonNumber": 1,
+          "name": "Season 1"
+        }
+      });
+    }
+
+    if (config.schemaType === 'TVSeries' && pathname === '/teskilat') {
       schemaGraph.push({
         "@type": "TVSeries",
         "@id": "https://feviqo.com/teskilat#series",

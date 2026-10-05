@@ -229,6 +229,125 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     });
   }
 
+  if (cleanPath === '/gunesin-dogdugu-yer') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVSeries",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer#series",
+      "url": "https://feviqo.com/gunesin-dogdugu-yer",
+      "name": "Gunesin Dogdugu Yer",
+      "description": "Watch Gunesin Dogdugu Yer Turkish drama in HD Urdu subtitles. Stream all official episodes online with complete story summaries and recaps on FEVIQO.",
+      "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
+      "containsSeason": {
+        "@type": "TVSeason",
+        "seasonNumber": 1,
+        "name": "Season 1"
+      }
+    });
+  }
+
+  if (cleanPath === '/gunesin-dogdugu-yer/episode-1') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVEpisode",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-1#episode",
+      "url": "https://feviqo.com/gunesin-dogdugu-yer/episode-1",
+      "name": "Gunesin Dogdugu Yer Episode 1 Urdu Subtitles | FEVIQO",
+      "episodeNumber": "1",
+      "seasonNumber": "1",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "description": "Watch Gunesin Dogdugu Yer Episode 1 in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.",
+      "image": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
+      "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-1",
+      "isPartOf": {
+        "@type": "TVSeries",
+        "name": "Gunesin Dogdugu Yer",
+        "url": "https://feviqo.com/gunesin-dogdugu-yer"
+      }
+    });
+  }
+
+  if (cleanPath === '/gunesin-dogdugu-yer/episode-2') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVEpisode",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-2#episode",
+      "url": "https://feviqo.com/gunesin-dogdugu-yer/episode-2",
+      "name": "Gunesin Dogdugu Yer Episode 2 Urdu Subtitles | FEVIQO",
+      "episodeNumber": "2",
+      "seasonNumber": "1",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "description": "Watch Gunesin Dogdugu Yer Episode 2 in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.",
+      "image": "https://feviqo.com/images/teskialt186thumbnIL.png",
+      "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-2",
+      "isPartOf": {
+        "@type": "TVSeries",
+        "name": "Gunesin Dogdugu Yer",
+        "url": "https://feviqo.com/gunesin-dogdugu-yer"
+      }
+    });
+  }
+
+  if (cleanPath === '/gunesin-dogdugu-yer/episode-3') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVEpisode",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-3#episode",
+      "url": "https://feviqo.com/gunesin-dogdugu-yer/episode-3",
+      "name": "Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3",
+      "episodeNumber": "3",
+      "seasonNumber": "1",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "description": "Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO.",
+      "image": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
+      "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-3",
+      "isPartOf": {
+        "@type": "TVSeries",
+        "name": "Gunesin Dogdugu Yer",
+        "url": "https://feviqo.com/gunesin-dogdugu-yer"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "VideoObject",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-3#video",
+      "name": "Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3",
+      "description": "Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles. Stream full episode online with story recap on FEVIQO.com.",
+      "thumbnailUrl": [
+        "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw"
+      ],
+      "uploadDate": "2026-10-15T18:00:00+00:00",
+      "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",
+      "embedUrl": "https://feviqo.com/gunesin-dogdugu-yer/episode-3",
+      "duration": "PT2H25M",
+      "isFamilyFriendly": true,
+      "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-3",
+      "publisher": {
+        "@id": "https://feviqo.com/#organization"
+      }
+    });
+  }
+
+  if (cleanPath === '/dramas') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVSeries",
+      "@id": "https://feviqo.com/dramas#series",
+      "url": "https://feviqo.com/dramas",
+      "name": "Turkish Premium TV Series & Dramas Urdu Subtitles | FEVIQO",
+      "description": "Stream premium Turkish TV series and dramas with high-fidelity Urdu subtitles online. Discover trending shows like Teskilat and Gunesin Dogdugu Yer in ultra HD 1080p.",
+      "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2"
+    });
+  }
+
   const jsonLdScript = `<script type="application/ld+json" id="feviqo-server-jsonld">${JSON.stringify(schemaObj)}</script>`;
   transformed = transformed.replace('</head>', `  ${jsonLdScript}\n  </head>`);
 
