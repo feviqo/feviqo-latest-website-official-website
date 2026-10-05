@@ -111,40 +111,44 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
       });
     }
 
-    if (config.schemaType === 'TVEpisode' || pathname === '/teskilat/episode-186') {
+    if (config.schemaType === 'TVEpisode' || pathname === '/teskilat/episode-186' || pathname === '/teskilat/episode-187') {
+      const is187 = pathname.includes('187');
+      const num = is187 ? "187" : "186";
+      const date = is187 ? "2026-10-03T08:00:00+00:00" : "2026-09-28T08:00:00+00:00";
+      const dur = is187 ? "PT2H25M" : "PT2H32M";
+      const thumb = is187 ? "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw" : "https://feviqo.com/images/teskialt186thumbnIL.png";
+
       schemaGraph.push({
         "@type": "TVEpisode",
-        "@id": "https://feviqo.com/teskilat/episode-186#episode",
-        "url": "https://feviqo.com/teskilat/episode-186",
-        "name": "Teskilat Season 7 Episode 186 Urdu Subtitles",
-        "episodeNumber": "186",
+        "@id": `https://feviqo.com/teskilat/episode-${num}#episode`,
+        "url": `https://feviqo.com/teskilat/episode-${num}`,
+        "name": `Teşkilat Season 7 Episode ${num} Urdu Subtitles`,
+        "episodeNumber": num,
         "seasonNumber": "7",
         "inLanguage": "Urdu",
         "subtitleLanguage": "Urdu Subtitles",
-        "description": "Watch Teskilat Season 7 Episode 186 in 1080p HD with full Urdu story recap on FEVIQO.",
-        "image": "https://feviqo.com/images/teskialt186thumbnIL.png",
-        "mainEntityOfPage": "https://feviqo.com/teskilat/episode-186",
+        "description": `Watch Teşkilat Season 7 Episode ${num} in 1080p HD with full Urdu story recap on FEVIQO.com.`,
+        "image": thumb,
+        "mainEntityOfPage": `https://feviqo.com/teskilat/episode-${num}`,
         "isPartOf": {
           "@type": "TVSeries",
-          "name": "Teskilat",
+          "name": "Teşkilat",
           "url": "https://feviqo.com/teskilat"
         }
       });
 
       schemaGraph.push({
         "@type": "VideoObject",
-        "@id": "https://feviqo.com/teskilat/episode-186#video",
-        "name": "Teskilat Season 7 Episode 186 Urdu Subtitles",
-        "description": "Watch Teskilat Season 7 Episode 186 full episode streaming in HD with Urdu Subtitles on FEVIQO.",
-        "thumbnailUrl": [
-          "https://feviqo.com/images/teskialt186thumbnIL.png"
-        ],
-        "uploadDate": "2026-09-28T08:00:00+00:00",
+        "@id": `https://feviqo.com/teskilat/episode-${num}#video`,
+        "name": `Teşkilat Season 7 Episode ${num} Urdu Subtitles`,
+        "description": `Watch Teşkilat Season 7 Episode ${num} full episode streaming in HD with Urdu Subtitles on FEVIQO.com.`,
+        "thumbnailUrl": [thumb],
+        "uploadDate": date,
         "contentUrl": "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
-        "embedUrl": "https://feviqo.com/teskilat/episode-186",
-        "duration": "PT2H32M",
+        "embedUrl": `https://feviqo.com/teskilat/episode-${num}`,
+        "duration": dur,
         "isFamilyFriendly": true,
-        "mainEntityOfPage": "https://feviqo.com/teskilat/episode-186",
+        "mainEntityOfPage": `https://feviqo.com/teskilat/episode-${num}`,
         "publisher": {
           "@id": "https://feviqo.com/#organization"
         }
@@ -154,9 +158,9 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "@type": "TVSeries",
         "@id": "https://feviqo.com/teskilat#series",
         "url": "https://feviqo.com/teskilat",
-        "name": "Teskilat Season 7",
-        "description": "Watch Teskilat Season 7 with Urdu Subtitles on FEVIQO. Explore episode guides, story recaps, and HD releases.",
-        "image": "https://feviqo.com/images/teskialt186thumbnIL.png",
+        "name": "Teşkilat Season 7",
+        "description": "Watch Teşkilat Season 7 with Urdu Subtitles on FEVIQO.com. Explore episode guides, story recaps, and HD releases.",
+        "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
         "containsSeason": {
           "@type": "TVSeason",
           "seasonNumber": 7,

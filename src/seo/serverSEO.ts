@@ -151,17 +151,17 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "@type": "TVEpisode",
       "@id": "https://feviqo.com/teskilat/episode-186#episode",
       "url": "https://feviqo.com/teskilat/episode-186",
-      "name": "Teskilat Season 7 Episode 186 Urdu Subtitles",
+      "name": "Teşkilat Season 7 Episode 186 Urdu Subtitles",
       "episodeNumber": "186",
       "seasonNumber": "7",
       "inLanguage": "Urdu",
       "subtitleLanguage": "Urdu Subtitles",
-      "description": "Watch Teskilat Season 7 Episode 186 in 1080p HD with full Urdu story recap on FEVIQO.",
+      "description": "Watch Teşkilat Season 7 Episode 186 in 1080p HD with full Urdu story recap on FEVIQO.com.",
       "image": "https://feviqo.com/images/teskialt186thumbnIL.png",
       "mainEntityOfPage": "https://feviqo.com/teskilat/episode-186",
       "isPartOf": {
         "@type": "TVSeries",
-        "name": "Teskilat",
+        "name": "Teşkilat",
         "url": "https://feviqo.com/teskilat"
       }
     });
@@ -169,8 +169,8 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     schemaObj["@graph"].push({
       "@type": "VideoObject",
       "@id": "https://feviqo.com/teskilat/episode-186#video",
-      "name": "Teskilat Season 7 Episode 186 Urdu Subtitles",
-      "description": "Watch Teskilat Season 7 Episode 186 full episode streaming in HD with Urdu Subtitles on FEVIQO.",
+      "name": "Teşkilat Season 7 Episode 186 Urdu Subtitles",
+      "description": "Watch Teşkilat Season 7 Episode 186 full episode streaming in HD with Urdu Subtitles on FEVIQO.com.",
       "thumbnailUrl": [
         "https://feviqo.com/images/teskialt186thumbnIL.png"
       ],
@@ -194,17 +194,17 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "@type": "TVEpisode",
       "@id": "https://feviqo.com/teskilat/episode-187#episode",
       "url": "https://feviqo.com/teskilat/episode-187",
-      "name": "Teskilat Episode 187 Urdu Subtitles",
+      "name": "Teşkilat Season 7 Episode 187 Urdu Subtitles",
       "episodeNumber": "187",
       "seasonNumber": "7",
       "inLanguage": "Urdu",
       "subtitleLanguage": "Urdu Subtitles",
-      "description": "Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teskilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.",
-      "image": "https://lh3.googleusercontent.com/d/1i-L-pMn0Tz4RuGi5R6AULl0Y6gI-EwMV",
+      "description": "Watch Teşkilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teşkilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.com.",
+      "image": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
       "mainEntityOfPage": "https://feviqo.com/teskilat/episode-187",
       "isPartOf": {
         "@type": "TVSeries",
-        "name": "Teskilat",
+        "name": "Teşkilat",
         "url": "https://feviqo.com/teskilat"
       }
     });
@@ -212,10 +212,10 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     schemaObj["@graph"].push({
       "@type": "VideoObject",
       "@id": "https://feviqo.com/teskilat/episode-187#video",
-      "name": "Teskilat Episode 187 Urdu Subtitles Watch Online",
-      "description": "Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teskilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.",
+      "name": "Teşkilat Season 7 Episode 187 Urdu Subtitles",
+      "description": "Watch Teşkilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teşkilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.com.",
       "thumbnailUrl": [
-        "https://lh3.googleusercontent.com/d/1i-L-pMn0Tz4RuGi5R6AULl0Y6gI-EwMV"
+        "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw"
       ],
       "uploadDate": "2026-10-03T08:00:00+00:00",
       "contentUrl": "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",

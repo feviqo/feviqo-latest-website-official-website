@@ -73,8 +73,8 @@ const EPISODE_187: TeskilatEpisode = {
   titleEnglish: 'Teskilat Episode 187 Urdu Subtitles | Watch Season 7 Episode 187 Urdu | FEVIQO',
   releaseDate: 'October 2026',
   duration: '2h 25m',
-  thumbnailUrl: 'https://lh3.googleusercontent.com/d/1i-L-pMn0Tz4RuGi5R6AULl0Y6gI-EwMV',
-  videoUrl: 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8',
+  thumbnailUrl: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
+  videoUrl: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8',
   storyRecapUrdu: `الپائے (Altay) اور صدر طغرل (Tuğrul Başkan) کے درمیان پیدا ہونے والی غلط فہمیاں اب ایک نیا رخ اختیار کر چکی ہیں۔ تشکیلات کی نئی ٹیم نے دشمن کے سب سے اہم مہرے 'اولاک' (Ulak) کو گھیرنے کے لیے ایک خفیہ جال بچھایا ہے۔ دوسری طرف عذرا (Azra) کو بچانے کے لیے شاہین ایک انتہائی خطرناک آپریشن شروع کرتا ہے جس میں سیکنڈز کی تاخیر بھی جان لیوا ثابت ہو سکتی ہے۔\nکپتان کورکوت (Korkut) کو حریف گروہوں کی اندرونی جنگ کا فائدہ اٹھاتے ہوئے ایک حساس فائل حاصل کرنی ہے جس میں غداروں کے نام چھپے ہیں۔ بھیڑیا اب پوری طرح بیدار ہو چکا ہے اور آخری وار کے لیے تیار ہے، لیکن دشمن بھی اپنے آخری مہرے کھیلنے سے پیچھے نہیں ہٹے گا…`,
   storyRecapEnglish: `In Teskilat Season 7 Episode 187 (Urdu Subtitles), the tension between Altay and Tuğrul Başkan reaches an explosive turning point. The special ops team designs a covert trap to corner Ulak, the enemy's master strategist. Meanwhile, Şahin launches a high-stakes, clock-ticking mission to extract Azra from enemy lines, where a single second of delay could cost everything. Korkut navigates a brutal turf war between rival syndicates to retrieve a classified list of deep-cover moles. The wolf is fully awake and ready for the final strike, but the enemy still has a dark card to play...`,
   views: '284,500',
@@ -180,8 +180,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
       const hash = window.location.hash.toLowerCase();
       if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187')) {
         setActiveView('episode-detail');
-        if (path.includes('186')) setSelectedEpisode(FEATURED_SEASON7_EPISODE);
-        if (path.includes('187')) setSelectedEpisode(EPISODE_187);
+        if (path.includes('186') || hash.includes('186')) setSelectedEpisode(FEATURED_SEASON7_EPISODE);
+        if (path.includes('187') || hash.includes('187')) setSelectedEpisode(EPISODE_187);
       } else {
         setActiveView('overview');
       }
@@ -209,12 +209,10 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.episodeNumber;
-      const pageTitle = num === 187 
-        ? `Teskilat Urdu Episode 187 | Watch Season 7 Episode 187 Urdu Subtitles | FEVIQO`
-        : `Teskilat Urdu Episode ${num} | Watch Season 7 Episode ${num} Urdu Subtitles | FEVIQO`;
+      const pageTitle = `Teşkilat Season 7 Episode ${num} Urdu Subtitles - FEVIQO.com`;
       const metaDesc = num === 187
-        ? `Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teskilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.`
-        : `Watch Teskilat Season 7 Episode ${num} with Urdu Subtitles (تشکیلات سیزن 7 قسط ${num}). Enjoy full story recaps and stream high-definition episodes processed by FEVIQO - the world's leading unlimited flat-rate video editing agency for brands, creators, and marketing agencies.`;
+        ? `Watch Teşkilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teşkilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.com.`
+        : `Watch Teşkilat Season 7 Episode ${num} with Urdu Subtitles (تشکیلات سیزن 7 قسط ${num}). Enjoy full story recaps and stream high-definition episodes processed by FEVIQO.com.`;
       const keywords = num === 187
         ? `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat episode 187 urdu subtitles, teskilat 187, teskilat 187 urdu, teskilat, teskilat urdu, teskilat 187 urdu subtitles, teskilat season 7 urdu, watch teskilat season 7 episode 187 urdu, teskilat episode 187 in urdu, teskilat 187 urdu, teskilat episode 187 urdu subtitles full`
         : `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat ${num}, teskilat ${num} urdu, teskilat season 7 episode ${num} urdu subtitles, teskilat episode ${num} urdu, teskilat episode ${num} urdu subtitles full, teskilat episode ${num} urdu subtitles full episode, teskilat urdu ${num}, teskilat season 7 ${num}, teskialt new season, teskilat urdu, unlimited video editing, flat-rate video editing, video editing agency, professional video editors, premium youtube editing services, outsource video editing, white-label video production`;
@@ -238,8 +236,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
       const twDescEl = document.querySelector('meta[name="twitter:description"]');
       if (twDescEl) twDescEl.setAttribute('content', metaDesc);
     } else {
-      const pageTitle = "Teskilat Urdu Subtitles | Teskilat Season 7 Urdu Subtitles | Watch Online | FEVIQO";
-      const metaDesc = "Watch Teskilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.";
+      const pageTitle = "Teşkilat Season 7 Urdu Subtitles - Watch Online - FEVIQO.com";
+      const metaDesc = "Watch Teşkilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.com.";
       const keywords = "teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat season 7, teskialt new season, teskilat urdu, teskilat drama urdu, teskilat 186, teskilat 186 urdu, teskilat episode 186 urdu subtitles, teskilat urdu 186, teskilat 187, teskilat 187 urdu, teskilat episode 187 urdu subtitles";
 
       document.title = pageTitle;
@@ -620,11 +618,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   {/* CTAs */}
                   <div className="flex flex-wrap items-center gap-4 pt-3">
                     <button
-                      onClick={() => handleOpenEpisode(FEATURED_SEASON7_EPISODE)}
+                      onClick={() => handleOpenEpisode(EPISODE_187)}
                       className="px-8 py-3.5 rounded-full bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-sm transition shadow-md hover:scale-[1.02] cursor-pointer inline-flex items-center gap-2"
                     >
                       <Play className="w-4 h-4 fill-current text-slate-950" />
-                      <span>Watch Episode 186</span>
+                      <span>Watch Episode 187</span>
                     </button>
 
                     <a
@@ -698,7 +696,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     </div>
 
                     <h3 className="text-2xl sm:text-3xl font-black text-[#0B0B0D]">
-                      Teskilat Season 7 Portal
+                      Teskilat Season 7 Urdu
                     </h3>
 
                     <div className="text-lg font-urdu-slim text-slate-800 dir-rtl text-right font-normal leading-relaxed">
@@ -885,8 +883,10 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
               </div>
 
-              {/* 5 & 6. Main Video Player or Coming Soon Placeholder (Centered max-w-6xl) */}
-              <div className={`relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#050508] shadow-2xl border border-slate-800/80 flex items-center justify-center w-full ${
+              {/* 5 & 6. Secure Anti-Download Main Video Player */}
+              <div 
+                onContextMenu={(e) => e.preventDefault()}
+                className={`relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#050508] shadow-2xl border border-slate-800/80 flex items-center justify-center w-full select-none ${
                 selectedEpisode.episodeNumber === 187 
                   ? 'min-h-[430px] sm:min-h-0 sm:aspect-video' 
                   : 'aspect-video'
@@ -909,7 +909,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </a>
                 </div>
 
-                {selectedEpisode.episodeNumber === 187 ? (
+                {false ? (
                   /* ULTRA-PREMIUM APPLE TV / NETFLIX STYLE COMING SOON PRESENTATION (FULLY RESPONSIVE) */
                   <div className="relative sm:absolute inset-0 bg-[#070709] flex flex-col items-center justify-center p-5 sm:p-12 text-center text-white z-20 w-full min-h-[430px] sm:min-h-0 overflow-hidden">
                     
@@ -1013,6 +1013,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           src={selectedEpisode.videoUrl}
                           playsinline
                           poster={selectedEpisode.thumbnailUrl}
+                          controlsList="nodownload"
+                          disablePictureInPicture
+                          onContextMenu={(e) => e.preventDefault()}
                           style={{ width: '100%', height: '100%', display: 'block' }}
                         ></mux-video>
                         <mux-data></mux-data>
@@ -1042,21 +1045,21 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
               {/* 8. Story Section */}
               <div className="space-y-6 pt-2 text-left max-w-4xl">
-                <h2 className="text-2xl font-black text-[#0B0B0D]">Episode {selectedEpisode.episodeNumber} Story</h2>
+                <h2 className="text-2xl font-black text-[#0B0B0D]">Episode {selectedEpisode.episodeNumber} Story Recap</h2>
 
-                <div className="space-y-3">
-                  <h3 className="text-lg font-urdu-slim font-bold text-slate-900 dir-rtl text-right">
-                    تشکیلات سیزن 7 قسط {selectedEpisode.episodeNumber} اردو کہانی کا خلاصہ
-                  </h3>
-                  <p className="text-slate-800 text-base sm:text-lg font-urdu-slim font-normal whitespace-pre-line leading-relaxed dir-rtl text-right">
-                    {selectedEpisode.storyRecapUrdu}
+                <div className="space-y-2">
+                  <h3 className="text-xs font-black text-[#22C55E] uppercase tracking-wider">English Story Summary</h3>
+                  <p className="text-slate-800 text-sm sm:text-base leading-relaxed font-normal">
+                    {selectedEpisode.storyRecapEnglish}
                   </p>
                 </div>
 
-                <div className="pt-6 border-t border-slate-100 space-y-1.5">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">English Story Summary</h3>
-                  <p className="text-slate-700 text-sm leading-relaxed font-normal">
-                    {selectedEpisode.storyRecapEnglish}
+                <div className="space-y-3 pt-6 border-t border-slate-100">
+                  <h3 className="text-lg font-urdu-slim font-bold text-slate-900 dir-rtl text-right">
+                    تشکیلات سیزن 7 قسط {selectedEpisode.episodeNumber} اردو کہانی کا خلاصہ
+                  </h3>
+                  <p className="text-slate-700 text-base font-urdu-slim font-normal whitespace-pre-line leading-relaxed dir-rtl text-right">
+                    {selectedEpisode.storyRecapUrdu}
                   </p>
                 </div>
               </div>
@@ -1092,7 +1095,15 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
               </div>
 
-              {/* 10. Episode Navigation */}
+              {/* 10. Search Keyword Tags & Search Engine Cloud (Invisible on UI, fully crawled by Googlebot) */}
+              <div className="sr-only" aria-hidden="true">
+                <h3>Popular Search Queries & Tags</h3>
+                <p>
+                  Users found this page using search keywords: teskilat episodes 187 urdu, teskilat 187, teskilat 187 urdu, teskilat urdu, teşkilat season 7 episode 187 urdu subtitles, watch teşkilat 187 urdu subtitles, teskilat 186 urdu, teşkilat episode 186 urdu subtitles, and teskilat urdu subtitles online. All image resources including posters, coverage teasers, and video banners are fully crawlable under image search parameters for the keyword: teskilat urdu.
+                </p>
+              </div>
+
+              {/* 11. Episode Navigation */}
               <div className="pt-10 border-t border-slate-200">
                 <div className="grid grid-cols-3 items-center text-xs font-bold">
                   <button 
