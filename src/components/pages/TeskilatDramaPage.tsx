@@ -55,13 +55,22 @@ const FEATURED_SEASON7_EPISODE: TeskilatEpisode = {
   episodeNumber: 186,
   seasonNumber: 7,
   titleUrdu: 'تشکیلات سیزن 7 قسط 186 اردو ترجمہ کے ساتھ',
-  titleEnglish: 'Teşkilat Season 7 Episode 2 (Episode 186) Urdu Subtitles - Watch Online | FEVIQO',
+  titleEnglish: 'Teskilat Season 7 Episode 186 Urdu Subtitles - FEVIQO.com',
   releaseDate: 'September 2026',
   duration: '2h 18m',
   thumbnailUrl: '/images/teskialt186thumbnIL.png',
   videoUrl: 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8',
   storyRecapUrdu: `اینڈر (Ender) کے اغوا کے بعد غصے میں پاگل الپائے (Altay) واپس اپنے ٹھکانے پر لوٹ آتا ہے؛ لیکن اس کی سب بهی ترجیح اپنے بیٹے سے دوبارہ ملنا ہے۔ الپائے کا یہ غصہ اسے صدر طغرل (Tuğrul Başkan) کے آمنے سامنے لے آتا ہے۔\nجہاں ایک طرف کورکوت (Korkut) اور یحییٰ (Yahya) کے درمیان ایک بڑا حساب کتاب (ٹکراؤ) ہو رہا ہے، وہی شاہین (Şahin) کو ان نتائج کا سامنا کرنا پڑ رہا ہے جن کا اس نے اندازہ بھی نہیں لگایا تھا۔ دوسری طرف، بہار (Bahar) کا آخر کار میدانِ عمل میں اترنا کورکوت کے لیے ایک اور بڑی مشکل کھڑی کر دے گا۔\nاولاک (Ulak)، اینڈر کے ذریعے الپائے اور 'تشکیلات' (Teskilat/ایجنسی) کو شکست دینے کے چکر میں ہے۔ جبکہ عذرا (Azra) اس بڑی مساوات میں سب سے اہم کرداروں میں سے ایک ادا کرے گی۔ دشمن اپنے مقصد میں کامیاب نہیں ہو سکے گا کیونکہ اب بھیڑیا بیدار ہو چکا ہے…`,
-  storyRecapEnglish: `In Teskilat Season 7 Episode 2 (Episode 186) with Urdu Subtitles, following Ender's abduction, an enraged Altay returns to his hideout with a single priority: reuniting with his son. Altay's fury brings him face-to-face with Tuğrul Başkan. As Korkut and Yahya settle scores in a major confrontation, Şahin faces unexpected consequences. Meanwhile, Bahar enters the field, creating a new challenge for Korkut. Ulak schemes to use Ender to defeat Altay and the Teskilat agency, while Azra plays a pivotal role. But the enemy will not succeed, because the wolf has awakened...`,
+  storyRecapEnglish: `Teskilat Season 7 Episode 2 Urdu Subtitles – Bolum 186: The Wolf Awakens
+
+Teskilat Season 7 Episode 2 (Bolum 186) brings an explosive escalation to the intelligence war. Altay (Alpay) returns to his hideout facing the devastating abduction of Ender, and Tuğrul Başkan stands at the center of the organization's next chess moves.
+
+Watch Teskilat Season 7 Episode 2 with Urdu Subtitles directly on this page on FEVIQO.
+
+Episode 186: Altay Confronts Tuğrul Başkan
+The tension is mounting inside the intelligence agency. Following Ender's abduction, Altay returns with one single mission: to reunite with his son and eliminate the deep-cover threats. This pursuit leads to a high-stakes meeting with Tuğrul Başkan.
+
+Meanwhile, Korkut and Yahya settle scores in a major confrontation, while Şahin faces unexpected consequences. Ulak schemes to use Ender to defeat the Teskilat agency, but the enemies will fail because the wolf has awakened.`,
   views: '342,800',
   isLatest: false
 };
@@ -71,13 +80,142 @@ const EPISODE_187: TeskilatEpisode = {
   episodeNumber: 187,
   seasonNumber: 7,
   titleUrdu: 'تشکیلات سیزن 7 قسط 187 اردو ترجمہ کے ساتھ',
-  titleEnglish: 'Teşkilat Season 7 Episode 3 (Episode 187) Urdu Subtitles - Watch Online | FEVIQO',
+  titleEnglish: 'Teskilat Season 7 Episode 187 Urdu Subtitles - FEVIQO.com',
   releaseDate: 'October 2026',
   duration: '2h 25m',
   thumbnailUrl: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
   videoUrl: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8',
   storyRecapUrdu: `الپائے (Altay) اور صدر طغرل (Tuğrul Başkan) کے درمیان پیدا ہونے والی غلط فہمیاں اب ایک نیا رخ اختیار کر چکی ہیں۔ تشکیلات کی نئی ٹیم نے دشمن کے سب سے اہم مہرے 'اولاک' (Ulak) کو گھیرنے کے لیے ایک خفیہ جال بچھایا ہے۔ دوسری طرف عذرا (Azra) کو بچانے کے لیے شاہین ایک انتہائی خطرناک آپریشن شروع کرتا ہے جس میں سیکنڈز کی تاخیر بھی جان لیوا ثابت ہو سکتی ہے۔\nکپتان کورکوت (Korkut) کو حریف گروہوں کی اندرونی جنگ کا فائدہ اٹھاتے ہوئے ایک حساس فائل حاصل کرنی ہے جس میں غداروں کے نام چھپے ہیں۔ بھیڑیا اب پوری طرح بیدار ہو چکا ہے اور آخری وار کے لیے تیار ہے، لیکن دشمن بھی اپنے آخری مہرے کھیلنے سے پیچھے نہیں ہٹے گا…`,
-  storyRecapEnglish: `In Teskilat Season 7 Episode 3 (Episode 187) with Urdu Subtitles, the tension between Altay and Tuğrul Başkan reaches an explosive turning point. The special ops team designs a covert trap to corner Ulak, the enemy's master strategist. Meanwhile, Şahin launches a high-stakes, clock-ticking mission to extract Azra from enemy lines, where a single second of delay could cost everything. Korkut navigates a brutal turf war between rival syndicates to retrieve a classified list of deep-cover moles. The wolf is fully awake and ready for the final strike, but the enemy still has a dark card to play...`,
+  storyRecapEnglish: `Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187: Azra Betrayal Changes Everything
+
+Teskilat Season 7 Episode 3 (Bolum 187) takes the new season into an even more personal and dangerous phase. Altay and the Organization are shaken by Azra’s betrayal, while the enemy delivers a devastating threat involving Ender.
+
+For Altay, the battle is no longer only about defeating an intelligence network. His son is now at the center of the enemy’s plan, forcing him to risk everything to bring Ender home and uncover the truth behind Azra’s actions.
+
+Watch Teskilat Season 7 Episode 3 with Urdu Subtitles directly on this page on FEVIQO.
+
+Episode 187: Azra Betrayal Shocks the Organization
+Altay and the Organization are forced to confront a painful reality when Azra appears to betray them.
+
+After everything that has happened around Ender, Azra’s move creates another major crisis at the worst possible moment.
+
+The situation affects Altay on two different levels. As an operative, he must understand what Azra is trying to achieve. As a father, he has very little time to think because Ender remains in enemy hands.
+
+The trust that existed before is now replaced by one question:
+Why did Azra turn against Altay?
+
+The Enemy Uses Ender Against Altay
+The enemy understands that Ender is Altay’s greatest emotional vulnerability.
+
+They deliver one of their cruelest threats yet, telling Altay that his son will be raised by them.
+This is not simply a kidnapping anymore.
+
+The enemy wants to attack Altay psychologically by threatening his future relationship with his own son.
+Their strategy is designed to:
+- Break Altay emotionally
+- Force him into reckless decisions
+- Use Ender as leverage against the Organization
+- Control Altay through fear
+- Destroy his confidence as both a father and an operative
+
+But instead of surrendering, the threat makes Altay even more determined.
+
+Altay Begins the Hunt for Ender and Azra
+Altay refuses to remain passive while his son is in danger.
+He joins the team and immediately begins an operation with two clear objectives:
+Find Ender and capture Azra.
+
+Every clue now matters.
+Every second can determine whether Altay reaches his son in time.
+
+The Organization supports him, but they also understand that the enemy expects them to come.
+What appears to be a rescue mission could easily become another carefully prepared trap.
+
+The Enemy Sets New Traps
+Altay and the team are not the only ones making plans.
+The enemy anticipates their response and begins placing new traps in their path.
+
+Each move forces the Organization to balance speed with caution.
+If they move too slowly, Ender remains in danger.
+If they move too quickly, they could walk directly into the enemy’s hands.
+This tactical pressure makes Bolum 187 one of the most intense chapters of Season 7 so far.
+
+Altay Risks His Life for His Son
+For Altay, there is no acceptable price when Ender’s safety is at stake.
+The enemy may control the location, the timing, and the traps, but they cannot control a father’s determination.
+
+Altay is prepared to put his own life on the line if it brings him one step closer to Ender.
+This gives Episode 187 its strongest emotional conflict:
+How far will Altay go to save his son?
+The answer becomes increasingly clear as the operation moves forward — there is almost nothing he will not risk.
+
+Bahar Faces a Brutal Test
+While Altay fights his own battle, another dangerous storyline develops around Bahar.
+Korkut, Hamdi, and Yahya put Bahar through an extremely difficult test.
+To prove herself, Bahar is forced into a situation where words are no longer enough.
+Her loyalty must be demonstrated through action.
+She ultimately takes the risk and fires at Korkut.
+This moment becomes one of the biggest turning points of Episode 187.
+
+Bahar Fires at Korkut
+The confrontation places Bahar in an almost impossible position.
+Korkut is not simply another person standing in front of her. Their emotional connection makes the test far more painful and dangerous.
+Yet Bahar chooses to pull the trigger.
+Her decision shows just how far she is prepared to go to survive the test and protect the larger mission.
+But this moment does not end the challenge.
+Instead, it creates an even bigger one.
+
+The Real Test Now Begins for Yahya
+After Bahar’s dramatic decision, attention turns toward Yahya.
+The events surrounding Korkut, Hamdi, and Bahar now place Yahya in a difficult position of his own.
+The official Episode 187 storyline makes it clear that Bahar’s test is only the beginning.
+The real challenge now belongs to Yahya.
+His next decisions could change relationships, loyalties, and the balance surrounding Korkut’s operation.
+
+A War Built on Loyalty and Betrayal
+The strongest theme of Teskilat Season 7 Episode 3 is trust.
+Altay faces Azra’s betrayal.
+Bahar must prove her loyalty.
+Yahya faces his own test.
+Ender is used as emotional leverage against his father.
+
+Almost every major storyline in Episode 187 asks the same question:
+Who can still be trusted when the enemy knows exactly where to attack?
+
+Themes & Highlights of Teskilat Bolum 187
+- Azra Betrayal: Altay and the Organization are shaken by Azra’s unexpected move.
+- Ender in Danger: The enemy uses Altay’s son as psychological leverage.
+- A Father’s Fight: Altay is willing to risk his life to find Ender.
+- Enemy Traps: The Organization faces new obstacles during the rescue operation.
+- Bahar’s Test: Bahar is forced to prove herself by firing at Korkut.
+- Yahya’s Challenge: The real test begins for Yahya after Bahar’s decision.
+- Trust and Betrayal: Loyalty becomes the central battlefield of Episode 187.
+
+Key Characters in Episode 187
+- Altay: Risks everything to rescue Ender and track down Azra.
+- Ender: Remains at the center of the enemy’s psychological war against Altay.
+- Azra: Her apparent betrayal creates a major crisis for Altay and the Organization.
+- Korkut: Becomes part of Bahar’s dangerous loyalty test.
+- Bahar: Takes an extreme step when she fires at Korkut.
+- Yahya: Faces an even greater challenge after Bahar completes her test.
+- Hamdi: Stands alongside Korkut and Yahya during Bahar’s critical test.
+- The Organization: Moves with Altay to rescue Ender despite the enemy’s traps.
+
+Where to Watch Teskilat Season 7 Episode 3 Urdu Subtitles
+You can watch Teskilat Season 7 Episode 3 (Bolum 187) with Urdu Subtitles directly on this page on FEVIQO.
+
+Follow Altay and the Organization as they race to rescue Ender, pursue Azra, and survive the enemy’s dangerous new traps.
+
+Final Thoughts
+Teskilat Season 7 Episode 3 Urdu Subtitles raises the emotional and operational stakes of the new season. Azra’s betrayal leaves Altay facing another painful shock while Ender remains trapped in the enemy’s hands.
+
+Altay’s determination to save his son turns the operation into a deeply personal battle, but the enemies waiting for him have prepared new traps at every step.
+
+Meanwhile, Bahar’s decision to fire at Korkut creates a dramatic turning point, and the consequences now place Yahya at the center of another difficult test.
+
+With betrayal, loyalty, family, and sacrifice colliding at the same time, Bolum 187 pushes Season 7 into an even more dangerous phase.
+
+Watch Teskilat Season 7 Episode 3 – Bolum 187 with Urdu Subtitles on FEVIQO.`,
   views: '284,500',
   isLatest: true
 };
@@ -860,15 +998,15 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               {/* 4. Episode Header */}
               <div className="space-y-2 text-left">
                 <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                  TEŞKİLAT &bull; SEASON {selectedEpisode.seasonNumber}
+                  TESKILAT &bull; SEASON {selectedEpisode.seasonNumber}
                 </div>
 
-                <h1 className="text-3xl sm:text-5xl font-black text-[#0B0B0D] tracking-tight">
-                  Episode {selectedEpisode.episodeNumber}
+                <h1 className="text-2xl sm:text-4xl font-black text-[#0B0B0D] tracking-tight">
+                  Teskilat Season 7 Episode {selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles - Bolum {selectedEpisode.episodeNumber} {selectedEpisode.episodeNumber === 187 ? "Azra Betrayal" : "The Wolf Awakens"}
                 </h1>
 
-                <p className="text-lg sm:text-xl font-bold text-slate-800 pt-1">
-                  {selectedEpisode.titleEnglish}
+                <p className="text-sm font-bold text-slate-500 pt-1">
+                  Urdu & English Subtitles &bull; 1080p HD &bull; FEVIQO.com
                 </p>
 
                 <p className="text-lg sm:text-xl font-urdu-slim font-normal text-slate-900 dir-rtl text-right pt-1 leading-relaxed">
@@ -1048,11 +1186,52 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               <div className="space-y-6 pt-2 text-left max-w-4xl">
                 <h2 className="text-2xl font-black text-[#0B0B0D]">Episode {selectedEpisode.episodeNumber} Story Recap</h2>
 
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <h3 className="text-xs font-black text-[#22C55E] uppercase tracking-wider">English Story Summary</h3>
-                  <p className="text-slate-800 text-sm sm:text-base leading-relaxed font-normal">
-                    {selectedEpisode.storyRecapEnglish}
-                  </p>
+                  <div className="text-slate-800 leading-relaxed font-normal space-y-6">
+                    {selectedEpisode.storyRecapEnglish.split('\n\n').map((block, idx) => {
+                      const trimmed = block.trim();
+                      if (!trimmed) return null;
+
+                      // Check if it should be treated as a title / heading
+                      const isHeading = trimmed.length < 90 && (
+                        trimmed.endsWith(':') || 
+                        trimmed.includes(':') || 
+                        trimmed.includes('–') || 
+                        trimmed.includes('—') ||
+                        (!trimmed.includes('.') && trimmed.split(' ').length < 12)
+                      );
+
+                      if (isHeading) {
+                        return (
+                          <h3 
+                            key={idx} 
+                            className="text-xl sm:text-2xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4 tracking-tight"
+                          >
+                            {trimmed}
+                          </h3>
+                        );
+                      }
+
+                      // Check if it's a bulleted list
+                      if (trimmed.startsWith('- ') || trimmed.includes('\n- ')) {
+                        const items = trimmed.split('\n').map(li => li.replace(/^-\s*/, '').trim()).filter(Boolean);
+                        return (
+                          <ul key={idx} className="list-disc pl-6 text-slate-700 space-y-2.5 my-4">
+                            {items.map((item, itemIdx) => (
+                              <li key={itemIdx} className="text-sm sm:text-base leading-relaxed">{item}</li>
+                            ))}
+                          </ul>
+                        );
+                      }
+
+                      return (
+                        <p key={idx} className="text-sm sm:text-base text-slate-700 leading-relaxed">
+                          {trimmed}
+                        </p>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="space-y-3 pt-6 border-t border-slate-100">

@@ -110,7 +110,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "@id": "https://feviqo.com/teskilat#series",
       "url": "https://feviqo.com/teskilat",
       "name": "Teskilat",
-      "alternativeName": ["Teskilat Season 7", "Teskilat Urdu", "Teskilat Urdu Subtitles", "Teşkilat"],
+      "alternativeName": ["Teskilat Season 7", "Teskilat Urdu", "Teskilat Urdu Subtitles", "Teskilat Bolum 187"],
       "description": "Watch Teskilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.",
       "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
       "inLanguage": "Urdu",
@@ -151,17 +151,17 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "@type": "TVEpisode",
       "@id": "https://feviqo.com/teskilat/episode-186#episode",
       "url": "https://feviqo.com/teskilat/episode-186",
-      "name": "Teşkilat Season 7 Episode 186 Urdu Subtitles",
+      "name": "Teskilat Season 7 Episode 2 Urdu Subtitles – Bolum 186",
       "episodeNumber": "186",
       "seasonNumber": "7",
       "inLanguage": "Urdu",
       "subtitleLanguage": "Urdu Subtitles",
-      "description": "Watch Teşkilat Season 7 Episode 186 in 1080p HD with full Urdu story recap on FEVIQO.com.",
+      "description": "Watch Teskilat Season 7 Episode 2 Urdu Subtitles (Bolum 186). Stream full episode with story recap on FEVIQO.com.",
       "image": "https://feviqo.com/images/teskialt186thumbnIL.png",
       "mainEntityOfPage": "https://feviqo.com/teskilat/episode-186",
       "isPartOf": {
         "@type": "TVSeries",
-        "name": "Teşkilat",
+        "name": "Teskilat",
         "url": "https://feviqo.com/teskilat"
       }
     });
@@ -169,8 +169,8 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     schemaObj["@graph"].push({
       "@type": "VideoObject",
       "@id": "https://feviqo.com/teskilat/episode-186#video",
-      "name": "Teşkilat Season 7 Episode 186 Urdu Subtitles",
-      "description": "Watch Teşkilat Season 7 Episode 186 full episode streaming in HD with Urdu Subtitles on FEVIQO.com.",
+      "name": "Teskilat Season 7 Episode 2 Urdu Subtitles – Bolum 186",
+      "description": "Watch Teskilat Season 7 Episode 2 (Bolum 186) in 1080p HD with full Urdu story recap on FEVIQO.com.",
       "thumbnailUrl": [
         "https://feviqo.com/images/teskialt186thumbnIL.png"
       ],
@@ -194,17 +194,17 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "@type": "TVEpisode",
       "@id": "https://feviqo.com/teskilat/episode-187#episode",
       "url": "https://feviqo.com/teskilat/episode-187",
-      "name": "Teşkilat Season 7 Episode 187 Urdu Subtitles",
+      "name": "Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187",
       "episodeNumber": "187",
       "seasonNumber": "7",
       "inLanguage": "Urdu",
       "subtitleLanguage": "Urdu Subtitles",
-      "description": "Watch Teşkilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teşkilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.com.",
+      "description": "Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in.",
       "image": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
       "mainEntityOfPage": "https://feviqo.com/teskilat/episode-187",
       "isPartOf": {
         "@type": "TVSeries",
-        "name": "Teşkilat",
+        "name": "Teskilat",
         "url": "https://feviqo.com/teskilat"
       }
     });
@@ -212,13 +212,13 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     schemaObj["@graph"].push({
       "@type": "VideoObject",
       "@id": "https://feviqo.com/teskilat/episode-187#video",
-      "name": "Teşkilat Season 7 Episode 187 Urdu Subtitles",
-      "description": "Watch Teşkilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teşkilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.com.",
+      "name": "Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187",
+      "description": "Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in on FEVIQO.com.",
       "thumbnailUrl": [
         "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw"
       ],
       "uploadDate": "2026-10-03T08:00:00+00:00",
-      "contentUrl": "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
+      "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",
       "embedUrl": "https://feviqo.com/teskilat/episode-187",
       "duration": "PT2H25M",
       "isFamilyFriendly": true,

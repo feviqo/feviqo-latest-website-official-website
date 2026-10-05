@@ -118,8 +118,10 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
       const date = is187 ? "2026-10-03T08:00:00+00:00" : "2026-09-28T08:00:00+00:00";
       const dur = is187 ? "PT2H25M" : "PT2H32M";
       const thumb = is187 ? "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw" : "https://feviqo.com/images/teskialt186thumbnIL.png";
-      const episodeName = `Teşkilat Season 7 Episode ${subNum} (Episode ${num}) Urdu Subtitles`;
-      const episodeDesc = `Watch Teşkilat Season 7 Episode ${subNum} (Episode ${num}) in 1080p HD with full Urdu story recap on FEVIQO.com.`;
+      const episodeName = `Teskilat Season 7 Episode ${subNum} Urdu Subtitles – Bolum ${num}`;
+      const episodeDesc = is187 
+        ? "Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in."
+        : "Watch Teskilat Season 7 Episode 2 Urdu Subtitles (Bolum 186). Stream full episode with story recap on FEVIQO.com.";
 
       schemaGraph.push({
         "@type": "TVEpisode",
@@ -135,7 +137,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "mainEntityOfPage": `https://feviqo.com/teskilat/episode-${num}`,
         "isPartOf": {
           "@type": "TVSeries",
-          "name": "Teşkilat",
+          "name": "Teskilat",
           "url": "https://feviqo.com/teskilat"
         }
       });
@@ -143,8 +145,10 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
       schemaGraph.push({
         "@type": "VideoObject",
         "@id": `https://feviqo.com/teskilat/episode-${num}#video`,
-        "name": episodeName,
-        "description": `Watch ${episodeName} full episode streaming in HD with Urdu Subtitles on FEVIQO.com.`,
+        "name": `Teskilat Season 7 Episode ${subNum} Urdu Subtitles - Bolum ${num}`,
+        "description": is187 
+          ? "Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in."
+          : "Watch Teskilat Season 7 Episode 2 Urdu Subtitles (Bolum 186). Stream full episode with story recap on FEVIQO.com.",
         "thumbnailUrl": [thumb],
         "uploadDate": date,
         "contentUrl": is187 ? "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8" : "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
@@ -161,8 +165,8 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "@type": "TVSeries",
         "@id": "https://feviqo.com/teskilat#series",
         "url": "https://feviqo.com/teskilat",
-        "name": "Teşkilat Season 7",
-        "description": "Watch Teşkilat Season 7 with Urdu Subtitles on FEVIQO.com. Explore episode guides, story recaps, and HD releases.",
+        "name": "Teskilat Season 7",
+        "description": "Watch Teskilat Season 7 with Urdu Subtitles on FEVIQO.com. Explore episode guides, story recaps, and HD releases.",
         "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
         "containsSeason": {
           "@type": "TVSeason",
