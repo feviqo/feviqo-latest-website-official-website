@@ -1279,11 +1279,29 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               <div className="sr-only" aria-hidden="true">
                 <h3>Popular Search Queries & Tags</h3>
                 <p>
-                  Users found this page using search keywords: teskilat episodes 187 urdu, teskilat 187, teskilat 187 urdu, teskilat urdu, teşkilat season 7 episode 187 urdu subtitles, watch teşkilat 187 urdu subtitles, teskilat 186 urdu, teşkilat episode 186 urdu subtitles, and teskilat urdu subtitles online. All image resources including posters, coverage teasers, and video banners are fully crawlable under image search parameters for the keyword: teskilat urdu.
+                  Users found this page using search keywords: teskilat episodes {selectedEpisode.episodeNumber} urdu, teskilat {selectedEpisode.episodeNumber}, teskilat {selectedEpisode.episodeNumber} urdu, teskilat urdu, watch teskilat {selectedEpisode.episodeNumber} urdu subtitles, and teskilat urdu subtitles online.
                 </p>
                 {/* Competitor Mirroring Tags (Guarantees Google Index Matching) */}
                 <p>
-                  Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, Turkish Action Series Urdu, Turkish Intelligence Series, TRT1 Teskilat, Teskilat New Season Urdu, Teskilat NiaziPlay, Teskilat Season 7 Episode 3 Urdu Subtitles, Teskilat Episode 187 Urdu Subtitles, Teskilat Bolum 187 Urdu, Teskilat Season 7 Urdu, Teskilat Episode 3 Urdu, Teskilat 187 Urdu, Altay Ender Episode 187, Azra Betrayal Teskilat, Korkut Bahar Episode 187, Yahya Teskilat Season 7, Turkish Series Urdu Subtitles, TRT1 Teskilat Episode 187, Teskilat Bolum 186 Urdu, Teskilat Season 7 Episode 2 Urdu Subtitles.
+                  teskilat {selectedEpisode.episodeNumber} urdu,
+                  teksilat {selectedEpisode.episodeNumber},
+                  teskilat episode {selectedEpisode.episodeNumber},
+                  teskilat season 7 episode {selectedEpisode.episodeNumber},
+                  teskilat {selectedEpisode.episodeNumber} urdu subtitles,
+                  teksilat {selectedEpisode.episodeNumber} urdu,
+                  teksilat episode {selectedEpisode.episodeNumber},
+                  teksilat season 7 episode {selectedEpisode.episodeNumber},
+                  teskilat {selectedEpisode.episodeNumber} urdu subtitles online,
+                  watch teskilat {selectedEpisode.episodeNumber} urdu subtitles,
+                  teskilat season 7 episode {selectedEpisode.episodeNumber === 187 ? "3" : "2"} urdu subtitles,
+                  teskilat season 7 episode {selectedEpisode.episodeNumber === 187 ? "3" : "2"} urdu subtitles – bolum {selectedEpisode.episodeNumber},
+                  teskilat season 7,
+                  teskilat season 7 urdu,
+                  teskilat season 7 urdu subtitles,
+                  niaziplay teskilat {selectedEpisode.episodeNumber},
+                  niaziplay teskilat season 7,
+                  turkish series urdu subtitles,
+                  trt1 teskilat episode {selectedEpisode.episodeNumber} urdu subtitles
                 </p>
               </div>
 
