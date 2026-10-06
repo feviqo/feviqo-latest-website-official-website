@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TopAlertBar } from './components/TopAlertBar';
 import { Navbar } from './components/Navbar';
@@ -21,27 +21,33 @@ import { Footer } from './components/Footer';
 import { VideoModal } from './components/VideoModal';
 import { BookCallModal } from './components/BookCallModal';
 import { CookieBanner } from './components/CookieBanner';
+import { PricingPage } from './components/PricingPage';
+import { FeviqoFlowApp } from './components/FeviqoFlowApp';
 
-// Code-Split Dedicated Sub-Pages for Ultra-Fast Worldwide Performance (<100ms Initial Load)
-const PricingPage = lazy(() => import('./components/PricingPage').then(m => ({ default: m.PricingPage })));
-const FeviqoFlowApp = lazy(() => import('./components/FeviqoFlowApp').then(m => ({ default: m.FeviqoFlowApp })));
-const BookingPage = lazy(() => import('./components/pages/BookingPage').then(m => ({ default: m.BookingPage })));
-const VideoGalleryPage = lazy(() => import('./components/pages/VideoGalleryPage').then(m => ({ default: m.VideoGalleryPage })));
-const ContentCreatorsPage = lazy(() => import('./components/pages/ContentCreatorsPage').then(m => ({ default: m.ContentCreatorsPage })));
-const BusinessOwnersPage = lazy(() => import('./components/pages/BusinessOwnersPage').then(m => ({ default: m.BusinessOwnersPage })));
-const AgenciesPage = lazy(() => import('./components/pages/AgenciesPage').then(m => ({ default: m.AgenciesPage })));
-const TestimonialsPage = lazy(() => import('./components/pages/TestimonialsPage').then(m => ({ default: m.TestimonialsPage })));
-const CaseStudiesPage = lazy(() => import('./components/pages/CaseStudiesPage').then(m => ({ default: m.CaseStudiesPage })));
-const UnlimitedEditingPage = lazy(() => import('./components/pages/UnlimitedEditingPage').then(m => ({ default: m.UnlimitedEditingPage })));
-const PlatformOverviewPage = lazy(() => import('./components/pages/PlatformOverviewPage').then(m => ({ default: m.PlatformOverviewPage })));
-const TurkishDramaPage = lazy(() => import('./components/pages/TurkishDramaPage').then(m => ({ default: m.TurkishDramaPage })));
-const TeskilatDramaPage = lazy(() => import('./components/pages/TeskilatDramaPage').then(m => ({ default: m.TeskilatDramaPage })));
-const GunesinDramaPage = lazy(() => import('./components/pages/GunesinDramaPage').then(m => ({ default: m.GunesinDramaPage })));
-const DramasPage = lazy(() => import('./components/pages/DramasPage').then(m => ({ default: m.DramasPage })));
-const AboutUsPage = lazy(() => import('./components/pages/AboutUsPage').then(m => ({ default: m.AboutUsPage })));
-const PrivacyPolicyPage = lazy(() => import('./components/pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
-const TermsPage = lazy(() => import('./components/pages/TermsPage').then(m => ({ default: m.TermsPage })));
-const SEOAdminModal = lazy(() => import('./components/admin/SEOAdminModal').then(m => ({ default: m.SEOAdminModal })));
+// Dedicated Sub-Pages
+import { BookingPage } from './components/pages/BookingPage';
+import { VideoGalleryPage } from './components/pages/VideoGalleryPage';
+import { ContentCreatorsPage } from './components/pages/ContentCreatorsPage';
+import { BusinessOwnersPage } from './components/pages/BusinessOwnersPage';
+import { AgenciesPage } from './components/pages/AgenciesPage';
+import { TestimonialsPage } from './components/pages/TestimonialsPage';
+import { CaseStudiesPage } from './components/pages/CaseStudiesPage';
+import { UnlimitedEditingPage } from './components/pages/UnlimitedEditingPage';
+import { PlatformOverviewPage } from './components/pages/PlatformOverviewPage';
+import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
+import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
+import { GunesinDramaPage } from './components/pages/GunesinDramaPage';
+import { DramasPage } from './components/pages/DramasPage';
+import { AboutUsPage } from './components/pages/AboutUsPage';
+import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
+import { TermsPage } from './components/pages/TermsPage';
+
+import { AppRoute, PreselectedPlan } from './types';
+import { initializeAssetSync } from './services/assetService';
+import { findVideoItem } from './data/videoRegistry';
+
+import { SEOHead } from './seo/SEOHead';
+import { SEOAdminModal } from './components/admin/SEOAdminModal';
 
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
@@ -749,13 +755,7 @@ export default function App() {
       <SEOHead pathname={getPathForRoute(currentRoute)} />
 
       <div className="w-full">
-        <Suspense fallback={
-          <div className="min-h-screen w-full bg-[#070709] flex flex-col items-center justify-center p-4">
-            <div className="w-8 h-8 border-2 border-[#22C55E] border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        }>
-          {renderCurrentRoute()}
-        </Suspense>
+        {renderCurrentRoute()}
       </div>
 
       {/* Admin SEO CMS Control Modal */}
