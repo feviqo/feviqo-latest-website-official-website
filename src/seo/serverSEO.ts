@@ -306,7 +306,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "inLanguage": "Urdu",
       "subtitleLanguage": "Urdu Subtitles",
       "description": "Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO.",
-      "image": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
+      "image": "https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj",
       "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-3",
       "isPartOf": {
         "@type": "TVSeries",
@@ -321,7 +321,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "name": "Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3",
       "description": "Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles. Stream full episode online with story recap on FEVIQO.com.",
       "thumbnailUrl": [
-        "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw"
+        "https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj"
       ],
       "uploadDate": "2026-10-15T18:00:00+00:00",
       "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",

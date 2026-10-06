@@ -170,7 +170,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         ? "Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO."
         : `Watch Gunesin Dogdugu Yer Episode ${epNum} in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.`;
       const date = epNum === 3 ? "2026-10-15T18:00:00+00:00" : (epNum === 1 ? "2026-10-01T18:00:00+00:00" : "2026-10-08T18:00:00+00:00");
-      const thumb = "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw";
+      const thumb = epNum === 3 ? "https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj" : "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh";
 
       schemaGraph.push({
         "@type": "TVEpisode",
