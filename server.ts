@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import path from 'path';
 import fs from 'fs';
 import { execFile } from 'child_process';
@@ -37,6 +38,9 @@ import {
 
 const app = express();
 const PORT = 3000;
+
+// Enable Gzip/Brotli HTTP response compression for lightning-fast site loads
+app.use(compression());
 
 // High-capacity payload limits supporting 900MB+ / 2GB video uploads
 app.use(express.json({ limit: '2048mb' }));
