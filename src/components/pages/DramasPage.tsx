@@ -230,6 +230,11 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                         FEVIQO • {slide.id === 'teskilat' ? 'TESKILAT' : 'GUNESIN DOGDUGU YER'}
                       </div>
 
+                      {/* Primary Descriptive H1 Heading */}
+                      <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white uppercase">
+                        {slide.title} — Ultra HD Urdu Subtitles
+                      </h1>
+
                       {/* Official Graphic LOGO matching exactly Teskilat sizing & position */}
                       <div className="h-14 sm:h-20 w-auto flex items-center justify-start select-none">
                         <img 

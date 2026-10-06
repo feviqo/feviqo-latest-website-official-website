@@ -46,6 +46,12 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   const canonicalTag = `<link rel="canonical" href="${config.canonicalUrl}" />`;
   transformed = transformed.replace('</head>', `  ${canonicalTag}\n  </head>`);
 
+  // 4b. Inject route-specific H1 tag inside #root for static search crawlers (Bingbot / Googlebot)
+  transformed = transformed.replace(
+    '<div id="root">',
+    `<div id="root"><h1 style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;">${config.seoTitle}</h1>`
+  );
+
   // 5. Inject Dynamic JSON-LD Schema
   let schemaObj: any = {
     "@context": "https://schema.org",

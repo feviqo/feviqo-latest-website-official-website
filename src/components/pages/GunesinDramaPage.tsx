@@ -275,6 +275,11 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                         />
                       </div>
 
+                      {/* Primary Descriptive H1 Title */}
+                      <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                        Gunesin Dogdugu Yer Urdu Subtitles
+                      </h1>
+
                       {/* Urdu Translation below logo */}
                       <div className="text-xl sm:text-2xl font-urdu-slim text-slate-300 font-normal dir-rtl leading-relaxed">
                         گنیشین دوغدوغو یر (Gunesin Dogdugu Yer Urdu)

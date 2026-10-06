@@ -752,6 +752,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       />
                     </div>
 
+                    {/* Primary Descriptive H1 Title */}
+                    <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+                      Teskilat Season 7 Urdu Subtitles
+                    </h1>
+
                     {/* Urdu Title below logo */}
                     <div className="text-xl sm:text-2xl font-urdu-slim text-slate-300 font-normal dir-rtl leading-relaxed">
                       تشکیلات سیزن 7 اردو ترجمہ کے ساتھ (Teskilat Urdu)
