@@ -269,3 +269,5 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
 
   return null;
 };
+
+export default SEOHead;

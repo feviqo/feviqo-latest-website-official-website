@@ -46,7 +46,7 @@ import { AppRoute, PreselectedPlan } from './types';
 import { initializeAssetSync } from './services/assetService';
 import { findVideoItem } from './data/videoRegistry';
 
-import { SEOHead } from './seo/SEOHead';
+import SEOHead from './seo/SEOHead';
 import { SEOAdminModal } from './components/admin/SEOAdminModal';
 
 export default function App() {

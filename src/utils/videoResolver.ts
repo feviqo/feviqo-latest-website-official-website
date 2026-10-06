@@ -261,7 +261,8 @@ export const resolvePlayableVideo = (
     // 1. Check if it's a registered video ID in videoRegistry (e.g. 'reel-3', 'reel-1', 'horiz-1', etc.)
     const matched = findVideoItem(cleanUrl);
     if (matched) {
-      const matchedSrc = matched.src || matched.videoUrl || (matched.driveId ? DRIVE_TO_DIRECT_VIDEO_MAP[matched.driveId] : undefined);
+      const m = matched as any;
+      const matchedSrc = m.src || m.videoUrl || (m.driveId ? DRIVE_TO_DIRECT_VIDEO_MAP[m.driveId] : undefined);
       if (matchedSrc) return matchedSrc;
     }
 
@@ -309,8 +310,9 @@ export const resolveVideoPoster = (
 
   // Check if it's a registered video ID
   const matched = findVideoItem(source);
-  if (matched?.poster || matched?.thumbnail) {
-    return matched.poster || matched.thumbnail || '';
+  const m = matched as any;
+  if (m?.poster || m?.thumbnail) {
+    return m.poster || m.thumbnail || '';
   }
 
   // Handle Mux Stream Posters directly
