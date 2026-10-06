@@ -40,6 +40,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
     setMeta('property', 'og:description', config.ogDescription);
     setMeta('property', 'og:url', config.canonicalUrl);
     setMeta('property', 'og:image', config.ogImage);
+    setMeta('property', 'og:image:secure_url', config.ogImage);
     setMeta('property', 'og:type', (pathname.includes('/teskilat/episode-') || pathname.includes('/gunesin-dogdugu-yer/episode-')) ? 'video.episode' : 'website');
 
     // 6. Twitter / X Cards

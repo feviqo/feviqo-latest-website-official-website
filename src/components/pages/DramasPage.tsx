@@ -182,11 +182,6 @@ export const DramasPage: React.FC<DramasPageProps> = ({
 
   return (
     <div className="w-full bg-white text-slate-900 font-sans antialiased min-h-screen flex flex-col relative overflow-x-hidden">
-      
-      {/* SEMANTIC & HIDDEN SEO H1 FOCUS KEYWORD */}
-      <h1 className="sr-only">
-        Turkish Dramas with Urdu Subtitles
-      </h1>
 
       {/* Unified Navigation Bar */}
       <Navbar 

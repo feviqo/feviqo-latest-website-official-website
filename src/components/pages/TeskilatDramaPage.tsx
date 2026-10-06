@@ -997,7 +997,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
         ) : (
           /* EDITORIAL WATCH EPISODE PAGE - FEVIQO BRIEF SPEC */
           <div className="bg-white text-[#0B0B0D] min-h-screen py-2 sm:py-10">
-            <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 space-y-2.5 sm:space-y-8">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-8">
               
               {/* 3. Top Breadcrumb Navigation */}
               <div className="px-4 sm:px-0">
@@ -1042,7 +1042,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               {/* 5 & 6. Secure Anti-Download Main Video Player */}
               <div 
                 onContextMenu={(e) => e.preventDefault()}
-                className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center w-full select-none aspect-video border-0">
+                className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center select-none aspect-video border border-slate-200/80 mx-auto"
+              >
                 
                 {/* 100% Machine-Readable Hidden Video Elements to Guarantee Google Search Console Video Indexing Approval */}
                 <div style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: '0' }} aria-hidden="true">

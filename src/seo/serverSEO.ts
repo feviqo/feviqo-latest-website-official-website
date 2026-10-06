@@ -1,7 +1,10 @@
 import { getSEOConfigForPath } from './seoStore';
 
 export function transformHTMLForRoute(html: string, reqPath: string): string {
-  const cleanPath = reqPath.split('?')[0].split('#')[0] || '/';
+  let cleanPath = (reqPath || '/').split('?')[0].split('#')[0].toLowerCase();
+  if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
+    cleanPath = cleanPath.slice(0, -1);
+  }
   const config = getSEOConfigForPath(cleanPath);
 
   let transformed = html;
@@ -14,26 +17,40 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
 
   // 2. Meta description
   transformed = transformed.replace(
-    /<meta\s+name="description"\s+content=".*?"\s*\/?>/i,
+    /<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i,
     `<meta name="description" content="${config.metaDescription}" />`
   );
 
   // 3. OpenGraph Title, Description, URL, Image, Type
   transformed = transformed.replace(
-    /<meta\s+property="og:title"\s+content=".*?"\s*\/?>/i,
+    /<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i,
     `<meta property="og:title" content="${config.ogTitle}" />`
   );
   transformed = transformed.replace(
-    /<meta\s+property="og:description"\s+content=".*?"\s*\/?>/i,
+    /<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i,
     `<meta property="og:description" content="${config.ogDescription}" />`
   );
   transformed = transformed.replace(
-    /<meta\s+property="og:url"\s+content=".*?"\s*\/?>/i,
+    /<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i,
     `<meta property="og:url" content="${config.canonicalUrl}" />`
   );
   transformed = transformed.replace(
-    /<meta\s+property="og:image"\s+content=".*?"\s*\/?>/i,
-    `<meta property="og:image" content="${config.ogImage}" />`
+    /<meta\s+property=["']og:image["']\s+content=["'].*?["']\s*\/?>/i,
+    `<meta property="og:image" content="${config.ogImage}" />\n  <meta property="og:image:secure_url" content="${config.ogImage}" />`
+  );
+
+  // 3b. Twitter / X Cards Title, Description, Image
+  transformed = transformed.replace(
+    /<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/i,
+    `<meta name="twitter:title" content="${config.ogTitle}" />`
+  );
+  transformed = transformed.replace(
+    /<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i,
+    `<meta name="twitter:description" content="${config.ogDescription}" />`
+  );
+  transformed = transformed.replace(
+    /<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i,
+    `<meta name="twitter:image" content="${config.ogImage}" />`
   );
 
   const ogType = cleanPath.includes('/teskilat/episode-') ? 'video.episode' : 'website';
@@ -45,12 +62,6 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   // 4. Inject Canonical Link Tag
   const canonicalTag = `<link rel="canonical" href="${config.canonicalUrl}" />`;
   transformed = transformed.replace('</head>', `  ${canonicalTag}\n  </head>`);
-
-  // 4b. Inject route-specific H1 tag inside #root for static search crawlers (Bingbot / Googlebot)
-  transformed = transformed.replace(
-    '<div id="root">',
-    `<div id="root"><h1 style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;">${config.seoTitle}</h1>`
-  );
 
   // 5. Inject Dynamic JSON-LD Schema
   let schemaObj: any = {
@@ -244,7 +255,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "url": "https://feviqo.com/gunesin-dogdugu-yer",
       "name": "Gunesin Dogdugu Yer",
       "description": "Watch Gunesin Dogdugu Yer Turkish drama in HD Urdu subtitles. Stream all official episodes online with complete story summaries and recaps on FEVIQO.",
-      "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
+      "image": "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
       "containsSeason": {
         "@type": "TVSeason",
         "seasonNumber": 1,

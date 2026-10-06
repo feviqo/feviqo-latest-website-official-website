@@ -2219,13 +2219,22 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(async (req, res, next) => {
-      if (req.method === 'GET' && (req.headers.accept || '').includes('text/html')) {
+      // Allow Vite to handle module requests, scripts, styles, source code, and API/upload endpoints
+      const isInternalModule = req.path.startsWith('/@') || 
+                               req.path.startsWith('/src') || 
+                               req.path.startsWith('/node_modules') || 
+                               req.path.startsWith('/api') || 
+                               req.path.startsWith('/uploads') || 
+                               req.path.startsWith('/videos') || 
+                               /\.[a-zA-Z0-9]+$/i.test(req.path);
+
+      if (req.method === 'GET' && !isInternalModule) {
         try {
           const indexPath = path.join(process.cwd(), 'index.html');
           let rawHtml = fs.readFileSync(indexPath, 'utf-8');
           rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
           const seoHtml = transformHTMLForRoute(rawHtml, req.path);
-          return res.status(200).set({ 'Content-Type': 'text/html' }).end(seoHtml);
+          return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
         } catch (e) {
           return next(e);
         }

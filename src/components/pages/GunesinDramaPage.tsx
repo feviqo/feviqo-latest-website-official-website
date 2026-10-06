@@ -580,10 +580,10 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
               </div>
 
               {/* Secure 16:9 Anti-Download Mux Video Player */}
-              <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div 
                   onContextMenu={(e) => e.preventDefault()}
-                  className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center w-full select-none aspect-video border-0"
+                  className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center select-none aspect-video border border-slate-200/80 mx-auto"
                 >
                   <style>{`
                     mux-video, video-skin, video-player { object-fit: contain !important; }

@@ -172,7 +172,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     canonicalUrl: 'https://feviqo.com/gunesin-dogdugu-yer',
     ogTitle: 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',
     ogDescription: 'Watch Gunesin Dogdugu Yer Turkish drama in HD Urdu subtitles. Stream all official episodes online with complete story summaries and recaps on FEVIQO.',
-    ogImage: 'https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2',
+    ogImage: 'https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
   },
@@ -293,6 +293,11 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
 const STORAGE_KEY = 'feviqo_seo_overrides_v1';
 
 export function getSEOConfigForPath(pathname: string): PageSEOConfig {
+  let cleanPath = (pathname || '/').split('?')[0].split('#')[0].toLowerCase();
+  if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
+    cleanPath = cleanPath.slice(0, -1);
+  }
+
   let savedOverrides: Record<string, PageSEOConfig> = {};
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -303,12 +308,12 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
     // fallback
   }
 
-  if (savedOverrides[pathname]) {
-    return savedOverrides[pathname];
+  if (savedOverrides[cleanPath]) {
+    return savedOverrides[cleanPath];
   }
 
-  if (DEFAULT_PAGE_SEO[pathname]) {
-    return DEFAULT_PAGE_SEO[pathname];
+  if (DEFAULT_PAGE_SEO[cleanPath]) {
+    return DEFAULT_PAGE_SEO[cleanPath];
   }
 
   // Dynamic fallback for unlisted routes
