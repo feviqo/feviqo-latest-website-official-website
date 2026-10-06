@@ -2247,7 +2247,11 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      maxAge: '1y',
+      immutable: true,
+      etag: true
+    }));
     app.get('*', (req, res) => {
       try {
         const indexPath = path.join(distPath, 'index.html');
