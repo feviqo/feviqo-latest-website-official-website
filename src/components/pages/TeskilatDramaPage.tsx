@@ -33,6 +33,7 @@ import { Navbar } from '../Navbar';
 import { NativeVideoPlayer } from '../NativeVideoPlayer';
 import { AppRoute } from '../../types';
 import { AdBanner468x60 } from '../AdBanner468x60';
+import { AdBanner160x300 } from '../AdBanner160x300';
 
 interface TeskilatEpisode {
   id: string;
@@ -724,7 +725,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 <img
                   src="https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2"
                   alt="Teskilat Cinematic Backdrop"
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover block"
                 />
                 <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black to-transparent pointer-events-none" />
               </div>
@@ -816,7 +817,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <a 
                     href="/teskilat/episode-187"
                     onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_187); }}
-                    className="lg:col-span-6 relative rounded-2xl overflow-hidden bg-black shadow-xl border border-slate-200 block group aspect-video"
+                    className="lg:col-span-6 relative rounded-2xl overflow-hidden bg-slate-100 shadow-xl border border-slate-200 block group aspect-video"
                   >
                     {EPISODE_187.thumbnailUrl ? (
                       <img 
@@ -931,7 +932,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     }}
                     className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-[#22C55E]/60 hover:shadow-lg transition-all duration-300 group cursor-pointer text-left flex flex-col sm:flex-row items-center gap-6 block"
                   >
-                    <div className="relative w-full sm:w-64 aspect-video rounded-xl overflow-hidden bg-black shrink-0">
+                    <div className="relative w-full sm:w-64 aspect-video rounded-xl overflow-hidden bg-slate-100 shrink-0">
                       {ep.thumbnailUrl ? (
                         <img 
                           src={ep.thumbnailUrl} 
@@ -990,39 +991,41 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
           </div>
         ) : (
           /* EDITORIAL WATCH EPISODE PAGE - FEVIQO BRIEF SPEC */
-          <div className="bg-white text-[#0B0B0D] min-h-screen py-6 sm:py-10">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="bg-white text-[#0B0B0D] min-h-screen py-2 sm:py-10">
+            <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8 space-y-2.5 sm:space-y-8">
               
               {/* 3. Top Breadcrumb Navigation */}
-              <nav className="text-xs text-slate-500 font-medium flex items-center gap-2">
-                <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>FEVIQO</span>
-                <span>/</span>
-                <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>Teskilat</span>
-                <span>/</span>
-                <span>Season 7</span>
-                <span>/</span>
-                <span className="text-slate-900 font-bold">Episode {selectedEpisode.episodeNumber}</span>
-              </nav>
+              <div className="px-4 sm:px-0">
+                <nav className="text-xs text-slate-500 font-medium flex items-center gap-2">
+                  <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>FEVIQO</span>
+                  <span>/</span>
+                  <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>Teskilat</span>
+                  <span>/</span>
+                  <span>Season 7</span>
+                  <span>/</span>
+                  <span className="text-slate-900 font-bold">Episode {selectedEpisode.episodeNumber}</span>
+                </nav>
+              </div>
 
               {/* 4. Episode Header */}
-              <div className="space-y-2 text-left">
+              <div className="space-y-2 text-left px-4 sm:px-0">
                 <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
                   TESKILAT &bull; SEASON {selectedEpisode.seasonNumber}
                 </div>
 
-                <h1 className="text-2xl sm:text-4xl font-black text-[#0B0B0D] tracking-tight">
+                <h1 className="text-xl sm:text-4xl font-black text-[#0B0B0D] tracking-tight">
                   Teskilat Season 7 Episode {selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles - Bolum {selectedEpisode.episodeNumber} {selectedEpisode.episodeNumber === 187 ? "Azra Betrayal" : "The Wolf Awakens"}
                 </h1>
 
-                <p className="text-sm font-bold text-slate-500 pt-1">
+                <p className="text-xs font-bold text-slate-500 pt-0.5">
                   Urdu & English Subtitles &bull; 1080p HD &bull; FEVIQO.com
                 </p>
 
-                <p className="text-lg sm:text-xl font-urdu-slim font-normal text-slate-900 dir-rtl text-right pt-1 leading-relaxed">
+                <p className="text-base sm:text-xl font-urdu-slim font-normal text-slate-900 dir-rtl text-right pt-1 leading-relaxed">
                   {selectedEpisode.titleUrdu}
                 </p>
 
-                <div className="text-xs text-slate-500 font-medium pt-2 flex items-center gap-3">
+                <div className="text-xs text-slate-500 font-medium pt-1 flex items-center gap-2 sm:gap-3">
                   <span>{selectedEpisode.duration}</span>
                   <span>&bull;</span>
                   <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">HD</span>
@@ -1034,7 +1037,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               {/* 5 & 6. Secure Anti-Download Main Video Player */}
               <div 
                 onContextMenu={(e) => e.preventDefault()}
-                className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#050508] shadow-2xl border border-slate-800/80 flex items-center justify-center w-full select-none aspect-video">
+                className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center w-full select-none aspect-video border-0">
                 
                 {/* 100% Machine-Readable Hidden Video Elements to Guarantee Google Search Console Video Indexing Approval */}
                 <div style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: '0' }} aria-hidden="true">
@@ -1134,17 +1137,21 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </div>
                 ) : (
                   <>
+                    <style>{`
+                      mux-video, video-skin, video-player { object-fit: contain !important; }
+                      mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
+                    `}</style>
                     {showPosterOverlay && (
                       <div 
                         onClick={handleStartPlayback}
-                        className="absolute inset-0 z-30 bg-slate-950 flex items-center justify-center cursor-pointer group"
+                        className="absolute inset-0 z-30 bg-black flex items-center justify-center cursor-pointer group overflow-hidden rounded-2xl sm:rounded-3xl"
                       >
                         <img 
                           src={selectedEpisode.thumbnailUrl} 
                           alt={`Teskilat Urdu Episode ${selectedEpisode.episodeNumber} Subtitles - Watch Season 7 Episode ${selectedEpisode.episodeNumber}`} 
-                          className="w-full h-full object-cover bg-black group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition-transform duration-500 rounded-2xl sm:rounded-3xl"
                         />
-                        <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-slate-950/20 transition-colors flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
                           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
                             <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-slate-950 ml-1" />
                           </div>
@@ -1152,8 +1159,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       </div>
                     )}
 
-                    <video-player style={{ display: 'block', width: '100%', height: '100%', borderRadius: '1rem', overflow: 'hidden' }}>
-                      <video-skin poster={selectedEpisode.thumbnailUrl} style={{ display: 'block', width: '100%', aspectRatio: '16 / 9' }}>
+                    <video-player style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}>
+                      <video-skin poster={selectedEpisode.thumbnailUrl} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
                         <mux-video
                           src={selectedEpisode.videoUrl}
                           playsinline
@@ -1161,7 +1168,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           controlsList="nodownload"
                           disablePictureInPicture
                           onContextMenu={(e) => e.preventDefault()}
-                          style={{ width: '100%', height: '100%', display: 'block' }}
+                          style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
                         ></mux-video>
                         <mux-data></mux-data>
                       </video-skin>
@@ -1170,8 +1177,24 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 )}
               </div>
 
-              {/* High-Converting Horizontal 468x60 Banner Ad */}
-              <AdBanner468x60 />
+              {/* High-Converting Ads & Smartlink Row */}
+              <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 mt-2 mb-4 sm:my-6">
+                <AdBanner468x60 />
+                <AdBanner160x300 />
+              </div>
+
+              {/* Sponsored Smartlink Button */}
+              <div className="flex justify-center my-3">
+                <a
+                  href="https://arwf.org/4/407c2859d48b877cf406dc93dcd6c1d5"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-2.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-black tracking-wide transition inline-flex items-center gap-2 shadow-sm"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <span>Sponsored HD Stream Mirror (FEVIQO Fast Server)</span>
+                </a>
+              </div>
 
               {/* 7. Player Surrounding Info Row */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 border-b border-slate-200/80">

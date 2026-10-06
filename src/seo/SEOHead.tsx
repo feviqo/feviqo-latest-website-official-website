@@ -25,10 +25,10 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
       el.setAttribute('content', contentVal);
     };
 
-    // 3. Remove obsolete meta keywords tag if present
-    const obsoleteKeywords = document.querySelector('meta[name="keywords"]');
-    if (obsoleteKeywords) {
-      obsoleteKeywords.remove();
+    // 3. Meta Keywords directive
+    const allKeywords = [config.focusKeyword, ...(config.secondaryKeywords || [])].filter(Boolean).join(', ');
+    if (allKeywords) {
+      setMeta('name', 'keywords', allKeywords);
     }
 
     // 4. Meta directives

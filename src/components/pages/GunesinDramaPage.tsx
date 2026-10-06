@@ -13,11 +13,13 @@ import {
   Share2,
   Calendar,
   Search,
-  DollarSign
+  DollarSign,
+  Sparkles
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
 import { AdBanner468x60 } from '../AdBanner468x60';
+import { AdBanner160x300 } from '../AdBanner160x300';
 import { GUNESIN_SERIES_DATA, GUNESIN_EPISODES, GunesinEpisode } from '../../data/gunesinDogduguYer';
 
 interface GunesinDramaPageProps {
@@ -246,7 +248,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                   <img
                     src={GUNESIN_SERIES_DATA.backdrop}
                     alt="Gunesin Dogdugu Yer Backdrop"
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain block"
                   />
                   <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black to-transparent pointer-events-none" />
                 </div>
@@ -543,11 +545,11 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
-              className="space-y-12 pb-20 bg-white"
+              className="space-y-4 sm:space-y-8 pb-12 bg-white"
             >
               
               {/* Breadcrumbs Row */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 text-left">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 text-left">
                 <nav className="text-xs text-slate-500 font-medium flex items-center gap-2">
                   <span className="hover:text-slate-900 cursor-pointer transition-colors" onClick={() => onNavigatePage('home')}>FEVIQO</span>
                   <span className="text-slate-300">/</span>
@@ -558,12 +560,12 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
               </div>
 
               {/* Title & Meta Row */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-left space-y-3">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-left space-y-2">
                 <span className="text-xs font-black text-emerald-600 tracking-widest uppercase">GUNESIN DOGDUGU YER &bull; EPISODE {selectedEpisode.number}</span>
-                <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900">
+                <h1 className="text-xl sm:text-4xl font-black tracking-tight text-slate-900">
                   Gunesin Dogdugu Yer Episode {selectedEpisode.number} Urdu Subtitles - Bolum {selectedEpisode.number}
                 </h1>
-                <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center gap-3">
+                <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center gap-2 sm:gap-3">
                   <span>Duration: {selectedEpisode.duration}</span>
                   <span>&bull;</span>
                   <span>Urdu Subtitles</span>
@@ -573,23 +575,27 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
               </div>
 
               {/* Secure 16:9 Anti-Download Mux Video Player */}
-              <div className="max-w-6xl mx-auto px-0 sm:px-6 lg:px-8">
+              <div className="max-w-6xl mx-auto px-3.5 sm:px-6 lg:px-8">
                 <div 
                   onContextMenu={(e) => e.preventDefault()}
-                  className="relative rounded-none sm:rounded-2xl overflow-hidden bg-slate-950 flex items-center justify-center select-none aspect-video shadow-lg border border-slate-200"
+                  className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center w-full select-none aspect-video border-0"
                 >
+                  <style>{`
+                    mux-video, video-skin, video-player { object-fit: contain !important; }
+                    mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
+                  `}</style>
                   {/* Poster Overlay */}
                   {showPosterOverlay && (
                     <div 
                       onClick={handleStartPlayback}
-                      className="absolute inset-0 z-30 bg-slate-900 flex items-center justify-center cursor-pointer group"
+                      className="absolute inset-0 z-30 bg-black flex items-center justify-center cursor-pointer group overflow-hidden rounded-2xl sm:rounded-3xl"
                     >
                       <img 
                         src={selectedEpisode.thumbnail} 
                         alt={selectedEpisode.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                        className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition duration-500 rounded-2xl sm:rounded-3xl"
                       />
-                      <div className="absolute inset-0 bg-slate-900/30 group-hover:bg-slate-900/20 transition flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition flex items-center justify-center">
                         <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all">
                           <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-slate-950 ml-1" />
                         </div>
@@ -598,8 +604,8 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                   )}
 
                   {/* Anti-Download Mux Video Web Component Player */}
-                  <video-player style={{ display: 'block', width: '100%', height: '100%', borderRadius: '1rem', overflow: 'hidden' }}>
-                    <video-skin poster={selectedEpisode.thumbnail} style={{ display: 'block', width: '100%', aspectRatio: '16 / 9' }}>
+                  <video-player style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}>
+                    <video-skin poster={selectedEpisode.thumbnail} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
                       <mux-video
                         src={selectedEpisode.embeds[0]?.src}
                         playsinline
@@ -607,7 +613,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                         controlsList="nodownload"
                         disablePictureInPicture
                         onContextMenu={(e) => e.preventDefault()}
-                        style={{ width: '100%', height: '100%', display: 'block' }}
+                        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
                       ></mux-video>
                       <mux-data></mux-data>
                     </video-skin>
@@ -637,9 +643,25 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
 
               </div>
 
-              {/* Secure anti-download disclaimer strip (CLS compliant slots) */}
+              {/* High-Converting Ads & Smartlink Row */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <AdBanner468x60 />
+                <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 mt-2 mb-4 sm:my-6">
+                  <AdBanner468x60 />
+                  <AdBanner160x300 />
+                </div>
+
+                {/* Sponsored Smartlink Button */}
+                <div className="flex justify-center my-3">
+                  <a
+                    href="https://arwf.org/4/407c2859d48b877cf406dc93dcd6c1d5"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-2.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-black tracking-wide transition inline-flex items-center gap-2 shadow-sm"
+                  >
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span>Sponsored HD Stream Mirror (FEVIQO Fast Server)</span>
+                  </a>
+                </div>
               </div>
 
               {/* 5. ORIGINAL DETAILED STORY RECAP SECTION */}

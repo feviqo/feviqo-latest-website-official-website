@@ -352,7 +352,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                     <img 
                       src={drama.image} 
                       alt={`${drama.title} Turkish drama with Urdu subtitles`}
-                      className="w-full h-full object-contain bg-slate-950 opacity-100 group-hover:scale-105 transition-all duration-[450ms] ease-out"
+                      className="w-full h-full object-cover block opacity-100 group-hover:scale-105 transition-all duration-[450ms] ease-out"
                       loading="lazy"
                     />
                     {/* Balanced visual depth gradient on bottom */}
