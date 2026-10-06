@@ -128,8 +128,8 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "url": "https://feviqo.com/teskilat",
       "name": "Teskilat",
       "alternativeName": ["Teskilat Season 7", "Teskilat Urdu", "Teskilat Urdu Subtitles", "Teskilat Bolum 187"],
-      "description": "Watch Teskilat Season 7 Turkish Drama in HD Urdu Subtitles (تشکیلات سیزن 7 اردو). Stream official episodes with story recaps on FEVIQO.",
-      "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
+      "description": "Watch Teskilat Season 7 Episode 187 Urdu Subtitles (Bolum 187). Stream official episode online with story recaps on FEVIQO.",
+      "image": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
       "inLanguage": "Urdu",
       "subtitleLanguage": "Urdu Subtitles",
       "genre": ["Action", "Drama", "Espionage"],
@@ -211,7 +211,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "@type": "TVEpisode",
       "@id": "https://feviqo.com/teskilat/episode-187#episode",
       "url": "https://feviqo.com/teskilat/episode-187",
-      "name": "Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187",
+      "name": "Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187 | FEVIQO",
       "episodeNumber": "187",
       "seasonNumber": "7",
       "inLanguage": "Urdu",
@@ -229,7 +229,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     schemaObj["@graph"].push({
       "@type": "VideoObject",
       "@id": "https://feviqo.com/teskilat/episode-187#video",
-      "name": "Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187",
+      "name": "Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187 | FEVIQO",
       "description": "Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in on FEVIQO.com.",
       "thumbnailUrl": [
         "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw"

@@ -199,7 +199,7 @@ export default function App() {
       'flow': 'FEVIQO Flow - Video Request Portal & Dashboard',
       'platform': 'FEVIQO Flow Portal - Manage Video Edits & Assets',
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
-      'teskilat-urdu': 'Teskilat Season 7 Episode 186 Urdu Subtitles | Teskilat Episode 186 Urdu | FEVIQO',
+      'teskilat-urdu': 'Teskilat Season 7 Episode 187 Urdu Subtitles – Bolum 187 | FEVIQO',
       'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',
       'dramas': 'Turkish Dramas Portal - Stream Premium Series & Movies | FEVIQO',
       'privacy': 'Privacy Policy & Cookie Disclosure | FEVIQO',
