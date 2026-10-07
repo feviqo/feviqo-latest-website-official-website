@@ -222,6 +222,70 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },
+  '/mehmed-fetihler-sultani': {
+    path: '/mehmed-fetihler-sultani',
+    pageName: 'Mehmed Fetihler Sultani Hub Page',
+    seoTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+    metaDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
+    focusKeyword: 'Mehmed Season 4 Episode 4 Urdu Subtitles',
+    secondaryKeywords: [
+      'Mehmed Fetihler Sultani Season 4 Episode 4', 'Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 87', 'mehmed 87 urdu', 'mehmed episode 87 urdu', 'memhed urdu', 'Mehmed Episode 87 Urdu Subtitles', 'Mehmed Bolum 87 Urdu', 'Episode 87 Urdu', 'Episode 87', 'Mehmed Fetihler Sultani Season 4 Urdu Subtitles', 'Mehmed Season 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Urdu Subtitles', 'Sultan Mehmed Series Urdu', 'Fatih Sultan Mehmed Series', 'Turkish Historical Series Urdu Subtitles', 'Ottoman Empire Series', 'Turkish Drama Urdu Subtitles', 'FEVIQO Mehmed Season 4', 'Sultan Muhammad Fateh Episode 87'
+    ],
+    canonicalUrl: 'https://feviqo.com/mehmed-fetihler-sultani',
+    ogTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+    ogDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVSeries'
+  },
+  '/mehmed': {
+    path: '/mehmed',
+    pageName: 'Mehmed Fetihler Sultani Hub Page Alias',
+    seoTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+    metaDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
+    focusKeyword: 'Mehmed Season 4 Episode 4 Urdu Subtitles',
+    secondaryKeywords: [
+      'Mehmed Fetihler Sultani Season 4 Episode 4', 'Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 87', 'mehmed 87 urdu', 'mehmed episode 87 urdu', 'memhed urdu', 'Mehmed Episode 87 Urdu Subtitles', 'Mehmed Bolum 87 Urdu', 'Episode 87 Urdu', 'Episode 87', 'Mehmed Fetihler Sultani Season 4 Urdu Subtitles', 'Mehmed Season 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Urdu Subtitles', 'Sultan Mehmed Series Urdu', 'Fatih Sultan Mehmed Series', 'Turkish Historical Series Urdu Subtitles', 'Ottoman Empire Series', 'Turkish Drama Urdu Subtitles', 'FEVIQO Mehmed Season 4', 'Sultan Muhammad Fateh Episode 87'
+    ],
+    canonicalUrl: 'https://feviqo.com/mehmed',
+    ogTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+    ogDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVSeries'
+  },
+  '/mehmed-fetihler-sultani/episode-87': {
+    path: '/mehmed-fetihler-sultani/episode-87',
+    pageName: 'Mehmed Episode 87 Watch Page',
+    seoTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+    metaDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
+    focusKeyword: 'Mehmed Season 4 Episode 4 Urdu Subtitles',
+    secondaryKeywords: [
+      'Mehmed Fetihler Sultani Season 4 Episode 4', 'Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 87', 'mehmed 87 urdu', 'mehmed episode 87 urdu', 'memhed urdu', 'Mehmed Episode 87 Urdu Subtitles', 'Mehmed Bolum 87 Urdu', 'Episode 87 Urdu', 'Episode 87', 'Mehmed Fetihler Sultani Season 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Season 4 English Subtitles', 'Mehmed Season 4 Urdu Subtitles', 'Mehmed Season 4 English Subtitles', 'Mehmed Fetihler Sultani Urdu Subtitles', 'Mehmed Fetihler Sultani English Subtitles', 'Mehmed Fetihler Sultani Season 4 Episodes', 'Mehmed Season 4 Latest Episode', 'Sultan Mehmed Series Urdu', 'Sultan Mehmed Series English', 'Fatih Sultan Mehmed Series', 'Turkish Historical Series Urdu Subtitles', 'Turkish Historical Drama English Subtitles', 'Ottoman Empire Series', 'Ottoman History Drama', 'Sultan Mehmed II Drama', 'Turkish Series Online', 'Turkish Drama Urdu Subtitles', 'Historical Series Online', 'FEVIQO Mehmed Season 4', 'Mehmed Fetihler Sultani FEVIQO', 'FEVIQO Turkish Dramas', 'FEVIQO', 'NiaziPlay Mehmed Season 4', 'Mehmed Fetihler Sultani NiaziPlay', 'premium streaming services', 'online video streaming', 'digital entertainment platforms', 'OTT streaming platforms', 'video streaming services', 'cloud video hosting', 'online subscription services', 'streaming technology', 'VPN streaming services', 'Mehmed Season 4 Episode 4 Urdu Subtitles', 'Mehmed Season 3 Episode 87', 'Sultan Muhammad Fateh Episode 87', 'Sultan Muhammad Fateh Bolum 87', 'NiaziPlay', 'Salahuddin Ayyubi Series', 'Kurulus Osman Season 5 in Urdu Subtitles', 'Kurulus Osman Season 6 Urdu & English Subtitles', 'Teskilat Season 4 Urdu Subtitles', 'Mehmed: Fetihler Sultani - Urdu & English Subtitles', 'Al Sancak | Sipahi', 'Alparslan: Büyük Selçuklu', 'Ates Kuslari', 'Barbarosslar', 'Destan', 'Ertugrul Ghazi', 'Keiki Sniper', 'Kosem Sultan', 'Mendirman Jaloliddin Khawarzam', 'Mevlana Celaleddin Rumi', 'Soz Series', 'Sultan Abdulhamid', 'Sultan Mehmat Fatih', 'The Pit (Cukur)', 'Turkish Dramas', 'Yunus Emre', 'Turkish series with Urdu subtitles', 'watch Turkish dramas online', 'historical Turkish series in Urdu', 'Ottoman Empire series with English subtitles', 'Islamic history dramas in Urdu', 'Turkish action series with Urdu dubbing', 'latest Turkish series 2024', 'Urdu dubbed Turkish historical dramas', 'stream Turkish series in HD', 'family-friendly Turkish dramas', 'Turkish war series with Urdu subtitles', 'best Turkish series to watch online', 'Turkish dramas based on true stories', 'top-rated Turkish series in Urdu', 'Turkish romantic dramas with English subtitles', 'Turkish thriller series in Urdu', 'online streaming of Turkish historical series', 'Turkish series with dual subtitles', 'popular Turkish dramas in Pakistan', 'Turkish series episodes in Urdu', 'best streaming platforms for Turkish series', 'online education games for kids', 'top adventure games for adults', 'fitness and health articles', 'latest technology news articles', 'financial advice for families', 'home improvement articles', 'educational articles for students', 'html5 games', 'games for children'
+    ],
+    canonicalUrl: 'https://feviqo.com/mehmed-fetihler-sultani/episode-87',
+    ogTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+    ogDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
+  '/mehmed/episode-87': {
+    path: '/mehmed/episode-87',
+    pageName: 'Mehmed Episode 87 Watch Page Alias',
+    seoTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+    metaDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
+    focusKeyword: 'Mehmed Season 4 Episode 4 Urdu Subtitles',
+    secondaryKeywords: [
+      'Mehmed Fetihler Sultani Season 4 Episode 4', 'Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 87', 'mehmed 87 urdu', 'mehmed episode 87 urdu', 'memhed urdu', 'Mehmed Episode 87 Urdu Subtitles', 'Mehmed Bolum 87 Urdu', 'Episode 87 Urdu', 'Episode 87', 'Mehmed Fetihler Sultani Season 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Season 4 English Subtitles', 'Mehmed Season 4 Urdu Subtitles', 'Mehmed Season 4 English Subtitles', 'Mehmed Fetihler Sultani Urdu Subtitles', 'Mehmed Fetihler Sultani English Subtitles', 'Mehmed Fetihler Sultani Season 4 Episodes', 'Mehmed Season 4 Latest Episode', 'Sultan Mehmed Series Urdu', 'Sultan Mehmed Series English', 'Fatih Sultan Mehmed Series', 'Turkish Historical Series Urdu Subtitles', 'Turkish Historical Drama English Subtitles', 'Ottoman Empire Series', 'Ottoman History Drama', 'Sultan Mehmed II Drama', 'Turkish Series Online', 'Turkish Drama Urdu Subtitles', 'Historical Series Online', 'FEVIQO Mehmed Season 4', 'Mehmed Fetihler Sultani FEVIQO', 'FEVIQO Turkish Dramas', 'FEVIQO', 'NiaziPlay Mehmed Season 4', 'Mehmed Fetihler Sultani NiaziPlay', 'premium streaming services', 'online video streaming', 'digital entertainment platforms', 'OTT streaming platforms', 'video streaming services', 'cloud video hosting', 'online subscription services', 'streaming technology', 'VPN streaming services', 'Mehmed Season 4 Episode 4 Urdu Subtitles', 'Mehmed Season 3 Episode 87', 'Sultan Muhammad Fateh Episode 87', 'Sultan Muhammad Fateh Bolum 87', 'NiaziPlay', 'Salahuddin Ayyubi Series', 'Kurulus Osman Season 5 in Urdu Subtitles', 'Kurulus Osman Season 6 Urdu & English Subtitles', 'Teskilat Season 4 Urdu Subtitles', 'Mehmed: Fetihler Sultani - Urdu & English Subtitles', 'Al Sancak | Sipahi', 'Alparslan: Büyük Selçuklu', 'Ates Kuslari', 'Barbarosslar', 'Destan', 'Ertugrul Ghazi', 'Keiki Sniper', 'Kosem Sultan', 'Mendirman Jaloliddin Khawarzam', 'Mevlana Celaleddin Rumi', 'Soz Series', 'Sultan Abdulhamid', 'Sultan Mehmat Fatih', 'The Pit (Cukur)', 'Turkish Dramas', 'Yunus Emre', 'Turkish series with Urdu subtitles', 'watch Turkish dramas online', 'historical Turkish series in Urdu', 'Ottoman Empire series with English subtitles', 'Islamic history dramas in Urdu', 'Turkish action series with Urdu dubbing', 'latest Turkish series 2024', 'Urdu dubbed Turkish historical dramas', 'stream Turkish series in HD', 'family-friendly Turkish dramas', 'Turkish war series with Urdu subtitles', 'best Turkish series to watch online', 'Turkish dramas based on true stories', 'top-rated Turkish series in Urdu', 'Turkish romantic dramas with English subtitles', 'Turkish thriller series in Urdu', 'online streaming of Turkish historical series', 'Turkish series with dual subtitles', 'popular Turkish dramas in Pakistan', 'Turkish series episodes in Urdu', 'best streaming platforms for Turkish series', 'online education games for kids', 'top adventure games for adults', 'fitness and health articles', 'latest technology news articles', 'financial advice for families', 'home improvement articles', 'educational articles for students', 'html5 games', 'games for children'
+    ],
+    canonicalUrl: 'https://feviqo.com/mehmed/episode-87',
+    ogTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+    ogDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
   '/dramas': {
     path: '/dramas',
     pageName: 'Turkish Dramas Directory',

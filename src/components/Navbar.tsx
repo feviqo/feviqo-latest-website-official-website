@@ -308,6 +308,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <div className="text-slate-300 text-xs mt-0.5">Brand-new Urdu release. Discover Anatolian family secrets.</div>
                     </div>
                   </button>
+
+                  <button 
+                    onClick={() => {
+                      onNavigatePage('mehmed-fetihler-sultani' as any);
+                      setDramasOpen(false);
+                    }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
+                  >
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
+                      <Globe className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Mehmed Fetihler Sultani</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Sultan Mehmed II saga. Season 4 Episode 87 in Urdu Subtitles.</div>
+                    </div>
+                  </button>
                 </div>
               </div>
             )}
@@ -477,6 +493,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <span>Gunesin Dogdugu Yer</span>
                   <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">NEW</span>
+                </button>
+
+                <button 
+                  onClick={() => {
+                    onNavigatePage('mehmed-fetihler-sultani' as any);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-2.5 px-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/60 font-extrabold cursor-pointer text-emerald-300 flex items-center justify-between border border-emerald-500/10"
+                >
+                  <span>Mehmed Fetihler Sultani</span>
+                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">EP 87</span>
                 </button>
               </div>
 

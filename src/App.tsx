@@ -37,6 +37,7 @@ import { PlatformOverviewPage } from './components/pages/PlatformOverviewPage';
 import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
 import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
 import { GunesinDramaPage } from './components/pages/GunesinDramaPage';
+import { MehmedDramaPage } from './components/pages/MehmedDramaPage';
 import { DramasPage } from './components/pages/DramasPage';
 import { AboutUsPage } from './components/pages/AboutUsPage';
 import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
@@ -70,6 +71,7 @@ export default function App() {
       if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) return 'turkish-drama';
       if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187')) return 'teskilat-urdu';
       if (path.includes('/gunesin-dogdugu-yer')) return 'gunesin-dogdugu-yer';
+      if (path.includes('/mehmed') || path.includes('/mehmed-fetihler-sultani')) return 'mehmed-fetihler-sultani';
       if (path.includes('/dramas')) return 'dramas';
       if (path.includes('/about') || hash.includes('#about')) return 'about';
       if (path.includes('/privacy') || hash.includes('#privacy')) return 'privacy';
@@ -150,6 +152,8 @@ export default function App() {
         setCurrentRoute('teskilat-urdu');
       } else if (path.includes('/gunesin-dogdugu-yer')) {
         setCurrentRoute('gunesin-dogdugu-yer');
+      } else if (path.includes('/mehmed') || path.includes('/mehmed-fetihler-sultani')) {
+        setCurrentRoute('mehmed-fetihler-sultani');
       } else if (path.includes('/dramas')) {
         setCurrentRoute('dramas');
       } else if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) {
@@ -642,6 +646,19 @@ export default function App() {
           </div>
         );
 
+      case 'mehmed-fetihler-sultani':
+        return (
+          <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#07090E] text-white font-sans selection:bg-amber-500 selection:text-slate-950 flex flex-col">
+            <MehmedDramaPage 
+              onBackToHome={() => navigateTo('home')}
+              onBookCall={handleOpenBookCall}
+              onNavigatePricing={() => navigateTo('pricing')}
+              onNavigateFlow={(view) => navigateTo('flow', view)}
+              onNavigatePage={(route) => navigateTo(route)}
+            />
+          </div>
+        );
+
       case 'home':
       default:
         return (
@@ -734,6 +751,17 @@ export default function App() {
       case 'flow': return '/admin';
       case 'platform': return '/platform';
       case 'turkish-drama': return '/turkish-drama';
+      case 'gunesin-dogdugu-yer':
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/episode-')) {
+          return window.location.pathname;
+        }
+        return '/gunesin-dogdugu-yer';
+      case 'mehmed-fetihler-sultani':
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/episode-')) {
+          return window.location.pathname;
+        }
+        return '/mehmed-fetihler-sultani';
+      case 'dramas': return '/dramas';
       case 'privacy': return '/privacy';
       case 'terms': return '/terms';
       case 'teskilat-urdu':

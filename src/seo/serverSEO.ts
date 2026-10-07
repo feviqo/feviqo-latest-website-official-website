@@ -53,7 +53,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     `<meta name="twitter:image" content="${config.ogImage}" />`
   );
 
-  const ogType = cleanPath.includes('/teskilat/episode-') ? 'video.episode' : 'website';
+  const ogType = cleanPath.includes('/episode-') ? 'video.episode' : 'website';
   transformed = transformed.replace(
     /<meta\s+property="og:type"\s+content=".*?"\s*\/?>/i,
     `<meta property="og:type" content="${ogType}" />`

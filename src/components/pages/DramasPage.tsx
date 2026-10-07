@@ -39,6 +39,15 @@ const dramas: DramaItem[] = [
     image: "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
     href: "/gunesin-dogdugu-yer",
     buttonLabel: "Watch Gunesin Dogdugu Yer"
+  },
+  {
+    id: "mehmed-fetihler-sultani",
+    title: "Mehmed: Fetihler Sultani",
+    subtitle: "Season 4 · Turkish Drama · Urdu Subtitles",
+    description: "The epic historical saga of Sultan Mehmed II, the Conqueror of Constantinople. Watch Saruca's battle, Gedik Ahmed Pasha's peril in Tabriz, and royal warfare in HD Urdu Subtitles.",
+    image: "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
+    href: "/mehmed-fetihler-sultani",
+    buttonLabel: "Watch Mehmed Fetihler Sultani"
   }
 ];
 
@@ -70,6 +79,15 @@ const slides: SlideItem[] = [
     description: "Explore an intense family saga, deep-rooted regional rivalries, and the journey of lovers torn apart by dynastic secrets. Stream the latest episodes officially on FEVIQO in premium high definition.",
     image: "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
     href: "/gunesin-dogdugu-yer"
+  },
+  {
+    id: "mehmed-fetihler-sultani",
+    title: "MEHMED FETIHLER SULTANI",
+    logoUrl: "https://lh3.googleusercontent.com/d/19HL2dzvRlKelis5qfA0ZyJ-vLUwU_ctZ",
+    tags: ["Turkish", "Historical", "War"],
+    description: "Witness the grand conquest and strategic brilliance of Sultan Mehmed II. Watch Season 4 Episode 4 (Episode 87) with Saruca's battle and Gedik Ahmed Pasha in Tabriz officially in Urdu Subtitles.",
+    image: "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
+    href: "/mehmed-fetihler-sultani"
   }
 ];
 
@@ -262,6 +280,8 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                         onClick={() => {
                           if (slide.id === 'teskilat') {
                             onNavigatePage('teskilat-urdu');
+                          } else if (slide.id === 'mehmed-fetihler-sultani') {
+                            onNavigatePage('mehmed-fetihler-sultani');
                           } else {
                             onNavigatePage('gunesin-dogdugu-yer');
                           }
@@ -343,6 +363,8 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                     onClick={() => {
                       if (drama.id === 'teskilat') {
                         onNavigatePage('teskilat-urdu');
+                      } else if (drama.id === 'mehmed-fetihler-sultani') {
+                        onNavigatePage('mehmed-fetihler-sultani');
                       } else {
                         onNavigatePage('gunesin-dogdugu-yer');
                       }
@@ -375,12 +397,14 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                       {drama.description}
                     </p>
 
-                    {/* Highly premium buttons: Explore Gunesin Dogdugu Yer / Watch Teskilat as explicitly requested! */}
+                    {/* Highly premium buttons */}
                     <div className="pt-2 flex flex-wrap items-center gap-3">
                       <button 
                         onClick={() => {
                           if (drama.id === 'teskilat') {
                             onNavigatePage('teskilat-urdu');
+                          } else if (drama.id === 'mehmed-fetihler-sultani') {
+                            onNavigatePage('mehmed-fetihler-sultani');
                           } else {
                             onNavigatePage('gunesin-dogdugu-yer');
                           }
@@ -395,6 +419,8 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                         onClick={() => {
                           if (drama.id === 'teskilat') {
                             onNavigatePage('teskilat-urdu');
+                          } else if (drama.id === 'mehmed-fetihler-sultani') {
+                            onNavigatePage('mehmed-fetihler-sultani');
                           } else {
                             onNavigatePage('gunesin-dogdugu-yer');
                           }

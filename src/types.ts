@@ -196,6 +196,7 @@ export type AppRoute =
   | 'turkish-drama'
   | 'teskilat-urdu'
   | 'gunesin-dogdugu-yer'
+  | 'mehmed-fetihler-sultani'
   | 'dramas'
   | 'privacy'
   | 'terms';
