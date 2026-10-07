@@ -207,7 +207,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-3</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-07</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <video:video>
@@ -217,6 +217,48 @@
       <video:content_loc>https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8</video:content_loc>
       <video:duration>8700</video:duration>
       <video:publication_date>2026-10-15T18:00:00+00:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://feviqo.com/mehmed-fetihler-sultani</loc>
+    <lastmod>2026-10-07</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://feviqo.com/mehmed</loc>
+    <lastmod>2026-10-07</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://feviqo.com/mehmed-fetihler-sultani/episode-87</loc>
+    <lastmod>2026-10-07</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <video:video>
+      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</video:thumbnail_loc>
+      <video:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</video:title>
+      <video:description>Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.</video:description>
+      <video:content_loc>https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8</video:content_loc>
+      <video:duration>9000</video:duration>
+      <video:publication_date>2026-10-06T18:00:00+00:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://feviqo.com/mehmed/episode-87</loc>
+    <lastmod>2026-10-07</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <video:video>
+      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</video:thumbnail_loc>
+      <video:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</video:title>
+      <video:description>Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.</video:description>
+      <video:content_loc>https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8</video:content_loc>
+      <video:duration>9000</video:duration>
+      <video:publication_date>2026-10-06T18:00:00+00:00</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
     </video:video>
   </url>
