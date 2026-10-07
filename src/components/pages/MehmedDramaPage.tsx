@@ -83,8 +83,8 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
 
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.number;
-      const pageTitle = `Mehmed Fetihler Sultani Season 4 Episode 4 (Bolum ${num}) Urdu Subtitles - FEVIQO.com`;
-      const metaDesc = `Watch Mehmed Fetihler Sultani Season 4 Episode 4 (Episode ${num}) with Urdu Subtitles (مہمد فتحلر سلطان قسط ${num}). Stream HD 1080p Bolum ${num} online with full story recaps on FEVIQO.com.`;
+      const pageTitle = `Mehmed Season 4 Episode 4 Urdu Subtitles | Episode ${num}`;
+      const metaDesc = `Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.`;
       const keywords = `mehmed fetihler sultani episode ${num} urdu subtitles, mehmed fetihler sultani bolum ${num} urdu, watch mehmed fetihler sultani episode ${num}, mehmed fetihler sultani urdu, mehmed fetihler sultani ${num} urdu subtitles, mehmed fetihler sultani bolum ${num}, sultan mehmed fatih episode ${num} urdu, feviqo mehmed fetihler sultani ${num}`;
       
       document.title = pageTitle;

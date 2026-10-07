@@ -21,6 +21,20 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     `<meta name="description" content="${config.metaDescription}" />`
   );
 
+  // 2b. Meta keywords
+  const keywordsStr = config.secondaryKeywords && config.secondaryKeywords.length > 0 
+    ? [config.focusKeyword, ...config.secondaryKeywords].join(', ')
+    : config.focusKeyword;
+
+  if (/<meta\s+name=["']keywords["']/i.test(transformed)) {
+    transformed = transformed.replace(
+      /<meta\s+name=["']keywords["']\s+content=["'].*?["']\s*\/?>/i,
+      `<meta name="keywords" content="${keywordsStr}" />`
+    );
+  } else {
+    transformed = transformed.replace('</head>', `  <meta name="keywords" content="${keywordsStr}" />\n  </head>`);
+  }
+
   // 3. OpenGraph Title, Description, URL, Image, Type
   transformed = transformed.replace(
     /<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i,
@@ -346,6 +360,66 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "duration": "PT2H25M",
       "isFamilyFriendly": true,
       "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-3",
+      "publisher": {
+        "@id": "https://feviqo.com/#organization"
+      }
+    });
+  }
+
+  if (cleanPath === '/mehmed-fetihler-sultani' || cleanPath === '/mehmed') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVSeries",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani#series",
+      "url": "https://feviqo.com/mehmed-fetihler-sultani",
+      "name": "Mehmed: Fetihler Sultani",
+      "description": "Watch Mehmed Fetihler Sultani Season 4 Urdu Subtitles on FEVIQO. Stream full episodes, historical recaps, and HD releases.",
+      "image": "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
+      "containsSeason": {
+        "@type": "TVSeason",
+        "seasonNumber": 4,
+        "name": "Season 4"
+      }
+    });
+  }
+
+  if (cleanPath === '/mehmed-fetihler-sultani/episode-87' || cleanPath === '/mehmed/episode-87') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVEpisode",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-87#episode",
+      "url": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
+      "name": "Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87",
+      "episodeNumber": "87",
+      "seasonNumber": "4",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "description": "Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.",
+      "image": "https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg",
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
+      "isPartOf": {
+        "@type": "TVSeries",
+        "name": "Mehmed: Fetihler Sultani",
+        "url": "https://feviqo.com/mehmed-fetihler-sultani"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "VideoObject",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-87#video",
+      "name": "Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87",
+      "description": "Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.",
+      "thumbnailUrl": [
+        "https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg"
+      ],
+      "uploadDate": "2026-10-06T18:00:00+00:00",
+      "contentUrl": "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8",
+      "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
+      "duration": "PT2H30M",
+      "isFamilyFriendly": true,
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
       "publisher": {
         "@id": "https://feviqo.com/#organization"
       }
