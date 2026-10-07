@@ -15,6 +15,9 @@ import {
 } from 'lucide-react';
 import { FeviqoHeaderLogo } from './FeviqoLogo';
 import { AppRoute } from '../types';
+import { AdBanner728x90 } from './AdBanner728x90';
+import { AdBanner468x60 } from './AdBanner468x60';
+import { AdBanner320x50 } from './AdBanner320x50';
 
 interface FooterProps {
   onBookCall: () => void;
@@ -69,6 +72,19 @@ export const Footer: React.FC<FooterProps> = ({
       <div className="absolute bottom-0 left-1/4 w-[600px] h-[400px] bg-teal-400/10 blur-[150px] rounded-full pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12">
+        {/* Global Site-Wide Footer Ad Banner */}
+        <div className="w-full flex justify-center items-center py-2 border-b border-emerald-900/40">
+          <div className="hidden md:block">
+            <AdBanner728x90 />
+          </div>
+          <div className="hidden sm:block md:hidden">
+            <AdBanner468x60 />
+          </div>
+          <div className="block sm:hidden">
+            <AdBanner320x50 />
+          </div>
+        </div>
+
         {/* Multi-Column Links Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 pt-4">
           {/* Brand Wordmark & Social Links */}

@@ -24,6 +24,7 @@ import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
 import { AdBanner468x60 } from '../AdBanner468x60';
 import { AdBanner160x300 } from '../AdBanner160x300';
+import { AdBanner300x250 } from '../AdBanner300x250';
 import { MEHMED_SERIES_DATA, MEHMED_EPISODES, MehmedEpisode } from '../../data/mehmedData';
 
 interface MehmedDramaPageProps {
@@ -75,6 +76,72 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeView, selectedEpisode]);
+
+  // SEO & Google Search Keyword Optimization Effect for Main & Episode 87 Pages
+  useEffect(() => {
+    const keywordsEl = document.querySelector('meta[name="keywords"]');
+
+    if (activeView === 'episode-detail') {
+      const num = selectedEpisode.number;
+      const pageTitle = `Mehmed Fetihler Sultani Season 4 Episode 4 (Bolum ${num}) Urdu Subtitles - FEVIQO.com`;
+      const metaDesc = `Watch Mehmed Fetihler Sultani Season 4 Episode 4 (Episode ${num}) with Urdu Subtitles (مہمد فتحلر سلطان قسط ${num}). Stream HD 1080p Bolum ${num} online with full story recaps on FEVIQO.com.`;
+      const keywords = `mehmed fetihler sultani episode ${num} urdu subtitles, mehmed fetihler sultani bolum ${num} urdu, watch mehmed fetihler sultani episode ${num}, mehmed fetihler sultani urdu, mehmed fetihler sultani ${num} urdu subtitles, mehmed fetihler sultani bolum ${num}, sultan mehmed fatih episode ${num} urdu, feviqo mehmed fetihler sultani ${num}`;
+      
+      document.title = pageTitle;
+
+      const metaDescEl = document.querySelector('meta[name="description"]');
+      if (metaDescEl) metaDescEl.setAttribute('content', metaDesc);
+
+      if (keywordsEl) keywordsEl.setAttribute('content', keywords);
+
+      const ogTitleEl = document.querySelector('meta[property="og:title"]');
+      if (ogTitleEl) ogTitleEl.setAttribute('content', pageTitle);
+
+      const ogDescEl = document.querySelector('meta[property="og:description"]');
+      if (ogDescEl) ogDescEl.setAttribute('content', metaDesc);
+
+      const twTitleEl = document.querySelector('meta[name="twitter:title"]');
+      if (twTitleEl) twTitleEl.setAttribute('content', pageTitle);
+
+      const twDescEl = document.querySelector('meta[name="twitter:description"]');
+      if (twDescEl) twDescEl.setAttribute('content', metaDesc);
+    } else {
+      const pageTitle = "Mehmed Fetihler Sultani Urdu Subtitles - Watch Online - FEVIQO.com";
+      const metaDesc = "Watch Mehmed Fetihler Sultani Turkish Drama in HD Urdu Subtitles (مہمد فتحلر سلطان اردو). Stream official episodes with story recaps on FEVIQO.com.";
+      const keywords = "mehmed fetihler sultani urdu, mehmed fetihler sultani urdu subtitles, watch mehmed fetihler sultani urdu, mehmed fetihler sultani season 4, mehmed fetihler sultani bolum 87 urdu, mehmed fetihler sultani episode 87 urdu subtitles, sultan mehmed II urdu";
+
+      document.title = pageTitle;
+
+      const metaDescEl = document.querySelector('meta[name="description"]');
+      if (metaDescEl) metaDescEl.setAttribute('content', metaDesc);
+
+      if (keywordsEl) keywordsEl.setAttribute('content', keywords);
+    }
+  }, [activeView, selectedEpisode]);
+
+  // Sync state with browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      if (path.includes('/episode-') || path.includes('/bolum-') || path.includes('87')) {
+        const match = path.match(/episode-(\d+)/) || path.match(/87/);
+        if (match) {
+          const num = match[1] ? parseInt(match[1]) : 87;
+          const found = MEHMED_EPISODES.find(ep => ep.number === num);
+          if (found) {
+            setSelectedEpisode(found);
+            setActiveView('episode-detail');
+            setShowPosterOverlay(true);
+            return;
+          }
+        }
+      }
+      setActiveView('overview');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const navigateToEpisode = (ep: MehmedEpisode) => {
     setSelectedEpisode(ep);
@@ -563,6 +630,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 mt-2 mb-4 sm:my-6">
                   <AdBanner468x60 />
+                  <AdBanner300x250 />
                   <AdBanner160x300 />
                 </div>
 
@@ -681,6 +749,24 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
           )}
         </AnimatePresence>
       </main>
+
+      {/* Search Keyword Tags & Search Engine Cloud (Invisible on UI, fully crawled by Googlebot) */}
+      <div className="sr-only" aria-hidden="true">
+        <h3>Popular Search Queries &amp; Tags for Mehmed Fetihler Sultani</h3>
+        <p>
+          Users found this page using search keywords: mehmed fetihler sultani episode 87 urdu, mehmed fetihler sultani season 4 episode 4 urdu subtitles, mehmed fetihler sultani 87 urdu, watch mehmed fetihler sultani episode 87 urdu subtitles, mehmed fetihler sultani bolum 87 urdu, and sultan mehmed fetihler sultani urdu subtitles online.
+        </p>
+        <p>
+          mehmed fetihler sultani 87 urdu,
+          mehmed fetihler sultani episode 87,
+          mehmed fetihler sultani season 4 episode 4,
+          mehmed fetihler sultani 87 urdu subtitles,
+          watch mehmed fetihler sultani 87 urdu subtitles,
+          mehmed season 4 episode 4 urdu subtitles,
+          sultan mehmed fatih episode 87 urdu subtitles,
+          feviqo mehmed fetihler sultani 87
+        </p>
+      </div>
 
       {/* Footer */}
       <Footer 

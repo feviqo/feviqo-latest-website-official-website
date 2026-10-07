@@ -648,7 +648,7 @@ export default function App() {
 
       case 'mehmed-fetihler-sultani':
         return (
-          <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#07090E] text-white font-sans selection:bg-amber-500 selection:text-slate-950 flex flex-col">
+          <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white text-slate-900 font-sans selection:bg-[#22C55E] selection:text-white flex flex-col">
             <MehmedDramaPage 
               onBackToHome={() => navigateTo('home')}
               onBookCall={handleOpenBookCall}
