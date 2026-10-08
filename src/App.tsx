@@ -42,6 +42,8 @@ import { DramasPage } from './components/pages/DramasPage';
 import { AboutUsPage } from './components/pages/AboutUsPage';
 import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
 import { TermsPage } from './components/pages/TermsPage';
+import { TrendingHubPage } from './components/pages/TrendingHubPage';
+import { TrendingArticlePage } from './components/pages/TrendingArticlePage';
 
 import { AppRoute, PreselectedPlan } from './types';
 import { initializeAssetSync } from './services/assetService';
@@ -73,6 +75,12 @@ export default function App() {
       if (path.includes('/gunesin-dogdugu-yer')) return 'gunesin-dogdugu-yer';
       if (path.includes('/mehmed') || path.includes('/mehmed-fetihler-sultani')) return 'mehmed-fetihler-sultani';
       if (path.includes('/dramas')) return 'dramas';
+      if (path.includes('/trending')) {
+        if (path.replace('/trending', '').replace('/', '').trim().length > 0) {
+          return 'trending-article';
+        }
+        return 'trending';
+      }
       if (path.includes('/about') || hash.includes('#about')) return 'about';
       if (path.includes('/privacy') || hash.includes('#privacy')) return 'privacy';
       if (path.includes('/terms') || hash.includes('#terms')) return 'terms';
@@ -93,6 +101,15 @@ export default function App() {
   const [activeVideoAspect, setActiveVideoAspect] = useState<'16/9' | '9/16'>('16/9');
   const [isBookCallModalOpen, setIsBookCallModalOpen] = useState(false);
   const [preselectedPlanForBooking, setPreselectedPlanForBooking] = useState<PreselectedPlan | null>(null);
+  const [currentArticleSlug, setCurrentArticleSlug] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase();
+      if (path.includes('/trending/')) {
+        return path.replace('/trending/', '').split('/')[0].split('?')[0];
+      }
+    }
+    return 'h1b-visa-2026-latest-update';
+  });
 
   useEffect(() => {
     const handleUrlStateAndVideo = () => {
@@ -156,6 +173,14 @@ export default function App() {
         setCurrentRoute('mehmed-fetihler-sultani');
       } else if (path.includes('/dramas')) {
         setCurrentRoute('dramas');
+      } else if (path.includes('/trending')) {
+        const articleSlug = path.replace('/trending', '').replace('/', '').trim();
+        if (articleSlug.length > 0) {
+          setCurrentArticleSlug(articleSlug);
+          setCurrentRoute('trending-article');
+        } else {
+          setCurrentRoute('trending');
+        }
       } else if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) {
         setCurrentRoute('turkish-drama');
       } else if (path.includes('/about') || hash.includes('#about')) {
@@ -205,7 +230,10 @@ export default function App() {
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
       'teskilat-urdu': 'Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal',
       'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',
+      'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
       'dramas': 'Turkish Dramas Portal - Stream Premium Series & Movies | FEVIQO',
+      'trending': 'FEVIQO Trending – What People Are Searching & Talking About Right Now',
+      'trending-article': 'FEVIQO Trending Article',
       'privacy': 'Privacy Policy & Cookie Disclosure | FEVIQO',
       'terms': 'Terms of Service & Usage Agreement | FEVIQO'
     };
@@ -659,6 +687,49 @@ export default function App() {
           </div>
         );
 
+      case 'trending':
+        return (
+          <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white text-slate-900 font-sans selection:bg-[#22C55E] selection:text-white flex flex-col">
+            <TrendingHubPage 
+              onBackToHome={() => navigateTo('home')}
+              onBookCall={handleOpenBookCall}
+              onNavigatePricing={() => navigateTo('pricing')}
+              onNavigateFlow={(view) => navigateTo('flow', view)}
+              onNavigatePage={(route) => navigateTo(route as AppRoute)}
+              onSelectArticle={(slug) => {
+                setCurrentArticleSlug(slug);
+                setCurrentRoute('trending-article');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                try {
+                  window.history.pushState({ route: 'trending-article', slug }, '', `/trending/${slug}`);
+                } catch {}
+              }}
+            />
+          </div>
+        );
+
+      case 'trending-article':
+        return (
+          <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white text-slate-900 font-sans selection:bg-[#22C55E] selection:text-white flex flex-col">
+            <TrendingArticlePage 
+              slug={currentArticleSlug}
+              onBackToTrending={() => navigateTo('trending')}
+              onBookCall={handleOpenBookCall}
+              onNavigatePricing={() => navigateTo('pricing')}
+              onNavigateFlow={(view) => navigateTo('flow', view)}
+              onNavigatePage={(route) => navigateTo(route as AppRoute)}
+              onSelectArticle={(slug) => {
+                setCurrentArticleSlug(slug);
+                setCurrentRoute('trending-article');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                try {
+                  window.history.pushState({ route: 'trending-article', slug }, '', `/trending/${slug}`);
+                } catch {}
+              }}
+            />
+          </div>
+        );
+
       case 'home':
       default:
         return (
@@ -762,6 +833,9 @@ export default function App() {
         }
         return '/mehmed-fetihler-sultani';
       case 'dramas': return '/dramas';
+      case 'trending': return '/trending';
+      case 'trending-article':
+        return currentArticleSlug ? `/trending/${currentArticleSlug}` : '/trending';
       case 'privacy': return '/privacy';
       case 'terms': return '/terms';
       case 'teskilat-urdu':

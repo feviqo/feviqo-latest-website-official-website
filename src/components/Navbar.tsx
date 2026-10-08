@@ -160,7 +160,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onMouseLeave={() => setServicesOpen(false)}
           >
             <button 
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
             >
               Services
               <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${servicesOpen ? 'rotate-180 text-white' : ''}`} />
@@ -174,7 +174,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
                   >
                     <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
-                      <Video className="w-4 h-4" />
+                      <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-white text-xs font-bold uppercase tracking-wider">Unlimited Video Editing</div>
@@ -218,9 +218,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Pricing */}
           <button 
             onClick={onNavigatePricing}
-            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer font-semibold text-white"
+            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer font-semibold text-white whitespace-nowrap shrink-0"
           >
             Pricing
+          </button>
+
+          {/* Trending Editorial Hub */}
+          <button 
+            onClick={() => onNavigatePage('trending' as any)}
+            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer font-semibold text-white flex items-center gap-1.5 hover:text-emerald-300 whitespace-nowrap shrink-0"
+          >
+            <span>Trending</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">HOT</span>
           </button>
 
           {/* Resources Dropdown */}
@@ -230,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onMouseLeave={() => setResourcesOpen(false)}
           >
             <button 
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
             >
               Resources
               <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${resourcesOpen ? 'rotate-180 text-white' : ''}`} />
@@ -266,9 +275,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <button 
               onClick={() => onNavigatePage('dramas')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300 whitespace-nowrap shrink-0"
             >
-              Turkish Dramas
+              <span>Turkish Dramas</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${dramasOpen ? 'rotate-180 text-white' : ''}`} />
             </button>
 
@@ -335,7 +344,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Desktop About Us in the Corner */}
           <button 
             onClick={() => onNavigatePage('about')}
-            className="hidden lg:inline-flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold text-white/90 hover:bg-white/15 hover:text-emerald-300 transition cursor-pointer"
+            className="hidden lg:inline-flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold text-white/90 hover:bg-white/15 hover:text-emerald-300 transition cursor-pointer whitespace-nowrap shrink-0"
             title="About FEVIQO"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -389,6 +398,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <span>Pricing Plans</span>
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#22C55E] text-slate-950 uppercase tracking-wider">Save $15.6k/yr</span>
+              </button>
+
+              <button 
+                onClick={() => { onNavigatePage('trending' as any); setMobileMenuOpen(false); }}
+                className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-extrabold flex items-center justify-between text-emerald-300 cursor-pointer border border-emerald-500/20 bg-emerald-950/40"
+              >
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-[#22C55E]" />
+                  <span>Trending Editorial Hub</span>
+                </div>
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[#22C55E] text-slate-950 uppercase tracking-wider">NEW</span>
               </button>
               
               <button 

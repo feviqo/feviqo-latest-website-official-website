@@ -73,9 +73,10 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     `<meta property="og:type" content="${ogType}" />`
   );
 
-  // 4. Inject Canonical Link Tag
+  // 4. Inject Canonical Link & Robots Indexing Tags
   const canonicalTag = `<link rel="canonical" href="${config.canonicalUrl}" />`;
-  transformed = transformed.replace('</head>', `  ${canonicalTag}\n  </head>`);
+  const robotsTag = `<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />`;
+  transformed = transformed.replace('</head>', `  ${robotsTag}\n  ${canonicalTag}\n  </head>`);
 
   // 5. Inject Dynamic JSON-LD Schema
   let schemaObj: any = {
@@ -437,6 +438,43 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "description": "Stream premium Turkish TV series and dramas with high-fidelity Urdu subtitles online. Discover trending shows like Teskilat and Gunesin Dogdugu Yer in ultra HD 1080p.",
       "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2"
     });
+  }
+
+  if (cleanPath.startsWith('/trending')) {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    if (cleanPath === '/trending') {
+      schemaObj["@graph"].push({
+        "@type": "WebPage",
+        "@id": "https://feviqo.com/trending#webpage",
+        "url": "https://feviqo.com/trending",
+        "name": config.seoTitle,
+        "description": config.metaDescription,
+        "publisher": {
+          "@id": "https://feviqo.com/#organization"
+        }
+      });
+    } else {
+      schemaObj["@graph"].push({
+        "@type": "NewsArticle",
+        "@id": `https://feviqo.com${cleanPath}#article`,
+        "url": `https://feviqo.com${cleanPath}`,
+        "headline": config.seoTitle,
+        "description": config.metaDescription,
+        "image": [config.ogImage],
+        "datePublished": "2026-10-07T08:00:00+00:00",
+        "dateModified": "2026-10-08T08:00:00+00:00",
+        "mainEntityOfPage": `https://feviqo.com${cleanPath}`,
+        "author": {
+          "@type": "Organization",
+          "name": "FEVIQO Editorial Research Desk",
+          "url": "https://feviqo.com"
+        },
+        "publisher": {
+          "@id": "https://feviqo.com/#organization"
+        }
+      });
+    }
   }
 
   const jsonLdScript = `<script type="application/ld+json" id="feviqo-server-jsonld">${JSON.stringify(schemaObj)}</script>`;
