@@ -129,7 +129,16 @@ export const TrendingArticlePage: React.FC<TrendingArticlePageProps> = ({
           <span className="px-3 py-1 rounded-full bg-slate-950 text-white font-bold text-xs uppercase tracking-wider">
             {article.category}
           </span>
-          <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+          <span className={`px-3 py-1 rounded-full font-bold text-xs uppercase tracking-wider ${
+            article.status === 'Confirmed' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+            article.status === 'Developing' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+            article.status === 'Rumored' ? 'bg-purple-100 text-purple-800 border border-purple-300' :
+            article.status === 'Proposed' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+            'bg-slate-100 text-slate-800 border border-slate-300'
+          }`}>
+            Status: {article.status || 'Confirmed'}
+          </span>
+          <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#22C55E]" />
             <span>{article.factStatus}</span>
           </span>

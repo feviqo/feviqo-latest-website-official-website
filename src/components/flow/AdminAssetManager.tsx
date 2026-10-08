@@ -31,6 +31,7 @@ import { CmsLogosTab } from './cms/CmsLogosTab';
 import { CmsTestimonialsTab } from './cms/CmsTestimonialsTab';
 import { CmsPortfolioTab } from './cms/CmsPortfolioTab';
 import { CmsPagesTab } from './cms/CmsPagesTab';
+import { CmsTrendingTab } from './cms/CmsTrendingTab';
 import { SafeImage } from '../SafeImage';
 import { attachHlsStream, isHlsStream } from '../../utils/hlsPlayer';
 
@@ -39,8 +40,8 @@ export const AdminAssetManager: React.FC = () => {
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'logos' | 'testimonials' | 'portfolio' | 'pages' | 'library' | 'images' | 'hero' | 'sizing' | 'gallery' | 'audience'
-  >('logos');
+    'trending' | 'logos' | 'testimonials' | 'portfolio' | 'pages' | 'library' | 'images' | 'hero' | 'sizing' | 'gallery' | 'audience'
+  >('trending');
 
   // Audience Pages Videos Management state
   const [selectedAudiencePage, setSelectedAudiencePage] = useState<AudiencePageType>('creators');
@@ -656,6 +657,19 @@ export const AdminAssetManager: React.FC = () => {
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
         <button
           type="button"
+          onClick={() => setActiveTab('trending')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'trending'
+              ? 'bg-slate-950 text-white'
+              : 'bg-white text-slate-600 hover:text-slate-950 border border-slate-200'
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-[#22C55E]" />
+          <span>Trending Articles</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('logos')}
           className={`px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'logos'
@@ -773,6 +787,7 @@ export const AdminAssetManager: React.FC = () => {
       </div>
 
       {/* Structured CMS Tabs */}
+      {activeTab === 'trending' && <CmsTrendingTab />}
       {activeTab === 'logos' && <CmsLogosTab />}
       {activeTab === 'testimonials' && <CmsTestimonialsTab />}
       {activeTab === 'portfolio' && <CmsPortfolioTab />}
