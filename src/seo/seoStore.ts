@@ -510,6 +510,31 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'Article'
   },
+  '/trending/kaytron-allen': {
+    path: '/trending/kaytron-allen',
+    pageName: 'Kaytron Allen Article',
+    seoTitle: 'Kaytron Allen: Latest News, Stats, Career and Updates | FEVIQO',
+    metaDescription: 'Latest Kaytron Allen news, stats, career updates, team information and everything fans need to know about the football running back.',
+    focusKeyword: 'Kaytron Allen',
+    secondaryKeywords: [
+      'Kaytron Allen news',
+      'Kaytron Allen latest',
+      'Kaytron Allen stats',
+      'Kaytron Allen football',
+      'Kaytron Allen Penn State',
+      'Kaytron Allen updates',
+      'Kaytron Allen career',
+      'Kaytron Allen draft',
+      'Kaytron Allen NFL Draft',
+      'Kaytron Allen college football'
+    ],
+    canonicalUrl: 'https://feviqo.com/trending/kaytron-allen',
+    ogTitle: 'Kaytron Allen: Latest News, Stats, Career and Updates',
+    ogDescription: 'Latest Kaytron Allen news, stats, career updates, team information and everything fans need to know about the football running back.',
+    ogImage: 'https://images.unsplash.com/photo-1566577739112-5180d4bf9390?q=80&w=1200&auto=format&fit=crop',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'Article'
+  },
   '/pricing': {
     path: '/pricing',
     pageName: 'Pricing',
