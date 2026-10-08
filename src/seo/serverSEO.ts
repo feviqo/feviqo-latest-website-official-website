@@ -367,6 +367,48 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     });
   }
 
+  if (cleanPath === '/gunesin-dogdugu-yer/episode-4') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVEpisode",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-4#episode",
+      "url": "https://feviqo.com/gunesin-dogdugu-yer/episode-4",
+      "name": "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4",
+      "episodeNumber": "4",
+      "seasonNumber": "1",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "description": "Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO.",
+      "image": "https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV",
+      "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-4",
+      "isPartOf": {
+        "@type": "TVSeries",
+        "name": "Gunesin Dogdugu Yer",
+        "url": "https://feviqo.com/gunesin-dogdugu-yer"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "VideoObject",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-4#video",
+      "name": "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4",
+      "description": "Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles. Stream full episode online with story recap on FEVIQO.com.",
+      "thumbnailUrl": [
+        "https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV"
+      ],
+      "uploadDate": "2026-10-22T18:00:00+00:00",
+      "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",
+      "embedUrl": "https://feviqo.com/gunesin-dogdugu-yer/episode-4",
+      "duration": "PT2H25M",
+      "isFamilyFriendly": true,
+      "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-4",
+      "publisher": {
+        "@id": "https://feviqo.com/#organization"
+      }
+    });
+  }
+
   if (cleanPath === '/mehmed-fetihler-sultani' || cleanPath === '/mehmed') {
     transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
 

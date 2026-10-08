@@ -222,6 +222,20 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },
+  '/gunesin-dogdugu-yer/episode-4': {
+    path: '/gunesin-dogdugu-yer/episode-4',
+    pageName: 'Gunesin Dogdugu Yer Episode 4 Watch Page',
+    seoTitle: 'Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4',
+    metaDescription: 'Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO.',
+    focusKeyword: 'gunesin dogdugu yer episode 4 urdu',
+    secondaryKeywords: ['gunesin dogdugu yer episode 4', 'gunesin dogdugu yer episode 4 urdu', 'gunesin dogdugu yer 4 urdu', 'gunesin dogdugu yer bolum 4'],
+    canonicalUrl: 'https://feviqo.com/gunesin-dogdugu-yer/episode-4',
+    ogTitle: 'Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4',
+    ogDescription: 'Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
   '/mehmed-fetihler-sultani': {
     path: '/mehmed-fetihler-sultani',
     pageName: 'Mehmed Fetihler Sultani Hub Page',

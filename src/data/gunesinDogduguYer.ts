@@ -60,6 +60,27 @@ export const GUNESIN_SERIES_DATA: GunesinSeries = {
 
 export const GUNESIN_EPISODES: GunesinEpisode[] = [
   {
+    number: 4,
+    slug: "episode-4",
+    title: "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles",
+    airDate: "2026-10-22T18:00:00+00:00",
+    thumbnail: "https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV",
+    duration: "2h 25m",
+    shortSummary: "Episode 4 continues the intense action in Gunesin Dogdugu Yer on FEVIQO. Major revelations unfold as family secrets and rivalries escalate to a dramatic peak.",
+    recap: `Gunesin Dogdugu Yer Episode 4 (Bolum 4) delivers an incredible continuation filled with massive suspense. The narrative deepens the core family conflicts, testing the relationships and long-standing rivalries that define the season. Characters find themselves drawn together in a high-stakes confrontation where secrets can no longer be hidden.
+
+As the story unfolds, the primary protagonist is forced to make a critical choice between protecting their allies and exposing a dark, hidden truth. Every action creates an immediate reaction from rival factions, raising the stakes to an absolute maximum.
+
+The climax of Gunesin Dogdugu Yer Episode 4 sets the stage for dangerous new twists, leaving viewers eagerly anticipating the next chapter. Who can be trusted when everyone has something to hide? Stream Gunesin Dogdugu Yer Episode 4 with Urdu Subtitles on FEVIQO.`,
+    embeds: [
+      {
+        label: "Server 1 (Fast HLS)",
+        src: "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8"
+      }
+    ],
+    season: 1
+  },
+  {
     number: 3,
     slug: "episode-3",
     title: "Gunesin Dogdugu Yer Episode 3 Urdu Subtitles",
