@@ -2214,6 +2214,27 @@ app.get('/ads.txt', (_req, res) => {
 });
 
 import { transformHTMLForRoute } from './src/seo/serverSEO';
+import { generateSitemapXml, updateSitemapFile } from './src/seo/sitemapGenerator';
+
+// Auto-update public/sitemap.xml file on server launch
+try {
+  updateSitemapFile();
+} catch (e) {
+  console.error('Initial sitemap sync error:', e);
+}
+
+// Dynamic Sitemap Generator Route (Serves 100% of pages instantly)
+app.get('/sitemap.xml', (_req, res) => {
+  try {
+    const xml = generateSitemapXml();
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+    return res.status(200).send(xml);
+  } catch (err) {
+    console.error('Error generating dynamic sitemap:', err);
+    return res.status(500).send('Error generating sitemap');
+  }
+});
 
 // --- VITE DEV / PRODUCTION MIDDLEWARE ---
 async function startServer() {

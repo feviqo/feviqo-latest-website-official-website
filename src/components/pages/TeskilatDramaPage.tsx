@@ -911,8 +911,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               </div>
             </section>
 
-            {/* 8, 9, 10, 11. EPISODE DIRECTORY */}
-            <section id="episode-directory" className="py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+            {/* EPISODE DIRECTORY - SMALL GRID BOXES MATCHING GONUL DAGI & MEHMED */}
+            <section id="episode-directory" className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
               <div className="text-left space-y-2 mb-8">
                 <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
                   EPISODE DIRECTORY
@@ -925,8 +925,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </p>
               </div>
 
-              {/* Minimal Row Episode Card */}
-              <div className="space-y-4">
+              {/* Grid of Small Episode Boxes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {ALL_EPISODES.map((ep) => (
                   <a 
                     href={`/teskilat/episode-${ep.episodeNumber}`}
@@ -935,57 +935,50 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       e.preventDefault();
                       handleOpenEpisode(ep);
                     }}
-                    className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-[#22C55E]/60 hover:shadow-lg transition-all duration-300 group cursor-pointer text-left flex flex-col sm:flex-row items-center gap-6 block"
+                    className="group bg-slate-50/20 hover:bg-slate-50/50 border border-slate-200 hover:border-[#22C55E]/80 rounded-2xl overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition duration-200 text-left select-none cursor-pointer flex flex-col h-full shadow-sm"
                   >
-                    <div className="relative w-full sm:w-64 aspect-video rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                    {/* 16:9 Thumbnail Box */}
+                    <div className="relative aspect-video bg-slate-100 border-b border-slate-100 overflow-hidden">
                       {ep.thumbnailUrl ? (
                         <img 
                           src={ep.thumbnailUrl} 
                           alt={`Teskilat Urdu Episode ${ep.episodeNumber} Subtitles Thumbnail - Season 7`} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                         />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-[#09090c] via-[#111116] to-[#021d12] flex flex-col items-center justify-center p-2 border border-white/5">
-                          <span className="text-[10px] font-mono font-bold tracking-widest text-[#22C55E] uppercase animate-pulse text-center">EPISODE 187</span>
+                          <span className="text-[10px] font-mono font-bold tracking-widest text-[#22C55E] uppercase animate-pulse text-center">EPISODE {ep.episodeNumber}</span>
                           <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5 text-center">COVER ART UPLOADING</span>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-slate-950/20 flex items-center justify-center">
-                        <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                          <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
+                      {ep.isLatest && (
+                        <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
+                          LATEST
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
+                        <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
+                          <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex-1 space-y-2 min-w-0 w-full">
-                      <div className="flex items-center gap-2">
-                        {ep.isLatest ? (
-                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 text-[10px] font-black uppercase tracking-wider">
-                            LATEST RELEASE
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-black uppercase tracking-wider">
-                            COMPLETED
-                          </span>
-                        )}
-                        <span className="text-xs font-bold text-slate-400">SEASON {ep.seasonNumber} &bull; EPISODE {ep.episodeNumber}</span>
+                    {/* Details Box */}
+                    <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <span>EPISODE {ep.episodeNumber}</span>
+                          <span>·</span>
+                          <span>{ep.duration}</span>
+                        </div>
+                        <h3 className="text-sm sm:text-base font-black text-[#0B0B0D] group-hover:text-[#22C55E] transition line-clamp-2">
+                          Teskilat Season 7 Episode {ep.episodeNumber === 187 ? '3' : '2'} (Bolum {ep.episodeNumber})
+                        </h3>
                       </div>
-
-                      <h3 className="text-xl font-extrabold text-[#0B0B0D] group-hover:text-[#22C55E] transition">
-                        Teskilat Season 7 Episode {ep.episodeNumber}
-                      </h3>
-
-                      <p className="text-sm font-urdu-slim text-slate-700 dir-rtl line-clamp-1 font-normal">
-                        {ep.storyRecapUrdu}
-                      </p>
-
-                      <div className="pt-2 flex items-center justify-between text-xs text-slate-500 font-medium">
-                        <span>{ep.duration} &bull; HD &bull; Urdu Subtitles</span>
-
-                        <span className="text-[#22C55E] font-bold inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                          <span>Watch Episode</span>
-                          <ChevronRight className="w-4 h-4" />
-                        </span>
+                      
+                      <div className="pt-2 flex items-center justify-between text-xs text-[#22C55E] font-bold border-t border-slate-100/80">
+                        <span>Watch Online</span>
+                        <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>
                   </a>
