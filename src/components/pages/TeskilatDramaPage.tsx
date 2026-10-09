@@ -34,6 +34,11 @@ import { NativeVideoPlayer } from '../NativeVideoPlayer';
 import { AppRoute } from '../../types';
 import { AdBanner468x60 } from '../AdBanner468x60';
 import { AdBanner160x300 } from '../AdBanner160x300';
+import { AdBanner728x90 } from '../AdBanner728x90';
+import { AdBanner320x50 } from '../AdBanner320x50';
+import { AdBanner300x250 } from '../AdBanner300x250';
+import { AdBanner160x600 } from '../AdBanner160x600';
+import { AdNativeBanner } from '../AdNativeBanner';
 
 interface TeskilatEpisode {
   id: string;
@@ -299,7 +304,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
     setTimeout(() => {
-      const muxEl = document.querySelector('mux-video') as HTMLVideoElement | null;
+      const muxEl = document.querySelector('mux-video') as unknown as HTMLVideoElement | null;
       const shadowVideo = muxEl?.shadowRoot?.querySelector('video') as HTMLVideoElement | null;
       const standardVideo = document.querySelector('video') as HTMLVideoElement | null;
 
@@ -430,16 +435,34 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
         }
         const hls = new Hls({
           enableWorker: true,
-          lowLatencyMode: true,
+          lowLatencyMode: false,
           startLevel: -1,
           capLevelToPlayerSize: true,
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
+          maxBufferSize: 12 * 1024 * 1024,
           autoStartLoad: true,
         });
         hls.loadSource(streamUrl);
         hls.attachMedia(video);
         hls.startLoad();
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                try { hls.destroy(); } catch {}
+                break;
+            }
+          }
+        });
+
         hlsRef.current = hls;
 
         return () => {
@@ -1177,22 +1200,36 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               </div>
 
               {/* High-Converting Ads & Smartlink Row */}
-              <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 mt-2 mb-4 sm:my-6">
-                <AdBanner468x60 />
-                <AdBanner160x300 />
-              </div>
+              <div className="space-y-4 my-6">
+                {/* 728x90 Leaderboard / 320x50 Mobile Header Ad */}
+                <div className="hidden md:block">
+                  <AdBanner728x90 />
+                </div>
+                <div className="block md:hidden">
+                  <AdBanner320x50 />
+                </div>
 
-              {/* Sponsored Smartlink Button */}
-              <div className="flex justify-center my-3">
-                <a
-                  href="https://arwf.org/4/407c2859d48b877cf406dc93dcd6c1d5"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-2.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-black tracking-wide transition inline-flex items-center gap-2 shadow-sm"
-                >
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
-                  <span>Sponsored HD Stream Mirror (FEVIQO Fast Server)</span>
-                </a>
+                <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 my-4">
+                  <AdBanner468x60 />
+                  <AdBanner300x250 />
+                  <AdBanner160x300 />
+                </div>
+
+                {/* Native Banner */}
+                <AdNativeBanner />
+
+                {/* Sponsored Smartlink Button */}
+                <div className="flex justify-center my-3">
+                  <a
+                    href="https://arwf.org/4/407c2859d48b877cf406dc93dcd6c1d5"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-2.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-black tracking-wide transition inline-flex items-center gap-2 shadow-sm"
+                  >
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span>Sponsored HD Stream Mirror (FEVIQO Fast Server)</span>
+                  </a>
+                </div>
               </div>
 
               {/* 7. Player Surrounding Info Row */}

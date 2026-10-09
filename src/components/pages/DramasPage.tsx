@@ -2,6 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Play, ChevronRight } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
+import { AdBanner728x90 } from '../AdBanner728x90';
+import { AdBanner320x50 } from '../AdBanner320x50';
+import { AdBanner468x60 } from '../AdBanner468x60';
+import { AdBanner300x250 } from '../AdBanner300x250';
+import { AdBanner160x300 } from '../AdBanner160x300';
+import { AdNativeBanner } from '../AdNativeBanner';
 
 interface DramasPageProps {
   onBackToHome: () => void;
@@ -438,6 +444,24 @@ export const DramasPage: React.FC<DramasPageProps> = ({
               </article>
             );
           })}
+        </div>
+
+        {/* HIGH-EARNING AD BANNER SUITE & NATIVE BANNER */}
+        <div className="pt-12 space-y-6">
+          <div className="hidden md:block">
+            <AdBanner728x90 />
+          </div>
+          <div className="block md:hidden">
+            <AdBanner320x50 />
+          </div>
+
+          <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 my-4">
+            <AdBanner468x60 />
+            <AdBanner300x250 />
+            <AdBanner160x300 />
+          </div>
+
+          <AdNativeBanner />
         </div>
 
       </section>

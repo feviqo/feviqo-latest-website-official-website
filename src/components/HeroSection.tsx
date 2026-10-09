@@ -2,6 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Volume2, VolumeX, Star } from 'lucide-react';
 import { getWebsiteAssets, subscribeWebsiteAssets } from '../services/assetService';
 import { attachHlsStream, isHlsStream } from '../utils/hlsPlayer';
+import { AdBanner728x90 } from './AdBanner728x90';
+import { AdBanner320x50 } from './AdBanner320x50';
+import { AdBanner468x60 } from './AdBanner468x60';
+import { AdBanner300x250 } from './AdBanner300x250';
+import { AdBanner160x300 } from './AdBanner160x300';
+import { AdNativeBanner } from './AdNativeBanner';
 
 interface HeroSectionProps {
   onBookCall: () => void;
@@ -233,6 +239,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
             </div>
 
           </div>
+
+          {/* MAIN PAGE HIGH-EARNING AD BANNER SUITE & NATIVE BANNER */}
+          <div className="mt-12 pt-8 border-t border-slate-200/60 w-full space-y-6 text-center">
+            <div className="hidden md:block">
+              <AdBanner728x90 />
+            </div>
+            <div className="block md:hidden">
+              <AdBanner320x50 />
+            </div>
+
+            <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 my-4">
+              <AdBanner468x60 />
+              <AdBanner300x250 />
+              <AdBanner160x300 />
+            </div>
+
+            <AdNativeBanner />
+          </div>
+
         </div>
 
       </div>

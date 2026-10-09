@@ -12,7 +12,7 @@ export interface PageSEOConfig {
   ogDescription: string;
   ogImage: string;
   robots: string; // 'index, follow' | 'noindex, nofollow'
-  schemaType: 'WebSite' | 'Organization' | 'Service' | 'TVEpisode' | 'TVSeries' | 'BreadcrumbList' | 'VideoObject';
+  schemaType: 'WebSite' | 'Organization' | 'Service' | 'TVEpisode' | 'TVSeries' | 'BreadcrumbList' | 'VideoObject' | 'Article';
   customJsonLd?: string;
 }
 

@@ -52,10 +52,10 @@ export function attachHlsStream(
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        backBufferLength: 10,
-        maxBufferLength: 8,
-        maxMaxBufferLength: 15,
-        maxBufferSize: 6 * 1024 * 1024,
+        backBufferLength: 30,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 15 * 1024 * 1024,
         capLevelToPlayerSize: true,
         startLevel: -1,
       });

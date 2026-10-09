@@ -227,6 +227,7 @@ export default function App() {
       'about': 'About FEVIQO - Dedicated Senior Video Editors | FEVIQO',
       'flow': 'FEVIQO Flow - Video Request Portal & Dashboard',
       'platform': 'FEVIQO Flow Portal - Manage Video Edits & Assets',
+      'admin': 'FEVIQO Admin Portal - Dashboard & Client Management',
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
       'teskilat-urdu': 'Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal',
       'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',

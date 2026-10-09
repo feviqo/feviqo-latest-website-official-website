@@ -25,7 +25,12 @@ import { Footer } from '../Footer';
 import { AdBanner468x60 } from '../AdBanner468x60';
 import { AdBanner160x300 } from '../AdBanner160x300';
 import { AdBanner300x250 } from '../AdBanner300x250';
+import { AdBanner728x90 } from '../AdBanner728x90';
+import { AdBanner320x50 } from '../AdBanner320x50';
+import { AdBanner160x600 } from '../AdBanner160x600';
+import { AdNativeBanner } from '../AdNativeBanner';
 import { MEHMED_SERIES_DATA, MEHMED_EPISODES, MehmedEpisode } from '../../data/mehmedData';
+import { attachHlsStream } from '../../utils/hlsPlayer';
 
 interface MehmedDramaPageProps {
   onBackToHome: () => void;
@@ -72,6 +77,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
   const [activeServerIndex, setActiveServerIndex] = useState(0);
   const [showPosterOverlay, setShowPosterOverlay] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -161,8 +167,24 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
     }
   };
 
+  const currentStreamUrl = "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8";
+
+  useEffect(() => {
+    if (activeView === 'episode-detail' && videoRef.current && currentStreamUrl) {
+      const cleanup = attachHlsStream(videoRef.current, currentStreamUrl, {
+        autoPlay: false,
+      });
+      return () => {
+        if (cleanup) cleanup();
+      };
+    }
+  }, [activeView, selectedEpisode, currentStreamUrl]);
+
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
   };
 
   const handleShare = () => {
@@ -597,21 +619,17 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     </div>
                   )}
 
-                  {/* Anti-Download Mux Video Web Component Player */}
-                  <video-player style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}>
-                    <video-skin poster={selectedEpisode.thumbnail} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
-                      <mux-video
-                        src="https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8"
-                        playsinline
-                        poster={selectedEpisode.thumbnail}
-                        controlsList="nodownload"
-                        disablePictureInPicture
-                        onContextMenu={(e) => e.preventDefault()}
-                        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
-                      ></mux-video>
-                      <mux-data></mux-data>
-                    </video-skin>
-                  </video-player>
+                  {/* Universal HTML5 HLS Video Player */}
+                  <video
+                    ref={videoRef}
+                    controls
+                    playsInline
+                    poster={selectedEpisode.thumbnail}
+                    controlsList="nodownload"
+                    disablePictureInPicture
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="w-full h-full object-contain block bg-black rounded-2xl sm:rounded-3xl"
+                  />
                 </div>
 
                 {/* Share Row */}
@@ -627,12 +645,23 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
               </div>
 
               {/* High-Converting Ads & Smartlink Row */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 mt-2 mb-4 sm:my-6">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+                {/* 728x90 Leaderboard / 320x50 Mobile Header Ad */}
+                <div className="hidden md:block">
+                  <AdBanner728x90 />
+                </div>
+                <div className="block md:hidden">
+                  <AdBanner320x50 />
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 my-4">
                   <AdBanner468x60 />
                   <AdBanner300x250 />
                   <AdBanner160x300 />
                 </div>
+
+                {/* Native Banner */}
+                <AdNativeBanner />
 
                 <div className="flex justify-center my-3">
                   <a

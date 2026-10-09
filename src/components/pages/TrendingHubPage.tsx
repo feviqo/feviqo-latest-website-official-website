@@ -20,6 +20,12 @@ import {
   TrendingArticle 
 } from '../../data/trendingArticlesData';
 import { AppRoute } from '../../types';
+import { AdBanner728x90 } from '../AdBanner728x90';
+import { AdBanner320x50 } from '../AdBanner320x50';
+import { AdBanner468x60 } from '../AdBanner468x60';
+import { AdBanner300x250 } from '../AdBanner300x250';
+import { AdBanner160x300 } from '../AdBanner160x300';
+import { AdNativeBanner } from '../AdNativeBanner';
 
 interface TrendingHubPageProps {
   onBackToHome: () => void;
@@ -180,6 +186,16 @@ export const TrendingHubPage: React.FC<TrendingHubPageProps> = ({
 
       {/* MAIN CONTENT AREA */}
       <main className="w-full flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
+        
+        {/* TOP LEADERBOARD AD */}
+        <div className="my-4">
+          <div className="hidden md:block">
+            <AdBanner728x90 />
+          </div>
+          <div className="block md:hidden">
+            <AdBanner320x50 />
+          </div>
+        </div>
         
         {/* FEATURED STORY HERO CARD */}
         {featuredArticle && !searchQuery && selectedCategory === 'All' && (

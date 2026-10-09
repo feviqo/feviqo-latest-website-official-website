@@ -20,7 +20,13 @@ import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
 import { AdBanner468x60 } from '../AdBanner468x60';
 import { AdBanner160x300 } from '../AdBanner160x300';
+import { AdBanner728x90 } from '../AdBanner728x90';
+import { AdBanner320x50 } from '../AdBanner320x50';
+import { AdBanner300x250 } from '../AdBanner300x250';
+import { AdBanner160x600 } from '../AdBanner160x600';
+import { AdNativeBanner } from '../AdNativeBanner';
 import { GUNESIN_SERIES_DATA, GUNESIN_EPISODES, GunesinEpisode } from '../../data/gunesinDogduguYer';
+import { attachHlsStream } from '../../utils/hlsPlayer';
 
 interface GunesinDramaPageProps {
   onBackToHome: () => void;
@@ -171,6 +177,19 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
       setTimeout(() => setCopiedLink(false), 2000);
     } catch {}
   };
+
+  const currentStreamUrl = selectedEpisode.embeds[0]?.src;
+
+  useEffect(() => {
+    if (activeView === 'episode-detail' && videoRef.current && currentStreamUrl) {
+      const cleanup = attachHlsStream(videoRef.current, currentStreamUrl, {
+        autoPlay: false,
+      });
+      return () => {
+        if (cleanup) cleanup();
+      };
+    }
+  }, [activeView, selectedEpisode, currentStreamUrl]);
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
@@ -614,21 +633,17 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     </div>
                   )}
 
-                  {/* Anti-Download Mux Video Web Component Player */}
-                  <video-player style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}>
-                    <video-skin poster={selectedEpisode.thumbnail} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
-                      <mux-video
-                        src={selectedEpisode.embeds[0]?.src}
-                        playsinline
-                        poster={selectedEpisode.thumbnail}
-                        controlsList="nodownload"
-                        disablePictureInPicture
-                        onContextMenu={(e) => e.preventDefault()}
-                        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
-                      ></mux-video>
-                      <mux-data></mux-data>
-                    </video-skin>
-                  </video-player>
+                  {/* Universal HTML5 HLS Video Player */}
+                  <video
+                    ref={videoRef}
+                    controls
+                    playsInline
+                    poster={selectedEpisode.thumbnail}
+                    controlsList="nodownload"
+                    disablePictureInPicture
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="w-full h-full object-contain block bg-black rounded-2xl sm:rounded-3xl"
+                  />
                 </div>
               </div>
 
@@ -655,11 +670,23 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
               </div>
 
               {/* High-Converting Ads & Smartlink Row */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 mt-2 mb-4 sm:my-6">
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
+                {/* 728x90 Leaderboard / 320x50 Mobile Header Ad */}
+                <div className="hidden md:block">
+                  <AdBanner728x90 />
+                </div>
+                <div className="block md:hidden">
+                  <AdBanner320x50 />
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 my-4">
                   <AdBanner468x60 />
+                  <AdBanner300x250 />
                   <AdBanner160x300 />
                 </div>
+
+                {/* Native Banner */}
+                <AdNativeBanner />
 
                 {/* Sponsored Smartlink Button */}
                 <div className="flex justify-center my-3">

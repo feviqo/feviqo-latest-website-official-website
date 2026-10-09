@@ -14,6 +14,8 @@ declare global {
         style?: React.CSSProperties;
       }, HTMLElement>;
       'mux-data': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { class?: string; style?: React.CSSProperties }, HTMLElement>;
+      [elemName: string]: any;
     }
   }
 }
+
