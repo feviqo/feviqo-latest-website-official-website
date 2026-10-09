@@ -173,6 +173,16 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         ]
       }
     });
+
+    schemaObj["@graph"].push({
+      "@type": "ImageObject",
+      "@id": "https://feviqo.com/teskilat#posterImage",
+      "url": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
+      "contentUrl": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
+      "name": "Teskilat Season 7 Turkish Drama Urdu Subtitles Main Poster",
+      "caption": "Teskilat Season 7 Turkish Drama Urdu Subtitles Main Poster Image",
+      "description": "Official Teskilat Season 7 Turkish Drama Main Poster featuring Altay, Korkut, and Ender in Urdu Subtitles."
+    });
   }
 
   if (cleanPath === '/teskilat/episode-186') {
@@ -259,6 +269,16 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "@id": "https://feviqo.com/#organization"
       }
     });
+
+    schemaObj["@graph"].push({
+      "@type": "ImageObject",
+      "@id": "https://feviqo.com/teskilat/episode-187#image",
+      "url": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
+      "contentUrl": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
+      "name": "Teskilat Episode 187 Urdu Subtitles HD Poster Thumbnail",
+      "caption": "Teskilat Episode 187 Urdu Subtitles HD Thumbnail - Bolum 187",
+      "description": "Official Teskilat Episode 187 Urdu Subtitles HD Thumbnail image."
+    });
   }
 
   if (cleanPath === '/gunesin-dogdugu-yer') {
@@ -276,6 +296,16 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "seasonNumber": 1,
         "name": "Season 1"
       }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "ImageObject",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer#posterImage",
+      "url": "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
+      "contentUrl": "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
+      "name": "Gunesin Dogdugu Yer Main Poster Turkish Drama Urdu Subtitles",
+      "caption": "Gunesin Dogdugu Yer Main Poster Turkish Drama Urdu Subtitles",
+      "description": "Official Gunesin Dogdugu Yer main poster image for Turkish drama with Urdu subtitles."
     });
   }
 
@@ -365,6 +395,16 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "@id": "https://feviqo.com/#organization"
       }
     });
+
+    schemaObj["@graph"].push({
+      "@type": "ImageObject",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-3#image",
+      "url": "https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj",
+      "contentUrl": "https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj",
+      "name": "Gunesin Dogdugu Yer Episode 3 Urdu Subtitles HD Thumbnail",
+      "caption": "Gunesin Dogdugu Yer Episode 3 Urdu Subtitles HD Thumbnail - Bolum 3",
+      "description": "Official Gunesin Dogdugu Yer Episode 3 Urdu Subtitles HD Thumbnail image."
+    });
   }
 
   if (cleanPath === '/gunesin-dogdugu-yer/episode-4') {
@@ -374,12 +414,12 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "@type": "TVEpisode",
       "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-4#episode",
       "url": "https://feviqo.com/gunesin-dogdugu-yer/episode-4",
-      "name": "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4",
+      "name": "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles | Bolum 4",
       "episodeNumber": "4",
       "seasonNumber": "1",
       "inLanguage": "Urdu",
       "subtitleLanguage": "Urdu Subtitles",
-      "description": "Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO.",
+      "description": "Watch Gunesin Dogdugu Yer Episode 4 Urdu Subtitles (Bolum 4) in HD on FEVIQO. Follow the latest episode of this Turkish drama with Urdu subtitles and enjoy a high-quality viewing experience.",
       "image": "https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV",
       "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-4",
       "isPartOf": {
@@ -392,13 +432,13 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     schemaObj["@graph"].push({
       "@type": "VideoObject",
       "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-4#video",
-      "name": "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4",
-      "description": "Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles. Stream full episode online with story recap on FEVIQO.com.",
+      "name": "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles | Bolum 4",
+      "description": "Watch Gunesin Dogdugu Yer Episode 4 Urdu Subtitles (Bolum 4) in HD on FEVIQO. Follow the latest episode of this Turkish drama with Urdu subtitles and enjoy a high-quality viewing experience.",
       "thumbnailUrl": [
         "https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV"
       ],
-      "uploadDate": "2026-10-22T18:00:00+00:00",
-      "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",
+      "uploadDate": "2026-10-08T18:00:00+00:00",
+      "contentUrl": "https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8",
       "embedUrl": "https://feviqo.com/gunesin-dogdugu-yer/episode-4",
       "duration": "PT2H25M",
       "isFamilyFriendly": true,
@@ -406,6 +446,16 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "publisher": {
         "@id": "https://feviqo.com/#organization"
       }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "ImageObject",
+      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-4#image",
+      "url": "https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV",
+      "contentUrl": "https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV",
+      "name": "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles HD Thumbnail",
+      "caption": "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles HD Thumbnail - Bolum 4",
+      "description": "Official Gunesin Dogdugu Yer Episode 4 Urdu Subtitles HD Thumbnail image."
     });
   }
 

@@ -225,13 +225,15 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/gunesin-dogdugu-yer/episode-4': {
     path: '/gunesin-dogdugu-yer/episode-4',
     pageName: 'Gunesin Dogdugu Yer Episode 4 Watch Page',
-    seoTitle: 'Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4',
-    metaDescription: 'Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO.',
-    focusKeyword: 'gunesin dogdugu yer episode 4 urdu',
-    secondaryKeywords: ['gunesin dogdugu yer episode 4', 'gunesin dogdugu yer episode 4 urdu', 'gunesin dogdugu yer 4 urdu', 'gunesin dogdugu yer bolum 4'],
+    seoTitle: 'Gunesin Dogdugu Yer Episode 4 Urdu Subtitles | Bolum 4',
+    metaDescription: 'Watch Gunesin Dogdugu Yer Episode 4 Urdu Subtitles (Bolum 4) in HD on FEVIQO. Follow the latest episode of this Turkish drama with Urdu subtitles and enjoy a high-quality viewing experience.',
+    focusKeyword: 'Gunesin Dogdugu Yer Episode 4 Urdu Subtitles',
+    secondaryKeywords: [
+      'Gunesin Dogdugu Yer Episode 4', 'Gunesin Dogdugu Yer Episode 4 Urdu Subtitles', 'Gunesin Dogdugu Yer Bolum 4', 'Gunesin Dogdugu Yer Bolum 4 Urdu Subtitles', 'Gunesin Dogdugu Yer Episode 4 Urdu', 'Gunesin Dogdugu Yer Season 1 Episode 4', 'Gunesin Dogdugu Yer Season 1 Episode 4 Urdu Subtitles', 'Gunesin Dogdugu Yer Urdu Subtitles', 'Gunesin Dogdugu Yer English Subtitles', 'Gunesin Dogdugu Yer Latest Episode', 'Gunesin Dogdugu Yer Full Episode', 'Gunesin Dogdugu Yer Watch Online', 'Gunesin Dogdugu Yer HD', 'Gunesin Dogdugu Yer 1080p', 'Gunesin Dogdugu Yer Turkish Drama', 'Gunesin Dogdugu Yer Series Urdu Subtitles', 'Gunesin Dogdugu Yer Turkish Series', 'Gunesin Dogdugu Yer Episode 4 Watch Online', 'Gunesin Dogdugu Yer Episode 4 HD', 'Gunesin Dogdugu Yer Episode 4 Online', 'Gunesin Dogdugu Yer New Episode', 'Gunesin Dogdugu Yer Bolum 4 Urdu', 'Episode 4 Urdu Subtitles', 'Bolum 4 Urdu Subtitles', 'Turkish Drama Episode 4 Urdu Subtitles', 'Turkish Series Episode 4 Urdu Subtitles', 'Turkish Dramas Urdu Subtitles', 'Turkish Series with Urdu Subtitles', 'Turkish Dramas in Pakistan', 'Watch Turkish Dramas Online', 'Latest Turkish Drama Urdu Subtitles', 'Turkish Series Online HD', 'Turkish Drama Online Free', 'Turkish Series Urdu Translation', 'Turkish Drama Subtitles', 'Urdu Subtitles Online', 'Turkish Shows Urdu Subtitles', 'Latest Turkish Series', 'New Turkish Drama Episodes', 'FEVIQO Gunesin Dogdugu Yer', 'FEVIQO Episode 4', 'FEVIQO Urdu Subtitles', 'FEVIQO Turkish Dramas', 'FEVIQO Turkish Series', 'FEVIQO', 'Gunesin Dogdugu Yer FEVIQO', 'Gunesin Dogdugu Yer Episode 4 FEVIQO', 'watch Gunesin Dogdugu Yer on FEVIQO', 'Turkish historical series Urdu subtitles', 'Turkish action drama Urdu subtitles', 'Turkish drama streaming', 'HD Turkish series', 'Turkish drama episodes online', 'Turkish series latest episodes', 'Urdu subtitle series online', 'Turkish entertainment Pakistan', 'Turkish drama fans Pakistan', 'premium streaming experience', 'online video streaming', 'digital entertainment platforms', 'OTT streaming platforms', 'online series episodes', 'Gunesin Dogdugu Yer Episode 3 Urdu Subtitles', 'Gunesin Dogdugu Yer Episode 2 Urdu Subtitles', 'Gunesin Dogdugu Yer Episode 1 Urdu Subtitles', 'Gunesin Dogdugu Yer Season 1 Urdu Subtitles', 'Mehmed Fetihler Sultani', 'Kurulus Osman', 'Salahuddin Ayyubi', 'Teskilat', 'Turkish Dramas with Urdu Subtitles', 'Turkish Series with English Subtitles'
+    ],
     canonicalUrl: 'https://feviqo.com/gunesin-dogdugu-yer/episode-4',
-    ogTitle: 'Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4',
-    ogDescription: 'Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO.',
+    ogTitle: 'Gunesin Dogdugu Yer Episode 4 Urdu Subtitles | Bolum 4',
+    ogDescription: 'Watch Gunesin Dogdugu Yer Episode 4 Urdu Subtitles (Bolum 4) in HD on FEVIQO. Follow the latest episode of this Turkish drama with Urdu subtitles and enjoy a high-quality viewing experience.',
     ogImage: 'https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
@@ -303,12 +305,12 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/dramas': {
     path: '/dramas',
     pageName: 'Turkish Dramas Directory',
-    seoTitle: 'Turkish Premium TV Series & Dramas Urdu Subtitles | FEVIQO',
+    seoTitle: 'Turkish Drama Urdu Subtitles - Watch All Episodes HD | FEVIQO',
     metaDescription: 'Stream premium Turkish TV series and dramas with high-fidelity Urdu subtitles online. Discover trending shows like Teskilat & Gunesin Dogdugu Yer.',
-    focusKeyword: 'turkish dramas urdu subtitles',
+    focusKeyword: 'turkish drama urdu subtitles',
     secondaryKeywords: ['turkish dramas', 'urdu subtitles', 'watch turkish series', 'historical dramas', 'teskilat urdu', 'gunesin dogdugu yer urdu'],
     canonicalUrl: 'https://feviqo.com/dramas',
-    ogTitle: 'Turkish Premium TV Series & Dramas Urdu Subtitles | FEVIQO',
+    ogTitle: 'Turkish Drama Urdu Subtitles - Watch All Episodes HD | FEVIQO',
     ogDescription: 'Stream premium Turkish TV series and dramas with high-fidelity Urdu subtitles online. Discover trending shows like Teskilat & Gunesin Dogdugu Yer.',
     ogImage: 'https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',

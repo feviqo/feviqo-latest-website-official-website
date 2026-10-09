@@ -74,8 +74,8 @@ As the story unfolds, the primary protagonist is forced to make a critical choic
 The climax of Gunesin Dogdugu Yer Episode 4 sets the stage for dangerous new twists, leaving viewers eagerly anticipating the next chapter. Who can be trusted when everyone has something to hide? Stream Gunesin Dogdugu Yer Episode 4 with Urdu Subtitles on FEVIQO.`,
     embeds: [
       {
-        label: "Server 1 (Fast HLS)",
-        src: "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8"
+        label: "Server 1 (Fast HLS 1080p)",
+        src: "https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8"
       }
     ],
     season: 1
