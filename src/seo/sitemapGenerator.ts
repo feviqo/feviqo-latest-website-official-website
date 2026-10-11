@@ -35,16 +35,18 @@ export function generateSitemapXml(): string {
     seenUrls.add(cleanPath);
 
     const fullLoc = `https://feviqo.com${cleanPath === '/' ? '/' : cleanPath}`;
+    const safeLoc = fullLoc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     xml += `  <url>\n`;
-    xml += `    <loc>${fullLoc}</loc>\n`;
+    xml += `    <loc>${safeLoc}</loc>\n`;
     xml += `    <lastmod>${lastmod}</lastmod>\n`;
     xml += `    <changefreq>${changefreq}</changefreq>\n`;
     xml += `    <priority>${priority}</priority>\n`;
 
     if (imageLoc) {
+      const safeImageLoc = imageLoc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       xml += `    <image:image>\n`;
-      xml += `      <image:loc>${imageLoc}</image:loc>\n`;
+      xml += `      <image:loc>${safeImageLoc}</image:loc>\n`;
       if (imageTitle) {
         const safeTitle = imageTitle.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         xml += `      <image:title>${safeTitle}</image:title>\n`;
@@ -53,16 +55,18 @@ export function generateSitemapXml(): string {
     }
 
     if (videoInfo) {
+      const safeVideoThumb = videoInfo.thumbnail.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const safeVideoContent = videoInfo.contentLoc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const safeVideoTitle = videoInfo.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       const safeVideoDesc = videoInfo.description.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       xml += `    <video:video>\n`;
-      xml += `      <video:thumbnail_loc>${videoInfo.thumbnail}</video:thumbnail_loc>\n`;
+      xml += `      <video:thumbnail_loc>${safeVideoThumb}</video:thumbnail_loc>\n`;
       xml += `      <video:title>${safeVideoTitle}</video:title>\n`;
       xml += `      <video:description>${safeVideoDesc}</video:description>\n`;
-      xml += `      <video:content_loc>${videoInfo.contentLoc}</video:content_loc>\n`;
+      xml += `      <video:content_loc>${safeVideoContent}</video:content_loc>\n`;
       xml += `      <video:duration>${videoInfo.duration || '8700'}</video:duration>\n`;
       xml += `      <video:publication_date>${videoInfo.pubDate || '2026-10-08T18:00:00+00:00'}</video:publication_date>\n`;
-      xml += `      <video:family_friendly>yes</video:family_friendly>\n`;
+      xml += `      <video:family_friendly>YES</video:family_friendly>\n`;
       xml += `    </video:video>\n`;
     }
 
