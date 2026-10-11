@@ -99,6 +99,27 @@ export function generateSitemapXml(): string {
         description: 'Watch Teskilat Season 7 Episode 2 Urdu Subtitles (Bolum 186) with story recaps on FEVIQO.',
         contentLoc: 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8'
       };
+    } else if (routeKey === '/gunesin-dogdugu-yer/episode-5') {
+      videoInfo = {
+        thumbnail: 'https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV',
+        title: 'Gunesin Dogdugu Yer Episode 5 Urdu Subtitles – Bolum 5',
+        description: 'Watch Gunesin Dogdugu Yer Episode 5 in HD Urdu Subtitles with story recap on FEVIQO.com.',
+        contentLoc: 'https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8'
+      };
+    } else if (routeKey === '/teskilat/episode-188' || routeKey === '/teskilat-urdu/episode-188') {
+      videoInfo = {
+        thumbnail: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
+        title: 'Teskilat Season 7 Episode 4 Urdu Subtitles – Bolum 188',
+        description: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188) with story recaps on FEVIQO.',
+        contentLoc: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8'
+      };
+    } else if (routeKey === '/mehmed-fetihler-sultani/episode-88') {
+      videoInfo = {
+        thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
+        title: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
+        description: 'Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) on FEVIQO.',
+        contentLoc: 'https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8'
+      };
     } else if (routeKey === '/gunesin-dogdugu-yer/episode-4') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV',

@@ -165,7 +165,7 @@ export default function App() {
         setCurrentRoute('unlimited-editing');
       } else if (path.includes('/platform') || hash.includes('#platform')) {
         setCurrentRoute('platform');
-      } else if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/teskilat-186') || path.includes('/teskilat-187') || hash.includes('#teskilat')) {
+      } else if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/teskilat-186') || path.includes('/teskilat-187') || path.includes('/teskilat-188') || hash.includes('#teskilat')) {
         setCurrentRoute('teskilat-urdu');
       } else if (path.includes('/gunesin-dogdugu-yer')) {
         setCurrentRoute('gunesin-dogdugu-yer');
@@ -229,7 +229,7 @@ export default function App() {
       'platform': 'FEVIQO Flow Portal - Manage Video Edits & Assets',
       'admin': 'FEVIQO Admin Portal - Dashboard & Client Management',
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
-      'teskilat-urdu': 'Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal',
+      'teskilat-urdu': 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188 - FEVIQO.com',
       'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',
       'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
       'dramas': 'Turkish Dramas Portal - Stream Premium Series & Movies | FEVIQO',

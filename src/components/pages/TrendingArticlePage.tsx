@@ -193,8 +193,8 @@ export const TrendingArticlePage: React.FC<TrendingArticlePageProps> = ({
           </div>
         </div>
 
-        {/* LEADERBOARD AD */}
-        <div className="my-4">
+        {/* LEADERBOARD ADSENSE CONTAINER */}
+        <div id="adsense-container" className="my-8 flex justify-center">
           <div className="hidden md:block">
             <AdBanner728x90 />
           </div>
@@ -219,25 +219,27 @@ export const TrendingArticlePage: React.FC<TrendingArticlePageProps> = ({
           )}
         </div>
 
-        {/* IN-ARTICLE AD BANNER SUITE */}
-        <div className="space-y-4 my-6">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 my-4">
-            <AdBanner468x60 />
-            <AdBanner300x250 />
-            <AdBanner160x300 />
-          </div>
+        {/* IN-ARTICLE ADSENSE CONTAINER */}
+        <div id="adsense-container" className="my-8 flex justify-center">
+          <div className="w-full space-y-4">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6">
+              <AdBanner468x60 />
+              <AdBanner300x250 />
+              <AdBanner160x300 />
+            </div>
 
-          {/* SPONSORED SMARTLINK */}
-          <div className="flex justify-center my-3">
-            <a
-              href="https://arwf.org/4/407c2859d48b877cf406dc93dcd6c1d5"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-2.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-black tracking-wide transition inline-flex items-center gap-2 shadow-sm"
-            >
-              <Sparkles className="w-4 h-4 text-emerald-600" />
-              <span>Sponsored Trending Update Mirror (FEVIQO Network)</span>
-            </a>
+            {/* SPONSORED SMARTLINK */}
+            <div className="flex justify-center my-3">
+              <a
+                href="https://arwf.org/4/407c2859d48b877cf406dc93dcd6c1d5"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-2.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-black tracking-wide transition inline-flex items-center gap-2 shadow-sm"
+              >
+                <Sparkles className="w-4 h-4 text-emerald-600" />
+                <span>Sponsored Trending Update Mirror (FEVIQO Network)</span>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -297,6 +299,11 @@ export const TrendingArticlePage: React.FC<TrendingArticlePageProps> = ({
           })}
         </article>
 
+        {/* MID-ARTICLE BODY ADSENSE CONTAINER */}
+        <div id="adsense-container" className="my-8 flex justify-center">
+          <AdNativeBanner />
+        </div>
+
         {/* SOURCES & CITATIONS */}
         {article.sources && article.sources.length > 0 && (
           <div className="pt-6 border-t border-slate-200 space-y-3">
@@ -343,8 +350,8 @@ export const TrendingArticlePage: React.FC<TrendingArticlePageProps> = ({
           </div>
         )}
 
-        {/* NATIVE BANNER AD */}
-        <div className="my-6">
+        {/* NATIVE BANNER ADSENSE CONTAINER */}
+        <div id="adsense-container" className="my-8 flex justify-center">
           <AdNativeBanner />
         </div>
 

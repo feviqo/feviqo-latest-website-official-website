@@ -35,6 +35,11 @@ import {
   addFilesToProject,
   addRevisionToProject,
 } from './server/cmsStore';
+import {
+  pingSearchEnginesForReindexing,
+  triggerEpisodeReindexingPing,
+  getSearchEnginePingHistory
+} from './src/seo/seoIndexingService';
 
 const app = express();
 const PORT = 3000;
@@ -692,6 +697,112 @@ app.post('/api/videos/download-from-url', (req, res) => {
         return res.status(500).json({ success: false, error: copyErr.message });
       }
     });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// --- SEO AUTOMATED SEARCH ENGINE RE-INDEXING APIS ---
+
+// Endpoint to trigger manual or automated search engine pings (Google & Bing)
+app.post('/api/seo/ping-indexing', async (req, res) => {
+  try {
+    const { urls, episodeTitle, thumbnailUrl, dramaKey, episodeNumber, reason } = req.body;
+    let result;
+    if (dramaKey && episodeNumber) {
+      result = await triggerEpisodeReindexingPing({
+        dramaKey,
+        episodeNumber: Number(episodeNumber),
+        thumbnailUrl,
+        title: episodeTitle,
+        reason
+      });
+    } else {
+      result = await pingSearchEnginesForReindexing({
+        urls: Array.isArray(urls) ? urls : undefined,
+        episodeTitle,
+        thumbnailUrl,
+        reason: reason || 'Manual or API triggered re-indexing ping'
+      });
+    }
+    return res.json({ success: true, result });
+  } catch (err: any) {
+    console.error('SEO ping error:', err);
+    return res.status(500).json({ success: false, error: err?.message || 'Failed to ping search engines' });
+  }
+});
+
+// Endpoint to save episode or thumbnail updates and automatically ping search engines
+app.post('/api/episodes/update', async (req, res) => {
+  try {
+    const { dramaKey, episodeNumber, seasonNumber, thumbnailUrl, title, videoUrl, storyRecapUrdu, storyRecapEnglish } = req.body;
+    if (!dramaKey || !episodeNumber) {
+      return res.status(400).json({ success: false, error: 'dramaKey and episodeNumber are required' });
+    }
+
+    // Persist episode record into data/episodes.json
+    const EPISODES_FILE = path.join(DATA_DIR, 'episodes.json');
+    let episodesData: Record<string, any[]> = {};
+    if (fs.existsSync(EPISODES_FILE)) {
+      try {
+        episodesData = JSON.parse(fs.readFileSync(EPISODES_FILE, 'utf-8'));
+      } catch (e) {}
+    }
+
+    if (!episodesData[dramaKey]) {
+      episodesData[dramaKey] = [];
+    }
+
+    const episodeId = `ep-${episodeNumber}-s${seasonNumber || 1}`;
+    const existingIdx = episodesData[dramaKey].findIndex((ep: any) => ep.episodeNumber === Number(episodeNumber) || ep.id === episodeId);
+
+    const episodeRecord = {
+      id: episodeId,
+      episodeNumber: Number(episodeNumber),
+      seasonNumber: Number(seasonNumber || 1),
+      title: title || `${dramaKey} Episode ${episodeNumber}`,
+      thumbnailUrl: thumbnailUrl || '',
+      videoUrl: videoUrl || '',
+      storyRecapUrdu: storyRecapUrdu || '',
+      storyRecapEnglish: storyRecapEnglish || '',
+      updatedAt: new Date().toISOString()
+    };
+
+    if (existingIdx >= 0) {
+      episodesData[dramaKey][existingIdx] = { ...episodesData[dramaKey][existingIdx], ...episodeRecord };
+    } else {
+      episodesData[dramaKey].unshift(episodeRecord);
+    }
+
+    fs.writeFileSync(EPISODES_FILE, JSON.stringify(episodesData, null, 2), 'utf-8');
+
+    // Automatically ping Google & Bing endpoints for rapid re-indexing!
+    const pingResult = await triggerEpisodeReindexingPing({
+      dramaKey,
+      episodeNumber: Number(episodeNumber),
+      seasonNumber: Number(seasonNumber || 1),
+      thumbnailUrl,
+      title,
+      reason: `Automated re-index ping: Episode ${episodeNumber} (${dramaKey}) updated in DB`
+    });
+
+    return res.json({
+      success: true,
+      message: `Episode ${episodeNumber} saved to database and search engines pinged for rapid re-indexing!`,
+      episode: episodeRecord,
+      pingResult
+    });
+  } catch (err: any) {
+    console.error('Episode update error:', err);
+    return res.status(500).json({ success: false, error: err?.message || 'Failed to save episode' });
+  }
+});
+
+// Endpoint to inspect search engine ping history logs
+app.get('/api/seo/ping-history', (_req, res) => {
+  try {
+    const history = getSearchEnginePingHistory();
+    return res.json({ success: true, history });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
   }

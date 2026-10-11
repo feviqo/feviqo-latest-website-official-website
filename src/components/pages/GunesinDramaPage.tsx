@@ -25,6 +25,7 @@ import { AdBanner320x50 } from '../AdBanner320x50';
 import { AdBanner300x250 } from '../AdBanner300x250';
 import { AdBanner160x600 } from '../AdBanner160x600';
 import { AdNativeBanner } from '../AdNativeBanner';
+import { CountdownTimer } from '../CountdownTimer';
 import { GUNESIN_SERIES_DATA, GUNESIN_EPISODES, GunesinEpisode } from '../../data/gunesinDogduguYer';
 import { attachHlsStream } from '../../utils/hlsPlayer';
 
@@ -602,6 +603,18 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                   <span>&bull;</span>
                   <span>HD 1080p Streaming</span>
                 </p>
+              </div>
+
+              {/* Official Premiere Countdown Timer */}
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
+                <CountdownTimer
+                  targetDate={selectedEpisode.airDate || "2026-10-16T04:00:00.000Z"}
+                  episodeTitle={selectedEpisode.title}
+                  seriesName={GUNESIN_SERIES_DATA.title}
+                  episodeNumber={selectedEpisode.number}
+                  backdropUrl={selectedEpisode.thumbnail}
+                  onPlayClick={handleStartPlayback}
+                />
               </div>
 
               {/* Secure 16:9 Anti-Download Mux Video Player */}

@@ -39,6 +39,7 @@ import { AdBanner320x50 } from '../AdBanner320x50';
 import { AdBanner300x250 } from '../AdBanner300x250';
 import { AdBanner160x600 } from '../AdBanner160x600';
 import { AdNativeBanner } from '../AdNativeBanner';
+import { CountdownTimer } from '../CountdownTimer';
 
 interface TeskilatEpisode {
   id: string;
@@ -49,6 +50,7 @@ interface TeskilatEpisode {
   releaseDate: string;
   duration: string;
   thumbnailUrl: string;
+  directoryThumbnailUrl?: string;
   videoUrl: string;
   storyRecapUrdu: string;
   storyRecapEnglish: string;
@@ -219,14 +221,33 @@ Altay’s determination to save his son turns the operation into a deeply person
 
 Meanwhile, Bahar’s decision to fire at Korkut creates a dramatic turning point, and the consequences now place Yahya at the center of another difficult test.
 
-With betrayal, loyalty, family, and sacrifice colliding at the same time, Bolum 187 pushes Season 7 into an even more dangerous phase.
-
 Watch Teskilat Season 7 Episode 3 – Bolum 187 with Urdu Subtitles on FEVIQO.`,
   views: '284,500',
+  isLatest: false
+};
+
+const EPISODE_188: TeskilatEpisode = {
+  id: 'ep-188-s7',
+  episodeNumber: 188,
+  seasonNumber: 7,
+  titleUrdu: 'تشکیلات سیزن 7 قسط 188 اردو ترجمہ کے ساتھ',
+  titleEnglish: 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188',
+  releaseDate: 'October 2026',
+  duration: '2h 25m',
+  thumbnailUrl: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
+  directoryThumbnailUrl: 'https://lh3.googleusercontent.com/d/1ikYYiLzzJ8NytHorSVBhRvsXKwGUl1zy',
+  videoUrl: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8',
+  storyRecapUrdu: `تشکیلات سیزن 7 قسط 188 (بولم 188) میں الپائے اور انٹیلی جنس ٹیم دشمن کے سب سے بڑے نیٹ ورک پر آخری وار کرنے جا رہی ہے۔ عذرا کی چالوں کے پیچھے کی اصل سچائی سامنے آتی ہے جبکہ اینڈر کو بچانے کا یہ حتمی آپریشن ایک زبردست موڑ اختیار کر جاتا ہے۔ مکمل قسط ایچ ڈی اردو سب ٹائٹلز کے ساتھ فیویکو پر دیکھیں۔`,
+  storyRecapEnglish: `Teskilat Season 7 Episode 4 Urdu Subtitles – Bolum 188: Final Intelligence Strike
+
+Teskilat Season 7 Episode 4 (Bolum 188) brings an explosive continuation to Altay's high-stakes mission. With the Organization closing in on enemy operatives, Altay faces the ultimate tactical challenge to bring Ender home and neutralize the deep-cover threats.
+
+Watch Teskilat Season 7 Episode 4 with Urdu Subtitles directly on this page on FEVIQO.`,
+  views: '198,400',
   isLatest: true
 };
 
-const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_187, FEATURED_SEASON7_EPISODE];
+const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_188, EPISODE_187, FEATURED_SEASON7_EPISODE];
 
 interface TeskilatDramaPageProps {
   onBackToHome: () => void;
@@ -248,7 +269,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188')) {
         return 'episode-detail';
       }
     }
@@ -259,17 +280,17 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
       const path = window.location.pathname.toLowerCase();
       if (path.includes('186')) return FEATURED_SEASON7_EPISODE;
       if (path.includes('187')) return EPISODE_187;
+      if (path.includes('188')) return EPISODE_188;
     }
-    return EPISODE_187; // Default to the newest episode!
+    return EPISODE_188; // Default to Episode 188
   });
   const [showPosterOverlay, setShowPosterOverlay] = useState(true);
 
-  // Premium Apple Countdown Timer for Episode 187 (Official Release: Monday, October 5, 2026, at 4:00 AM PKT/TRT - Sunday at 4:00 PM PDT)
+  // Official Release Target Timestamp: Monday, October 12, 2026 at 4:00 AM UTC
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   useEffect(() => {
-    // Official Release Target Timestamp (Monday, October 5, 2026, at 4:00 AM PKT/TRT, which is Sunday, October 4, 2026, at 4:00 PM PDT -07:00)
-    const targetTime = new Date('2026-10-04T16:00:00-07:00').getTime();
+    const targetTime = new Date('2026-10-12T04:00:00.000Z').getTime();
 
     const updateTimer = () => {
       const diff = targetTime - Date.now();
@@ -806,11 +827,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   {/* Right button panel */}
                   <div className="lg:col-span-4 flex items-center lg:justify-end gap-3 flex-wrap sm:flex-nowrap w-full">
                     <button
-                      onClick={() => handleOpenEpisode(EPISODE_187)}
+                      onClick={() => handleOpenEpisode(EPISODE_188)}
                       className="w-full lg:w-auto px-8 py-3.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:scale-[1.02]"
                     >
                       <Play className="w-4 h-4 fill-current text-slate-950" />
-                      <span>Watch Episode 187</span>
+                      <span>Watch Episode 188</span>
                     </button>
 
                     <a
@@ -832,7 +853,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 
                 <div className="space-y-1">
                   <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                    SEASON 7 &bull; EPISODE 187
+                    SEASON 7 &bull; EPISODE 188 (SEASON 7 EPISODE 4)
                   </div>
                   <h2 className="text-2xl sm:text-4xl font-black text-[#0B0B0D]">
                     Latest Episode
@@ -843,19 +864,20 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   
                   {/* Thumbnail */}
                   <a 
-                    href="/teskilat/episode-187"
-                    onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_187); }}
+                    href="/teskilat/episode-188"
+                    onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_188); }}
                     className="lg:col-span-6 relative rounded-2xl overflow-hidden bg-slate-100 shadow-xl border border-slate-200 block group aspect-video"
                   >
-                    {EPISODE_187.thumbnailUrl ? (
+                    {EPISODE_188.thumbnailUrl ? (
                       <img 
-                        src={EPISODE_187.thumbnailUrl} 
-                        alt="Teskilat Season 7 Episode 187 Thumbnail" 
+                        src={EPISODE_188.directoryThumbnailUrl || EPISODE_188.thumbnailUrl} 
+                        alt="Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" 
+                        title="Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-[#09090c] via-[#111116] to-[#021d12] flex flex-col items-center justify-center p-4 border border-white/5">
-                        <span className="text-xs font-mono font-bold tracking-widest text-[#22C55E] uppercase bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-1 rounded-full mb-1 animate-pulse">EPISODE 187 TEASER</span>
+                        <span className="text-xs font-mono font-bold tracking-widest text-[#22C55E] uppercase bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-1 rounded-full mb-1 animate-pulse">EPISODE 188 TEASER</span>
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">COVER ART UPLOADING SOON</span>
                       </div>
                     )}
@@ -873,15 +895,15 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     </div>
 
                     <h3 className="text-2xl sm:text-3xl font-black text-[#0B0B0D]">
-                      Teskilat Season 7 Urdu
+                      Teskilat Season 7 Episode 4 (Bolum 188) Urdu
                     </h3>
 
                     <div className="text-lg font-urdu-slim text-slate-800 dir-rtl text-right font-normal leading-relaxed">
-                      تشکیلات سیزن 7 اردو سب ٹائٹلز کے ساتھ دیکھیں۔
+                      تشکیلات سیزن 7 قسط 188 اردو ترجمہ کے ساتھ دیکھیں۔
                     </div>
 
                     <p className="text-slate-600 text-sm leading-relaxed">
-                      Stream all released episodes of Teskilat Season 7 Turkish drama with premium Urdu subtitles on FEVIQO. Browse our comprehensive directory below to watch individual episodes, view high-definition players, and read full official story recaps.
+                      Stream Teskilat Season 7 Episode 4 (Bolum 188) Turkish drama with premium Urdu subtitles on FEVIQO. Stream official story recaps, full HD 1080p video player, and complete espionage missions.
                     </p>
 
                     {/* Minimal Information Strip */}
@@ -898,16 +920,16 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     {/* Actions */}
                     <div className="flex items-center gap-4 pt-3">
                       <button
-                        onClick={() => handleOpenEpisode(EPISODE_187)}
+                        onClick={() => handleOpenEpisode(EPISODE_188)}
                         className="px-6 py-3 rounded-full bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs transition cursor-pointer inline-flex items-center gap-2"
                       >
                         <Play className="w-4 h-4 fill-current text-slate-950" />
-                        <span>Watch Episode 187</span>
+                        <span>Watch Episode 188</span>
                       </button>
 
                       <a
-                        href="/teskilat/episode-187"
-                        onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_187); }}
+                        href="/teskilat/episode-188"
+                        onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_188); }}
                         className="text-xs font-bold text-slate-700 hover:text-[#0B0B0D] transition cursor-pointer"
                       >
                         Read Story &rarr;
@@ -964,8 +986,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     <div className="relative aspect-video bg-slate-100 border-b border-slate-100 overflow-hidden">
                       {ep.thumbnailUrl ? (
                         <img 
-                          src={ep.thumbnailUrl} 
-                          alt={`Teskilat Urdu Episode ${ep.episodeNumber} Subtitles Thumbnail - Season 7`} 
+                          src={ep.directoryThumbnailUrl || ep.thumbnailUrl} 
+                          alt={ep.episodeNumber === 188 ? "Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Urdu Episode ${ep.episodeNumber} Subtitles Thumbnail - Season 7`} 
+                          title={ep.episodeNumber === 188 ? "Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Urdu Episode ${ep.episodeNumber} Subtitles`}
                           className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                         />
                       ) : (
@@ -995,7 +1018,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           <span>{ep.duration}</span>
                         </div>
                         <h3 className="text-sm sm:text-base font-black text-[#0B0B0D] group-hover:text-[#22C55E] transition line-clamp-2">
-                          Teskilat Season 7 Episode {ep.episodeNumber === 187 ? '3' : '2'} (Bolum {ep.episodeNumber})
+                          Teskilat Season 7 Episode {ep.episodeNumber === 188 ? '4' : ep.episodeNumber === 187 ? '3' : '2'} (Bolum {ep.episodeNumber})
                         </h3>
                       </div>
                       
@@ -1035,7 +1058,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
 
                 <h1 className="text-xl sm:text-4xl font-black text-[#0B0B0D] tracking-tight">
-                  Teskilat Season 7 Episode {selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles - Bolum {selectedEpisode.episodeNumber} {selectedEpisode.episodeNumber === 187 ? "Azra Betrayal" : "The Wolf Awakens"}
+                  Teskilat Season 7 Episode {selectedEpisode.episodeNumber === 188 ? "4" : selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles - Bolum {selectedEpisode.episodeNumber} {selectedEpisode.episodeNumber === 188 ? "Final Operation" : selectedEpisode.episodeNumber === 187 ? "Azra Betrayal" : "The Wolf Awakens"}
                 </h1>
 
                 <p className="text-xs font-bold text-slate-500 pt-0.5">
@@ -1053,6 +1076,18 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <span>&bull;</span>
                   <span>Urdu Subtitles</span>
                 </div>
+              </div>
+
+              {/* Official Premiere Countdown Timer */}
+              <div className="mb-6">
+                <CountdownTimer
+                  targetDate="2026-10-12T04:00:00.000Z"
+                  episodeTitle={`Teskilat Season 7 Episode ${selectedEpisode.episodeNumber === 188 ? "4" : selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles | Bolum ${selectedEpisode.episodeNumber}`}
+                  seriesName="Teskilat Season 7"
+                  episodeNumber={selectedEpisode.episodeNumber}
+                  backdropUrl={selectedEpisode.thumbnailUrl}
+                  onPlayClick={handleStartPlayback}
+                />
               </div>
 
               {/* 5 & 6. Secure Anti-Download Main Video Player */}
@@ -1086,7 +1121,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     {/* Background Subtle Ambient Image Overlay (Restrained & Blurs) */}
                     <div 
                       className="absolute inset-0 bg-cover bg-center filter blur-sm scale-105 opacity-[0.22] pointer-events-none transition-opacity duration-700" 
-                      style={{ backgroundImage: `url('https://lh3.googleusercontent.com/d/1i-L-pMn0Tz4RuGi5R6AULl0Y6gI-EwMV')` }} 
+                      style={{ backgroundImage: `url('${selectedEpisode.thumbnailUrl}')` }} 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#070709] via-transparent to-[#070709] pointer-events-none" />
                     
@@ -1170,7 +1205,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       >
                         <img 
                           src={selectedEpisode.thumbnailUrl} 
-                          alt={`Teskilat Urdu Episode ${selectedEpisode.episodeNumber} Subtitles - Watch Season 7 Episode ${selectedEpisode.episodeNumber}`} 
+                          alt={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Urdu Episode ${selectedEpisode.episodeNumber} Subtitles - Watch Season 7 Episode ${selectedEpisode.episodeNumber}`} 
+                          title={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Episode ${selectedEpisode.episodeNumber}`}
                           className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition-transform duration-500 rounded-2xl sm:rounded-3xl"
                         />
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">

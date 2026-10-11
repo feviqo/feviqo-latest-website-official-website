@@ -4,227 +4,179 @@
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://feviqo.com/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://feviqo.com/feviqo1.png</image:loc>
-      <image:title>FEVIQO Unlimited Video Editing Agency Logo</image:title>
-    </image:image>
-    <image:image>
       <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
-      <image:title>FEVIQO Video Editing Banner</image:title>
+      <image:title>Feviqo — Unlimited Video Editing Services | Flat-rate Video Editing Agency</image:title>
     </image:image>
     <video:video>
       <video:thumbnail_loc>https://feviqo.com/images/feviqo-hero-poster.jpg</video:thumbnail_loc>
       <video:title>FEVIQO Unlimited Video Editing Showreel</video:title>
-      <video:description>High-converting creator hooks, luxury villa walkthroughs, performance ad creative samples, and motion graphics edited by FEVIQO dedicated editors.</video:description>
+      <video:description>High-converting creator hooks, luxury villa walkthroughs, and performance ad creative samples.</video:description>
       <video:content_loc>https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8</video:content_loc>
       <video:duration>45</video:duration>
-      <video:publication_date>2026-01-15T08:00:00+00:00</video:publication_date>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
     </video:video>
-  </url>
-  <url>
-    <loc>https://feviqo.com/gallery</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <video:video>
-      <video:thumbnail_loc>https://feviqo.com/images/feviqo-hero-poster.jpg</video:thumbnail_loc>
-      <video:title>High-Paced Creator Hook &amp; Luxury Villa Walkthrough</video:title>
-      <video:description>Luxury Estate Reel and high-converting performance video edit created by FEVIQO video editors.</video:description>
-      <video:content_loc>https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8</video:content_loc>
-      <video:duration>35</video:duration>
-      <video:publication_date>2026-02-01T08:00:00+00:00</video:publication_date>
-      <video:family_friendly>yes</video:family_friendly>
-    </video:video>
-  </url>
-  <url>
-    <loc>https://feviqo.com/about</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-  </url>
-  <url>
-    <loc>https://feviqo.com/pricing</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://feviqo.com/booking</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
   </url>
   <url>
     <loc>https://feviqo.com/unlimited-editing</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.95</priority>
-    <video:video>
-      <video:thumbnail_loc>https://feviqo.com/HEADER-removebg-preview.png</video:thumbnail_loc>
-      <video:title>Flat-Rate Unlimited Video Editing Service</video:title>
-      <video:description>Dedicated senior video editor, 4K rendering, unlimited revisions, and 24-48 hour turnarounds by FEVIQO Studio.</video:description>
-      <video:content_loc>https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8</video:content_loc>
-      <video:duration>45</video:duration>
-      <video:publication_date>2026-01-15T08:00:00+00:00</video:publication_date>
-      <video:family_friendly>yes</video:family_friendly>
-    </video:video>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>Unlimited Video Editing Service | Dedicated Senior Editors | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/creators</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
     <priority>0.9</priority>
-    <video:video>
-      <video:thumbnail_loc>https://feviqo.com/HEADER-removebg-preview.png</video:thumbnail_loc>
-      <video:title>High-Retention Video Editing for YouTube &amp; Streamers</video:title>
-      <video:description>YouTube Shorts, TikToks, Reels, and long-form video editing designed to maximize retention and watch time.</video:description>
-      <video:content_loc>https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8</video:content_loc>
-      <video:duration>45</video:duration>
-      <video:publication_date>2026-01-15T08:00:00+00:00</video:publication_date>
-      <video:family_friendly>yes</video:family_friendly>
-    </video:video>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>High-Retention Video Editing for YouTubers &amp; Streamers | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/agencies</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
     <priority>0.9</priority>
-    <video:video>
-      <video:thumbnail_loc>https://feviqo.com/HEADER-removebg-preview.png</video:thumbnail_loc>
-      <video:title>White-Label Video Editing Pods for Marketing Agencies</video:title>
-      <video:description>Scale your agency retainer capacity with white-label video editing pods and dedicated editors.</video:description>
-      <video:content_loc>https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8</video:content_loc>
-      <video:duration>45</video:duration>
-      <video:publication_date>2026-01-15T08:00:00+00:00</video:publication_date>
-      <video:family_friendly>yes</video:family_friendly>
-    </video:video>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>White-Label Video Editing Pods for Marketing Agencies | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/business</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-    <video:video>
-      <video:thumbnail_loc>https://feviqo.com/HEADER-removebg-preview.png</video:thumbnail_loc>
-      <video:title>Performance Video Ads &amp; Founder Content Suite</video:title>
-      <video:description>Turn 1 founder recording into a multi-channel video suite with performance ad creatives.</video:description>
-      <video:content_loc>https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8</video:content_loc>
-      <video:duration>45</video:duration>
-      <video:publication_date>2026-01-15T08:00:00+00:00</video:publication_date>
-      <video:family_friendly>yes</video:family_friendly>
-    </video:video>
-  </url>
-  <url>
-    <loc>https://feviqo.com/case-studies</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-    <video:video>
-      <video:thumbnail_loc>https://feviqo.com/HEADER-removebg-preview.png</video:thumbnail_loc>
-      <video:title>FEVIQO Client Case Studies &amp; Performance Ad Metrics</video:title>
-      <video:description>Case studies showing 3.2x ROAS performance ad creatives and channel growth breakdowns.</video:description>
-      <video:content_loc>https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8</video:content_loc>
-      <video:duration>45</video:duration>
-      <video:publication_date>2026-01-15T08:00:00+00:00</video:publication_date>
-      <video:family_friendly>yes</video:family_friendly>
-    </video:video>
-  </url>
-  <url>
-    <loc>https://feviqo.com/testimonials</loc>
-    <lastmod>2026-09-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://feviqo.com/turkish-drama</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>Performance Ad Creatives &amp; Founder Content Suite | FEVIQO</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://feviqo.com/gallery</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>Video Editing Portfolio &amp; Performance Showreel | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/teskilat</loc>
-    <lastmod>2026-10-04</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.95</priority>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw</image:loc>
+      <image:title>Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-186</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/images/teskialt186thumbnIL.png</image:loc>
+      <image:title>Teskilat Season 7 Episode 2 Urdu Subtitles – Bolum 186</image:title>
+    </image:image>
     <video:video>
       <video:thumbnail_loc>https://feviqo.com/images/teskialt186thumbnIL.png</video:thumbnail_loc>
-      <video:title>Teskilat Season 7 Episode 186 Urdu Subtitles</video:title>
-      <video:description>Watch Teskilat Season 7 Episode 186 in HD Urdu Subtitles with full story recap on FEVIQO.com.</video:description>
+      <video:title>Teskilat Season 7 Episode 2 Urdu Subtitles – Bolum 186</video:title>
+      <video:description>Watch Teskilat Season 7 Episode 2 Urdu Subtitles (Bolum 186) with story recaps on FEVIQO.</video:description>
       <video:content_loc>https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8</video:content_loc>
-      <video:duration>9120</video:duration>
-      <video:publication_date>2026-09-28T08:00:00+00:00</video:publication_date>
+      <video:duration>8700</video:duration>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
     </video:video>
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-187</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw</image:loc>
+      <image:title>Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal</image:title>
+    </image:image>
     <video:video>
       <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw</video:thumbnail_loc>
-      <video:title>Teskilat Season 7 Episode 187 Urdu Subtitles</video:title>
-      <video:description>Watch Teskilat Season 7 Episode 187 in HD Urdu Subtitles with full story recap on FEVIQO.com.</video:description>
+      <video:title>Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187</video:title>
+      <video:description>Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187) with story recaps on FEVIQO.</video:description>
       <video:content_loc>https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8</video:content_loc>
       <video:duration>8700</video:duration>
-      <video:publication_date>2026-10-03T08:00:00+00:00</video:publication_date>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
     </video:video>
   </url>
   <url>
-    <loc>https://feviqo.com/dramas</loc>
-    <lastmod>2026-10-05</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh</image:loc>
+      <image:title>Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-1</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.9</priority>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw</image:loc>
+      <image:title>Gunesin Dogdugu Yer Episode 1 Urdu Subtitles | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-2</loc>
-    <lastmod>2026-10-05</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.9</priority>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/images/teskialt186thumbnIL.png</image:loc>
+      <image:title>Gunesin Dogdugu Yer Episode 2 Urdu Subtitles | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-3</loc>
-    <lastmod>2026-10-07</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj</image:loc>
+      <image:title>Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3</image:title>
+    </image:image>
     <video:video>
       <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj</video:thumbnail_loc>
-      <video:title>Gunesin Dogdugu Yer Episode 3 Urdu Subtitles</video:title>
+      <video:title>Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3</video:title>
       <video:description>Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles with story recap on FEVIQO.com.</video:description>
       <video:content_loc>https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8</video:content_loc>
       <video:duration>8700</video:duration>
-      <video:publication_date>2026-10-15T18:00:00+00:00</video:publication_date>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
     </video:video>
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-4</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV</image:loc>
+      <image:title>Gunesin Dogdugu Yer Episode 4 Urdu Subtitles | Bolum 4</image:title>
+    </image:image>
     <video:video>
       <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV</video:thumbnail_loc>
       <video:title>Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4</video:title>
@@ -236,141 +188,359 @@
     </video:video>
   </url>
   <url>
-    <loc>https://feviqo.com/mehmed-fetihler-sultani</loc>
-    <lastmod>2026-10-07</lastmod>
+    <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-5</loc>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.95</priority>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV</image:loc>
+      <image:title>Gunesin Dogdugu Yer Episode 5 Urdu Subtitles | Bolum 5</image:title>
+    </image:image>
+    <video:video>
+      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV</video:thumbnail_loc>
+      <video:title>Gunesin Dogdugu Yer Episode 5 Urdu Subtitles – Bolum 5</video:title>
+      <video:description>Watch Gunesin Dogdugu Yer Episode 5 in HD Urdu Subtitles with story recap on FEVIQO.com.</video:description>
+      <video:content_loc>https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8</video:content_loc>
+      <video:duration>8700</video:duration>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://feviqo.com/teskilat/episode-188</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>always</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc</image:loc>
+      <image:title>Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</image:title>
+      <image:caption>Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1ikYYiLzzJ8NytHorSVBhRvsXKwGUl1zy</image:loc>
+      <image:title>Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</image:title>
+      <image:caption>Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</image:caption>
+    </image:image>
+    <video:video>
+      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc</video:thumbnail_loc>
+      <video:title>Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</video:title>
+      <video:description>Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188) with story recaps on FEVIQO. Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu.</video:description>
+      <video:content_loc>https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8</video:content_loc>
+      <video:duration>8700</video:duration>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://feviqo.com/teskilat-urdu/episode-188</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>always</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc</image:loc>
+      <image:title>Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</image:title>
+      <image:caption>Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1ikYYiLzzJ8NytHorSVBhRvsXKwGUl1zy</image:loc>
+      <image:title>Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</image:title>
+      <image:caption>Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</image:caption>
+    </image:image>
+    <video:video>
+      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc</video:thumbnail_loc>
+      <video:title>Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu</video:title>
+      <video:description>Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188) with story recaps on FEVIQO. Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu.</video:description>
+      <video:content_loc>https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8</video:content_loc>
+      <video:duration>8700</video:duration>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://feviqo.com/mehmed-fetihler-sultani/episode-88</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</image:loc>
+      <image:title>Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88</image:title>
+    </image:image>
+    <video:video>
+      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</video:thumbnail_loc>
+      <video:title>Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88</video:title>
+      <video:description>Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) on FEVIQO.</video:description>
+      <video:content_loc>https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8</video:content_loc>
+      <video:duration>8700</video:duration>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://feviqo.com/mehmed-fetihler-sultani</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1</image:loc>
+      <image:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/mehmed</loc>
-    <lastmod>2026-10-07</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.95</priority>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1</image:loc>
+      <image:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/mehmed-fetihler-sultani/episode-87</loc>
-    <lastmod>2026-10-07</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</image:loc>
+      <image:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</image:title>
+    </image:image>
     <video:video>
       <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</video:thumbnail_loc>
       <video:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</video:title>
-      <video:description>Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.</video:description>
+      <video:description>Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87) on FEVIQO.</video:description>
       <video:content_loc>https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8</video:content_loc>
-      <video:duration>9000</video:duration>
-      <video:publication_date>2026-10-06T18:00:00+00:00</video:publication_date>
+      <video:duration>8700</video:duration>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
     </video:video>
   </url>
   <url>
     <loc>https://feviqo.com/mehmed/episode-87</loc>
-    <lastmod>2026-10-07</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</image:loc>
+      <image:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</image:title>
+    </image:image>
     <video:video>
       <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</video:thumbnail_loc>
       <video:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</video:title>
-      <video:description>Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.</video:description>
+      <video:description>Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87) on FEVIQO.</video:description>
       <video:content_loc>https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8</video:content_loc>
-      <video:duration>9000</video:duration>
-      <video:publication_date>2026-10-06T18:00:00+00:00</video:publication_date>
+      <video:duration>8700</video:duration>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>yes</video:family_friendly>
     </video:video>
   </url>
   <url>
-    <loc>https://feviqo.com/trending</loc>
-    <lastmod>2026-10-08</lastmod>
+    <loc>https://feviqo.com/dramas</loc>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.95</priority>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2</image:loc>
+      <image:title>Turkish Drama Urdu Subtitles - Watch All Episodes HD | FEVIQO</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://feviqo.com/trending</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1541872703-74c5e44368f9?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>FEVIQO Trending – What People Are Searching, Watching &amp; Talking About</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/h1b-visa-2026-latest-update</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>1.0</priority>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1541872703-74c5e44368f9?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>H-1B Visa 2026: Latest Rules, Fees &amp; What Workers Need to Know | FEVIQO Trending</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/us-immigration-updates-this-week</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>US Immigration Updates: What Changed This Week? | FEVIQO Trending</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/latest-ai-news-major-developments</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>Latest AI News &amp; Major Developments 2026 | FEVIQO Trending</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/tech-job-market-2026-hiring-trends</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>Tech &amp; Remote Job Market 2026: Hiring Trends &amp; Skills | FEVIQO Trending</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/gta-6-leaks-cyberleaks-latest-news</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>1.0</priority>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>GTA 6 Leaks: Cyberleaks Claims &amp; Confirmed Facts | FEVIQO Trending</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/us-deportation-policy-updates-2026</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.95</priority>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>US Deportation &amp; Immigration News 2026: Confirmed vs Proposed Rules | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/cory-wharton-taylor-selfridge-latest-news</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>Cory Wharton &amp; Taylor Selfridge: Latest Updates &amp; News | FEVIQO Trending</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/mlb-154-game-season-proposal-latest</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1508802913482-f3da9e1a55e7?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>MLB 154-Game Season Proposal: Schedule Changes &amp; Analysis | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/james-talarico-campaign-texas-senate</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>James Talarico Campaign News &amp; Texas Senate Race Updates | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/celine-dion-paris-residency-2026-updates</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>Celine Dion Paris Residency 2026: Concert News &amp; Updates | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/ronald-acuna-jr-injury-recovery-mlb-updates</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1562077772-3bd90403f7f0?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>Ronald Acuña Jr. Injury Recovery &amp; Braves MLB Return News | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/terence-atmane-tennis-atp-tour-latest</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>Terence Atmane Tennis News &amp; ATP Tour Ranking Results | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/microsoft-stock-msft-ai-cloud-revenue</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.95</priority>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>Microsoft Stock (MSFT) News: Azure AI Revenue &amp; Analysis | FEVIQO</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/business-startup-funding-trends</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.85</priority>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>Business &amp; Startup Funding Trends 2026 | FEVIQO Trending</image:title>
+    </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/trending/kaytron-allen</loc>
-    <lastmod>2026-10-08</lastmod>
+    <lastmod>2026-10-11</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.95</priority>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://images.unsplash.com/photo-1566577739112-5180d4bf9390?q=80&w=1200&auto=format&fit=crop</image:loc>
+      <image:title>Kaytron Allen: Latest News, Stats, Career and Updates | FEVIQO</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://feviqo.com/pricing</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>Transparent Flat-Rate Pricing | FEVIQO Unlimited Video Editing</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://feviqo.com/about</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>About FEVIQO Studio | Performance Creative &amp; Video Editing Studio</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://feviqo.com/booking</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>Book a Creative Strategy Call | FEVIQO Studio</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://feviqo.com/admin</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/feviqo1.png</image:loc>
+      <image:title>FEVIQO Admin Portal</image:title>
+    </image:image>
   </url>
 </urlset>

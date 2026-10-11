@@ -238,6 +238,70 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },
+  '/gunesin-dogdugu-yer/episode-5': {
+    path: '/gunesin-dogdugu-yer/episode-5',
+    pageName: 'Gunesin Dogdugu Yer Episode 5 Watch Page',
+    seoTitle: 'Gunesin Dogdugu Yer Episode 5 Urdu Subtitles | Bolum 5',
+    metaDescription: 'Watch Gunesin Dogdugu Yer Episode 5 Urdu Subtitles (Bolum 5) in HD on FEVIQO. High-stakes family secrets and dramatic betrayals reach an explosive peak in the new episode.',
+    focusKeyword: 'Gunesin Dogdugu Yer Episode 5 Urdu Subtitles',
+    secondaryKeywords: [
+      'Gunesin Dogdugu Yer Episode 5', 'Gunesin Dogdugu Yer Episode 5 Urdu Subtitles', 'Gunesin Dogdugu Yer Bolum 5', 'Gunesin Dogdugu Yer Bolum 5 Urdu Subtitles', 'Gunesin Dogdugu Yer Episode 5 Urdu', 'Gunesin Dogdugu Yer Season 1 Episode 5', 'Gunesin Dogdugu Yer Season 1 Episode 5 Urdu Subtitles', 'Gunesin Dogdugu Yer Urdu Subtitles', 'Gunesin Dogdugu Yer English Subtitles', 'Gunesin Dogdugu Yer Latest Episode', 'Gunesin Dogdugu Yer Full Episode', 'Gunesin Dogdugu Yer Watch Online', 'Gunesin Dogdugu Yer HD', 'Gunesin Dogdugu Yer 1080p', 'Gunesin Dogdugu Yer Turkish Drama', 'Gunesin Dogdugu Yer Series Urdu Subtitles', 'Gunesin Dogdugu Yer Turkish Series', 'Gunesin Dogdugu Yer Episode 5 Watch Online', 'Gunesin Dogdugu Yer Episode 5 HD', 'Gunesin Dogdugu Yer Episode 5 Online', 'Gunesin Dogdugu Yer New Episode', 'Gunesin Dogdugu Yer Bolum 5 Urdu', 'Episode 5 Urdu Subtitles', 'Bolum 5 Urdu Subtitles', 'Turkish Drama Episode 5 Urdu Subtitles', 'FEVIQO Gunesin Dogdugu Yer', 'FEVIQO Episode 5', 'FEVIQO Urdu Subtitles'
+    ],
+    canonicalUrl: 'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
+    ogTitle: 'Gunesin Dogdugu Yer Episode 5 Urdu Subtitles | Bolum 5',
+    ogDescription: 'Watch Gunesin Dogdugu Yer Episode 5 Urdu Subtitles (Bolum 5) in HD on FEVIQO. High-stakes family secrets and dramatic betrayals reach an explosive peak in the new episode.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
+  '/teskilat/episode-188': {
+    path: '/teskilat/episode-188',
+    pageName: 'Teskilat Episode 188 Watch Page',
+    seoTitle: 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188',
+    metaDescription: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188) in HD on FEVIQO. Altay launches the final operation against enemy networks as Ender rescue mission reaches a climax.',
+    focusKeyword: 'Teskilat Season 7 Episode 4 Urdu Subtitles',
+    secondaryKeywords: [
+      'Teskilat Season 7 Episode 4', 'Teskilat Season 7 Episode 4 Urdu Subtitles', 'Teskilat Bolum 188', 'Teskilat Bolum 188 Urdu Subtitles', 'Teskilat Episode 188 Urdu', 'Teskilat Season 7 Episode 188', 'Teskilat Season 7 Episode 188 Urdu Subtitles', 'Teskilat Urdu Subtitles', 'Teskilat English Subtitles', 'Teskilat Latest Episode', 'Teskilat Full Episode', 'Teskilat Watch Online', 'Teskilat HD', 'Teskilat 1080p', 'Teskilat Turkish Drama', 'Teskilat Series Urdu Subtitles', 'Teskilat Turkish Series', 'Teskilat Episode 188 Watch Online', 'Teskilat Episode 188 HD', 'Teskilat Episode 188 Online', 'Teskilat New Episode', 'Teskilat Bolum 188 Urdu', 'Episode 188 Urdu Subtitles', 'Bolum 188 Urdu Subtitles', 'Turkish Drama Episode 188 Urdu Subtitles', 'Turkish Series Episode 188 Urdu Subtitles', 'Turkish Dramas Urdu Subtitles', 'Turkish Series with Urdu Subtitles', 'Watch Turkish Dramas Online', 'FEVIQO Teskilat', 'FEVIQO Episode 188', 'FEVIQO Urdu Subtitles', 'FEVIQO Turkish Dramas', 'FEVIQO Turkish Series', 'FEVIQO', 'Teskilat FEVIQO', 'Teskilat Episode 188 FEVIQO', 'watch Teskilat on FEVIQO', 'Turkish action drama Urdu subtitles', 'Turkish drama streaming', 'HD Turkish series', 'Teskilat Season 7 Episode 3 Urdu Subtitles', 'Teskilat Season 7 Episode 2 Urdu Subtitles', 'Teskilat Season 7 Episode 1 Urdu Subtitles', 'Mehmed Fetihler Sultani', 'Kurulus Osman', 'Salahuddin Ayyubi', 'Turkish Dramas with Urdu Subtitles'
+    ],
+    canonicalUrl: 'https://feviqo.com/teskilat/episode-188',
+    ogTitle: 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188',
+    ogDescription: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188) in HD on FEVIQO. Altay launches the final operation against enemy networks as Ender rescue mission reaches a climax.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
+  '/teskilat-urdu/episode-188': {
+    path: '/teskilat-urdu/episode-188',
+    pageName: 'Teskilat Urdu Episode 188 Watch Page',
+    seoTitle: 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188',
+    metaDescription: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188) in HD on FEVIQO. Altay launches the final operation against enemy networks as Ender rescue mission reaches a climax.',
+    focusKeyword: 'Teskilat Season 7 Episode 4 Urdu Subtitles',
+    secondaryKeywords: [
+      'Teskilat Season 7 Episode 4', 'Teskilat Season 7 Episode 4 Urdu Subtitles', 'Teskilat Bolum 188', 'Teskilat Bolum 188 Urdu Subtitles', 'Teskilat Episode 188 Urdu', 'Teskilat Season 7 Episode 188', 'Teskilat Season 7 Episode 188 Urdu Subtitles', 'Teskilat Urdu Subtitles', 'Teskilat English Subtitles', 'Teskilat Latest Episode', 'Teskilat Full Episode', 'Teskilat Watch Online', 'Teskilat HD', 'Teskilat 1080p', 'Teskilat Turkish Drama', 'Teskilat Series Urdu Subtitles', 'Teskilat Turkish Series', 'Teskilat Episode 188 Watch Online', 'Teskilat Episode 188 HD', 'Teskilat Episode 188 Online', 'Teskilat New Episode', 'Teskilat Bolum 188 Urdu', 'Episode 188 Urdu Subtitles', 'Bolum 188 Urdu Subtitles', 'Turkish Drama Episode 188 Urdu Subtitles', 'Turkish Series Episode 188 Urdu Subtitles', 'Turkish Dramas Urdu Subtitles', 'Turkish Series with Urdu Subtitles', 'Watch Turkish Dramas Online', 'FEVIQO Teskilat', 'FEVIQO Episode 188', 'FEVIQO Urdu Subtitles'
+    ],
+    canonicalUrl: 'https://feviqo.com/teskilat-urdu/episode-188',
+    ogTitle: 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188',
+    ogDescription: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188) in HD on FEVIQO. Altay launches the final operation against enemy networks as Ender rescue mission reaches a climax.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
+  '/mehmed-fetihler-sultani/episode-88': {
+    path: '/mehmed-fetihler-sultani/episode-88',
+    pageName: 'Mehmed Fetihler Sultani Episode 88 Watch Page',
+    seoTitle: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
+    metaDescription: 'Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.',
+    focusKeyword: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles',
+    secondaryKeywords: [
+      'Mehmed Fetihler Sultani Episode 88', 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 88', 'Mehmed Bolum 88 Urdu Subtitles', 'Mehmed Episode 88 Urdu', 'Mehmed Season 4 Episode 88', 'Mehmed Season 4 Episode 88 Urdu Subtitles', 'FEVIQO Mehmed', 'FEVIQO Episode 88'
+    ],
+    canonicalUrl: 'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
+    ogTitle: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
+    ogDescription: 'Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
   '/mehmed-fetihler-sultani': {
     path: '/mehmed-fetihler-sultani',
     pageName: 'Mehmed Fetihler Sultani Hub Page',
@@ -665,3 +729,11 @@ export function saveSEOConfigForPath(pathname: string, config: PageSEOConfig): v
     console.error('Failed to save SEO config', e);
   }
 }
+
+// Export automated search engine re-indexing pinger functions
+export {
+  pingSearchEnginesForReindexing,
+  triggerEpisodeReindexingPing,
+  getSearchEnginePingHistory
+} from './seoIndexingService';
+export type { SearchEnginePingOptions, SearchEnginePingResult } from './seoIndexingService';
