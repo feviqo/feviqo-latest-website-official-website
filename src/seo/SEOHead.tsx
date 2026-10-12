@@ -112,15 +112,22 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
       });
     }
 
-    if (config.schemaType === 'TVEpisode' || pathname === '/teskilat/episode-186' || pathname === '/teskilat/episode-187') {
+    if (config.schemaType === 'TVEpisode' || pathname.includes('/teskilat/episode-') || pathname.includes('/teskilat-urdu/episode-')) {
+      const is188 = pathname.includes('188');
       const is187 = pathname.includes('187');
-      const num = is187 ? "187" : "186";
-      const subNum = is187 ? "3" : "2";
-      const date = is187 ? "2026-10-03T08:00:00+00:00" : "2026-09-28T08:00:00+00:00";
-      const dur = is187 ? "PT2H25M" : "PT2H32M";
-      const thumb = is187 ? "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw" : "https://feviqo.com/images/teskialt186thumbnIL.png";
-      const episodeName = `Teskilat Season 7 Episode ${subNum} Urdu Subtitles – Bolum ${num}`;
-      const episodeDesc = is187 
+      const num = is188 ? "188" : is187 ? "187" : "186";
+      const subNum = is188 ? "4" : is187 ? "3" : "2";
+      const date = is188 ? "2026-10-11T08:00:00+00:00" : is187 ? "2026-10-03T08:00:00+00:00" : "2026-09-28T08:00:00+00:00";
+      const dur = is188 ? "PT2H20M" : is187 ? "PT2H25M" : "PT2H32M";
+      const thumb = is188 
+        ? "https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc" 
+        : is187 
+        ? "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw" 
+        : "https://feviqo.com/images/teskialt186thumbnIL.png";
+      const episodeName = `Teskilat Season 7 Episode ${subNum} Urdu Subtitles - Bolum ${num}`;
+      const episodeDesc = is188
+        ? "Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya."
+        : is187 
         ? "Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in."
         : "Watch Teskilat Season 7 Episode 2 Urdu Subtitles (Bolum 186). Stream full episode with story recap on FEVIQO.com.";
 
@@ -147,12 +154,10 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "@type": "VideoObject",
         "@id": `https://feviqo.com/teskilat/episode-${num}#video`,
         "name": `Teskilat Season 7 Episode ${subNum} Urdu Subtitles - Bolum ${num}`,
-        "description": is187 
-          ? "Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in."
-          : "Watch Teskilat Season 7 Episode 2 Urdu Subtitles (Bolum 186). Stream full episode with story recap on FEVIQO.com.",
+        "description": episodeDesc,
         "thumbnailUrl": [thumb],
         "uploadDate": date,
-        "contentUrl": is187 ? "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8" : "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
+        "contentUrl": is188 ? "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8" : is187 ? "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8" : "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
         "embedUrl": `https://feviqo.com/teskilat/episode-${num}`,
         "duration": dur,
         "isFamilyFriendly": true,
@@ -160,6 +165,16 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "publisher": {
           "@id": "https://feviqo.com/#organization"
         }
+      });
+
+      schemaGraph.push({
+        "@type": "ImageObject",
+        "@id": `https://feviqo.com/teskilat/episode-${num}#image`,
+        "url": thumb,
+        "contentUrl": thumb,
+        "name": is188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Episode ${num} Urdu Subtitles HD Poster Thumbnail`,
+        "caption": is188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Episode ${num} Urdu Subtitles HD Thumbnail`,
+        "description": episodeDesc
       });
     }
 

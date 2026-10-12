@@ -231,18 +231,18 @@ const EPISODE_188: TeskilatEpisode = {
   episodeNumber: 188,
   seasonNumber: 7,
   titleUrdu: 'تشکیلات سیزن 7 قسط 188 اردو ترجمہ کے ساتھ',
-  titleEnglish: 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188',
+  titleEnglish: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue',
   releaseDate: 'October 2026',
   duration: '2h 25m',
   thumbnailUrl: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
   directoryThumbnailUrl: 'https://lh3.googleusercontent.com/d/1ikYYiLzzJ8NytHorSVBhRvsXKwGUl1zy',
   videoUrl: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8',
   storyRecapUrdu: `تشکیلات سیزن 7 قسط 188 (بولم 188) میں الپائے اور انٹیلی جنس ٹیم دشمن کے سب سے بڑے نیٹ ورک پر آخری وار کرنے جا رہی ہے۔ عذرا کی چالوں کے پیچھے کی اصل سچائی سامنے آتی ہے جبکہ اینڈر کو بچانے کا یہ حتمی آپریشن ایک زبردست موڑ اختیار کر جاتا ہے۔ مکمل قسط ایچ ڈی اردو سب ٹائٹلز کے ساتھ فیویکو پر دیکھیں۔`,
-  storyRecapEnglish: `Teskilat Season 7 Episode 4 Urdu Subtitles – Bolum 188: Final Intelligence Strike
+  storyRecapEnglish: `Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.
 
-Teskilat Season 7 Episode 4 (Bolum 188) brings an explosive continuation to Altay's high-stakes mission. With the Organization closing in on enemy operatives, Altay faces the ultimate tactical challenge to bring Ender home and neutralize the deep-cover threats.
+Teskilat Season 7 Episode 4 (Bolum 188) brings an explosive continuation to Altay's high-stakes mission. With the Organization closing in on enemy operatives, Altay faces the ultimate tactical challenge to bring Ender home and neutralize deep-cover threats.
 
-Watch Teskilat Season 7 Episode 4 with Urdu Subtitles directly on this page on FEVIQO.`,
+Target Search Keywords: Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, TRT1 Teskilat, Teskilat Season 7 Episode 4 Urdu Subtitles, Teskilat Episode 188 Urdu Subtitles, Teskilat Bolum 188 Urdu, Teskilat 188 Urdu, Altay Ender Episode 188, Azra Teskilat Season 7, Korkut Yahya Episode 188, Ender Rescue Teskilat.`,
   views: '198,400',
   isLatest: true
 };
@@ -375,13 +375,18 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.episodeNumber;
-      const pageTitle = `Teskilat Season 7 Episode ${num} Urdu Subtitles - FEVIQO.com`;
-      const metaDesc = num === 187
-        ? `Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teskilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.com.`
-        : `Watch Teskilat Season 7 Episode ${num} with Urdu Subtitles (تشکیلات سیزن 7 قسط ${num}). Enjoy full story recaps and stream high-definition episodes processed by FEVIQO.com.`;
-      const keywords = num === 187
-        ? `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat episode 187 urdu subtitles, teskilat 187, teskilat 187 urdu, teskilat, teskilat urdu, teskilat 187 urdu subtitles, teskilat season 7 urdu, watch teskilat season 7 episode 187 urdu, teskilat episode 187 in urdu, teskilat 187 urdu, teskilat episode 187 urdu subtitles full`
-        : `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat ${num}, teskilat ${num} urdu, teskilat season 7 episode ${num} urdu subtitles, teskilat episode ${num} urdu, teskilat episode ${num} urdu subtitles full, teskilat episode ${num} urdu subtitles full episode, teskilat urdu ${num}, teskilat season 7 ${num}, teskialt new season, teskilat urdu, unlimited video editing, flat-rate video editing, video editing agency, professional video editors, premium youtube editing services, outsource video editing, white-label video production`;
+      let pageTitle = `Teskilat Season 7 Episode ${num} Urdu Subtitles - FEVIQO.com`;
+      let metaDesc = `Watch Teskilat Season 7 Episode ${num} with Urdu Subtitles (تشکیلات سیزن 7 قسط ${num}). Stream HD episodes processed on FEVIQO.com.`;
+      let keywords = `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat ${num}, teskilat ${num} urdu, teskilat season 7 episode ${num} urdu subtitles`;
+
+      if (num === 188) {
+        pageTitle = `Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue | FEVIQO`;
+        metaDesc = `Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.`;
+        keywords = `Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, Turkish Action Series Urdu, Turkish Intelligence Series, TRT1 Teskilat, Teskilat New Season Urdu, Teskilat NiaziPlay, Teskilat Season 7 Episode 4 Urdu Subtitles, Teskilat Episode 188 Urdu Subtitles, Teskilat Bolum 188 Urdu, Teskilat Season 7 Urdu, Teskilat Episode 4 Urdu, Teskilat 188 Urdu, Altay Ender Episode 188, Azra Teskilat Season 7, Korkut Yahya Episode 188, Bahar Yahya Teskilat, Ender Rescue Teskilat, TRT1 Teskilat Episode 188, Salahuddin Ayyubi Series, Kurulus Osman Season 5 in Urdu Subtitles, Kurulus Osman Season 6 Urdu & English Subtitles, Teskilat Season 4 Urdu Subtitles, Mehmed: Fetihler Sultani - Urdu & English Subtitles, Al Sancak | Sipahi, Alparslan: Büyük Selçuklu, Ates Kuslari, Barbarosslar, Destan, Ertugrul Ghazi, Keiki Sniper, Kosem Sultan, Mendirman Jaloliddin Khawarzam, Mevlana Celaleddin Rumi, Soz Series, Sultan Abdulhamid, Sultan Mehmat Fatih, The Pit (Cukur), Turkish Dramas, Yunus Emre, Turkish series with Urdu subtitles, watch Turkish dramas online, historical Turkish series in Urdu, Ottoman Empire series with English subtitles, Islamic history dramas in Urdu, Turkish action series with Urdu dubbing, latest Turkish series 2024, Urdu dubbed Turkish historical dramas, stream Turkish series in HD, family-friendly Turkish dramas, Turkish war series with Urdu subtitles, best Turkish series to watch online, Turkish dramas based on true stories, top-rated Turkish series in Urdu, Turkish romantic dramas with English subtitles, Turkish thriller series in Urdu, online streaming of Turkish historical series, Turkish series with dual subtitles, popular Turkish dramas in Pakistan, Turkish series episodes in Urdu, best streaming platforms for Turkish series, online education games for kids, top adventure games for adults, fitness and health articles, latest technology news articles, financial advice for families, home improvement articles, educational articles for students, html5 games, games for children`;
+      } else if (num === 187) {
+        metaDesc = `Watch Teskilat Season 7 Episode 187 Urdu subtitles full episode. Stream Teskilat episode 187 Urdu subtitles watch online with story recaps on FEVIQO.com.`;
+        keywords = `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat episode 187 urdu subtitles, teskilat 187, teskilat 187 urdu, teskilat, teskilat urdu, teskilat 187 urdu subtitles, teskilat season 7 urdu, watch teskilat season 7 episode 187 urdu, teskilat episode 187 in urdu, teskilat 187 urdu, teskilat episode 187 urdu subtitles full`;
+      }
       
       document.title = pageTitle;
 
@@ -1379,33 +1384,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
               </div>
 
-              {/* 10. Search Keyword Tags & Search Engine Cloud (Invisible on UI, fully crawled by Googlebot) */}
+              {/* 10. Search Keyword Tags & Search Engine Cloud (Fully crawled by Googlebot) */}
               <div className="sr-only" aria-hidden="true">
-                <h3>Popular Search Queries & Tags</h3>
+                <h3>Popular Search Queries &amp; Target Keywords</h3>
                 <p>
-                  Users found this page using search keywords: teskilat episodes {selectedEpisode.episodeNumber} urdu, teskilat {selectedEpisode.episodeNumber}, teskilat {selectedEpisode.episodeNumber} urdu, teskilat urdu, watch teskilat {selectedEpisode.episodeNumber} urdu subtitles, and teskilat urdu subtitles online.
-                </p>
-                {/* Competitor Mirroring Tags (Guarantees Google Index Matching) */}
-                <p>
-                  teskilat {selectedEpisode.episodeNumber} urdu,
-                  teksilat {selectedEpisode.episodeNumber},
-                  teskilat episode {selectedEpisode.episodeNumber},
-                  teskilat season 7 episode {selectedEpisode.episodeNumber},
-                  teskilat {selectedEpisode.episodeNumber} urdu subtitles,
-                  teksilat {selectedEpisode.episodeNumber} urdu,
-                  teksilat episode {selectedEpisode.episodeNumber},
-                  teksilat season 7 episode {selectedEpisode.episodeNumber},
-                  teskilat {selectedEpisode.episodeNumber} urdu subtitles online,
-                  watch teskilat {selectedEpisode.episodeNumber} urdu subtitles,
-                  teskilat season 7 episode {selectedEpisode.episodeNumber === 187 ? "3" : "2"} urdu subtitles,
-                  teskilat season 7 episode {selectedEpisode.episodeNumber === 187 ? "3" : "2"} urdu subtitles – bolum {selectedEpisode.episodeNumber},
-                  teskilat season 7,
-                  teskilat season 7 urdu,
-                  teskilat season 7 urdu subtitles,
-                  niaziplay teskilat {selectedEpisode.episodeNumber},
-                  niaziplay teskilat season 7,
-                  turkish series urdu subtitles,
-                  trt1 teskilat episode {selectedEpisode.episodeNumber} urdu subtitles
+                  Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, Turkish Action Series Urdu, Turkish Intelligence Series, TRT1 Teskilat, Teskilat New Season Urdu, Teskilat NiaziPlay, Teskilat Season 7 Episode 4 Urdu Subtitles, Teskilat Episode 188 Urdu Subtitles, Teskilat Bolum 188 Urdu, Teskilat Season 7 Urdu, Teskilat Episode 4 Urdu, Teskilat 188 Urdu, Altay Ender Episode 188, Azra Teskilat Season 7, Korkut Yahya Episode 188, Bahar Yahya Teskilat, Ender Rescue Teskilat, Turkish Series Urdu Subtitles, Teskilat NiaziPlay, TRT1 Teskilat Episode 188, Salahuddin Ayyubi Series, Kurulus Osman Season 5 in Urdu Subtitles, Kurulus Osman Season 6 Urdu &amp; English Subtitles, Teskilat Season 4 Urdu Subtitles, Mehmed: Fetihler Sultani - Urdu &amp; English Subtitles, Al Sancak | Sipahi, Alparslan: Büyük Selçuklu, Ates Kuslari, Barbarosslar, Destan, Ertugrul Ghazi, Keiki Sniper, Kosem Sultan, Mendirman Jaloliddin Khawarzam, Mevlana Celaleddin Rumi, Soz Series, Sultan Abdulhamid, Sultan Mehmat Fatih, The Pit (Cukur), Turkish Dramas, Yunus Emre, Turkish series with Urdu subtitles, watch Turkish dramas online, historical Turkish series in Urdu, Ottoman Empire series with English subtitles, Islamic history dramas in Urdu, Turkish action series with Urdu dubbing, latest Turkish series 2024, Urdu dubbed Turkish historical dramas, stream Turkish series in HD, family-friendly Turkish dramas, Turkish war series with Urdu subtitles, best Turkish series to watch online, Turkish dramas based on true stories, top-rated Turkish series in Urdu, Turkish romantic dramas with English subtitles, Turkish thriller series in Urdu, online streaming of Turkish historical series, Turkish series with dual subtitles, popular Turkish dramas in Pakistan, Turkish series episodes in Urdu, best streaming platforms for Turkish series, online education games for kids, top adventure games for adults, fitness and health articles, latest technology news articles, financial advice for families, home improvement articles, educational articles for students, html5 games, games for children.
                 </p>
               </div>
 

@@ -112,9 +112,9 @@ export function generateSitemapXml(): string {
       };
     } else if (routeKey === '/teskilat/episode-188' || routeKey === '/teskilat-urdu/episode-188') {
       videoInfo = {
-        thumbnail: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
-        title: 'Teskilat Season 7 Episode 4 Urdu Subtitles – Bolum 188',
-        description: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188) with story recaps on FEVIQO.',
+        thumbnail: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
+        title: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue',
+        description: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
         contentLoc: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8'
       };
     } else if (routeKey === '/mehmed-fetihler-sultani/episode-88') {

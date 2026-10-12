@@ -169,6 +169,12 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
             "episodeNumber": "187",
             "name": "Teskilat Episode 187 Urdu Subtitles",
             "url": "https://feviqo.com/teskilat/episode-187"
+          },
+          {
+            "@type": "TVEpisode",
+            "episodeNumber": "188",
+            "name": "Teskilat Episode 188 Urdu Subtitles",
+            "url": "https://feviqo.com/teskilat/episode-188"
           }
         ]
       }
@@ -278,6 +284,58 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "name": "Teskilat Episode 187 Urdu Subtitles HD Poster Thumbnail",
       "caption": "Teskilat Episode 187 Urdu Subtitles HD Thumbnail - Bolum 187",
       "description": "Official Teskilat Episode 187 Urdu Subtitles HD Thumbnail image."
+    });
+  }
+
+  if (cleanPath === '/teskilat/episode-188' || cleanPath === '/teskilat-urdu/episode-188') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVEpisode",
+      "@id": "https://feviqo.com/teskilat/episode-188#episode",
+      "url": "https://feviqo.com/teskilat/episode-188",
+      "name": "Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue | FEVIQO",
+      "episodeNumber": "188",
+      "seasonNumber": "7",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "description": "Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.",
+      "image": "https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc",
+      "mainEntityOfPage": "https://feviqo.com/teskilat/episode-188",
+      "isPartOf": {
+        "@type": "TVSeries",
+        "name": "Teskilat",
+        "url": "https://feviqo.com/teskilat"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "VideoObject",
+      "@id": "https://feviqo.com/teskilat/episode-188#video",
+      "name": "Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue | FEVIQO",
+      "description": "Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.",
+      "thumbnailUrl": [
+        "https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc"
+      ],
+      "uploadDate": "2026-10-11T08:00:00+00:00",
+      "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",
+      "embedUrl": "https://feviqo.com/teskilat/episode-188",
+      "duration": "PT2H20M",
+      "isFamilyFriendly": true,
+      "mainEntityOfPage": "https://feviqo.com/teskilat/episode-188",
+      "publisher": {
+        "@id": "https://feviqo.com/#organization"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "ImageObject",
+      "@id": "https://feviqo.com/teskilat/episode-188#image",
+      "url": "https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc",
+      "contentUrl": "https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc",
+      "name": "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu",
+      "caption": "Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu",
+      "description": "Official Teskilat Episode 188 Urdu Subtitles HD Thumbnail image."
     });
   }
 
