@@ -192,6 +192,16 @@ app.get('/sitemap.xml', (_req, res) => {
   }
 });
 
+app.get('/ads.txt', (_req, res) => {
+  const adsPath = path.join(process.cwd(), 'public', 'ads.txt');
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  if (fs.existsSync(adsPath)) {
+    return res.sendFile(adsPath);
+  }
+  return res.status(200).send("google.com, pub-4691262355758432, DIRECT, f08c47fec0942fa0\n");
+});
+
 app.use(express.static(path.join(process.cwd(), 'public')));
 
 // Direct video upload to public/videos (Supports minimum 900MB up to 2048MB / 2GB)
