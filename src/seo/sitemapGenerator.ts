@@ -110,7 +110,7 @@ export function generateSitemapXml(): string {
         description: 'Watch Gunesin Dogdugu Yer Episode 5 in HD Urdu Subtitles with story recap on FEVIQO.com.',
         contentLoc: 'https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8'
       };
-    } else if (routeKey === '/teskilat/episode-188' || routeKey === '/teskilat-urdu/episode-188') {
+    } else if (routeKey === '/teskilat/episode-188') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
         title: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue',
@@ -138,7 +138,7 @@ export function generateSitemapXml(): string {
         description: 'Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles with story recap on FEVIQO.com.',
         contentLoc: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8'
       };
-    } else if (routeKey === '/mehmed-fetihler-sultani/episode-87' || routeKey === '/mehmed/episode-87') {
+    } else if (routeKey === '/mehmed-fetihler-sultani/episode-87') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
         title: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',

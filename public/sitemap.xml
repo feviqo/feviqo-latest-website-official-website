@@ -522,6 +522,26 @@
     </image:image>
   </url>
   <url>
+    <loc>https://feviqo.com/case-studies</loc>
+    <lastmod>2026-10-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>Video Editing Case Studies &amp; Brand Results | FEVIQO Studio</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://feviqo.com/testimonials</loc>
+    <lastmod>2026-10-12</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://feviqo.com/HEADER-removebg-preview.png</image:loc>
+      <image:title>Client Reviews &amp; Creator Testimonials | FEVIQO Studio</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://feviqo.com/admin</loc>
     <lastmod>2026-10-12</lastmod>
     <changefreq>daily</changefreq>

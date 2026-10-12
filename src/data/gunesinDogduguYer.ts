@@ -123,5 +123,43 @@ The climax of Gunesin Dogdugu Yer Episode 3 sets the stage for a dangerous intel
       }
     ],
     season: 1
+  },
+  {
+    number: 2,
+    slug: "episode-2",
+    title: "Gunesin Dogdugu Yer Episode 2 Urdu Subtitles",
+    airDate: "2026-10-08T18:00:00+00:00",
+    thumbnail: "https://feviqo.com/images/teskialt186thumbnIL.png",
+    duration: "2h 20m",
+    shortSummary: "Watch Gunesin Dogdugu Yer Episode 2 with Urdu Subtitles (Bolum 2) in HD on FEVIQO. Suspense builds as alliances are tested and hidden secrets come to light.",
+    recap: `Gunesin Dogdugu Yer Episode 2 (Bolum 2) continues the dramatic saga with high tension and gripping developments. Secrets from the past begin to unravel as key families face unexpected challenges.
+
+In this chapter, the narrative uncovers hidden motives while main characters fight to protect their loved ones. High-definition streaming with clear Urdu subtitles available exclusively on FEVIQO.`,
+    embeds: [
+      {
+        label: "Server 1 (Fast HLS 1080p)",
+        src: "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8"
+      }
+    ],
+    season: 1
+  },
+  {
+    number: 1,
+    slug: "episode-1",
+    title: "Gunesin Dogdugu Yer Episode 1 Urdu Subtitles",
+    airDate: "2026-10-01T18:00:00+00:00",
+    thumbnail: "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
+    duration: "2h 18m",
+    shortSummary: "Watch Gunesin Dogdugu Yer Episode 1 Series Premiere with Urdu Subtitles (Bolum 1) in HD on FEVIQO.",
+    recap: `Gunesin Dogdugu Yer Episode 1 (Bolum 1) introduces viewers to a world of passion, secrets, and high-stakes family drama. Set against breathtaking landscapes, the premiere episode establishes the core characters and the rivalries that drive the series.
+
+Stream Gunesin Dogdugu Yer Episode 1 with full Urdu Subtitles in 1080p HD on FEVIQO.com.`,
+    embeds: [
+      {
+        label: "Server 1 (Fast HLS 1080p)",
+        src: "https://stream.mux.com/ff2G9XfcMerNcnD02iPnysGkByH6SMTSa7p2yP01DuzT4.m3u8"
+      }
+    ],
+    season: 1
   }
 ];

@@ -42,7 +42,44 @@ import {
 } from './src/seo/seoIndexingService';
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+
+// Canonical 301 Redirect Middleware: Enforce feviqo.com primary domain in production only
+app.use((req, res, next) => {
+  const host = (req.headers.host || '').toLowerCase();
+  const rawPath = (req.path || '/').toLowerCase();
+
+  // 1. Primary domain & HTTPS enforcement for live production domain
+  if (
+    host === 'www.feviqo.com' || 
+    host === 'www.feviqo.co' || 
+    host === 'feviqo.co'
+  ) {
+    return res.redirect(301, `https://feviqo.com${req.url}`);
+  }
+
+  // 2. Canonical URL 301 Redirects for alias routes (production / feviqo.com requests only)
+  if (process.env.NODE_ENV === 'production' || host.includes('feviqo.com')) {
+    const aliasMap: Record<string, string> = {
+      '/mehmed': '/mehmed-fetihler-sultani',
+      '/mehmed/': '/mehmed-fetihler-sultani',
+      '/mehmed/episode-87': '/mehmed-fetihler-sultani/episode-87',
+      '/teskilat-urdu/episode-188': '/teskilat/episode-188',
+      '/teskilat-188': '/teskilat/episode-188',
+      '/teskilat-187': '/teskilat/episode-187',
+      '/teskilat-186': '/teskilat/episode-186',
+      '/episode-188': '/teskilat/episode-188',
+      '/episode-187': '/teskilat/episode-187',
+      '/episode-186': '/teskilat/episode-186',
+    };
+
+    if (aliasMap[rawPath]) {
+      return res.redirect(301, aliasMap[rawPath]);
+    }
+  }
+
+  next();
+});
 
 // Enable Gzip/Brotli HTTP response compression for lightning-fast site loads
 app.use(compression());
@@ -51,7 +88,7 @@ app.use(compression());
 app.use(express.json({ limit: '2048mb' }));
 app.use(express.urlencoded({ limit: '2048mb', extended: true }));
 
-// Enable global CORS & cellular network compatibility headers (fixes ERR_QUIC_PROTOCOL_ERROR on Jazz, Ufone, Zong)
+// Enable global CORS & cellular network compatibility headers
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -59,8 +96,6 @@ app.use((req, res, next) => {
   
   // Explicitly clear QUIC/UDP advertisement so mobile browsers use stable TCP/TLS HTTP/2
   res.setHeader('Alt-Svc', 'clear');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Keep-Alive', 'timeout=30, max=100');
 
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
@@ -2346,31 +2381,32 @@ try {
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
+      server: { middlewareMode: true, host: true, allowedHosts: true },
+      appType: 'custom',
     });
-    app.use(async (req, res, next) => {
-      // Allow Vite to handle module requests, scripts, styles, source code, and API/upload endpoints
-      const isInternalModule = req.path.startsWith('/@') || 
-                               req.path.startsWith('/src') || 
-                               req.path.startsWith('/node_modules') || 
-                               req.path.startsWith('/api') || 
-                               req.path.startsWith('/uploads') || 
-                               req.path.startsWith('/videos') || 
-                               /\.[a-zA-Z0-9]+$/i.test(req.path);
-
-      if (req.method === 'GET' && !isInternalModule) {
-        try {
-          const indexPath = path.join(process.cwd(), 'index.html');
-          let rawHtml = fs.readFileSync(indexPath, 'utf-8');
-          rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
-          const seoHtml = transformHTMLForRoute(rawHtml, req.path);
-          return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
-        } catch (e) {
-          return next(e);
-        }
+    app.use(vite.middlewares);
+    app.use('*', async (req, res, next) => {
+      if (
+        (req.method !== 'GET' && req.method !== 'HEAD') || 
+        req.path.startsWith('/api') || 
+        req.path.startsWith('/uploads') || 
+        req.path.startsWith('/videos') ||
+        (req.path.includes('.') && !req.path.endsWith('.html'))
+      ) {
+        return next();
       }
-      vite.middlewares(req, res, next);
+      try {
+        const indexPath = path.join(process.cwd(), 'index.html');
+        let rawHtml = fs.readFileSync(indexPath, 'utf-8');
+        rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
+        const seoHtml = transformHTMLForRoute(rawHtml, req.path);
+        const canonicalUrl = `https://feviqo.com${req.path === '/' ? '/' : req.path}`;
+        res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
+        return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
     });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
@@ -2384,6 +2420,8 @@ async function startServer() {
         const indexPath = path.join(distPath, 'index.html');
         const rawHtml = fs.readFileSync(indexPath, 'utf-8');
         const seoHtml = transformHTMLForRoute(rawHtml, req.path);
+        const canonicalUrl = `https://feviqo.com${req.path === '/' ? '/' : req.path}`;
+        res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
         return res.status(200).set({ 'Content-Type': 'text/html' }).end(seoHtml);
       } catch {
         return res.sendFile(path.join(distPath, 'index.html'));
@@ -2391,9 +2429,36 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`FEVIQO full-stack server running on http://0.0.0.0:${PORT}`);
   });
+
+  server.on('error', (err: any) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${PORT} is in use. Attempting to free port...`);
+      try {
+        execFile('fuser', ['-k', `${PORT}/tcp`], () => {
+          setTimeout(() => {
+            app.listen(PORT, '0.0.0.0', () => {
+              console.log(`FEVIQO full-stack server recovered and listening on http://0.0.0.0:${PORT}`);
+            });
+          }, 500);
+        });
+      } catch (e) {
+        console.error('Failed to free port:', e);
+      }
+    } else {
+      console.error('Server error:', err);
+    }
+  });
 }
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
 
 startServer();
