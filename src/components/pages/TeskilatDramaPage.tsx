@@ -39,7 +39,6 @@ import { AdBanner320x50 } from '../AdBanner320x50';
 import { AdBanner300x250 } from '../AdBanner300x250';
 import { AdBanner160x600 } from '../AdBanner160x600';
 import { AdNativeBanner } from '../AdNativeBanner';
-import { CountdownTimer } from '../CountdownTimer';
 
 interface TeskilatEpisode {
   id: string;
@@ -236,7 +235,7 @@ const EPISODE_188: TeskilatEpisode = {
   duration: '2h 25m',
   thumbnailUrl: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
   directoryThumbnailUrl: 'https://lh3.googleusercontent.com/d/1ikYYiLzzJ8NytHorSVBhRvsXKwGUl1zy',
-  videoUrl: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8',
+  videoUrl: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8',
   storyRecapUrdu: `تشکیلات سیزن 7 قسط 188 (بولم 188) میں الپائے اور انٹیلی جنس ٹیم دشمن کے سب سے بڑے نیٹ ورک پر آخری وار کرنے جا رہی ہے۔ عذرا کی چالوں کے پیچھے کی اصل سچائی سامنے آتی ہے جبکہ اینڈر کو بچانے کا یہ حتمی آپریشن ایک زبردست موڑ اختیار کر جاتا ہے۔ مکمل قسط ایچ ڈی اردو سب ٹائٹلز کے ساتھ فیویکو پر دیکھیں۔`,
   storyRecapEnglish: `Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.
 
@@ -1083,18 +1082,6 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
               </div>
 
-              {/* Official Premiere Countdown Timer */}
-              <div className="mb-6">
-                <CountdownTimer
-                  targetDate="2026-10-12T04:00:00.000Z"
-                  episodeTitle={`Teskilat Season 7 Episode ${selectedEpisode.episodeNumber === 188 ? "4" : selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles | Bolum ${selectedEpisode.episodeNumber}`}
-                  seriesName="Teskilat Season 7"
-                  episodeNumber={selectedEpisode.episodeNumber}
-                  backdropUrl={selectedEpisode.thumbnailUrl}
-                  onPlayClick={handleStartPlayback}
-                />
-              </div>
-
               {/* 5 & 6. Secure Anti-Download Main Video Player */}
               <div 
                 onContextMenu={(e) => e.preventDefault()}
@@ -1119,125 +1106,43 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </a>
                 </div>
 
-                {false ? (
-                  /* ULTRA-PREMIUM APPLE TV / NETFLIX STYLE COMING SOON PRESENTATION (FULLY RESPONSIVE) */
-                  <div className="relative sm:absolute inset-0 bg-[#070709] flex flex-col items-center justify-center p-5 sm:p-12 text-center text-white z-20 w-full min-h-[430px] sm:min-h-0 overflow-hidden">
-                    
-                    {/* Background Subtle Ambient Image Overlay (Restrained & Blurs) */}
-                    <div 
-                      className="absolute inset-0 bg-cover bg-center filter blur-sm scale-105 opacity-[0.22] pointer-events-none transition-opacity duration-700" 
-                      style={{ backgroundImage: `url('${selectedEpisode.thumbnailUrl}')` }} 
+                <style>{`
+                  mux-video, video-skin, video-player { object-fit: contain !important; }
+                  mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
+                `}</style>
+                {showPosterOverlay && (
+                  <div 
+                    onClick={handleStartPlayback}
+                    className="absolute inset-0 z-30 bg-black flex items-center justify-center cursor-pointer group overflow-hidden rounded-2xl sm:rounded-3xl"
+                  >
+                    <img 
+                      src={selectedEpisode.thumbnailUrl} 
+                      alt={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Urdu Episode ${selectedEpisode.episodeNumber} Subtitles - Watch Season 7 Episode ${selectedEpisode.episodeNumber}`} 
+                      title={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Episode ${selectedEpisode.episodeNumber}`}
+                      className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition-transform duration-500 rounded-2xl sm:rounded-3xl"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#070709] via-transparent to-[#070709] pointer-events-none" />
-                    
-                    {/* Background Subtle Ambient Glow */}
-                    <div className="absolute inset-0 bg-radial-gradient opacity-20 pointer-events-none" />
-
-                    <div className="space-y-4 sm:space-y-6 max-w-xl z-10 w-full px-2 py-4 sm:py-0">
-                      
-                      {/* 1. EPISODE 187 ACCENT */}
-                      <div className="text-[10px] sm:text-[11px] font-mono tracking-[0.2em] sm:tracking-[0.25em] text-[#22C55E] uppercase font-bold flex items-center justify-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
-                        <span>EPISODE {selectedEpisode.episodeNumber}</span>
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                        <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-slate-950 ml-1" />
                       </div>
-
-                      {/* 2. Coming soon. */}
-                      <h3 className="text-3xl sm:text-6xl font-extralight text-white tracking-tight">
-                        Coming soon.
-                      </h3>
-
-                      {/* 3. The Urdu-subtitled premiere is being prepared for release. */}
-                      <p className="text-xs sm:text-lg font-light text-slate-400 max-w-md mx-auto leading-relaxed px-2">
-                        The Urdu-subtitled premiere is being prepared for release.
-                      </p>
-
-                      {/* Premium Minimalist Countdown Timer Display (Apple Style, Mobile Optimized) */}
-                      <div className="flex items-center justify-center gap-2.5 sm:gap-6 text-white pt-1 pb-1 sm:pt-2 sm:pb-2 tracking-normal sm:tracking-widest">
-                        <div className="flex flex-col items-center min-w-[48px] sm:min-w-[70px]">
-                          <span className="font-sans font-thin text-2xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 tracking-wider sm:tracking-widest">
-                            {String(timeLeft.days).padStart(2, '0')}
-                          </span>
-                          <span className="text-[9px] sm:text-[10px] font-sans font-light tracking-[0.15em] sm:tracking-[0.25em] text-slate-500 uppercase mt-1 sm:mt-2">Days</span>
-                        </div>
-                        <span className="text-slate-800 text-xl sm:text-4xl font-extralight self-start mt-1 sm:mt-2">:</span>
-                        <div className="flex flex-col items-center min-w-[48px] sm:min-w-[70px]">
-                          <span className="font-sans font-thin text-2xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 tracking-wider sm:tracking-widest">
-                            {String(timeLeft.hours).padStart(2, '0')}
-                          </span>
-                          <span className="text-[9px] sm:text-[10px] font-sans font-light tracking-[0.15em] sm:tracking-[0.25em] text-slate-500 uppercase mt-1 sm:mt-2">Hours</span>
-                        </div>
-                        <span className="text-slate-800 text-xl sm:text-4xl font-extralight self-start mt-1 sm:mt-2">:</span>
-                        <div className="flex flex-col items-center min-w-[48px] sm:min-w-[70px]">
-                          <span className="font-sans font-thin text-2xl sm:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-slate-400 tracking-wider sm:tracking-widest">
-                            {String(timeLeft.minutes).padStart(2, '0')}
-                          </span>
-                          <span className="text-[9px] sm:text-[10px] font-sans font-light tracking-[0.15em] sm:tracking-[0.25em] text-slate-500 uppercase mt-1 sm:mt-2">Minutes</span>
-                        </div>
-                        <span className="text-slate-800 text-xl sm:text-4xl font-extralight self-start mt-1 sm:mt-2">:</span>
-                        <div className="flex flex-col items-center min-w-[48px] sm:min-w-[70px]">
-                          <span className="font-sans font-light text-2xl sm:text-6xl text-[#22C55E] tracking-wider sm:tracking-widest animate-pulse">
-                            {String(timeLeft.seconds).padStart(2, '0')}
-                          </span>
-                          <span className="text-[9px] sm:text-[10px] font-sans font-light tracking-[0.15em] sm:tracking-[0.25em] text-[#22C55E] uppercase mt-1 sm:mt-2">Seconds</span>
-                        </div>
-                      </div>
-
-                      {/* Line divider */}
-                      <div className="w-8 h-[1px] bg-slate-800/80 mx-auto my-2 sm:my-4" />
-
-                      {/* 4. TEŞKİLAT • SEASON 7 • EPISODE 187 */}
-                      <div className="text-[9px] sm:text-xs font-sans font-light tracking-[0.15em] sm:tracking-[0.2em] text-slate-500 uppercase">
-                        TEŞKİLAT • SEASON {selectedEpisode.seasonNumber} • EPISODE {selectedEpisode.episodeNumber}
-                      </div>
-
-                      {/* 5. COMING SOON status */}
-                      <div className="inline-block px-3.5 sm:px-4 py-1 sm:py-1.5 rounded-full bg-slate-900 border border-slate-800 text-[9px] sm:text-[10px] font-sans font-bold tracking-[0.25em] sm:tracking-[0.3em] text-[#22C55E] uppercase shadow-md">
-                        COMING SOON
-                      </div>
-
                     </div>
                   </div>
-                ) : (
-                  <>
-                    <style>{`
-                      mux-video, video-skin, video-player { object-fit: contain !important; }
-                      mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
-                    `}</style>
-                    {showPosterOverlay && (
-                      <div 
-                        onClick={handleStartPlayback}
-                        className="absolute inset-0 z-30 bg-black flex items-center justify-center cursor-pointer group overflow-hidden rounded-2xl sm:rounded-3xl"
-                      >
-                        <img 
-                          src={selectedEpisode.thumbnailUrl} 
-                          alt={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Urdu Episode ${selectedEpisode.episodeNumber} Subtitles - Watch Season 7 Episode ${selectedEpisode.episodeNumber}`} 
-                          title={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Episode ${selectedEpisode.episodeNumber}`}
-                          className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition-transform duration-500 rounded-2xl sm:rounded-3xl"
-                        />
-                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
-                            <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-slate-950 ml-1" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <video-player style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}>
-                      <video-skin poster={selectedEpisode.thumbnailUrl} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
-                        <mux-video
-                          src={selectedEpisode.videoUrl}
-                          playsinline
-                          poster={selectedEpisode.thumbnailUrl}
-                          controlsList="nodownload"
-                          disablePictureInPicture
-                          onContextMenu={(e) => e.preventDefault()}
-                          style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
-                        ></mux-video>
-                        <mux-data></mux-data>
-                      </video-skin>
-                    </video-player>
-                  </>
                 )}
+
+                <video-player style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}>
+                  <video-skin poster={selectedEpisode.thumbnailUrl} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
+                    <mux-video
+                      src={selectedEpisode.videoUrl}
+                      playsinline
+                      poster={selectedEpisode.thumbnailUrl}
+                      controlsList="nodownload"
+                      disablePictureInPicture
+                      onContextMenu={(e) => e.preventDefault()}
+                      style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
+                    ></mux-video>
+                    <mux-data></mux-data>
+                  </video-skin>
+                </video-player>
               </div>
 
               {/* High-Converting Ads & Smartlink Row */}
@@ -1422,8 +1327,10 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     onClick={() => {
                       if (selectedEpisode.episodeNumber === 186) {
                         handleOpenEpisode(EPISODE_187);
+                      } else if (selectedEpisode.episodeNumber === 187) {
+                        handleOpenEpisode(EPISODE_188);
                       } else {
-                        showToast('Episode 188 releases next Sunday!');
+                        showToast('You are watching the latest episode (Episode 188)!');
                       }
                     }}
                     className="p-4 rounded-2xl border border-slate-200/80 hover:border-slate-400 text-right transition group cursor-pointer"

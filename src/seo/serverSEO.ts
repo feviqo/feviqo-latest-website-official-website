@@ -318,7 +318,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc"
       ],
       "uploadDate": "2026-10-11T08:00:00+00:00",
-      "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",
+      "contentUrl": "https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8",
       "embedUrl": "https://feviqo.com/teskilat/episode-188",
       "duration": "PT2H20M",
       "isFamilyFriendly": true,
