@@ -86,11 +86,11 @@ export const Footer: React.FC<FooterProps> = ({
         </div>
 
         {/* Multi-Column Links Section */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 pt-4">
           {/* Brand Wordmark & Social Links */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:col-span-1">
             <a 
-              href="#" 
+              href="/" 
               onClick={(e) => { e.preventDefault(); onNavigatePage ? onNavigatePage('home') : onNavigateSection('website-hero'); }}
               className="inline-block group"
               aria-label="FEVIQO Home"
@@ -143,37 +143,37 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Column 1: Services */}
           <div>
             <h4 className="font-extrabold text-white text-sm uppercase tracking-wider mb-4">
-              Services & Platform
+              Services &amp; Platform
             </h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-emerald-100 font-normal">
               <li>
-                <button onClick={() => nav('unlimited-editing')} className="hover:text-white transition cursor-pointer text-[#22C55E] font-bold">
+                <a href="/unlimited-editing" onClick={(e) => { e.preventDefault(); nav('unlimited-editing'); }} className="hover:text-white transition cursor-pointer text-[#22C55E] font-bold">
                   Unlimited Video Editing
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={() => nav('platform')} className="hover:text-white transition cursor-pointer">
+                <a href="/platform" onClick={(e) => { e.preventDefault(); nav('platform'); }} className="hover:text-white transition cursor-pointer">
                   FEVIQO Flow Portal
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={() => nav('turkish-drama')} className="hover:text-white transition cursor-pointer text-emerald-300 font-semibold flex items-center gap-1.5">
+                <a href="/turkish-drama" onClick={(e) => { e.preventDefault(); nav('turkish-drama'); }} className="hover:text-white transition cursor-pointer text-emerald-300 font-semibold flex items-center gap-1.5">
                   <span>Turkish TV Licensing (Pakistan)</span>
                   <span className="px-1.5 py-0.2 rounded bg-emerald-400/20 text-[#DBFF4C] text-[9px] font-black">B2B</span>
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={() => nav('gallery')} className="hover:text-white transition cursor-pointer">
+                <a href="/gallery" onClick={(e) => { e.preventDefault(); nav('gallery'); }} className="hover:text-white transition cursor-pointer">
                   Video Gallery (Categories)
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={onNavigatePricing} className="hover:text-white transition cursor-pointer">
+                <a href="/pricing" onClick={(e) => { e.preventDefault(); onNavigatePricing(); }} className="hover:text-white transition cursor-pointer">
                   Pricing Plans ($1,299/mo)
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={onBookCall} className="hover:text-white transition cursor-pointer">
+                <button onClick={onBookCall} className="hover:text-white transition cursor-pointer text-left">
                   Schedule Strategy Call
                 </button>
               </li>
@@ -187,42 +187,86 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-emerald-100 font-normal">
               <li>
-                <button onClick={() => nav('creators')} className="hover:text-white transition cursor-pointer">
+                <a href="/creators" onClick={(e) => { e.preventDefault(); nav('creators'); }} className="hover:text-white transition cursor-pointer">
                   For Content Creators
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={() => nav('business')} className="hover:text-white transition cursor-pointer">
+                <a href="/business" onClick={(e) => { e.preventDefault(); nav('business'); }} className="hover:text-white transition cursor-pointer">
                   For Business Owners
-                </button>
+                </a>
               </li>
               <li>
-                <button onClick={() => nav('agencies')} className="hover:text-white transition cursor-pointer">
-                  For Marketers & Agencies
-                </button>
+                <a href="/agencies" onClick={(e) => { e.preventDefault(); nav('agencies'); }} className="hover:text-white transition cursor-pointer">
+                  For Marketers &amp; Agencies
+                </a>
               </li>
               <li>
-                <button onClick={() => nav('case-studies')} className="hover:text-white transition cursor-pointer">
-                  Case Studies & ROI
-                </button>
+                <a href="/case-studies" onClick={(e) => { e.preventDefault(); nav('case-studies'); }} className="hover:text-white transition cursor-pointer">
+                  Case Studies &amp; ROI
+                </a>
               </li>
               <li>
-                <button onClick={() => nav('testimonials')} className="hover:text-white transition cursor-pointer">
-                  Testimonials & Reviews
-                </button>
+                <a href="/testimonials" onClick={(e) => { e.preventDefault(); nav('testimonials'); }} className="hover:text-white transition cursor-pointer">
+                  Testimonials &amp; Reviews
+                </a>
               </li>
               <li>
-                <button onClick={() => nav('about')} className="hover:text-white transition cursor-pointer text-[#22C55E] font-bold">
-                  About Us (Leadership & Vetting)
-                </button>
+                <a href="/about" onClick={(e) => { e.preventDefault(); nav('about'); }} className="hover:text-white transition cursor-pointer text-[#22C55E] font-bold">
+                  About Us (Leadership)
+                </a>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: Resources & Support */}
+          {/* Column 3: Latest Episodes & Dramas (Crawlable Googlebot Index) */}
+          <div>
+            <h4 className="font-extrabold text-white text-sm uppercase tracking-wider mb-4 text-[#22C55E]">
+              Trending Dramas &amp; Episodes
+            </h4>
+            <ul className="space-y-2 text-xs text-emerald-100 font-normal">
+              <li>
+                <a href="/teskilat/episode-188" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer font-bold text-amber-300 block">
+                  Teskilat Season 7 Ep 4 (188)
+                </a>
+              </li>
+              <li>
+                <a href="/teskilat-urdu/episode-188" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer text-emerald-300 block">
+                  Teskilat 188 Urdu Subtitles
+                </a>
+              </li>
+              <li>
+                <a href="/gunesin-dogdugu-yer/episode-5" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer font-bold text-amber-300 block">
+                  Gunesin Dogdugu Yer Ep 5
+                </a>
+              </li>
+              <li>
+                <a href="/gunesin-dogdugu-yer/episode-4" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer text-emerald-300 block">
+                  Gunesin Dogdugu Yer Ep 4
+                </a>
+              </li>
+              <li>
+                <a href="/mehmed-fetihler-sultani/episode-88" onClick={(e) => { e.preventDefault(); nav('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer font-bold text-amber-300 block">
+                  Mehmed Fetihler Sultani Ep 88
+                </a>
+              </li>
+              <li>
+                <a href="/mehmed-fetihler-sultani/episode-87" onClick={(e) => { e.preventDefault(); nav('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer text-emerald-300 block">
+                  Mehmed Season 4 Ep 4 (87)
+                </a>
+              </li>
+              <li>
+                <a href="/dramas" onClick={(e) => { e.preventDefault(); nav('dramas'); }} className="hover:text-white transition cursor-pointer text-[#DBFF4C] font-extrabold underline block mt-1">
+                  View All Drama Portals &rarr;
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: Resources & Support */}
           <div>
             <h4 className="font-extrabold text-white text-sm uppercase tracking-wider mb-4">
-              Resources & Help
+              Resources &amp; Support
             </h4>
             <ul className="space-y-3 text-xs sm:text-sm text-emerald-100 font-normal">
               <li>
@@ -241,6 +285,11 @@ export const Footer: React.FC<FooterProps> = ({
                 >
                   <Mail className="w-4 h-4 text-emerald-300" />
                   <span>partner@feviqo.com</span>
+                </a>
+              </li>
+              <li>
+                <a href="/trending" onClick={(e) => { e.preventDefault(); nav('trending'); }} className="hover:text-white transition cursor-pointer text-[#22C55E] font-bold block">
+                  Trending Articles &amp; News
                 </a>
               </li>
               <li>
