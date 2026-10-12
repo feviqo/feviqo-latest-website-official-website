@@ -699,6 +699,13 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
     return DEFAULT_PAGE_SEO[cleanPath];
   }
 
+  // Alias lookup for Teskilat Episode 188 variations
+  if ((cleanPath.includes('188') || cleanPath.includes('episode-188')) && (cleanPath.includes('teskilat') || cleanPath.includes('episode'))) {
+    if (DEFAULT_PAGE_SEO['/teskilat/episode-188']) {
+      return DEFAULT_PAGE_SEO['/teskilat/episode-188'];
+    }
+  }
+
   // Dynamic fallback for unlisted routes
   const cleanTitle = pathname.replace('/', '').replace('-', ' ');
   const capitalized = cleanTitle ? cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1) : 'Page';

@@ -343,10 +343,15 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('/episode')) {
         setActiveView('episode-detail');
-        if (path.includes('186') || hash.includes('186')) setSelectedEpisode(FEATURED_SEASON7_EPISODE);
-        if (path.includes('187') || hash.includes('187')) setSelectedEpisode(EPISODE_187);
+        if (path.includes('186') || hash.includes('186')) {
+          setSelectedEpisode(FEATURED_SEASON7_EPISODE);
+        } else if (path.includes('187') || hash.includes('187')) {
+          setSelectedEpisode(EPISODE_187);
+        } else {
+          setSelectedEpisode(EPISODE_188);
+        }
       } else {
         setActiveView('overview');
       }
@@ -1062,7 +1067,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
 
                 <h1 className="text-xl sm:text-4xl font-black text-[#0B0B0D] tracking-tight">
-                  Teskilat Season 7 Episode {selectedEpisode.episodeNumber === 188 ? "4" : selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles - Bolum {selectedEpisode.episodeNumber} {selectedEpisode.episodeNumber === 188 ? "Final Operation" : selectedEpisode.episodeNumber === 187 ? "Azra Betrayal" : "The Wolf Awakens"}
+                  Teskilat Season 7 Episode {selectedEpisode.episodeNumber === 188 ? "4" : selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles - Bolum {selectedEpisode.episodeNumber} {selectedEpisode.episodeNumber === 188 ? "Ender Rescue" : selectedEpisode.episodeNumber === 187 ? "Azra Betrayal" : "The Wolf Awakens"}
                 </h1>
 
                 <p className="text-xs font-bold text-slate-500 pt-0.5">
