@@ -175,14 +175,15 @@ app.get('/robots.txt', (req, res) => {
 });
 
 app.get('/sitemap.xml', (_req, res) => {
-  const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
   res.setHeader('Content-Type', 'text/xml; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
   
-  if (fs.existsSync(sitemapPath)) {
-    return res.sendFile(sitemapPath);
-  }
   try {
+    updateSitemapFile();
+    const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+    if (fs.existsSync(sitemapPath)) {
+      return res.sendFile(sitemapPath);
+    }
     const xml = generateSitemapXml();
     return res.status(200).send(xml);
   } catch (err: any) {
@@ -2369,11 +2370,6 @@ app.delete('/api/editors/:id', (req, res) => {
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to delete editor' });
   }
-});
-
-app.get('/ads.txt', (_req, res) => {
-  res.setHeader('Content-Type', 'text/plain');
-  return res.send('google.com, pub-4691262355758432, DIRECT, f08c47fec0942fa0\n');
 });
 
 import { transformHTMLForRoute } from './src/seo/serverSEO';

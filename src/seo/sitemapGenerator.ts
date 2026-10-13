@@ -1,6 +1,7 @@
 import { DEFAULT_PAGE_SEO } from './seoStore';
 import { INITIAL_TRENDING_ARTICLES } from '../data/trendingArticlesData';
 import { GUNESIN_EPISODES } from '../data/gunesinDogduguYer';
+import { MEHMED_EPISODES } from '../data/mehmedData';
 import fs from 'fs';
 import path from 'path';
 
@@ -187,7 +188,28 @@ export function generateSitemapXml(): string {
     );
   });
 
-  // 3. Process all dynamically created Trending articles from database / file
+  // 3. Process all dynamically generated Mehmed episodes
+  MEHMED_EPISODES.forEach((ep) => {
+    const epPath = `/mehmed-fetihler-sultani/${ep.slug}`;
+    const firstEmbed = ep.embeds && ep.embeds[0] ? ep.embeds[0].src : undefined;
+
+    addUrlNode(
+      epPath,
+      '1.0',
+      'daily',
+      ep.airDate ? ep.airDate.split('T')[0] : today,
+      ep.thumbnail,
+      ep.title,
+      firstEmbed ? {
+        thumbnail: ep.thumbnail,
+        title: ep.title,
+        description: ep.shortSummary,
+        contentLoc: firstEmbed
+      } : undefined
+    );
+  });
+
+  // 4. Process all dynamically created Trending articles from database / file
   INITIAL_TRENDING_ARTICLES.forEach((article) => {
     const articlePath = `/trending/${article.slug}`;
     const pubDate = article.updatedAt ? article.updatedAt.split('T')[0] : today;

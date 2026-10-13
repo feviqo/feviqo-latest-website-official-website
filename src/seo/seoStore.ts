@@ -298,7 +298,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     canonicalUrl: 'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
     ogTitle: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
     ogDescription: 'Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.',
-    ogImage: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
+    ogImage: 'https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },

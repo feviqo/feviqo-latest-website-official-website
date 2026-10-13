@@ -70,7 +70,7 @@ export const MEHMED_EPISODES: MehmedEpisode[] = [
     slug: "episode-88",
     title: "Mehmed Season 4 Episode 5 Urdu Subtitles | Bolum 88",
     airDate: "2026-10-14T04:00:00.000Z",
-    thumbnail: "https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg",
+    thumbnail: "https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq",
     duration: "2h 30m",
     shortSummary: "Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an explosive military advance as court rivalries escalate.",
     recap: `Mehmed: Fetihler Sultani Episode 88 (Bolum 88) opens with high-stakes Ottoman military warfare and court intrigue. As Sultan Mehmed II prepares an imperial campaign against rival coalitions, tactical intelligence and frontline courage determine the fate of the empire.

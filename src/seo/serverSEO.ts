@@ -74,8 +74,11 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   );
 
   // 4. Inject Canonical Link & Robots Indexing Tags
+  transformed = transformed.replace(/<meta\s+name=["']robots["']\s+content=["'].*?["']\s*\/?>/gi, '');
+  transformed = transformed.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/gi, '');
+
   const canonicalTag = `<link rel="canonical" href="${config.canonicalUrl}" />`;
-  const robotsTag = `<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />`;
+  const robotsTag = `<meta name="robots" content="${config.robots || 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}" />`;
   transformed = transformed.replace('</head>', `  ${robotsTag}\n  ${canonicalTag}\n  </head>`);
 
   // 5. Inject Dynamic JSON-LD Schema
@@ -577,6 +580,58 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     });
   }
 
+  if (cleanPath === '/mehmed-fetihler-sultani/episode-88' || cleanPath === '/mehmed/episode-88') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVEpisode",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-88#episode",
+      "url": "https://feviqo.com/mehmed-fetihler-sultani/episode-88",
+      "name": "Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88",
+      "episodeNumber": "88",
+      "seasonNumber": "4",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "description": "Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.",
+      "image": "https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq",
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-88",
+      "isPartOf": {
+        "@type": "TVSeries",
+        "name": "Mehmed: Fetihler Sultani",
+        "url": "https://feviqo.com/mehmed-fetihler-sultani"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "VideoObject",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-88#video",
+      "name": "Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88",
+      "description": "Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.",
+      "thumbnailUrl": [
+        "https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq"
+      ],
+      "uploadDate": "2026-10-14T04:00:00.000Z",
+      "contentUrl": "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8",
+      "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-88",
+      "duration": "PT2H30M",
+      "isFamilyFriendly": true,
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-88",
+      "publisher": {
+        "@id": "https://feviqo.com/#organization"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "ImageObject",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-88#image",
+      "url": "https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq",
+      "contentUrl": "https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq",
+      "name": "Mehmed Fetihler Sultani Episode 88 Urdu Subtitles HD Thumbnail",
+      "caption": "Mehmed Episode 88, Bolum 88 Urdu Subtitles HD Thumbnail",
+      "description": "Official Mehmed Fetihler Sultani Episode 88 Urdu Subtitles HD Thumbnail image."
+    });
+  }
+
   if (cleanPath === '/dramas') {
     transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
 
@@ -629,6 +684,11 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
 
   const jsonLdScript = `<script type="application/ld+json" id="feviqo-server-jsonld">${JSON.stringify(schemaObj)}</script>`;
   transformed = transformed.replace('</head>', `  ${jsonLdScript}\n  </head>`);
+
+  // Inject prerendered semantic body content inside <div id="root"> so search crawlers see full text & internal links
+  const prerenderedBody = `<div id="root"><header><nav aria-label="FEVIQO Navigation"><a href="/">Home</a> | <a href="/dramas">Turkish Dramas</a> | <a href="/teskilat">Teskilat Season 7</a> | <a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani</a> | <a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer</a> | <a href="/trending">Trending Hub</a></nav></header><main><header><h1>${config.seoTitle}</h1><p>${config.metaDescription}</p></header><article><h2>Watch Online with Urdu Subtitles HD</h2><p>Experience full HD 1080p streaming with complete story recaps, character breakdowns, and official video streams on FEVIQO.</p></article><section><h2>Featured Episodes & Navigation Links</h2><ul><li><a href="/teskilat/episode-188">Teskilat Season 7 Episode 188 (Bolum 188) Urdu Subtitles - Ender Rescue</a></li><li><a href="/teskilat/episode-187">Teskilat Season 7 Episode 187 (Bolum 187) Urdu Subtitles</a></li><li><a href="/teskilat/episode-186">Teskilat Season 7 Episode 186 (Bolum 186) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-88">Mehmed Fetihler Sultani Episode 88 (Bolum 88) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-87">Mehmed Fetihler Sultani Episode 87 (Bolum 87) Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-5">Gunesin Dogdugu Yer Episode 5 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-4">Gunesin Dogdugu Yer Episode 4 Urdu Subtitles</a></li></ul></section></main></div>`;
+
+  transformed = transformed.replace('<div id="root"></div>', prerenderedBody);
 
   return transformed;
 }

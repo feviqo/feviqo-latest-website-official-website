@@ -225,15 +225,26 @@
     <!-- VideoJS HTML Player & Skin registration -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/cdn@10.0.0-rc.4/video.js"></script>
 
-    <!-- Popunder forfeviqo.com -->
-    <script data-cfasync="false" src="https://afders.org/1/a7a4453eb8b1f1852342cdad1214a60e"></script>
+    <!-- Conditional Popunder & Social Bar (Loads on live site, bypasses iframe restrictions in dev studio) -->
+    <script>
+      if (window.self === window.top) {
+        var s1 = document.createElement('script');
+        s1.setAttribute('data-cfasync', 'false');
+        s1.src = 'https://afders.org/1/a7a4453eb8b1f1852342cdad1214a60e';
+        document.head.appendChild(s1);
+
+        window.addEventListener('DOMContentLoaded', function() {
+          var s2 = document.createElement('script');
+          s2.setAttribute('data-cfasync', 'false');
+          s2.src = 'https://bicea.org/14/4f99f5321c574fc6695e44c1381b9312';
+          document.body.appendChild(s2);
+        });
+      }
+    </script>
   </head>
   <body class="bg-white text-slate-900 antialiased selection:bg-[#22C55E] selection:text-black">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-
-    <!-- Social Bar forfeviqo.com -->
-    <script data-cfasync="false" src="https://bicea.org/14/4f99f5321c574fc6695e44c1381b9312"></script>
   </body>
 </html>
 
