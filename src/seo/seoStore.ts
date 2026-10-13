@@ -261,9 +261,25 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     metaDescription: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
     focusKeyword: 'Teskilat Season 7 Episode 4 Urdu Subtitles',
     secondaryKeywords: [
-      'Teskilat Season 7', 'Teskilat Season 7 Urdu Subtitles', 'Teskilat Urdu Subtitles', 'Teşkilat Season 7 Urdu', 'Teskilat Season 7 Watch Online', 'Teskilat Episode 185 Urdu Subtitles', 'Teskilat Bolum 185 Urdu', 'Altay Teskilat Season 7', 'Korkut Teskilat', 'Turkish Series Urdu Subtitles', 'Turkish Action Series Urdu', 'Turkish Intelligence Series', 'TRT1 Teskilat', 'Teskilat New Season Urdu', 'Teskilat NiaziPlay', 'Teskilat Season 7 Episode 4 Urdu Subtitles', 'Teskilat Episode 188 Urdu Subtitles', 'Teskilat Bolum 188 Urdu', 'Teskilat Season 7 Urdu', 'Teskilat Episode 4 Urdu', 'Teskilat 188 Urdu', 'Altay Ender Episode 188', 'Azra Teskilat Season 7', 'Korkut Yahya Episode 188', 'Bahar Yahya Teskilat', 'Ender Rescue Teskilat', 'TRT1 Teskilat Episode 188', 'Salahuddin Ayyubi Series', 'Kurulus Osman Season 5 in Urdu Subtitles', 'Kurulus Osman Season 6 Urdu & English Subtitles', 'Teskilat Season 4 Urdu Subtitles', 'Mehmed: Fetihler Sultani - Urdu & English Subtitles', 'Al Sancak | Sipahi', 'Alparslan: Büyük Selçuklu', 'Ates Kuslari', 'Barbarosslar', 'Destan', 'Ertugrul Ghazi', 'Keiki Sniper', 'Kosem Sultan', 'Mendirman Jaloliddin Khawarzam', 'Mevlana Celaleddin Rumi', 'Soz Series', 'Sultan Abdulhamid', 'Sultan Mehmat Fatih', 'The Pit (Cukur)', 'Turkish Dramas', 'Yunus Emre', 'Turkish series with Urdu subtitles', 'watch Turkish dramas online', 'historical Turkish series in Urdu', 'Ottoman Empire series with English subtitles', 'Islamic history dramas in Urdu', 'Turkish action series with Urdu dubbing', 'latest Turkish series 2024', 'Urdu dubbed Turkish historical dramas', 'stream Turkish series in HD', 'family-friendly Turkish dramas', 'Turkish war series with Urdu subtitles', 'best Turkish series to watch online', 'Turkish dramas based on true stories', 'top-rated Turkish series in Urdu', 'Turkish romantic dramas with English subtitles', 'Turkish thriller series in Urdu', 'online streaming of Turkish historical series', 'Turkish series with dual subtitles', 'popular Turkish dramas in Pakistan', 'Turkish series episodes in Urdu', 'best streaming platforms for Turkish series', 'online education games for kids', 'top adventure games for adults', 'fitness and health articles', 'latest technology news articles', 'financial advice for families', 'home improvement articles', 'educational articles for students', 'html5 games', 'games for children'
+      'Teskilat Season 7', 'Teskilat Season 7 Urdu Subtitles', 'Teskilat Urdu Subtitles', 'Teşkilat Season 7 Urdu', 'Teskilat Season 7 Watch Online', 'Teskilat Episode 185 Urdu Subtitles', 'Teskilat Bolum 185 Urdu', 'Altay Teskilat Season 7', 'Korkut Teskilat', 'Turkish Series Urdu Subtitles', 'Turkish Action Series Urdu', 'Turkish Intelligence Series', 'TRT1 Teskilat', 'Teskilat New Season Urdu', 'Teskilat NiaziPlay', 'Teskilat Season 7 Episode 4 Urdu Subtitles', 'Teskilat Episode 188 Urdu Subtitles', 'Teskilat Bolum 188 Urdu', 'Teskilat Season 7 Urdu', 'Teskilat Episode 4 Urdu', 'Teskilat 188 Urdu', 'Altay Ender Episode 188', 'Azra Teskilat Season 7', 'Korkut Yahya Episode 188', 'Bahar Yahya Teskilat', 'Ender Rescue Teskilat', 'TRT1 Teskilat Episode 188'
     ],
     canonicalUrl: 'https://feviqo.com/teskilat/episode-188',
+    ogTitle: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue | FEVIQO',
+    ogDescription: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
+  '/teskilat-urdu/episode-188': {
+    path: '/teskilat-urdu/episode-188',
+    pageName: 'Teskilat Urdu Episode 188 Watch Page',
+    seoTitle: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue | FEVIQO',
+    metaDescription: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
+    focusKeyword: 'Teskilat Season 7 Episode 4 Urdu Subtitles',
+    secondaryKeywords: [
+      'Teskilat Season 7', 'Teskilat Season 7 Urdu Subtitles', 'Teskilat Urdu Subtitles', 'Teşkilat Season 7 Urdu', 'Teskilat Season 7 Watch Online', 'Teskilat Episode 188 Urdu Subtitles', 'Teskilat Bolum 188 Urdu', 'Altay Ender Episode 188', 'Ender Rescue Teskilat', 'TRT1 Teskilat Episode 188'
+    ],
+    canonicalUrl: 'https://feviqo.com/teskilat-urdu/episode-188',
     ogTitle: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue | FEVIQO',
     ogDescription: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
     ogImage: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',

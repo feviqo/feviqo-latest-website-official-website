@@ -64,7 +64,6 @@ app.use((req, res, next) => {
       '/mehmed': '/mehmed-fetihler-sultani',
       '/mehmed/': '/mehmed-fetihler-sultani',
       '/mehmed/episode-87': '/mehmed-fetihler-sultani/episode-87',
-      '/teskilat-urdu/episode-188': '/teskilat/episode-188',
       '/teskilat-188': '/teskilat/episode-188',
       '/teskilat-187': '/teskilat/episode-187',
       '/teskilat-186': '/teskilat/episode-186',
