@@ -117,7 +117,7 @@ The climax of Gunesin Dogdugu Yer Episode 3 sets the stage for a dangerous intel
     embeds: [
       {
         label: "Server 1 (Fast HLS)",
-        src: "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8"
+        src: "https://stream.mux.com/ff2G9XfcMerNcnD02iPnysGkByH6SMTSa7p2yP01DuzT4.m3u8"
       }
     ],
     season: 1

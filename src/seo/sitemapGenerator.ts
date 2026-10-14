@@ -123,7 +123,7 @@ export function generateSitemapXml(): string {
         thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
         title: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
         description: 'Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) on FEVIQO.',
-        contentLoc: 'https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8'
+        contentLoc: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8'
       };
     } else if (routeKey === '/gunesin-dogdugu-yer/episode-4') {
       videoInfo = {
@@ -137,14 +137,14 @@ export function generateSitemapXml(): string {
         thumbnail: 'https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj',
         title: 'Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3',
         description: 'Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles with story recap on FEVIQO.com.',
-        contentLoc: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8'
+        contentLoc: 'https://stream.mux.com/ff2G9XfcMerNcnD02iPnysGkByH6SMTSa7p2yP01DuzT4.m3u8'
       };
     } else if (routeKey === '/mehmed-fetihler-sultani/episode-87') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
         title: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
         description: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87) on FEVIQO.',
-        contentLoc: 'https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8'
+        contentLoc: 'https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8'
       };
     } else if (routeKey === '/') {
       videoInfo = {

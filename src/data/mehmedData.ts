@@ -83,11 +83,11 @@ Watch Mehmed Season 4 Episode 5 with Urdu Subtitles in full 1080p HD on FEVIQO. 
     embeds: [
       {
         label: "Server 1 (Fast HLS 1080p)",
-        src: "https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8"
+        src: "https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8"
       },
       {
         label: "Server 2 (FEVIQO Mirror 1080p)",
-        src: "https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8"
+        src: "https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8"
       }
     ]
   },
@@ -119,7 +119,7 @@ Key Episode Highlights:
     embeds: [
       {
         label: "Server 1 (Fast HLS)",
-        src: "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8"
+        src: "https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8"
       }
     ]
   }

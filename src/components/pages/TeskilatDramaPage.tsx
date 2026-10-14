@@ -1122,19 +1122,24 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   />
                 )}
 
-                {/* Universal HTML5 HLS Video Player */}
-                <video
-                  ref={videoRef}
-                  controls
-                  playsInline
-                  poster={selectedEpisode.thumbnailUrl}
-                  controlsList="nodownload"
-                  disablePictureInPicture
-                  data-vast-url="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
-                  data-ad-src="/api/vast-ad"
-                  onContextMenu={(e) => e.preventDefault()}
-                  className="w-full h-full object-contain block bg-black rounded-2xl sm:rounded-3xl"
-                />
+                {/* VideoJS / Mux Video Player Web Components */}
+                <video-player
+                  data-vast-endpoint="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
+                  className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden"
+                >
+                  <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
+                    <mux-video
+                      ref={videoRef as any}
+                      src={selectedEpisode.videoUrl}
+                      controls
+                      playsInline
+                      poster={selectedEpisode.thumbnailUrl}
+                      onContextMenu={(e: any) => e.preventDefault()}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    ></mux-video>
+                    <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.titleEnglish}></mux-data>
+                  </video-skin>
+                </video-player>
               </div>
 
               {/* High-Converting Ads & Smartlink Row */}

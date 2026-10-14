@@ -45,6 +45,18 @@ export function attachHlsStream(
 ): (() => void) | undefined {
   if (!videoElement || !src) return;
 
+  // If element is <mux-video> custom element, it natively handles HLS streaming via src
+  if (videoElement.tagName === 'MUX-VIDEO') {
+    if (videoElement.getAttribute('src') !== src) {
+      videoElement.setAttribute('src', src);
+    }
+    options.onReady?.();
+    if (options.autoPlay) {
+      videoElement.play().catch(() => {});
+    }
+    return undefined;
+  }
+
   const isHls = isHlsStream(src);
 
   if (isHls) {

@@ -403,7 +403,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj"
       ],
       "uploadDate": "2026-10-15T18:00:00+00:00",
-      "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",
+      "contentUrl": "https://stream.mux.com/ff2G9XfcMerNcnD02iPnysGkByH6SMTSa7p2yP01DuzT4.m3u8",
       "embedUrl": "https://feviqo.com/gunesin-dogdugu-yer/episode-3",
       "duration": "PT2H25M",
       "isFamilyFriendly": true,
@@ -525,7 +525,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg"
       ],
       "uploadDate": "2026-10-06T18:00:00+00:00",
-      "contentUrl": "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8",
+      "contentUrl": "https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8",
       "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
       "duration": "PT2H30M",
       "isFamilyFriendly": true,
@@ -567,7 +567,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq"
       ],
       "uploadDate": "2026-10-14T04:00:00.000Z",
-      "contentUrl": "https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8",
+      "contentUrl": "https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8",
       "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-88",
       "duration": "PT2H30M",
       "isFamilyFriendly": true,
