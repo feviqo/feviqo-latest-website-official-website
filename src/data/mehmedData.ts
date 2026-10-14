@@ -81,7 +81,7 @@ Gedik Ahmed Pasha and Saruca Pasha face deadly political traps on the frontier, 
 
 Watch Mehmed Season 4 Episode 5 with Urdu Subtitles in full 1080p HD on FEVIQO. Experience the grand historical drama and epic battles of Sultan Mehmed II.`,
     recapUrdu: `مہمد فتحلر سلطان سیزن 4 قسط 88 (بولم 88) میں سلطان محمد فاتح کی سلطنت عثمانیہ کے زبردست جنگی اور سفارتی معرکے جاری ہیں۔ عثمانی افواج سرحدوں پر دشمنوں کے نادیدہ جال توڑتے ہوئے ایک بڑے معرکے کی تیاری کر رہی ہیں۔ مکمل قسط ایچ ڈی اردو سب ٹائٹلز کے ساتھ فیویکو پر دیکھیں۔`,
-    downloadUrl: "https://www.file-upload.org/z551l97nsap5",
+    downloadUrl: "https://shrinkme.click/mehmedepisode88urdu",
     embeds: [
       {
         label: "Server 1 (Fast HLS 1080p)",

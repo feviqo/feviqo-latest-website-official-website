@@ -668,70 +668,30 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   </video-player>
                 </div>
 
-                {/* Action Row: Download & Share Buttons */}
-                <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+                {/* Action Row: Download & Share Buttons (Guaranteed same line on phones) */}
+                <div className="mt-3 flex flex-row items-center justify-between gap-2 w-full">
                   <a
-                    href={selectedEpisode.downloadUrl || "https://www.file-upload.org/z551l97nsap5"}
+                    href={selectedEpisode.downloadUrl || "https://shrinkme.click/mehmedepisode88urdu"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-6 py-3 rounded-2xl bg-[#22C55E] hover:bg-[#1ebd52] text-slate-950 text-xs font-black tracking-wide uppercase transition-all duration-300 shadow-xl shadow-[#22C55E]/20 hover:shadow-[#22C55E]/35 hover:scale-[1.02] active:scale-95 flex items-center gap-2 cursor-pointer"
+                    className="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-[#22C55E] hover:bg-[#1ebd52] text-slate-950 text-[11px] sm:text-xs font-black tracking-wide transition shadow-md shadow-[#22C55E]/15 hover:scale-[1.02] active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
                   >
-                    <Download className="w-4 h-4 text-slate-950 shrink-0" />
+                    <Download className="w-3.5 h-3.5 text-slate-950 shrink-0" />
                     <span>Download Episode {selectedEpisode.number} (1080p HD)</span>
                   </a>
 
                   <button
                     onClick={handleShare}
-                    className="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 transition flex items-center gap-1.5 cursor-pointer ml-auto hover:scale-[1.02] active:scale-95"
+                    className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[11px] sm:text-xs font-bold text-slate-800 transition flex items-center gap-1.5 cursor-pointer shrink-0 hover:scale-[1.02] active:scale-95"
                   >
-                    <Share2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{copiedLink ? 'Link Copied!' : 'Share Episode'}</span>
+                    <Share2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{copiedLink ? 'Copied!' : 'Share Episode'}</span>
                   </button>
                 </div>
               </div>
 
-              {/* High-Converting Ads & Premium Download Card */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 my-6">
-                {/* 728x90 Leaderboard / 320x50 Mobile Header Ad */}
-                <div className="hidden md:block">
-                  <AdBanner728x90 />
-                </div>
-                <div className="block md:hidden">
-                  <AdBanner320x50 />
-                </div>
-
-                {/* Premium Dark Luxury Download Card */}
-                <div className="relative rounded-3xl bg-[#0B0B0D] border border-emerald-500/30 p-6 sm:p-8 shadow-2xl overflow-hidden group text-left">
-                  {/* Ambient Background Glow Effects */}
-                  <div className="absolute -top-24 -right-24 w-72 h-72 bg-[#22C55E]/15 rounded-full blur-3xl pointer-events-none group-hover:bg-[#22C55E]/25 transition duration-700" />
-                  <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-emerald-900/20 rounded-full blur-3xl pointer-events-none" />
-
-                  <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div className="space-y-2 max-w-2xl">
-                      <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#22C55E]">
-                        <Sparkles className="w-4 h-4 text-[#22C55E]" />
-                        <span>High-Speed Direct Download Link Available</span>
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                        Download Mehmed Season 4 Episode 88 with Urdu Subtitles (Full HD 1080p)
-                      </h3>
-                      <p className="text-xs text-slate-400 font-medium leading-relaxed">
-                        Fast, single-click high-speed server download hosted via File-Upload.org with original 1080p HD quality and hardcoded Urdu Subtitles.
-                      </p>
-                    </div>
-
-                    <a
-                      href={selectedEpisode.downloadUrl || "https://www.file-upload.org/z551l97nsap5"}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full md:w-auto px-8 py-4 rounded-2xl bg-[#22C55E] hover:bg-[#1ebd52] text-slate-950 font-black text-xs sm:text-sm tracking-wider uppercase transition-all duration-300 transform hover:scale-[1.03] active:scale-95 shadow-xl shadow-[#22C55E]/20 hover:shadow-[#22C55E]/35 flex items-center justify-center gap-3 shrink-0 cursor-pointer"
-                    >
-                      <Download className="w-5 h-5 text-slate-950" />
-                      <span>Download Episode 88 (File-Upload.org)</span>
-                      <ChevronRight className="w-4 h-4 text-slate-950/70" />
-                    </a>
-                  </div>
-                </div>
+              {/* High-Converting Ads Row */}
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 my-4">
 
                 <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 my-4">
                   <AdBanner468x60 />
