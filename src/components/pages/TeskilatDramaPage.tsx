@@ -1,9 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Hls from 'hls.js';
-import '@videojs/html/video/player';
-import '@videojs/html/video/skin';
-import '@videojs/html/media/mux-video';
-import '@videojs/html/extensions/mux-data';
+import MuxPlayer from '@mux/mux-player-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Play, 
@@ -40,7 +37,7 @@ import { AdBanner300x250 } from '../AdBanner300x250';
 import { AdBanner160x600 } from '../AdBanner160x600';
 import { AdNativeBanner } from '../AdNativeBanner';
 import { VastPreRollAdOverlay } from '../VastPreRollAdOverlay';
-import { attachHlsStream } from '../../utils/hlsPlayer';
+import { attachHlsStream, extractMuxPlaybackId } from '../../utils/hlsPlayer';
 
 interface TeskilatEpisode {
   id: string;
@@ -1122,24 +1119,17 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   />
                 )}
 
-                {/* VideoJS / Mux Video Player Web Components */}
-                <video-player
-                  data-vast-endpoint="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
-                  className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden"
-                >
-                  <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
-                    <mux-video
-                      ref={videoRef as any}
-                      src={selectedEpisode.videoUrl}
-                      controls
-                      playsInline
-                      poster={selectedEpisode.thumbnailUrl}
-                      onContextMenu={(e: any) => e.preventDefault()}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    ></mux-video>
-                    <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.titleEnglish}></mux-data>
-                  </video-skin>
-                </video-player>
+                {/* Single Official Mux Player */}
+                <MuxPlayer
+                  ref={videoRef as any}
+                  playbackId={extractMuxPlaybackId(selectedEpisode.videoUrl) || 'E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU'}
+                  metadataVideoTitle={selectedEpisode.titleEnglish}
+                  poster={selectedEpisode.thumbnailUrl}
+                  streamType="on-demand"
+                  accentColor="#22C55E"
+                  className="w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden block bg-black"
+                  style={{ width: '100%', aspectRatio: '16 / 9' }}
+                />
               </div>
 
               {/* High-Converting Ads & Smartlink Row */}

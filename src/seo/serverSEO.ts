@@ -567,7 +567,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq"
       ],
       "uploadDate": "2026-10-14T04:00:00.000Z",
-      "contentUrl": "https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8",
+      "contentUrl": "https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8",
       "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-88",
       "duration": "PT2H30M",
       "isFamilyFriendly": true,

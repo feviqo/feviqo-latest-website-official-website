@@ -123,7 +123,7 @@ export function generateSitemapXml(): string {
         thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
         title: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
         description: 'Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) on FEVIQO.',
-        contentLoc: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8'
+        contentLoc: 'https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8'
       };
     } else if (routeKey === '/gunesin-dogdugu-yer/episode-4') {
       videoInfo = {
