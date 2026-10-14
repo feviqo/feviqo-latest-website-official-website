@@ -119,7 +119,7 @@ Key Episode Highlights:
     embeds: [
       {
         label: "Server 1 (Fast HLS)",
-        src: "https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8"
+        src: "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8"
       }
     ]
   }

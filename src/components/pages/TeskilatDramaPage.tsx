@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Hls from 'hls.js';
-import MuxPlayer from '@mux/mux-player-react';
+import '@videojs/html/video/player';
+import '@videojs/html/video/skin';
+import '@videojs/html/media/mux-video';
+import '@videojs/html/extensions/mux-data';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Play, 
@@ -1119,17 +1122,20 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   />
                 )}
 
-                {/* Single Official Mux Player */}
-                <MuxPlayer
-                  ref={videoRef as any}
-                  playbackId={extractMuxPlaybackId(selectedEpisode.videoUrl) || 'E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU'}
-                  metadataVideoTitle={selectedEpisode.titleEnglish}
-                  poster={selectedEpisode.thumbnailUrl}
-                  streamType="on-demand"
-                  accentColor="#22C55E"
-                  className="w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden block bg-black"
-                  style={{ width: '100%', aspectRatio: '16 / 9' }}
-                />
+                {/* Official VideoJS / Mux Video Player Web Components */}
+                <video-player className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden">
+                  <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
+                    <mux-video
+                      ref={videoRef as any}
+                      src={selectedEpisode.videoUrl}
+                      playsinline
+                      poster={selectedEpisode.thumbnailUrl}
+                      onContextMenu={(e: any) => e.preventDefault()}
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                    ></mux-video>
+                    <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.titleEnglish}></mux-data>
+                  </video-skin>
+                </video-player>
               </div>
 
               {/* High-Converting Ads & Smartlink Row */}

@@ -75,7 +75,7 @@ Watch Gunesin Dogdugu Yer Episode 5 with Urdu Subtitles in full 1080p HD exclusi
     embeds: [
       {
         label: "Server 1 (Fast HLS 1080p)",
-        src: "https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8"
+        src: "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8"
       }
     ],
     season: 1

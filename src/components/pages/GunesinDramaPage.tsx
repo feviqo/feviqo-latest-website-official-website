@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import MuxPlayer from '@mux/mux-player-react';
+import '@videojs/html/video/player';
+import '@videojs/html/video/skin';
+import '@videojs/html/media/mux-video';
+import '@videojs/html/extensions/mux-data';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Play, 
@@ -664,17 +667,20 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     />
                   )}
 
-                  {/* Single Official Mux Player */}
-                  <MuxPlayer
-                    ref={videoRef as any}
-                    playbackId={extractMuxPlaybackId(currentStreamUrl) || 'ff2G9XfcMerNcnD02iPnysGkByH6SMTSa7p2yP01DuzT4'}
-                    metadataVideoTitle={selectedEpisode.title}
-                    poster={selectedEpisode.thumbnail}
-                    streamType="on-demand"
-                    accentColor="#22C55E"
-                    className="w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden block bg-black"
-                    style={{ width: '100%', aspectRatio: '16 / 9' }}
-                  />
+                  {/* Official VideoJS / Mux Video Player Web Components */}
+                  <video-player className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden">
+                    <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
+                      <mux-video
+                        ref={videoRef as any}
+                        src={currentStreamUrl}
+                        playsinline
+                        poster={selectedEpisode.thumbnail}
+                        onContextMenu={(e: any) => e.preventDefault()}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      ></mux-video>
+                      <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.title}></mux-data>
+                    </video-skin>
+                  </video-player>
                 </div>
               </div>
 

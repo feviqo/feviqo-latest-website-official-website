@@ -525,7 +525,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg"
       ],
       "uploadDate": "2026-10-06T18:00:00+00:00",
-      "contentUrl": "https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8",
+      "contentUrl": "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8",
       "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
       "duration": "PT2H30M",
       "isFamilyFriendly": true,
