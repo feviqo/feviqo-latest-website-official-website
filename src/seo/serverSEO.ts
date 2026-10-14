@@ -370,51 +370,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     });
   }
 
-  if (cleanPath === '/gunesin-dogdugu-yer/episode-1') {
-    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
 
-    schemaObj["@graph"].push({
-      "@type": "TVEpisode",
-      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-1#episode",
-      "url": "https://feviqo.com/gunesin-dogdugu-yer/episode-1",
-      "name": "Gunesin Dogdugu Yer Episode 1 Urdu Subtitles | FEVIQO",
-      "episodeNumber": "1",
-      "seasonNumber": "1",
-      "inLanguage": "Urdu",
-      "subtitleLanguage": "Urdu Subtitles",
-      "description": "Watch Gunesin Dogdugu Yer Episode 1 in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.",
-      "image": "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw",
-      "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-1",
-      "isPartOf": {
-        "@type": "TVSeries",
-        "name": "Gunesin Dogdugu Yer",
-        "url": "https://feviqo.com/gunesin-dogdugu-yer"
-      }
-    });
-  }
-
-  if (cleanPath === '/gunesin-dogdugu-yer/episode-2') {
-    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
-
-    schemaObj["@graph"].push({
-      "@type": "TVEpisode",
-      "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-2#episode",
-      "url": "https://feviqo.com/gunesin-dogdugu-yer/episode-2",
-      "name": "Gunesin Dogdugu Yer Episode 2 Urdu Subtitles | FEVIQO",
-      "episodeNumber": "2",
-      "seasonNumber": "1",
-      "inLanguage": "Urdu",
-      "subtitleLanguage": "Urdu Subtitles",
-      "description": "Watch Gunesin Dogdugu Yer Episode 2 in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.",
-      "image": "https://feviqo.com/images/teskialt186thumbnIL.png",
-      "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-2",
-      "isPartOf": {
-        "@type": "TVSeries",
-        "name": "Gunesin Dogdugu Yer",
-        "url": "https://feviqo.com/gunesin-dogdugu-yer"
-      }
-    });
-  }
 
   if (cleanPath === '/gunesin-dogdugu-yer/episode-3') {
     transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
@@ -611,7 +567,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
         "https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq"
       ],
       "uploadDate": "2026-10-14T04:00:00.000Z",
-      "contentUrl": "https://stream.mux.com/VsQd2trOJ8GIgQf963baKkQueuqr4I9qHdAj4Y01qwcY.m3u8",
+      "contentUrl": "https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8",
       "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-88",
       "duration": "PT2H30M",
       "isFamilyFriendly": true,

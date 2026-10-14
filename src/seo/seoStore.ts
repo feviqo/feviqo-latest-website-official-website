@@ -180,34 +180,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
   },
-  '/gunesin-dogdugu-yer/episode-1': {
-    path: '/gunesin-dogdugu-yer/episode-1',
-    pageName: 'Gunesin Dogdugu Yer Episode 1 Watch Page',
-    seoTitle: 'Gunesin Dogdugu Yer Episode 1 Urdu Subtitles | FEVIQO',
-    metaDescription: 'Watch Gunesin Dogdugu Yer Episode 1 in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.',
-    focusKeyword: 'gunesin dogdugu yer episode 1 urdu',
-    secondaryKeywords: ['gunesin dogdugu yer episode 1', 'gunesin dogdugu yer episode 1 urdu', 'gunesin dogdugu yer 1 urdu', 'gunesin dogdugu yer bolum 1'],
-    canonicalUrl: 'https://feviqo.com/gunesin-dogdugu-yer/episode-1',
-    ogTitle: 'Gunesin Dogdugu Yer Episode 1 Urdu Subtitles | FEVIQO',
-    ogDescription: 'Watch Gunesin Dogdugu Yer Episode 1 in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.',
-    ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
-    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
-    schemaType: 'TVEpisode'
-  },
-  '/gunesin-dogdugu-yer/episode-2': {
-    path: '/gunesin-dogdugu-yer/episode-2',
-    pageName: 'Gunesin Dogdugu Yer Episode 2 Watch Page',
-    seoTitle: 'Gunesin Dogdugu Yer Episode 2 Urdu Subtitles | FEVIQO',
-    metaDescription: 'Watch Gunesin Dogdugu Yer Episode 2 in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.',
-    focusKeyword: 'gunesin dogdugu yer episode 2 urdu',
-    secondaryKeywords: ['gunesin dogdugu yer episode 2', 'gunesin dogdugu yer episode 2 urdu', 'gunesin dogdugu yer 2 urdu', 'gunesin dogdugu yer bolum 2'],
-    canonicalUrl: 'https://feviqo.com/gunesin-dogdugu-yer/episode-2',
-    ogTitle: 'Gunesin Dogdugu Yer Episode 2 Urdu Subtitles | FEVIQO',
-    ogDescription: 'Watch Gunesin Dogdugu Yer Episode 2 in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.',
-    ogImage: 'https://feviqo.com/images/teskialt186thumbnIL.png',
-    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
-    schemaType: 'TVEpisode'
-  },
+
   '/gunesin-dogdugu-yer/episode-3': {
     path: '/gunesin-dogdugu-yer/episode-3',
     pageName: 'Gunesin Dogdugu Yer Episode 3 Watch Page',

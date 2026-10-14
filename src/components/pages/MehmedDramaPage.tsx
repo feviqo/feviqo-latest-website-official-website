@@ -182,7 +182,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
 
   const currentStreamUrl = selectedEpisode.embeds?.[activeServerIndex]?.src 
     || selectedEpisode.embeds?.[0]?.src 
-    || "https://stream.mux.com/VsQd2trOJ8GIgQf963baKkQueuqr4I9qHdAj4Y01qwcY.m3u8";
+    || "https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8";
 
   useEffect(() => {
     if (activeView === 'episode-detail' && videoRef.current && currentStreamUrl) {
