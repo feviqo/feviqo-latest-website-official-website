@@ -25,6 +25,7 @@ import { AdBanner320x50 } from '../AdBanner320x50';
 import { AdBanner300x250 } from '../AdBanner300x250';
 import { AdBanner160x600 } from '../AdBanner160x600';
 import { AdNativeBanner } from '../AdNativeBanner';
+import { VastPreRollAdOverlay } from '../VastPreRollAdOverlay';
 import { CountdownTimer } from '../CountdownTimer';
 import { GUNESIN_SERIES_DATA, GUNESIN_EPISODES, GunesinEpisode } from '../../data/gunesinDogduguYer';
 import { attachHlsStream } from '../../utils/hlsPlayer';
@@ -69,6 +70,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
   });
 
   const [showPosterOverlay, setShowPosterOverlay] = useState(true);
+  const [showPreRollAd, setShowPreRollAd] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Search & Filters State
@@ -194,6 +196,11 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
+    setShowPreRollAd(true);
+  };
+
+  const handleAdComplete = () => {
+    setShowPreRollAd(false);
     setIsVideoPlaying(true);
     setTimeout(() => {
       if (videoRef.current) {
@@ -646,6 +653,13 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     </div>
                   )}
 
+                  {/* VAST Pre-Roll Video Ad Layer for Drama Pages */}
+                  {showPreRollAd && (
+                    <VastPreRollAdOverlay
+                      onAdComplete={handleAdComplete}
+                    />
+                  )}
+
                   {/* Universal HTML5 HLS Video Player */}
                   <video
                     ref={videoRef}
@@ -654,6 +668,8 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     poster={selectedEpisode.thumbnail}
                     controlsList="nodownload"
                     disablePictureInPicture
+                    data-vast-url="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
+                    data-ad-src="/api/vast-ad"
                     onContextMenu={(e) => e.preventDefault()}
                     className="w-full h-full object-contain block bg-black rounded-2xl sm:rounded-3xl"
                   />

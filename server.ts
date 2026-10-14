@@ -511,7 +511,74 @@ function sanitizeBlobUrls(obj: any): any {
   return obj;
 }
 
-// --- API ROUTES ---
+// --- VAST PRE-ROLL AD ENDPOINTS FOR DRAMA PAGES ---
+// VAST Endpoint: https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]
+
+function getClientIpAndUa(req: express.Request) {
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  let rawIp = '';
+  if (typeof xForwardedFor === 'string') {
+    rawIp = xForwardedFor.split(',')[0].trim();
+  } else if (Array.isArray(xForwardedFor)) {
+    rawIp = xForwardedFor[0].trim();
+  } else {
+    rawIp = (req.headers['x-real-ip'] as string) || req.socket?.remoteAddress || '127.0.0.1';
+  }
+
+  let cleanIp = rawIp.replace(/^::ffff:/, '').trim();
+  if (!cleanIp || cleanIp === '::1' || cleanIp === '127.0.0.1') {
+    cleanIp = '103.255.4.12'; // Default public IP fallback for local dev
+  }
+
+  const cleanUa = (req.headers['user-agent'] as string) || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
+
+  return { ip: cleanIp, ua: cleanUa };
+}
+
+app.get('/api/vast-url', (req, res) => {
+  const { ip, ua } = getClientIpAndUa(req);
+  const vastEndpoint = `https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=${encodeURIComponent(ip)}&ua=${encodeURIComponent(ua)}`;
+  
+  return res.json({
+    success: true,
+    ip,
+    ua,
+    vastUrl: vastEndpoint,
+    proxyUrl: '/api/vast-ad'
+  });
+});
+
+app.get('/api/vast-ad', async (req, res) => {
+  const { ip, ua } = getClientIpAndUa(req);
+  const vastEndpoint = `https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=${encodeURIComponent(ip)}&ua=${encodeURIComponent(ua)}`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+    const vastRes = await fetch(vastEndpoint, {
+      method: 'GET',
+      headers: {
+        'User-Agent': ua,
+        'X-Forwarded-For': ip,
+        'Accept': 'application/xml, text/xml, */*'
+      },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    const vastXml = await vastRes.text();
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.status(vastRes.status || 200).send(vastXml);
+  } catch (err: any) {
+    console.warn('VAST ad fetch warning/timeout:', err.message);
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    return res.status(200).send('<VAST version="3.0"><Ad><InLine><AdTitle>Empty Ad</AdTitle><Impression/></InLine></Ad></VAST>');
+  }
+});
 
 // Health check
 app.get('/api/health', (req, res) => {

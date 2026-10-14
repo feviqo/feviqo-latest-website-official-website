@@ -39,6 +39,7 @@ import { AdBanner320x50 } from '../AdBanner320x50';
 import { AdBanner300x250 } from '../AdBanner300x250';
 import { AdBanner160x600 } from '../AdBanner160x600';
 import { AdNativeBanner } from '../AdNativeBanner';
+import { VastPreRollAdOverlay } from '../VastPreRollAdOverlay';
 
 interface TeskilatEpisode {
   id: string;
@@ -284,6 +285,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     return EPISODE_188; // Default to Episode 188
   });
   const [showPosterOverlay, setShowPosterOverlay] = useState(true);
+  const [showPreRollAd, setShowPreRollAd] = useState(false);
 
   // Official Release Target Timestamp: Monday, October 12, 2026 at 4:00 AM UTC
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -323,6 +325,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
+    setShowPreRollAd(true);
+  };
+
+  const handleAdComplete = () => {
+    setShowPreRollAd(false);
     setTimeout(() => {
       const muxEl = document.querySelector('mux-video') as unknown as HTMLVideoElement | null;
       const shadowVideo = muxEl?.shadowRoot?.querySelector('video') as HTMLVideoElement | null;
@@ -1134,7 +1141,18 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </div>
                 )}
 
-                <video-player style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}>
+                {/* VAST Pre-Roll Video Ad Layer for Drama Pages */}
+                {showPreRollAd && (
+                  <VastPreRollAdOverlay
+                    onAdComplete={handleAdComplete}
+                  />
+                )}
+
+                <video-player
+                  data-vast-endpoint="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
+                  data-ad-src="/api/vast-ad"
+                  style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}
+                >
                   <video-skin poster={selectedEpisode.thumbnailUrl} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
                     <mux-video
                       src={selectedEpisode.videoUrl}
@@ -1142,6 +1160,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       poster={selectedEpisode.thumbnailUrl}
                       controlsList="nodownload"
                       disablePictureInPicture
+                      data-vast-url="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
                       onContextMenu={(e) => e.preventDefault()}
                       style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
                     ></mux-video>

@@ -30,6 +30,7 @@ import { AdBanner728x90 } from '../AdBanner728x90';
 import { AdBanner320x50 } from '../AdBanner320x50';
 import { AdBanner160x600 } from '../AdBanner160x600';
 import { AdNativeBanner } from '../AdNativeBanner';
+import { VastPreRollAdOverlay } from '../VastPreRollAdOverlay';
 import { MEHMED_SERIES_DATA, MEHMED_EPISODES, MehmedEpisode } from '../../data/mehmedData';
 import { attachHlsStream } from '../../utils/hlsPlayer';
 
@@ -77,6 +78,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [activeServerIndex, setActiveServerIndex] = useState(0);
   const [showPosterOverlay, setShowPosterOverlay] = useState(true);
+  const [showPreRollAd, setShowPreRollAd] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -180,9 +182,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
 
   const currentStreamUrl = selectedEpisode.embeds?.[activeServerIndex]?.src 
     || selectedEpisode.embeds?.[0]?.src 
-    || (selectedEpisode.number === 88 
-        ? "https://stream.mux.com/VsQd2trOJ8GIgQf963baKkQueuqr4I9qHdAj4Y01qwcY.m3u8" 
-        : "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8");
+    || "https://stream.mux.com/VsQd2trOJ8GIgQf963baKkQueuqr4I9qHdAj4Y01qwcY.m3u8";
 
   useEffect(() => {
     if (activeView === 'episode-detail' && videoRef.current && currentStreamUrl) {
@@ -197,6 +197,11 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
+    setShowPreRollAd(true);
+  };
+
+  const handleAdComplete = () => {
+    setShowPreRollAd(false);
     if (videoRef.current) {
       videoRef.current.play().catch(() => {});
     }
@@ -604,41 +609,6 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                 </p>
               </div>
 
-              {/* Fast Stream Server Selection Bar */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 text-white p-3.5 sm:p-4 rounded-2xl border border-slate-800 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <Server className="w-4 h-4 text-[#22C55E]" />
-                    <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-slate-200">Video Server:</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {(selectedEpisode.embeds || [
-                      { label: "Server 1 (Fast HLS 1080p)", src: "https://stream.mux.com/VsQd2trOJ8GIgQf963baKkQueuqr4I9qHdAj4Y01qwcY.m3u8" },
-                      { label: "Server 2 (FEVIQO Mirror 1080p)", src: "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8" }
-                    ]).map((srv, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => {
-                          setActiveServerIndex(idx);
-                          setShowPosterOverlay(false);
-                          if (videoRef.current) {
-                            videoRef.current.play().catch(() => {});
-                          }
-                        }}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer ${
-                          activeServerIndex === idx
-                            ? 'bg-[#22C55E] text-slate-950 shadow-md scale-105'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
-                        }`}
-                      >
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>{srv.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
               {/* Secure 16:9 Anti-Download Video Player */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div 
@@ -669,17 +639,34 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     </div>
                   )}
 
-                  {/* Universal HTML5 HLS Video Player */}
-                  <video
-                    ref={videoRef}
-                    controls
-                    playsInline
-                    poster={selectedEpisode.thumbnail}
-                    controlsList="nodownload"
-                    disablePictureInPicture
-                    onContextMenu={(e) => e.preventDefault()}
-                    className="w-full h-full object-contain block bg-black rounded-2xl sm:rounded-3xl"
-                  />
+                  {/* VAST Pre-Roll Video Ad Layer for Drama Pages */}
+                  {showPreRollAd && (
+                    <VastPreRollAdOverlay
+                      onAdComplete={handleAdComplete}
+                    />
+                  )}
+
+                  {/* Standard VideoJS HTML Video Player Web Components matching rest of episodes */}
+                  <video-player
+                    data-vast-endpoint="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
+                    data-ad-src="/api/vast-ad"
+                    style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}
+                  >
+                    <video-skin poster={selectedEpisode.thumbnail} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
+                      <mux-video
+                        ref={videoRef as any}
+                        src={currentStreamUrl}
+                        playsinline
+                        poster={selectedEpisode.thumbnail}
+                        controlsList="nodownload"
+                        disablePictureInPicture
+                        data-vast-url="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
+                        onContextMenu={(e) => e.preventDefault()}
+                        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
+                      ></mux-video>
+                      <mux-data></mux-data>
+                    </video-skin>
+                  </video-player>
                 </div>
 
                 {/* Share Row */}
