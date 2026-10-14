@@ -40,6 +40,7 @@ import { AdBanner300x250 } from '../AdBanner300x250';
 import { AdBanner160x600 } from '../AdBanner160x600';
 import { AdNativeBanner } from '../AdNativeBanner';
 import { VastPreRollAdOverlay } from '../VastPreRollAdOverlay';
+import { attachHlsStream } from '../../utils/hlsPlayer';
 
 interface TeskilatEpisode {
   id: string;
@@ -284,63 +285,36 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     }
     return EPISODE_188; // Default to Episode 188
   });
+
   const [showPosterOverlay, setShowPosterOverlay] = useState(true);
   const [showPreRollAd, setShowPreRollAd] = useState(false);
 
-  // Official Release Target Timestamp: Monday, October 12, 2026 at 4:00 AM UTC
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-
   useEffect(() => {
-    const targetTime = new Date('2026-10-12T04:00:00.000Z').getTime();
-
-    const updateTimer = () => {
-      const diff = targetTime - Date.now();
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        return false;
-      }
-
-      const totalSecs = Math.floor(diff / 1000);
-      const d = Math.floor(totalSecs / (3600 * 24));
-      const h = Math.floor((totalSecs % (3600 * 24)) / 3600);
-      const m = Math.floor((totalSecs % 3600) / 60);
-      const s = totalSecs % 60;
-
-      setTimeLeft({ days: d, hours: h, minutes: m, seconds: s });
-      return true;
-    };
-
-    // Run immediately
-    updateTimer();
-
-    const interval = setInterval(() => {
-      const active = updateTimer();
-      if (!active) {
-        clearInterval(interval);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+    if (activeView === 'episode-detail' && videoRef.current && selectedEpisode.videoUrl) {
+      const cleanup = attachHlsStream(videoRef.current, selectedEpisode.videoUrl, {
+        autoPlay: false,
+      });
+      return () => {
+        if (cleanup) cleanup();
+      };
+    }
+  }, [activeView, selectedEpisode]);
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
+    if (videoRef.current) {
+      videoRef.current.play().then(() => {
+        if (videoRef.current) videoRef.current.pause();
+      }).catch(() => {});
+    }
     setShowPreRollAd(true);
   };
 
   const handleAdComplete = () => {
     setShowPreRollAd(false);
     setTimeout(() => {
-      const muxEl = document.querySelector('mux-video') as unknown as HTMLVideoElement | null;
-      const shadowVideo = muxEl?.shadowRoot?.querySelector('video') as HTMLVideoElement | null;
-      const standardVideo = document.querySelector('video') as HTMLVideoElement | null;
-
-      if (shadowVideo && typeof shadowVideo.play === 'function') {
-        shadowVideo.play().catch(() => {});
-      } else if (muxEl && typeof muxEl.play === 'function') {
-        muxEl.play().catch(() => {});
-      } else if (standardVideo && typeof standardVideo.play === 'function') {
-        standardVideo.play().catch(() => {});
+      if (videoRef.current) {
+        videoRef.current.play().catch(() => {});
       }
     }, 50);
   };
@@ -1148,25 +1122,19 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   />
                 )}
 
-                <video-player
-                  data-vast-endpoint="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
+                {/* Universal HTML5 HLS Video Player */}
+                <video
+                  ref={videoRef}
+                  controls
+                  playsInline
+                  poster={selectedEpisode.thumbnailUrl}
+                  controlsList="nodownload"
+                  disablePictureInPicture
+                  data-vast-url="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
                   data-ad-src="/api/vast-ad"
-                  style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}
-                >
-                  <video-skin poster={selectedEpisode.thumbnailUrl} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
-                    <mux-video
-                      src={selectedEpisode.videoUrl}
-                      playsinline
-                      poster={selectedEpisode.thumbnailUrl}
-                      controlsList="nodownload"
-                      disablePictureInPicture
-                      data-vast-url="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
-                      onContextMenu={(e) => e.preventDefault()}
-                      style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
-                    ></mux-video>
-                    <mux-data></mux-data>
-                  </video-skin>
-                </video-player>
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="w-full h-full object-contain block bg-black rounded-2xl sm:rounded-3xl"
+                />
               </div>
 
               {/* High-Converting Ads & Smartlink Row */}

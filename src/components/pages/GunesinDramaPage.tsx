@@ -196,6 +196,11 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
+    if (videoRef.current) {
+      videoRef.current.play().then(() => {
+        if (videoRef.current) videoRef.current.pause();
+      }).catch(() => {});
+    }
     setShowPreRollAd(true);
   };
 

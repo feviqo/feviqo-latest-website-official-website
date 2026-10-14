@@ -193,10 +193,15 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
         if (cleanup) cleanup();
       };
     }
-  }, [activeView, selectedEpisode, currentStreamUrl]);
+  }, [activeView, selectedEpisode, activeServerIndex, currentStreamUrl]);
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
+    if (videoRef.current) {
+      videoRef.current.play().then(() => {
+        if (videoRef.current) videoRef.current.pause();
+      }).catch(() => {});
+    }
     setShowPreRollAd(true);
   };
 
@@ -646,27 +651,19 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     />
                   )}
 
-                  {/* Standard VideoJS HTML Video Player Web Components matching rest of episodes */}
-                  <video-player
-                    data-vast-endpoint="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
+                  {/* Universal HTML5 HLS Video Player */}
+                  <video
+                    ref={videoRef}
+                    controls
+                    playsInline
+                    poster={selectedEpisode.thumbnail}
+                    controlsList="nodownload"
+                    disablePictureInPicture
+                    data-vast-url="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
                     data-ad-src="/api/vast-ad"
-                    style={{ display: 'block', width: '100%', height: '100%', overflow: 'hidden' }}
-                  >
-                    <video-skin poster={selectedEpisode.thumbnail} style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
-                      <mux-video
-                        ref={videoRef as any}
-                        src={currentStreamUrl}
-                        playsinline
-                        poster={selectedEpisode.thumbnail}
-                        controlsList="nodownload"
-                        disablePictureInPicture
-                        data-vast-url="https://16793.rtb.adp3.net/pre-roll-rp?pubid=1025579&siteid=410037&ip=[IP]&ua=[USER_AGENT]"
-                        onContextMenu={(e) => e.preventDefault()}
-                        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain' }}
-                      ></mux-video>
-                      <mux-data></mux-data>
-                    </video-skin>
-                  </video-player>
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="w-full h-full object-contain block bg-black rounded-2xl sm:rounded-3xl"
+                  />
                 </div>
 
                 {/* Share Row */}
