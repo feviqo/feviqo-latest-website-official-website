@@ -19,7 +19,8 @@ import {
   Sword,
   Globe,
   Film,
-  Server
+  Server,
+  Download
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
@@ -667,11 +668,33 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   </video-player>
                 </div>
 
-                {/* Share Row */}
-                <div className="mt-3 flex justify-end">
+                {/* Action Row: Download & Share Buttons */}
+                <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
+                  {selectedEpisode.downloadUrl ? (
+                    <a
+                      href={selectedEpisode.downloadUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition shadow-lg hover:shadow-emerald-900/30 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-white animate-bounce" />
+                      <span>Download Episode {selectedEpisode.number} (1080p HD)</span>
+                    </a>
+                  ) : (
+                    <a
+                      href="https://www.file-upload.org/z551l97nsap5"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition shadow-lg hover:shadow-emerald-900/30 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Download className="w-4 h-4 text-white animate-bounce" />
+                      <span>Download Episode {selectedEpisode.number} (1080p HD)</span>
+                    </a>
+                  )}
+
                   <button
                     onClick={handleShare}
-                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 transition flex items-center gap-1.5 cursor-pointer ml-auto"
                   >
                     <Share2 className="w-3.5 h-3.5 text-emerald-600" />
                     <span>{copiedLink ? 'Link Copied!' : 'Share Episode'}</span>
@@ -679,7 +702,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                 </div>
               </div>
 
-              {/* High-Converting Ads & Smartlink Row */}
+              {/* High-Converting Ads & Download Smartlink Row */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
                 {/* 728x90 Leaderboard / 320x50 Mobile Header Ad */}
                 <div className="hidden md:block">
@@ -687,6 +710,25 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                 </div>
                 <div className="block md:hidden">
                   <AdBanner320x50 />
+                </div>
+
+                {/* High-Visibility Fast Download Banner */}
+                <div className="flex flex-col items-center justify-center gap-2 my-4 p-5 rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 border border-emerald-500/40 text-center shadow-2xl">
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-400" /> High-Speed Direct Download Link Available
+                  </span>
+                  <h4 className="text-sm sm:text-base font-extrabold text-white">
+                    Download Mehmed Season 4 Episode 88 with Urdu Subtitles (Full HD 1080p)
+                  </h4>
+                  <a
+                    href={selectedEpisode.downloadUrl || "https://www.file-upload.org/z551l97nsap5"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 px-8 py-3 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm tracking-wide transition transform hover:scale-105 shadow-xl flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4 text-slate-950" />
+                    <span>Download Episode 88 (File-Upload.org)</span>
+                  </a>
                 </div>
 
                 <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 my-4">
