@@ -38,6 +38,7 @@ import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
 import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
 import { GunesinDramaPage } from './components/pages/GunesinDramaPage';
 import { MehmedDramaPage } from './components/pages/MehmedDramaPage';
+import { getSEOConfigForPath } from './seo/seoStore';
 import { DramasPage } from './components/pages/DramasPage';
 import { AboutUsPage } from './components/pages/AboutUsPage';
 import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
@@ -231,7 +232,7 @@ export default function App() {
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
       'teskilat-urdu': 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188 - FEVIQO.com',
       'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',
-      'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+      'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88 - FEVIQO',
       'dramas': 'Turkish Dramas Portal - Stream Premium Series & Movies | FEVIQO',
       'trending': 'FEVIQO Trending – What People Are Searching & Talking About Right Now',
       'trending-article': 'FEVIQO Trending Article',
@@ -239,7 +240,10 @@ export default function App() {
       'terms': 'Terms of Service & Usage Agreement | FEVIQO'
     };
 
-    if (titles[currentRoute]) {
+    const pathConfig = getSEOConfigForPath(window.location.pathname);
+    if (pathConfig && pathConfig.seoTitle && window.location.pathname !== '/') {
+      document.title = pathConfig.seoTitle;
+    } else if (titles[currentRoute]) {
       document.title = titles[currentRoute];
     }
   }, [currentRoute]);

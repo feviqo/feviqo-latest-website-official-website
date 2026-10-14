@@ -68,17 +68,17 @@ export const MEHMED_EPISODES: MehmedEpisode[] = [
     season: 4,
     seasonEpisodeNumber: 5,
     slug: "episode-88",
-    title: "Mehmed Season 4 Episode 5 Urdu Subtitles | Bolum 88",
+    title: "Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88",
     airDate: "2026-10-14T04:00:00.000Z",
     thumbnail: "https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq",
     duration: "2h 30m",
-    shortSummary: "Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an explosive military advance as court rivalries escalate.",
-    recap: `Mehmed: Fetihler Sultani Episode 88 (Bolum 88) opens with high-stakes Ottoman military warfare and court intrigue. As Sultan Mehmed II prepares an imperial campaign against rival coalitions, tactical intelligence and frontline courage determine the fate of the empire.
+    shortSummary: "Watch Mehmed Season 4 Episode 5 Urdu Subtitles (Mehmed Fetihler Sultani Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an explosive military advance as court rivalries escalate.",
+    recap: `Mehmed Season 4 Episode 5 Urdu Subtitles (Mehmed Fetihler Sultani Bolum 88) opens with high-stakes Ottoman military warfare and court intrigue. As Sultan Mehmed II prepares an imperial campaign against rival coalitions, tactical intelligence and frontline courage determine the fate of the empire.
 
 Diplomatic Warfare & Imperial Strategy
 Gedik Ahmed Pasha and Saruca Pasha face deadly political traps on the frontier, navigating enemy ambushes and shifting alliances. Meanwhile in Edirne, the Conqueror enforces strict military discipline and roots out hidden threats within the imperial council.
 
-Watch Mehmed Fetihler Sultani Episode 88 with Urdu Subtitles in full 1080p HD on FEVIQO. Experience the grand historical drama and epic battles of Sultan Mehmed II.`,
+Watch Mehmed Season 4 Episode 5 with Urdu Subtitles in full 1080p HD on FEVIQO. Experience the grand historical drama and epic battles of Sultan Mehmed II.`,
     recapUrdu: `مہمد فتحلر سلطان سیزن 4 قسط 88 (بولم 88) میں سلطان محمد فاتح کی سلطنت عثمانیہ کے زبردست جنگی اور سفارتی معرکے جاری ہیں۔ عثمانی افواج سرحدوں پر دشمنوں کے نادیدہ جال توڑتے ہوئے ایک بڑے معرکے کی تیاری کر رہی ہیں۔ مکمل قسط ایچ ڈی اردو سب ٹائٹلز کے ساتھ فیویکو پر دیکھیں۔`,
     embeds: [
       {

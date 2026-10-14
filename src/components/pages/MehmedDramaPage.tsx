@@ -84,15 +84,20 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [activeView, selectedEpisode]);
 
-  // SEO & Google Search Keyword Optimization Effect for Main & Episode 87 Pages
+  // SEO & Google Search Keyword Optimization Effect for Main & Episode Pages
   useEffect(() => {
     const keywordsEl = document.querySelector('meta[name="keywords"]');
 
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.number;
-      const pageTitle = `Mehmed Season 4 Episode 4 Urdu Subtitles | Episode ${num}`;
-      const metaDesc = `Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.`;
-      const keywords = `mehmed fetihler sultani episode ${num} urdu subtitles, mehmed fetihler sultani bolum ${num} urdu, watch mehmed fetihler sultani episode ${num}, mehmed fetihler sultani urdu, mehmed fetihler sultani ${num} urdu subtitles, mehmed fetihler sultani bolum ${num}, sultan mehmed fatih episode ${num} urdu, feviqo mehmed fetihler sultani ${num}`;
+      const pageTitle = selectedEpisode.number === 88
+        ? 'Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88 - FEVIQO'
+        : (selectedEpisode.title || `Mehmed Fetihler Sultani Episode ${num} Urdu Subtitles | Bolum ${num} - FEVIQO`);
+      
+      const metaDesc = selectedEpisode.shortSummary || `Watch Mehmed Season 4 Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO.`;
+      const keywords = selectedEpisode.number === 88
+        ? `Mehmed Season 4 Episode 88 Urdu Subtitles, Mehmed Season 4 Episode 88, Urdu Subtitles, Mehmed Fetihler Sultani Season 4 Episode 88, Mehmed Fetihler Sultani Season 4 Episode 88 Urdu Subtitles, Mehmed Fetihler Sultani Episode 88, Mehmed Fetihler Sultani Episode 88 Urdu Subtitles, Mehmed Fetihler Sultani Bolum 88, Mehmed Bolum 88 Urdu Subtitles, Mehmed Episode 88 Urdu, Mehmed 88 Urdu, Sultan Mehmed Season 4 Episode 88 Urdu, Mehmed Season 4 Ep 88 Urdu, Sultan Muhammad Fateh Season 4 Episode 88 Urdu Subtitles, FEVIQO Mehmed Season 4 Episode 88`
+        : `mehmed fetihler sultani episode ${num} urdu subtitles, mehmed fetihler sultani bolum ${num} urdu, watch mehmed fetihler sultani episode ${num}, mehmed episode ${num} urdu, mehmed fetihler sultani ${num} urdu subtitles, mehmed fetihler sultani bolum ${num}, sultan mehmed fatih episode ${num} urdu, mehmed season 4 episode ${num}, mehmed ${num} urdu subtitles, feviqo mehmed fetihler sultani ${num}`;
       
       document.title = pageTitle;
 
@@ -107,6 +112,11 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
       const ogDescEl = document.querySelector('meta[property="og:description"]');
       if (ogDescEl) ogDescEl.setAttribute('content', metaDesc);
 
+      const ogImageEl = document.querySelector('meta[property="og:image"]');
+      if (ogImageEl && selectedEpisode.thumbnail) {
+        ogImageEl.setAttribute('content', selectedEpisode.thumbnail);
+      }
+
       const twTitleEl = document.querySelector('meta[name="twitter:title"]');
       if (twTitleEl) twTitleEl.setAttribute('content', pageTitle);
 
@@ -115,7 +125,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
     } else {
       const pageTitle = "Mehmed Fetihler Sultani Urdu Subtitles - Watch Online - FEVIQO.com";
       const metaDesc = "Watch Mehmed Fetihler Sultani Turkish Drama in HD Urdu Subtitles (مہمد فتحلر سلطان اردو). Stream official episodes with story recaps on FEVIQO.com.";
-      const keywords = "mehmed fetihler sultani urdu, mehmed fetihler sultani urdu subtitles, watch mehmed fetihler sultani urdu, mehmed fetihler sultani season 4, mehmed fetihler sultani bolum 87 urdu, mehmed fetihler sultani episode 87 urdu subtitles, sultan mehmed II urdu";
+      const keywords = "mehmed fetihler sultani urdu, mehmed fetihler sultani urdu subtitles, watch mehmed fetihler sultani urdu, mehmed fetihler sultani season 4, mehmed fetihler sultani bolum 88 urdu, mehmed fetihler sultani episode 88 urdu subtitles, mehmed fetihler sultani bolum 87 urdu, sultan mehmed II urdu";
 
       document.title = pageTitle;
 
@@ -130,10 +140,10 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
-      if (path.includes('/episode-') || path.includes('/bolum-') || path.includes('87')) {
-        const match = path.match(/episode-(\d+)/) || path.match(/87/);
+      if (path.includes('/episode-') || path.includes('/bolum-') || path.includes('88') || path.includes('87')) {
+        const match = path.match(/episode-(\d+)/) || path.match(/bolum-(\d+)/) || path.match(/(88|87)/);
         if (match) {
-          const num = match[1] ? parseInt(match[1]) : 87;
+          const num = parseInt(match[1]);
           const found = MEHMED_EPISODES.find(ep => ep.number === num);
           if (found) {
             setSelectedEpisode(found);

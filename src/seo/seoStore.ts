@@ -289,15 +289,15 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/mehmed-fetihler-sultani/episode-88': {
     path: '/mehmed-fetihler-sultani/episode-88',
     pageName: 'Mehmed Fetihler Sultani Episode 88 Watch Page',
-    seoTitle: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
-    metaDescription: 'Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.',
-    focusKeyword: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles',
+    seoTitle: 'Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88 - FEVIQO',
+    metaDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.',
+    focusKeyword: 'Mehmed Season 4 Episode 88 Urdu Subtitles',
     secondaryKeywords: [
-      'Mehmed Fetihler Sultani Episode 88', 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 88', 'Mehmed Bolum 88 Urdu Subtitles', 'Mehmed Episode 88 Urdu', 'Mehmed Season 4 Episode 88', 'Mehmed Season 4 Episode 88 Urdu Subtitles', 'FEVIQO Mehmed', 'FEVIQO Episode 88'
+      'Mehmed Season 4 Episode 88 Urdu Subtitles', 'Mehmed Season 4 Episode 88', 'Urdu Subtitles', 'Mehmed Fetihler Sultani Season 4 Episode 88', 'Mehmed Fetihler Sultani Season 4 Episode 88 Urdu Subtitles', 'Mehmed Fetihler Sultani Episode 88', 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 88', 'Mehmed Bolum 88 Urdu Subtitles', 'Mehmed Episode 88 Urdu', 'Mehmed Season 4 Episode 88', 'Mehmed Season 4 Episode 88 Urdu Subtitles', 'Mehmed 88 Urdu', 'Sultan Mehmed Season 4 Episode 88 Urdu', 'Mehmed Season 4 Ep 88 Urdu', 'Sultan Muhammad Fateh Season 4 Episode 88 Urdu Subtitles', 'Mehmed Fetihler Sultani Season 4 Episodes', 'Mehmed Season 4 Latest Episode', 'Sultan Mehmed Series Urdu', 'Fatih Sultan Mehmed Series', 'Turkish Historical Series Urdu Subtitles', 'Ottoman Empire Series', 'Turkish Drama Urdu Subtitles', 'FEVIQO Mehmed Season 4 Episode 88', 'FEVIQO Mehmed', 'FEVIQO Episode 88'
     ],
     canonicalUrl: 'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
-    ogTitle: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
-    ogDescription: 'Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.',
+    ogTitle: 'Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88 - FEVIQO',
+    ogDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.',
     ogImage: 'https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
@@ -305,16 +305,16 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/mehmed-fetihler-sultani': {
     path: '/mehmed-fetihler-sultani',
     pageName: 'Mehmed Fetihler Sultani Hub Page',
-    seoTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
-    metaDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
-    focusKeyword: 'Mehmed Season 4 Episode 4 Urdu Subtitles',
+    seoTitle: 'Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88 - FEVIQO',
+    metaDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.',
+    focusKeyword: 'Mehmed Season 4 Episode 88 Urdu Subtitles',
     secondaryKeywords: [
-      'Mehmed Fetihler Sultani Season 4 Episode 4', 'Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 87', 'mehmed 87 urdu', 'mehmed episode 87 urdu', 'memhed urdu', 'Mehmed Episode 87 Urdu Subtitles', 'Mehmed Bolum 87 Urdu', 'Episode 87 Urdu', 'Episode 87', 'Mehmed Fetihler Sultani Season 4 Urdu Subtitles', 'Mehmed Season 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Urdu Subtitles', 'Sultan Mehmed Series Urdu', 'Fatih Sultan Mehmed Series', 'Turkish Historical Series Urdu Subtitles', 'Ottoman Empire Series', 'Turkish Drama Urdu Subtitles', 'FEVIQO Mehmed Season 4', 'Sultan Muhammad Fateh Episode 87'
+      'Mehmed Season 4 Episode 88 Urdu Subtitles', 'Mehmed Season 4 Episode 88', 'Urdu Subtitles', 'Mehmed Fetihler Sultani Season 4 Episode 88', 'Mehmed Fetihler Sultani Season 4 Episode 88 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 88', 'mehmed 88 urdu', 'mehmed episode 88 urdu', 'Mehmed Episode 88 Urdu Subtitles', 'Mehmed Bolum 88 Urdu', 'Episode 88 Urdu', 'Mehmed Fetihler Sultani Season 4 Urdu Subtitles', 'Mehmed Season 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Urdu Subtitles', 'Sultan Mehmed Series Urdu', 'Fatih Sultan Mehmed Series', 'Turkish Historical Series Urdu Subtitles', 'Ottoman Empire Series', 'Turkish Drama Urdu Subtitles', 'FEVIQO Mehmed Season 4', 'Sultan Muhammad Fateh Episode 88'
     ],
     canonicalUrl: 'https://feviqo.com/mehmed-fetihler-sultani',
-    ogTitle: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
-    ogDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.',
-    ogImage: 'https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1',
+    ogTitle: 'Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88 - FEVIQO',
+    ogDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 88 Urdu Subtitles (Bolum 88) in HD on FEVIQO. Sultan Mehmed II prepares an imperial campaign as court rivalries escalate.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
   },
