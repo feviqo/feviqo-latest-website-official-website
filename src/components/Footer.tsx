@@ -226,33 +226,33 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2 text-xs text-emerald-100 font-normal">
               <li>
-                <a href="/teskilat/episode-188" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer font-bold text-amber-300 block">
-                  Teskilat Season 7 Ep 4 (188)
-                </a>
-              </li>
-              <li>
-                <a href="/teskilat-urdu/episode-188" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer text-emerald-300 block">
-                  Teskilat 188 Urdu Subtitles
-                </a>
-              </li>
-              <li>
-                <a href="/gunesin-dogdugu-yer/episode-5" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer font-bold text-amber-300 block">
-                  Gunesin Dogdugu Yer Ep 5
-                </a>
-              </li>
-              <li>
-                <a href="/gunesin-dogdugu-yer/episode-4" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer text-emerald-300 block">
-                  Gunesin Dogdugu Yer Ep 4
+                <a href="/mehmed-fetihler-sultani" onClick={(e) => { e.preventDefault(); nav('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
+                  Mehmed: Fetihler Sultanı
                 </a>
               </li>
               <li>
                 <a href="/mehmed-fetihler-sultani/episode-88" onClick={(e) => { e.preventDefault(); nav('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer font-bold text-amber-300 block">
-                  Mehmed Fetihler Sultani Ep 88
+                  Mehmed Ep 88 (Bolum 88)
                 </a>
               </li>
               <li>
                 <a href="/mehmed-fetihler-sultani/episode-87" onClick={(e) => { e.preventDefault(); nav('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer text-emerald-300 block">
                   Mehmed Season 4 Ep 4 (87)
+                </a>
+              </li>
+              <li>
+                <a href="/gunesin-dogdugu-yer" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
+                  Güneşin Doğduğu Yer
+                </a>
+              </li>
+              <li>
+                <a href="/gunesin-dogdugu-yer/episode-5" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer text-amber-300 block">
+                  Gunesin Ep 5 (Bolum 5)
+                </a>
+              </li>
+              <li>
+                <a href="/teskilat" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
+                  Teşkilat Season 7
                 </a>
               </li>
               <li>
