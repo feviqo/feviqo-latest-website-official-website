@@ -192,6 +192,12 @@ app.get('/sitemap.xml', (_req, res) => {
   }
 });
 
+app.get('/feviqo-indexnow-key-2026.txt', (_req, res) => {
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  return res.status(200).send('feviqo-indexnow-key-2026');
+});
+
 app.get('/ads.txt', (_req, res) => {
   const adsPath = path.join(process.cwd(), 'public', 'ads.txt');
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -2485,7 +2491,8 @@ async function startServer() {
     app.use(express.static(distPath, {
       maxAge: '1y',
       immutable: true,
-      etag: true
+      etag: true,
+      index: false
     }));
     app.get('*', (req, res) => {
       try {
