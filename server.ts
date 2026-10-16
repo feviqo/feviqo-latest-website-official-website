@@ -70,6 +70,8 @@ app.use((req, res, next) => {
       '/episode-188': '/teskilat/episode-188',
       '/episode-187': '/teskilat/episode-187',
       '/episode-186': '/teskilat/episode-186',
+      '/teskilat-urdu': '/teskilat',
+      '/teskilat-urdu/episode-188': '/teskilat/episode-188',
     };
 
     if (aliasMap[rawPath]) {
