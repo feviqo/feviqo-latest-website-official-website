@@ -27,6 +27,7 @@ export interface GunesinEpisode {
   duration: string;
   shortSummary: string;
   recap: string; // 3-5 paragraphs, formatted with double newlines
+  downloadUrl?: string;
   embeds: { label: string; src: string }[];
   season: number;
 }
@@ -72,6 +73,7 @@ export const GUNESIN_EPISODES: GunesinEpisode[] = [
 In this explosive new installment, the core characters must navigate betrayal from close allies while fighting to protect their legacy. Every choice triggers immediate consequences across the entire network, keeping viewers on the edge of their seats.
 
 Watch Gunesin Dogdugu Yer Episode 5 with Urdu Subtitles in full 1080p HD exclusively on FEVIQO. Experience the latest episode of this captivating Turkish drama.`,
+    downloadUrl: "https://shrinkme.click/gunesindogduguyerepisode5urdu",
     embeds: [
       {
         label: "Server 1 (Fast HLS 1080p)",

@@ -11,6 +11,7 @@ import {
   Tv,
   ArrowLeft,
   Share2,
+  Download,
   Calendar,
   Search,
   DollarSign,
@@ -669,26 +670,38 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                 </div>
               </div>
 
-              {/* Actions Row */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-end gap-4">
-                
-                <div className="flex items-center gap-2.5">
+              {/* Actions Row: Download & Share Buttons (Guaranteed same line on phones) */}
+              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-3 flex flex-row items-center justify-between gap-2 w-full">
+                {selectedEpisode.downloadUrl ? (
+                  <a
+                    href={selectedEpisode.downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-[#22C55E] hover:bg-[#1ebd52] text-slate-950 text-[11px] sm:text-xs font-black tracking-wide transition shadow-md shadow-[#22C55E]/15 hover:scale-[1.02] active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    <Download className="w-3.5 h-3.5 text-slate-950 shrink-0" />
+                    <span>Download Episode {selectedEpisode.number} (1080p HD)</span>
+                  </a>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
                   <button 
                     onClick={handleShareLink}
-                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer"
+                    className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] sm:text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer shrink-0 hover:scale-[1.02] active:scale-95"
                   >
-                    <span>{copiedLink ? 'Link Copied!' : 'Share Episode'}</span>
-                    <Share2 className="w-4 h-4" />
+                    <Share2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{copiedLink ? 'Copied!' : 'Share Episode'}</span>
                   </button>
 
                   <button 
                     onClick={handleBackToOverview}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition inline-flex items-center gap-1.5 cursor-pointer"
+                    className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-[11px] sm:text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer shrink-0 hover:scale-[1.02] active:scale-95"
                   >
                     <span>Series Directory</span>
                   </button>
                 </div>
-
               </div>
 
               {/* High-Converting Ads & Smartlink Row */}
