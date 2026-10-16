@@ -223,7 +223,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     canonicalUrl: 'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
     ogTitle: 'Gunesin Dogdugu Yer Episode 5 Urdu Subtitles | Bolum 5',
     ogDescription: 'Watch Gunesin Dogdugu Yer Episode 5 Urdu Subtitles (Bolum 5) in HD on FEVIQO. High-stakes family secrets and dramatic betrayals reach an explosive peak in the new episode.',
-    ogImage: 'https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV',
+    ogImage: 'https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },

@@ -489,7 +489,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "inLanguage": "Urdu",
       "subtitleLanguage": "Urdu Subtitles",
       "description": "Watch Gunesin Dogdugu Yer Episode 5 Urdu Subtitles (Bolum 5) in HD on FEVIQO. High-stakes family secrets and dramatic betrayals reach an explosive peak in the new episode.",
-      "image": "https://lh3.googleusercontent.com/d/1BINiXNmXNm9hIozv0PsowyTYBuP2NSYO",
+      "image": "https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO",
       "mainEntityOfPage": "https://feviqo.com/gunesin-dogdugu-yer/episode-5",
       "isPartOf": {
         "@type": "TVSeries",
@@ -504,10 +504,10 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "name": "Gunesin Dogdugu Yer Episode 5 Urdu Subtitles | Bolum 5",
       "description": "Watch Gunesin Dogdugu Yer Episode 5 Urdu Subtitles (Bolum 5) in HD on FEVIQO. High-stakes family secrets and dramatic betrayals reach an explosive peak in the new episode.",
       "thumbnailUrl": [
-        "https://lh3.googleusercontent.com/d/1BINiXNmXNm9hIozv0PsowyTYBuP2NSYO"
+        "https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO"
       ],
       "uploadDate": "2026-10-16T04:00:00.000Z",
-      "contentUrl": "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8",
+      "contentUrl": "https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8",
       "embedUrl": "https://feviqo.com/gunesin-dogdugu-yer/episode-5",
       "duration": "PT2H25M",
       "isFamilyFriendly": true,
@@ -520,8 +520,8 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     schemaObj["@graph"].push({
       "@type": "ImageObject",
       "@id": "https://feviqo.com/gunesin-dogdugu-yer/episode-5#image",
-      "url": "https://lh3.googleusercontent.com/d/1BINiXNmXNm9hIozv0PsowyTYBuP2NSYO",
-      "contentUrl": "https://lh3.googleusercontent.com/d/1BINiXNmXNm9hIozv0PsowyTYBuP2NSYO",
+      "url": "https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO",
+      "contentUrl": "https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO",
       "name": "Gunesin Dogdugu Yer Episode 5 Urdu Subtitles HD Thumbnail",
       "caption": "Gunesin Dogdugu Yer Episode 5 Urdu Subtitles HD Thumbnail - Bolum 5",
       "description": "Official Gunesin Dogdugu Yer Episode 5 Urdu Subtitles HD Thumbnail image."

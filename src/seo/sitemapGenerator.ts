@@ -106,10 +106,10 @@ export function generateSitemapXml(): string {
       };
     } else if (routeKey === '/gunesin-dogdugu-yer/episode-5') {
       videoInfo = {
-        thumbnail: 'https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV',
+        thumbnail: 'https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO',
         title: 'Gunesin Dogdugu Yer Episode 5 Urdu Subtitles – Bolum 5',
         description: 'Watch Gunesin Dogdugu Yer Episode 5 in HD Urdu Subtitles with story recap on FEVIQO.com.',
-        contentLoc: 'https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8'
+        contentLoc: 'https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8'
       };
     } else if (routeKey === '/teskilat/episode-188' || routeKey === '/teskilat-urdu/episode-188') {
       videoInfo = {

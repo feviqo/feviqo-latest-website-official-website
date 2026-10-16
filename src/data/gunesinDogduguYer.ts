@@ -64,7 +64,7 @@ export const GUNESIN_EPISODES: GunesinEpisode[] = [
     slug: "episode-5",
     title: "Gunesin Dogdugu Yer Episode 5 Urdu Subtitles | Bolum 5",
     airDate: "2026-10-16T04:00:00.000Z",
-    thumbnail: "https://lh3.googleusercontent.com/d/1BINiXNmXNm9hIozv0PsowyTYBuP2NSYO",
+    thumbnail: "https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO",
     duration: "2h 25m",
     shortSummary: "Watch Gunesin Dogdugu Yer Episode 5 Urdu Subtitles (Bolum 5) in HD on FEVIQO. High-stakes betrayals and hidden secrets reach an explosive peak in the new episode.",
     recap: `Gunesin Dogdugu Yer Episode 5 (Bolum 5) delivers an intense continuation filled with high-stakes suspense and dramatic turnarounds. As family rivalries reach an absolute boiling point, hidden motives are brought directly into the light.
@@ -75,7 +75,7 @@ Watch Gunesin Dogdugu Yer Episode 5 with Urdu Subtitles in full 1080p HD exclusi
     embeds: [
       {
         label: "Server 1 (Fast HLS 1080p)",
-        src: "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8"
+        src: "https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8"
       }
     ],
     season: 1
