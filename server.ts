@@ -179,18 +179,57 @@ app.get('/robots.txt', (req, res) => {
 app.get('/sitemap.xml', (_req, res) => {
   res.setHeader('Content-Type', 'text/xml; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  
   try {
-    updateSitemapFile();
-    const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
-    if (fs.existsSync(sitemapPath)) {
-      return res.sendFile(sitemapPath);
-    }
+    updateSitemapFiles();
     const xml = generateSitemapXml();
     return res.status(200).send(xml);
   } catch (err: any) {
-    console.error('Error serving sitemap:', err);
+    console.error('Error serving sitemap.xml:', err);
     return res.status(500).send('Error serving sitemap');
+  }
+});
+
+app.get(['/sitemap-index.xml', '/sitemap_index.xml'], (_req, res) => {
+  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  try {
+    const xml = generateSitemapIndexXml();
+    return res.status(200).send(xml);
+  } catch (err: any) {
+    return res.status(500).send('Error serving sitemap index');
+  }
+});
+
+app.get('/sitemap-main.xml', (_req, res) => {
+  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  try {
+    const xml = generateMainSitemapXml();
+    return res.status(200).send(xml);
+  } catch (err: any) {
+    return res.status(500).send('Error serving main sitemap');
+  }
+});
+
+app.get('/sitemap-episodes.xml', (_req, res) => {
+  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  try {
+    const xml = generateEpisodesSitemapXml();
+    return res.status(200).send(xml);
+  } catch (err: any) {
+    return res.status(500).send('Error serving episodes sitemap');
+  }
+});
+
+app.get('/sitemap-trending.xml', (_req, res) => {
+  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  try {
+    const xml = generateTrendingSitemapXml();
+    return res.status(200).send(xml);
+  } catch (err: any) {
+    return res.status(500).send('Error serving trending sitemap');
   }
 });
 
@@ -2448,11 +2487,18 @@ app.delete('/api/editors/:id', (req, res) => {
 });
 
 import { transformHTMLForRoute } from './src/seo/serverSEO';
-import { generateSitemapXml, updateSitemapFile } from './src/seo/sitemapGenerator';
+import { 
+  generateSitemapXml, 
+  generateSitemapIndexXml,
+  generateMainSitemapXml,
+  generateEpisodesSitemapXml,
+  generateTrendingSitemapXml,
+  updateSitemapFiles 
+} from './src/seo/sitemapGenerator';
 
 // Initial sitemap sync on boot
 try {
-  updateSitemapFile();
+  updateSitemapFiles();
 } catch (e) {
   console.error('Initial sitemap sync error:', e);
 }

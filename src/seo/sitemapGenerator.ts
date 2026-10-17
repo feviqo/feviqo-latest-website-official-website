@@ -5,6 +5,313 @@ import { MEHMED_EPISODES } from '../data/mehmedData';
 import fs from 'fs';
 import path from 'path';
 
+const SITE_ORIGIN = 'https://feviqo.com';
+
+interface VideoXmlInfo {
+  thumbnail: string;
+  title: string;
+  description: string;
+  contentLoc: string;
+  duration?: string;
+  pubDate?: string;
+}
+
+function escapeXml(unsafe: string): string {
+  if (!unsafe) return '';
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function formatUrlNode(
+  urlPath: string,
+  priority: string = '0.9',
+  changefreq: string = 'daily',
+  lastmod: string = new Date().toISOString().split('T')[0],
+  imageLoc?: string,
+  imageTitle?: string,
+  videoInfo?: VideoXmlInfo
+): string {
+  const cleanPath = urlPath.startsWith('/') ? urlPath : `/${urlPath}`;
+  const fullLoc = `${SITE_ORIGIN}${cleanPath === '/' ? '/' : cleanPath}`;
+  
+  let node = `  <url>\n`;
+  node += `    <loc>${escapeXml(fullLoc)}</loc>\n`;
+  node += `    <lastmod>${lastmod}</lastmod>\n`;
+  node += `    <changefreq>${changefreq}</changefreq>\n`;
+  node += `    <priority>${priority}</priority>\n`;
+
+  if (imageLoc) {
+    node += `    <image:image>\n`;
+    node += `      <image:loc>${escapeXml(imageLoc)}</image:loc>\n`;
+    if (imageTitle) {
+      node += `      <image:title>${escapeXml(imageTitle)}</image:title>\n`;
+    }
+    node += `    </image:image>\n`;
+  }
+
+  if (videoInfo) {
+    node += `    <video:video>\n`;
+    node += `      <video:thumbnail_loc>${escapeXml(videoInfo.thumbnail)}</video:thumbnail_loc>\n`;
+    node += `      <video:title>${escapeXml(videoInfo.title)}</video:title>\n`;
+    node += `      <video:description>${escapeXml(videoInfo.description)}</video:description>\n`;
+    node += `      <video:content_loc>${escapeXml(videoInfo.contentLoc)}</video:content_loc>\n`;
+    node += `      <video:duration>${videoInfo.duration || '8700'}</video:duration>\n`;
+    node += `      <video:publication_date>${videoInfo.pubDate || '2026-10-08T18:00:00+00:00'}</video:publication_date>\n`;
+    node += `      <video:family_friendly>YES</video:family_friendly>\n`;
+    node += `    </video:video>\n`;
+  }
+
+  node += `  </url>\n`;
+  return node;
+}
+
+/**
+ * 1. Main Pages Sitemap (sitemap-main.xml)
+ */
+export function generateMainSitemapXml(): string {
+  const today = new Date().toISOString().split('T')[0];
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n`;
+  xml += `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+
+  const mainRoutes = [
+    '/',
+    '/unlimited-editing',
+    '/creators',
+    '/agencies',
+    '/business',
+    '/gallery',
+    '/pricing',
+    '/about',
+    '/booking',
+    '/case-studies',
+    '/testimonials',
+    '/dramas',
+    '/turkish-drama',
+    '/teskilat',
+    '/mehmed-fetihler-sultani',
+    '/gunesin-dogdugu-yer',
+    '/trending',
+    '/privacy',
+    '/terms'
+  ];
+
+  mainRoutes.forEach((routeKey) => {
+    const config = DEFAULT_PAGE_SEO[routeKey];
+    let priority = '0.9';
+    let changefreq = 'daily';
+
+    if (routeKey === '/') priority = '1.0';
+    if (['/privacy', '/terms'].includes(routeKey)) {
+      priority = '0.5';
+      changefreq = 'monthly';
+    }
+
+    xml += formatUrlNode(
+      routeKey,
+      priority,
+      changefreq,
+      today,
+      config?.ogImage || `${SITE_ORIGIN}/feviqo1.png`,
+      config?.seoTitle || 'FEVIQO'
+    );
+  });
+
+  xml += `</urlset>\n`;
+  return xml;
+}
+
+/**
+ * 2. Drama Episodes Video Sitemap (sitemap-episodes.xml)
+ */
+export function generateEpisodesSitemapXml(): string {
+  const today = new Date().toISOString().split('T')[0];
+  const seenPaths = new Set<string>();
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n`;
+  xml += `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"\n`;
+  xml += `        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n`;
+
+  // Explicit Video Episode Mappings
+  const explicitEpisodes: Record<string, VideoXmlInfo> = {
+    '/teskilat/episode-188': {
+      thumbnail: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
+      title: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue',
+      description: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
+      contentLoc: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8'
+    },
+    '/teskilat/episode-187': {
+      thumbnail: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
+      title: 'Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187',
+      description: 'Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187) with story recaps on FEVIQO.',
+      contentLoc: 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8'
+    },
+    '/teskilat/episode-186': {
+      thumbnail: 'https://feviqo.com/images/teskialt186thumbnIL.png',
+      title: 'Teskilat Season 7 Episode 2 Urdu Subtitles – Bolum 186',
+      description: 'Watch Teskilat Season 7 Episode 2 Urdu Subtitles (Bolum 186) with story recaps on FEVIQO.',
+      contentLoc: 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8'
+    },
+    '/mehmed-fetihler-sultani/episode-88': {
+      thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
+      title: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
+      description: 'Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) on FEVIQO.',
+      contentLoc: 'https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8'
+    },
+    '/mehmed-fetihler-sultani/episode-87': {
+      thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
+      title: 'Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87',
+      description: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87) on FEVIQO.',
+      contentLoc: 'https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8'
+    },
+    '/gunesin-dogdugu-yer/episode-5': {
+      thumbnail: 'https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO',
+      title: 'Gunesin Dogdugu Yer Episode 5 Urdu Subtitles – Bolum 5',
+      description: 'Watch Gunesin Dogdugu Yer Episode 5 in HD Urdu Subtitles with story recap on FEVIQO.com.',
+      contentLoc: 'https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8'
+    },
+    '/gunesin-dogdugu-yer/episode-4': {
+      thumbnail: 'https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV',
+      title: 'Gunesin Dogdugu Yer Episode 4 Urdu Subtitles – Bolum 4',
+      description: 'Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles with story recap on FEVIQO.com.',
+      contentLoc: 'https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8'
+    },
+    '/gunesin-dogdugu-yer/episode-3': {
+      thumbnail: 'https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj',
+      title: 'Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3',
+      description: 'Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles with story recap on FEVIQO.com.',
+      contentLoc: 'https://stream.mux.com/ff2G9XfcMerNcnD02iPnysGkByH6SMTSa7p2yP01DuzT4.m3u8'
+    }
+  };
+
+  Object.keys(explicitEpisodes).forEach((epPath) => {
+    if (seenPaths.has(epPath)) return;
+    seenPaths.add(epPath);
+
+    const videoInfo = explicitEpisodes[epPath];
+    const config = DEFAULT_PAGE_SEO[epPath];
+
+    xml += formatUrlNode(
+      epPath,
+      '1.0',
+      'daily',
+      today,
+      videoInfo.thumbnail,
+      videoInfo.title,
+      videoInfo
+    );
+  });
+
+  // Dynamically crawl all Güneşin Episodes
+  GUNESIN_EPISODES.forEach((ep) => {
+    const epPath = `/gunesin-dogdugu-yer/${ep.slug}`;
+    if (seenPaths.has(epPath)) return;
+    seenPaths.add(epPath);
+
+    const firstEmbed = ep.embeds && ep.embeds[0] ? ep.embeds[0].src : undefined;
+    xml += formatUrlNode(
+      epPath,
+      '1.0',
+      'daily',
+      ep.airDate ? ep.airDate.split('T')[0] : today,
+      ep.thumbnail,
+      ep.title,
+      firstEmbed ? {
+        thumbnail: ep.thumbnail,
+        title: ep.title,
+        description: ep.shortSummary,
+        contentLoc: firstEmbed
+      } : undefined
+    );
+  });
+
+  // Dynamically crawl all Mehmed Episodes
+  MEHMED_EPISODES.forEach((ep) => {
+    const epPath = `/mehmed-fetihler-sultani/${ep.slug}`;
+    if (seenPaths.has(epPath)) return;
+    seenPaths.add(epPath);
+
+    const firstEmbed = ep.embeds && ep.embeds[0] ? ep.embeds[0].src : undefined;
+    xml += formatUrlNode(
+      epPath,
+      '1.0',
+      'daily',
+      ep.airDate ? ep.airDate.split('T')[0] : today,
+      ep.thumbnail,
+      ep.title,
+      firstEmbed ? {
+        thumbnail: ep.thumbnail,
+        title: ep.title,
+        description: ep.shortSummary,
+        contentLoc: firstEmbed
+      } : undefined
+    );
+  });
+
+  xml += `</urlset>\n`;
+  return xml;
+}
+
+/**
+ * 3. Trending Articles Sitemap (sitemap-trending.xml)
+ */
+export function generateTrendingSitemapXml(): string {
+  const today = new Date().toISOString().split('T')[0];
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n`;
+  xml += `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
+
+  INITIAL_TRENDING_ARTICLES.forEach((article) => {
+    const articlePath = `/trending/${article.slug}`;
+    const pubDate = article.updatedAt ? article.updatedAt.split('T')[0] : today;
+
+    xml += formatUrlNode(
+      articlePath,
+      article.featured ? '1.0' : '0.9',
+      'daily',
+      pubDate,
+      article.featuredImage,
+      article.title
+    );
+  });
+
+  xml += `</urlset>\n`;
+  return xml;
+}
+
+/**
+ * 4. Official XML Sitemap Index (sitemap-index.xml)
+ */
+export function generateSitemapIndexXml(): string {
+  const today = new Date().toISOString().split('T')[0];
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+  const sitemaps = [
+    '/sitemap-main.xml',
+    '/sitemap-episodes.xml',
+    '/sitemap-trending.xml'
+  ];
+
+  sitemaps.forEach((sm) => {
+    xml += `  <sitemap>\n`;
+    xml += `    <loc>${SITE_ORIGIN}${sm}</loc>\n`;
+    xml += `    <lastmod>${today}</lastmod>\n`;
+    xml += `  </sitemap>\n`;
+  });
+
+  xml += `</sitemapindex>\n`;
+  return xml;
+}
+
+/**
+ * 5. Full Combined Sitemap (sitemap.xml)
+ */
 export function generateSitemapXml(): string {
   const seenUrls = new Set<string>();
   const today = new Date().toISOString().split('T')[0];
@@ -14,67 +321,22 @@ export function generateSitemapXml(): string {
   xml += `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"\n`;
   xml += `        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n`;
 
-  // Helper to add URL node
-  const addUrlNode = (
+  const addNode = (
     urlPath: string,
     priority: string = '0.9',
     changefreq: string = 'daily',
     lastmod: string = today,
     imageLoc?: string,
     imageTitle?: string,
-    videoInfo?: {
-      thumbnail: string;
-      title: string;
-      description: string;
-      contentLoc: string;
-      duration?: string;
-      pubDate?: string;
-    }
+    videoInfo?: VideoXmlInfo
   ) => {
     const cleanPath = urlPath.startsWith('/') ? urlPath : `/${urlPath}`;
     if (seenUrls.has(cleanPath)) return;
     seenUrls.add(cleanPath);
-
-    const fullLoc = `https://feviqo.com${cleanPath === '/' ? '/' : cleanPath}`;
-    const safeLoc = fullLoc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-    xml += `  <url>\n`;
-    xml += `    <loc>${safeLoc}</loc>\n`;
-    xml += `    <lastmod>${lastmod}</lastmod>\n`;
-    xml += `    <changefreq>${changefreq}</changefreq>\n`;
-    xml += `    <priority>${priority}</priority>\n`;
-
-    if (imageLoc) {
-      const safeImageLoc = imageLoc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      xml += `    <image:image>\n`;
-      xml += `      <image:loc>${safeImageLoc}</image:loc>\n`;
-      if (imageTitle) {
-        const safeTitle = imageTitle.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        xml += `      <image:title>${safeTitle}</image:title>\n`;
-      }
-      xml += `    </image:image>\n`;
-    }
-
-    if (videoInfo) {
-      const safeVideoThumb = videoInfo.thumbnail.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const safeVideoContent = videoInfo.contentLoc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const safeVideoTitle = videoInfo.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      const safeVideoDesc = videoInfo.description.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      xml += `    <video:video>\n`;
-      xml += `      <video:thumbnail_loc>${safeVideoThumb}</video:thumbnail_loc>\n`;
-      xml += `      <video:title>${safeVideoTitle}</video:title>\n`;
-      xml += `      <video:description>${safeVideoDesc}</video:description>\n`;
-      xml += `      <video:content_loc>${safeVideoContent}</video:content_loc>\n`;
-      xml += `      <video:duration>${videoInfo.duration || '8700'}</video:duration>\n`;
-      xml += `      <video:publication_date>${videoInfo.pubDate || '2026-10-08T18:00:00+00:00'}</video:publication_date>\n`;
-      xml += `      <video:family_friendly>YES</video:family_friendly>\n`;
-      xml += `    </video:video>\n`;
-    }
-
-    xml += `  </url>\n`;
+    xml += formatUrlNode(cleanPath, priority, changefreq, lastmod, imageLoc, imageTitle, videoInfo);
   };
 
-  // 1. Process all pages from DEFAULT_PAGE_SEO
+  // 1. Core pages
   Object.keys(DEFAULT_PAGE_SEO).forEach((routeKey) => {
     const config = DEFAULT_PAGE_SEO[routeKey];
     let priority = '0.9';
@@ -87,10 +349,15 @@ export function generateSitemapXml(): string {
       changefreq = 'monthly';
     }
 
-    let videoInfo: any = undefined;
-
-    // Attach Video Object metadata for video watch pages
-    if (routeKey === '/teskilat/episode-187') {
+    let videoInfo: VideoXmlInfo | undefined = undefined;
+    if (routeKey === '/teskilat/episode-188') {
+      videoInfo = {
+        thumbnail: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
+        title: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue',
+        description: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
+        contentLoc: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8'
+      };
+    } else if (routeKey === '/teskilat/episode-187') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
         title: 'Teskilat Season 7 Episode 3 Urdu Subtitles – Bolum 187',
@@ -110,13 +377,6 @@ export function generateSitemapXml(): string {
         title: 'Gunesin Dogdugu Yer Episode 5 Urdu Subtitles – Bolum 5',
         description: 'Watch Gunesin Dogdugu Yer Episode 5 in HD Urdu Subtitles with story recap on FEVIQO.com.',
         contentLoc: 'https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8'
-      };
-    } else if (routeKey === '/teskilat/episode-188') {
-      videoInfo = {
-        thumbnail: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
-        title: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue',
-        description: 'Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
-        contentLoc: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8'
       };
     } else if (routeKey === '/mehmed-fetihler-sultani/episode-88') {
       videoInfo = {
@@ -156,23 +416,22 @@ export function generateSitemapXml(): string {
       };
     }
 
-    addUrlNode(
+    addNode(
       routeKey,
       priority,
       changefreq,
       today,
-      config.ogImage,
-      config.seoTitle,
+      config?.ogImage,
+      config?.seoTitle,
       videoInfo
     );
   });
 
-  // 2. Process all dynamically generated Güneşin episodes
+  // 2. Güneşin Episodes
   GUNESIN_EPISODES.forEach((ep) => {
     const epPath = `/gunesin-dogdugu-yer/${ep.slug}`;
     const firstEmbed = ep.embeds && ep.embeds[0] ? ep.embeds[0].src : undefined;
-
-    addUrlNode(
+    addNode(
       epPath,
       '1.0',
       'daily',
@@ -188,12 +447,11 @@ export function generateSitemapXml(): string {
     );
   });
 
-  // 3. Process all dynamically generated Mehmed episodes
+  // 3. Mehmed Episodes
   MEHMED_EPISODES.forEach((ep) => {
     const epPath = `/mehmed-fetihler-sultani/${ep.slug}`;
     const firstEmbed = ep.embeds && ep.embeds[0] ? ep.embeds[0].src : undefined;
-
-    addUrlNode(
+    addNode(
       epPath,
       '1.0',
       'daily',
@@ -209,12 +467,11 @@ export function generateSitemapXml(): string {
     );
   });
 
-  // 4. Process all dynamically created Trending articles from database / file
+  // 4. Trending Articles
   INITIAL_TRENDING_ARTICLES.forEach((article) => {
     const articlePath = `/trending/${article.slug}`;
     const pubDate = article.updatedAt ? article.updatedAt.split('T')[0] : today;
-
-    addUrlNode(
+    addNode(
       articlePath,
       article.featured ? '1.0' : '0.9',
       'daily',
@@ -228,13 +485,36 @@ export function generateSitemapXml(): string {
   return xml;
 }
 
-// Function to update the public/sitemap.xml on disk
-export function updateSitemapFile(): void {
+/**
+ * Automatically regenerates all sitemap XML files on disk
+ */
+export function updateSitemapFiles(): void {
   try {
-    const xmlContent = generateSitemapXml();
-    const publicSitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
-    fs.writeFileSync(publicSitemapPath, xmlContent, 'utf-8');
+    const publicDir = path.join(process.cwd(), 'public');
+
+    // 1. Write sitemap.xml
+    fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), generateSitemapXml(), 'utf-8');
+
+    // 2. Write sitemap-index.xml & sitemap_index.xml
+    const indexXml = generateSitemapIndexXml();
+    fs.writeFileSync(path.join(publicDir, 'sitemap-index.xml'), indexXml, 'utf-8');
+    fs.writeFileSync(path.join(publicDir, 'sitemap_index.xml'), indexXml, 'utf-8');
+
+    // 3. Write sitemap-main.xml
+    fs.writeFileSync(path.join(publicDir, 'sitemap-main.xml'), generateMainSitemapXml(), 'utf-8');
+
+    // 4. Write sitemap-episodes.xml
+    fs.writeFileSync(path.join(publicDir, 'sitemap-episodes.xml'), generateEpisodesSitemapXml(), 'utf-8');
+
+    // 5. Write sitemap-trending.xml
+    fs.writeFileSync(path.join(publicDir, 'sitemap-trending.xml'), generateTrendingSitemapXml(), 'utf-8');
+
+    console.log('[SEO Service] All sitemap XML files regenerated successfully!');
   } catch (err) {
-    console.error('Failed to auto-write public/sitemap.xml:', err);
+    console.error('Failed to auto-write sitemap files:', err);
   }
+}
+
+export function updateSitemapFile(): void {
+  updateSitemapFiles();
 }
