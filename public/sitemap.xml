@@ -4,7 +4,7 @@
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://feviqo.com/</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -23,7 +23,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/unlimited-editing</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -33,7 +33,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/creators</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -43,7 +43,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/agencies</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -53,7 +53,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/business</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -63,7 +63,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/gallery</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -73,7 +73,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/teskilat</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -83,7 +83,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-186</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -102,7 +102,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-187</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -121,7 +121,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -130,28 +130,8 @@
     </image:image>
   </url>
   <url>
-    <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-1</loc>
-    <lastmod>2026-10-12</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <image:image>
-      <image:loc>https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw</image:loc>
-      <image:title>Gunesin Dogdugu Yer Episode 1 Urdu Subtitles | FEVIQO</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-2</loc>
-    <lastmod>2026-10-12</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <image:image>
-      <image:loc>https://feviqo.com/images/teskialt186thumbnIL.png</image:loc>
-      <image:title>Gunesin Dogdugu Yer Episode 2 Urdu Subtitles | FEVIQO</image:title>
-    </image:image>
-  </url>
-  <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-3</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -162,7 +142,7 @@
       <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj</video:thumbnail_loc>
       <video:title>Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3</video:title>
       <video:description>Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles with story recap on FEVIQO.com.</video:description>
-      <video:content_loc>https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8</video:content_loc>
+      <video:content_loc>https://stream.mux.com/ff2G9XfcMerNcnD02iPnysGkByH6SMTSa7p2yP01DuzT4.m3u8</video:content_loc>
       <video:duration>8700</video:duration>
       <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>YES</video:family_friendly>
@@ -170,7 +150,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-4</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -189,18 +169,18 @@
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-5</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV</image:loc>
+      <image:loc>https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO</image:loc>
       <image:title>Gunesin Dogdugu Yer Episode 5 Urdu Subtitles | Bolum 5</image:title>
     </image:image>
     <video:video>
-      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV</video:thumbnail_loc>
+      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO</video:thumbnail_loc>
       <video:title>Gunesin Dogdugu Yer Episode 5 Urdu Subtitles – Bolum 5</video:title>
       <video:description>Watch Gunesin Dogdugu Yer Episode 5 in HD Urdu Subtitles with story recap on FEVIQO.com.</video:description>
-      <video:content_loc>https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8</video:content_loc>
+      <video:content_loc>https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8</video:content_loc>
       <video:duration>8700</video:duration>
       <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>YES</video:family_friendly>
@@ -208,26 +188,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-188</loc>
-    <lastmod>2026-10-12</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <image:image>
-      <image:loc>https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc</image:loc>
-      <image:title>Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue | FEVIQO</image:title>
-    </image:image>
-    <video:video>
-      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc</video:thumbnail_loc>
-      <video:title>Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue</video:title>
-      <video:description>Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.</video:description>
-      <video:content_loc>https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8</video:content_loc>
-      <video:duration>8700</video:duration>
-      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
-      <video:family_friendly>YES</video:family_friendly>
-    </video:video>
-  </url>
-  <url>
-    <loc>https://feviqo.com/teskilat-urdu/episode-188</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -246,18 +207,18 @@
   </url>
   <url>
     <loc>https://feviqo.com/mehmed-fetihler-sultani/episode-88</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
-      <image:loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</image:loc>
-      <image:title>Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88</image:title>
+      <image:loc>https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq</image:loc>
+      <image:title>Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88 - FEVIQO</image:title>
     </image:image>
     <video:video>
       <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</video:thumbnail_loc>
       <video:title>Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88</video:title>
       <video:description>Watch Mehmed Fetihler Sultani Episode 88 Urdu Subtitles (Bolum 88) on FEVIQO.</video:description>
-      <video:content_loc>https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8</video:content_loc>
+      <video:content_loc>https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8</video:content_loc>
       <video:duration>8700</video:duration>
       <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>YES</video:family_friendly>
@@ -265,46 +226,17 @@
   </url>
   <url>
     <loc>https://feviqo.com/mehmed-fetihler-sultani</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
-      <image:loc>https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1</image:loc>
-      <image:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</image:title>
-    </image:image>
-  </url>
-  <url>
-    <loc>https://feviqo.com/mehmed</loc>
-    <lastmod>2026-10-12</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-    <image:image>
-      <image:loc>https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1</image:loc>
-      <image:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</image:title>
+      <image:loc>https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq</image:loc>
+      <image:title>Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88 - FEVIQO</image:title>
     </image:image>
   </url>
   <url>
     <loc>https://feviqo.com/mehmed-fetihler-sultani/episode-87</loc>
-    <lastmod>2026-10-12</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-    <image:image>
-      <image:loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</image:loc>
-      <image:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</image:title>
-    </image:image>
-    <video:video>
-      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg</video:thumbnail_loc>
-      <video:title>Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87</video:title>
-      <video:description>Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87) on FEVIQO.</video:description>
-      <video:content_loc>https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8</video:content_loc>
-      <video:duration>8700</video:duration>
-      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
-      <video:family_friendly>YES</video:family_friendly>
-    </video:video>
-  </url>
-  <url>
-    <loc>https://feviqo.com/mehmed/episode-87</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -323,7 +255,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/dramas</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -333,7 +265,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -343,7 +275,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/h1b-visa-2026-latest-update</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -353,7 +285,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/us-immigration-updates-this-week</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -363,7 +295,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/latest-ai-news-major-developments</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -373,7 +305,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/tech-job-market-2026-hiring-trends</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -383,7 +315,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/gta-6-leaks-cyberleaks-latest-news</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -393,7 +325,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/us-deportation-policy-updates-2026</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -403,7 +335,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/cory-wharton-taylor-selfridge-latest-news</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -413,7 +345,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/mlb-154-game-season-proposal-latest</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -423,7 +355,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/james-talarico-campaign-texas-senate</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -433,7 +365,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/celine-dion-paris-residency-2026-updates</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -443,7 +375,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/ronald-acuna-jr-injury-recovery-mlb-updates</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -453,7 +385,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/terence-atmane-tennis-atp-tour-latest</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -463,7 +395,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/microsoft-stock-msft-ai-cloud-revenue</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -473,7 +405,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/business-startup-funding-trends</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -483,7 +415,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/trending/kaytron-allen</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -493,7 +425,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/pricing</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -503,7 +435,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/about</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -513,7 +445,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/booking</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -523,7 +455,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/case-studies</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -533,7 +465,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/testimonials</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -543,7 +475,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/admin</loc>
-    <lastmod>2026-10-12</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
     <image:image>

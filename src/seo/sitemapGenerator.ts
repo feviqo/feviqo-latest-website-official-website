@@ -111,7 +111,7 @@ export function generateSitemapXml(): string {
         description: 'Watch Gunesin Dogdugu Yer Episode 5 in HD Urdu Subtitles with story recap on FEVIQO.com.',
         contentLoc: 'https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8'
       };
-    } else if (routeKey === '/teskilat/episode-188' || routeKey === '/teskilat-urdu/episode-188') {
+    } else if (routeKey === '/teskilat/episode-188') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
         title: 'Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue',
