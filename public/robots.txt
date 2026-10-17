@@ -4,7 +4,4 @@ Disallow: /admin
 Disallow: /flow
 
 Sitemap: https://feviqo.com/sitemap.xml
-Sitemap: https://feviqo.com/sitemap-index.xml
-Sitemap: https://feviqo.com/sitemap-episodes.xml
-Sitemap: https://feviqo.com/sitemap-main.xml
-Sitemap: https://feviqo.com/sitemap-trending.xml
+

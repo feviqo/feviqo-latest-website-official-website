@@ -179,8 +179,11 @@ app.get('/robots.txt', (req, res) => {
 app.get('/sitemap.xml', (_req, res) => {
   res.setHeader('Content-Type', 'text/xml; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+  if (fs.existsSync(sitemapPath)) {
+    return res.sendFile(sitemapPath);
+  }
   try {
-    updateSitemapFiles();
     const xml = generateSitemapXml();
     return res.status(200).send(xml);
   } catch (err: any) {
@@ -189,48 +192,8 @@ app.get('/sitemap.xml', (_req, res) => {
   }
 });
 
-app.get(['/sitemap-index.xml', '/sitemap_index.xml'], (_req, res) => {
-  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  try {
-    const xml = generateSitemapIndexXml();
-    return res.status(200).send(xml);
-  } catch (err: any) {
-    return res.status(500).send('Error serving sitemap index');
-  }
-});
-
-app.get('/sitemap-main.xml', (_req, res) => {
-  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  try {
-    const xml = generateMainSitemapXml();
-    return res.status(200).send(xml);
-  } catch (err: any) {
-    return res.status(500).send('Error serving main sitemap');
-  }
-});
-
-app.get('/sitemap-episodes.xml', (_req, res) => {
-  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  try {
-    const xml = generateEpisodesSitemapXml();
-    return res.status(200).send(xml);
-  } catch (err: any) {
-    return res.status(500).send('Error serving episodes sitemap');
-  }
-});
-
-app.get('/sitemap-trending.xml', (_req, res) => {
-  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  try {
-    const xml = generateTrendingSitemapXml();
-    return res.status(200).send(xml);
-  } catch (err: any) {
-    return res.status(500).send('Error serving trending sitemap');
-  }
+app.get(['/sitemap-index.xml', '/sitemap_index.xml', '/sitemap-main.xml', '/sitemap-episodes.xml', '/sitemap-trending.xml'], (_req, res) => {
+  return res.redirect(301, 'https://feviqo.com/sitemap.xml');
 });
 
 app.get('/feviqo-indexnow-key-2026.txt', (_req, res) => {
