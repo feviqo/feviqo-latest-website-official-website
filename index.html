@@ -225,9 +225,9 @@
     <!-- VideoJS HTML Player & Skin registration -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/@videojs/cdn@10.0.0-rc.4/video.js"></script>
 
-    <!-- Conditional Popunder & Social Bar (Loads on live site, bypasses iframe restrictions in dev studio) -->
+    <!-- Conditional Popunder & Social Bar (Loads on live site, bypasses search crawlers and dev studio) -->
     <script>
-      if (window.self === window.top) {
+      if (window.self === window.top && !/Googlebot|Mediapartners|bingbot|slurp|duckduckbot|baiduspider|yandex/i.test(navigator.userAgent)) {
         var s1 = document.createElement('script');
         s1.setAttribute('data-cfasync', 'false');
         s1.src = 'https://afders.org/1/a7a4453eb8b1f1852342cdad1214a60e';
