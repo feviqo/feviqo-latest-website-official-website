@@ -64,13 +64,16 @@ app.use((req, res, next) => {
       '/mehmed': '/mehmed-fetihler-sultani',
       '/mehmed/': '/mehmed-fetihler-sultani',
       '/mehmed/episode-87': '/mehmed-fetihler-sultani/episode-87',
+      '/teskilat-189': '/teskilat/episode-189',
       '/teskilat-188': '/teskilat/episode-188',
       '/teskilat-187': '/teskilat/episode-187',
       '/teskilat-186': '/teskilat/episode-186',
+      '/episode-189': '/teskilat/episode-189',
       '/episode-188': '/teskilat/episode-188',
       '/episode-187': '/teskilat/episode-187',
       '/episode-186': '/teskilat/episode-186',
       '/teskilat-urdu': '/teskilat',
+      '/teskilat-urdu/episode-189': '/teskilat/episode-189',
       '/teskilat-urdu/episode-188': '/teskilat/episode-188',
     };
 
@@ -167,13 +170,10 @@ app.use('/videos', express.static(path.join(process.cwd(), 'public', 'videos')))
 app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
 
 // Explicit SEO endpoints for search engine crawlers (Google, Bing, Yahoo, Ahrefs, SEMrush)
-app.get('/robots.txt', (req, res) => {
-  const robotsPath = path.join(process.cwd(), 'public', 'robots.txt');
-  if (fs.existsSync(robotsPath)) {
-    res.type('text/plain');
-    return res.sendFile(robotsPath);
-  }
-  res.type('text/plain').send("User-agent: *\nAllow: /\nSitemap: https://feviqo.com/sitemap.xml\n");
+app.get('/robots.txt', (_req, res) => {
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  return res.status(200).send("User-agent: *\nAllow: /\nSitemap: https://feviqo.com/sitemap.xml\n");
 });
 
 app.get('/sitemap.xml', (_req, res) => {

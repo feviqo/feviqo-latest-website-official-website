@@ -227,6 +227,22 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },
+  '/teskilat/episode-189': {
+    path: '/teskilat/episode-189',
+    pageName: 'Teskilat Episode 189 Watch Page',
+    seoTitle: 'Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189 | FEVIQO',
+    metaDescription: 'Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
+    focusKeyword: 'Teskilat Season 7 Episode 5 Urdu Subtitles',
+    secondaryKeywords: [
+      'Teskilat Season 7', 'Teskilat Season 7 Urdu Subtitles', 'Teskilat Urdu Subtitles', 'Teşkilat Season 7 Urdu', 'Teskilat Season 7 Watch Online', 'Teskilat Episode 189 Urdu Subtitles', 'Teskilat Bolum 189 Urdu', 'Altay Teskilat Season 7', 'Korkut Teskilat', 'Turkish Series Urdu Subtitles', 'Turkish Action Series Urdu', 'Turkish Intelligence Series', 'TRT1 Teskilat', 'Teskilat New Season Urdu', 'Teskilat NiaziPlay', 'Teskilat Season 7 Episode 5 Urdu Subtitles', 'Teskilat Bolum 189 Urdu Subtitles', 'Teskilat Season 7 Urdu', 'Teskilat Episode 5 Urdu', 'Teskilat 189 Urdu', 'Altay Ender Episode 189', 'Azra Teskilat Season 7', 'Korkut Yahya Episode 189', 'Bahar Yahya Teskilat', 'Ender Rescue Teskilat', 'TRT1 Teskilat Episode 189'
+    ],
+    canonicalUrl: 'https://feviqo.com/teskilat/episode-189',
+    ogTitle: 'Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189 | FEVIQO',
+    ogDescription: 'Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
   '/teskilat/episode-188': {
     path: '/teskilat/episode-188',
     pageName: 'Teskilat Episode 188 Watch Page',
@@ -661,6 +677,11 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
   if (cleanPath.includes('mehmed') && cleanPath.includes('87')) {
     if (DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani/episode-87']) {
       return DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani/episode-87'];
+    }
+  }
+  if ((cleanPath.includes('189') || cleanPath.includes('episode-189')) && (cleanPath.includes('teskilat') || cleanPath.includes('episode'))) {
+    if (DEFAULT_PAGE_SEO['/teskilat/episode-189']) {
+      return DEFAULT_PAGE_SEO['/teskilat/episode-189'];
     }
   }
   if ((cleanPath.includes('188') || cleanPath.includes('episode-188')) && (cleanPath.includes('teskilat') || cleanPath.includes('episode'))) {

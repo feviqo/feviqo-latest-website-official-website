@@ -227,6 +227,27 @@ Watch Teskilat Season 7 Episode 3 – Bolum 187 with Urdu Subtitles on FEVIQO.`,
   isLatest: false
 };
 
+const EPISODE_189: TeskilatEpisode = {
+  id: 'ep-189-s7',
+  episodeNumber: 189,
+  seasonNumber: 7,
+  titleUrdu: 'تشکیلات سیزن 7 قسط 189 اردو ترجمہ کے ساتھ',
+  titleEnglish: 'Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189 | FEVIQO',
+  releaseDate: 'October 2026',
+  duration: '2h 25m',
+  thumbnailUrl: 'https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S',
+  directoryThumbnailUrl: 'https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S',
+  videoUrl: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8',
+  storyRecapUrdu: `تشکیلات سیزن 7 قسط 189 (بولم 189) میں الپائے اور انٹیلی جنس ٹیم دشمن کے سب سے بڑے نیٹ ورک پر آخری وار کرنے جا رہی ہے۔ عذرا کی چالوں کے پیچھے کی اصل سچائی سامنے آتی ہے جبکہ اینڈر کو بچانے کا یہ حتمی آپریشن ایک زبردست موڑ اختیار کر جاتا ہے۔ مکمل قسط ایچ ڈی اردو سب ٹائٹلز کے ساتھ فیویکو پر دیکھیں۔`,
+  storyRecapEnglish: `Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.
+
+Teskilat Season 7 Episode 5 (Bolum 189) brings an explosive continuation to Altay's high-stakes mission. With the Organization closing in on enemy operatives, Altay faces the ultimate tactical challenge to bring Ender home and neutralize deep-cover threats.
+
+Target Search Keywords: Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 189 Urdu Subtitles, Teskilat Bolum 189 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, TRT1 Teskilat, Teskilat Season 7 Episode 5 Urdu Subtitles, Teskilat Bolum 189 Urdu, Teskilat 189 Urdu, Altay Ender Episode 189, Azra Teskilat Season 7, Korkut Yahya Episode 189, Ender Rescue Teskilat.`,
+  views: '124,100',
+  isLatest: true
+};
+
 const EPISODE_188: TeskilatEpisode = {
   id: 'ep-188-s7',
   episodeNumber: 188,
@@ -245,10 +266,10 @@ Teskilat Season 7 Episode 4 (Bolum 188) brings an explosive continuation to Alta
 
 Target Search Keywords: Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, TRT1 Teskilat, Teskilat Season 7 Episode 4 Urdu Subtitles, Teskilat Episode 188 Urdu Subtitles, Teskilat Bolum 188 Urdu, Teskilat 188 Urdu, Altay Ender Episode 188, Azra Teskilat Season 7, Korkut Yahya Episode 188, Ender Rescue Teskilat.`,
   views: '198,400',
-  isLatest: true
+  isLatest: false
 };
 
-const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_188, EPISODE_187, FEATURED_SEASON7_EPISODE];
+const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_189, EPISODE_188, EPISODE_187, FEATURED_SEASON7_EPISODE];
 
 interface TeskilatDramaPageProps {
   onBackToHome: () => void;
