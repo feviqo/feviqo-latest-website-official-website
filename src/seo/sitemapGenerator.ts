@@ -140,10 +140,10 @@ export function generateEpisodesSitemapXml(): string {
   // Explicit Video Episode Mappings
   const explicitEpisodes: Record<string, VideoXmlInfo> = {
     '/teskilat/episode-189': {
-      thumbnail: 'https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S',
-      title: 'Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189',
-      description: 'Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
-      contentLoc: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8'
+      thumbnail: 'https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC',
+      title: 'Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu',
+      description: 'Watch Teşkilat Episode 189 with Urdu subtitles. Framed for high treason, Altay Yalçın escapes custody to clear his name, leading to a shocking Swiss showdown.',
+      contentLoc: 'https://stream.mux.com/toXOVmLVaJSsRkVRJUxYiColdHPoHLSI8qBM00KBHyuA.m3u8'
     },
     '/teskilat/episode-188': {
       thumbnail: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
@@ -358,10 +358,10 @@ export function generateSitemapXml(): string {
     let videoInfo: VideoXmlInfo | undefined = undefined;
     if (routeKey === '/teskilat/episode-189') {
       videoInfo = {
-        thumbnail: 'https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S',
-        title: 'Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189',
-        description: 'Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
-        contentLoc: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8'
+        thumbnail: 'https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC',
+        title: 'Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu',
+        description: 'Watch Teşkilat Episode 189 with Urdu subtitles. Framed for high treason, Altay Yalçın escapes custody to clear his name, leading to a shocking Swiss showdown.',
+        contentLoc: 'https://stream.mux.com/toXOVmLVaJSsRkVRJUxYiColdHPoHLSI8qBM00KBHyuA.m3u8'
       };
     } else if (routeKey === '/teskilat/episode-188') {
       videoInfo = {

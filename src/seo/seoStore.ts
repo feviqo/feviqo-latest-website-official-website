@@ -230,16 +230,16 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/teskilat/episode-189': {
     path: '/teskilat/episode-189',
     pageName: 'Teskilat Episode 189 Watch Page',
-    seoTitle: 'Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189 | FEVIQO',
-    metaDescription: 'Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
-    focusKeyword: 'Teskilat Season 7 Episode 5 Urdu Subtitles',
+    seoTitle: 'Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu | FEVIQO',
+    metaDescription: 'Watch Teşkilat Episode 189 with Urdu subtitles. Framed for high treason, Altay Yalçın escapes custody to clear his name, leading to a shocking Swiss showdown.',
+    focusKeyword: 'Teskilat 189 Urdu',
     secondaryKeywords: [
-      'Teskilat Season 7', 'Teskilat Season 7 Urdu Subtitles', 'Teskilat Urdu Subtitles', 'Teşkilat Season 7 Urdu', 'Teskilat Season 7 Watch Online', 'Teskilat Episode 189 Urdu Subtitles', 'Teskilat Bolum 189 Urdu', 'Altay Teskilat Season 7', 'Korkut Teskilat', 'Turkish Series Urdu Subtitles', 'Turkish Action Series Urdu', 'Turkish Intelligence Series', 'TRT1 Teskilat', 'Teskilat New Season Urdu', 'Teskilat NiaziPlay', 'Teskilat Season 7 Episode 5 Urdu Subtitles', 'Teskilat Bolum 189 Urdu Subtitles', 'Teskilat Season 7 Urdu', 'Teskilat Episode 5 Urdu', 'Teskilat 189 Urdu', 'Altay Ender Episode 189', 'Azra Teskilat Season 7', 'Korkut Yahya Episode 189', 'Bahar Yahya Teskilat', 'Ender Rescue Teskilat', 'TRT1 Teskilat Episode 189'
+      'Teskilat Episode 189 Urdu Subtitles', 'Teskilat Bolum 189 Urdu', 'Drama Teskilat Season 7 Episode 189', 'Teskilat 189 Urdu Sub', 'Altay Yalcin Kurt Bey', 'Teskilat Episode 189 Full Story', 'teskilat season 7 episode 5', 'تشکیلات قسط 189 اردو', 'تشکیلات سیزن 7 قسط 189 اردو سب ٹائٹلز', 'Teskilat Season 7', 'Teskilat Urdu Subtitles', 'Teşkilat Season 7 Urdu', 'Kurt Bey Return', 'Haritacılar', 'Tugrul Baskan', 'Swiss Rooftop Betrayal', 'Korkut Hamdi Osman Selven'
     ],
     canonicalUrl: 'https://feviqo.com/teskilat/episode-189',
-    ogTitle: 'Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189 | FEVIQO',
-    ogDescription: 'Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.',
-    ogImage: 'https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S',
+    ogTitle: 'Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu | FEVIQO',
+    ogDescription: 'Watch Teşkilat Episode 189 with Urdu subtitles. Framed for high treason, Altay Yalçın escapes custody to clear his name, leading to a shocking Swiss showdown.',
+    ogImage: 'https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },

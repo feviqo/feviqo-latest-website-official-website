@@ -297,13 +297,13 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "@type": "TVEpisode",
       "@id": "https://feviqo.com/teskilat/episode-189#episode",
       "url": "https://feviqo.com/teskilat/episode-189",
-      "name": "Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189 | FEVIQO",
+      "name": "Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu",
       "episodeNumber": "189",
       "seasonNumber": "7",
       "inLanguage": "Urdu",
       "subtitleLanguage": "Urdu Subtitles",
-      "description": "Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.",
-      "image": "https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S",
+      "description": "Watch Teşkilat Episode 189 with Urdu subtitles. Framed for high treason, Altay Yalçın escapes custody to clear his name, leading to a shocking Swiss showdown.",
+      "image": "https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC",
       "mainEntityOfPage": "https://feviqo.com/teskilat/episode-189",
       "isPartOf": {
         "@type": "TVSeries",
@@ -315,13 +315,13 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     schemaObj["@graph"].push({
       "@type": "VideoObject",
       "@id": "https://feviqo.com/teskilat/episode-189#video",
-      "name": "Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189 | FEVIQO",
-      "description": "Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.",
+      "name": "Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu",
+      "description": "Watch Teşkilat Episode 189 with Urdu subtitles. Framed for high treason, Altay Yalçın escapes custody to clear his name, leading to a shocking Swiss showdown.",
       "thumbnailUrl": [
-        "https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S"
+        "https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC"
       ],
       "uploadDate": "2026-10-18T04:00:00+00:00",
-      "contentUrl": "https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8",
+      "contentUrl": "https://stream.mux.com/toXOVmLVaJSsRkVRJUxYiColdHPoHLSI8qBM00KBHyuA.m3u8",
       "embedUrl": "https://feviqo.com/teskilat/episode-189",
       "duration": "PT2H25M",
       "isFamilyFriendly": true,
@@ -334,11 +334,11 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     schemaObj["@graph"].push({
       "@type": "ImageObject",
       "@id": "https://feviqo.com/teskilat/episode-189#image",
-      "url": "https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S",
-      "contentUrl": "https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S",
-      "name": "Teskilat 189, teskilat urdu, teskilat teskilat episode 189 urdu",
-      "caption": "Teskilat Episode 189, Teskilat 189, teskilat urdu, teskilat teskilat episode 189 urdu",
-      "description": "Official Teskilat Episode 189 Urdu Subtitles HD Thumbnail image."
+      "url": "https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC",
+      "contentUrl": "https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC",
+      "name": "Teskilat 189 Urdu, Teskilat Episode 189 Urdu Subtitles, Teskilat Bolum 189 Urdu",
+      "caption": "Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu",
+      "description": "Watch Teşkilat Episode 189 with Urdu subtitles. Framed for high treason, Altay Yalçın escapes custody to clear his name, leading to a shocking Swiss showdown."
     });
   }
 

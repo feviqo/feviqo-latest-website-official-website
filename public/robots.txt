@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://feviqo.com/sitemap.xml

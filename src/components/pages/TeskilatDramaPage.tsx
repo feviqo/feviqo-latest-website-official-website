@@ -231,19 +231,36 @@ const EPISODE_189: TeskilatEpisode = {
   id: 'ep-189-s7',
   episodeNumber: 189,
   seasonNumber: 7,
-  titleUrdu: 'تشکیلات سیزن 7 قسط 189 اردو ترجمہ کے ساتھ',
-  titleEnglish: 'Teskilat Season 7 Episode 5 Urdu Subtitles - Bolum 189 | FEVIQO',
+  titleUrdu: 'ڈرامہ تشکیلات قسط 189 اردو سب ٹائٹلز – التائے پر غداری کا الزام اور ازرا کا غیر متوقع وار',
+  titleEnglish: 'Teskilat Season 7 Episode 189 with Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu',
   releaseDate: 'October 2026',
   duration: '2h 25m',
   thumbnailUrl: 'https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S',
-  directoryThumbnailUrl: 'https://lh3.googleusercontent.com/d/1PaGulpcECjUpkylALiwWBfsmxUcx6K_S',
-  videoUrl: 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8',
-  storyRecapUrdu: `تشکیلات سیزن 7 قسط 189 (بولم 189) میں الپائے اور انٹیلی جنس ٹیم دشمن کے سب سے بڑے نیٹ ورک پر آخری وار کرنے جا رہی ہے۔ عذرا کی چالوں کے پیچھے کی اصل سچائی سامنے آتی ہے جبکہ اینڈر کو بچانے کا یہ حتمی آپریشن ایک زبردست موڑ اختیار کر جاتا ہے۔ مکمل قسط ایچ ڈی اردو سب ٹائٹلز کے ساتھ فیویکو پر دیکھیں۔`,
-  storyRecapEnglish: `Watch Teskilat Season 7 Episode 5 Urdu Subtitles (Bolum 189). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.
+  directoryThumbnailUrl: 'https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC',
+  videoUrl: 'https://stream.mux.com/toXOVmLVaJSsRkVRJUxYiColdHPoHLSI8qBM00KBHyuA.m3u8',
+  storyRecapUrdu: `تشکیلات قسط 189: التائے پر وطن سے غداری کا الزام، کُرٹ بے کی ایجنسی میں واپسی اور آخری لمحات کا خوفناک موڑ!
 
-Teskilat Season 7 Episode 5 (Bolum 189) brings an explosive continuation to Altay's high-stakes mission. With the Organization closing in on enemy operatives, Altay faces the ultimate tactical challenge to bring Ender home and neutralize deep-cover threats.
+ڈرامہ سیریل تشکیلات کی قسط 189 کا آغاز ایک سنسنی خیز موڑ سے ہوتا ہے جب انٹیلی جنس ٹیم اپنے ہی ساتھی التائے یالچن (کُرٹ بے) کو گرفتار کر لیتی ہے۔ التائے پر الزام لگایا جاتا ہے کہ اس نے اپنے بیٹے ایندر کی جان بچانے کے لیے ترکی کے جدید لڑاکا طیاروں کے چپس کا خفیہ ڈیٹا بین الاقوامی دشمن تنظیم "نقشہ ساز" (Haritacılar) کے حوالے کیا ہے۔ تاہم طغرل چیف ایک خفیہ حکمتِ عملی کے تحت التائے کو حراست سے فرار کراتے ہیں تاکہ وہ سچائی سامنے لا سکے۔
 
-Target Search Keywords: Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 189 Urdu Subtitles, Teskilat Bolum 189 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, TRT1 Teskilat, Teskilat Season 7 Episode 5 Urdu Subtitles, Teskilat Bolum 189 Urdu, Teskilat 189 Urdu, Altay Ender Episode 189, Azra Teskilat Season 7, Korkut Yahya Episode 189, Ender Rescue Teskilat.`,
+التائے، ازرا، اوزائے اور زولکوف جنریٹر عملے کے بھیس میں دشمن کے خفیہ اے آئی سینٹر کی تیرہویں منزل پر چھاپہ مارتے ہیں اور ثابت کرتے ہیں کہ التائے کا فون ہیک کر کے جعلی شواہد گھڑے گئے تھے۔ بے گناہی ثابت ہونے کے بعد، التائے اپنے بیٹے ایندر سے ملتا ہے اور بیٹے کے اصرار پر دوبارہ کُرٹ بے کے روپ میں ایجنسی میں شامل ہو جاتا ہے۔ ادھر استنبول میں قاصد (اولاک) شاہین کے ذریعے نیٹو کنٹریکٹر اور بحری جہاز ساز عثمان سیلون پر قاتلانہ حملہ کروانے کی کوشش کرتی ہے، جسے قورقوت اور حمدی بروقت ناکام بنا دیتے ہیں۔
+
+قسط کا اختتام سوئٹزرلینڈ کے برف پوش پہاڑوں میں واقع ایک لگژری ہوٹل میں ہوتا ہے، جہاں التائے اور ازرا نقشہ سازوں کے ایلچی کو زندہ دبوچ لیتے ہیں۔ لیکن جب ہیلی کاپٹر چھت پر پہنچنے والا ہوتا ہے، تو ازرا انکشاف کرتی ہے کہ اسے دھوکہ دیا گیا ہے اور وہ اچانک التائے پر بندوق تان کر کہتی ہے: "مجھ پر بھروسہ کر کے تم نے بہت بڑی غلطی کی ہے، التائے!"`,
+  storyRecapEnglish: `Teşkilat Episode 189: High Treason Accusations, Kurt Bey's Return, and a Shocking Swiss Cliffhanger!
+
+In Episode 189 of Teşkilat, the stakes reach an all-time high when Altay Yalçın (Kurt Bey) is suddenly arrested on charges of leaking Turkish fighter jet microchip blueprints to the hostile syndicate "Haritacılar" in exchange for his son Ender's rescue. Knowing Altay is being framed, Tuğrul Başkan orchestrates Altay's covert escape so he can uncover the conspiracy from the outside.
+
+Disguised as power generator technicians, Altay and Azra infiltrate the enemy's hidden AI mainframe on the 13th floor, exposing the AI-generated fake evidence and successfully neutralizing the stolen digital files with an embedded Trojan countermeasure. Cleared of all false charges and motivated by Ender's wish to have a hero father, Altay officially reclaims his agency ring and returns to active duty. Meanwhile, field operatives Korkut and Hamdi race against the clock to protect NATO naval shipyard tycoon Osman Selven from an assassination ordered by Ulak.
+
+The climactic operation takes Altay and Azra to a high-profile summit in the Swiss Alps, capturing the Haritacılar representative alive. But just as the extraction helicopter approaches the rooftop, Azra drops a chilling revelation and points her gun directly at Altay, closing the episode on one of the series' most dramatic cliffhangers.
+
+Key Highlights:
+- Altay Framed & Escapes: Accused of high treason, Altay escapes custody with Tuğrul Başkan’s quiet backing.
+- Server Room Infiltration: The team raids the 13th-floor AI facility and disproves the forged treason chats.
+- Kurt Bey Reborn: Altay reclaims his agency ring and officially rejoins Teşkilat for his son, Ender.
+- Shipyard Ambush Thwarted: Korkut and Hamdi intercept Ulak and Şahin's hit on defense contractor Osman Selven.
+- Swiss Rooftop Betrayal: Azra corners Altay at gunpoint on the rooftop in Switzerland in a stunning final twist.
+
+Search Tags: Teskilat 189 Urdu, Teskilat Episode 189 Urdu Subtitles, Teskilat Bolum 189 Urdu, Drama Teskilat Season 7 Episode 189, Teskilat 189 Urdu Sub, Altay Yalcin Kurt Bey, Teskilat Episode 189 Full Story, teskilat season 7 episode 5, تشکیلات قسط 189 اردو, تشکیلات سیزن 7 قسط 189 اردو سب ٹائٹلز.`,
   views: '124,100',
   isLatest: true
 };
@@ -291,7 +308,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189')) {
         return 'episode-detail';
       }
     }
@@ -303,8 +320,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
       if (path.includes('186')) return FEATURED_SEASON7_EPISODE;
       if (path.includes('187')) return EPISODE_187;
       if (path.includes('188')) return EPISODE_188;
+      if (path.includes('189')) return EPISODE_189;
     }
-    return EPISODE_188; // Default to Episode 188
+    return EPISODE_189; // Default to Episode 189
   });
 
   const [showPosterOverlay, setShowPosterOverlay] = useState(true);
@@ -345,14 +363,16 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('/episode')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('/episode')) {
         setActiveView('episode-detail');
         if (path.includes('186') || hash.includes('186')) {
           setSelectedEpisode(FEATURED_SEASON7_EPISODE);
         } else if (path.includes('187') || hash.includes('187')) {
           setSelectedEpisode(EPISODE_187);
-        } else {
+        } else if (path.includes('188') || hash.includes('188')) {
           setSelectedEpisode(EPISODE_188);
+        } else {
+          setSelectedEpisode(EPISODE_189);
         }
       } else {
         setActiveView('overview');
@@ -385,7 +405,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
       let metaDesc = `Watch Teskilat Season 7 Episode ${num} with Urdu Subtitles (تشکیلات سیزن 7 قسط ${num}). Stream HD episodes processed on FEVIQO.com.`;
       let keywords = `teskilat urdu, teskilat urdu subtitles, watch teskilat urdu, teskilat ${num}, teskilat ${num} urdu, teskilat season 7 episode ${num} urdu subtitles`;
 
-      if (num === 188) {
+      if (num === 189) {
+        pageTitle = `Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu`;
+        metaDesc = `Watch Teşkilat Episode 189 with Urdu subtitles. Framed for high treason, Altay Yalçın escapes custody to clear his name, leading to a shocking Swiss showdown.`;
+        keywords = `Teskilat 189 Urdu, Teskilat Episode 189 Urdu Subtitles, Teskilat Bolum 189 Urdu, Drama Teskilat Season 7 Episode 189, Teskilat 189 Urdu Sub, Altay Yalcin Kurt Bey, Teskilat Episode 189 Full Story, teskilat season 7 episode 5, تشکیلات قسط 189 اردو, تشکیلات سیزن 7 قسط 189 اردو سب ٹائٹلز`;
+      } else if (num === 188) {
         pageTitle = `Teskilat Season 7 Episode 4 Urdu Subtitles - Bolum 188 Ender Rescue | FEVIQO`;
         metaDesc = `Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya.`;
         keywords = `Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, Turkish Action Series Urdu, Turkish Intelligence Series, TRT1 Teskilat, Teskilat New Season Urdu, Teskilat NiaziPlay, Teskilat Season 7 Episode 4 Urdu Subtitles, Teskilat Episode 188 Urdu Subtitles, Teskilat Bolum 188 Urdu, Teskilat Season 7 Urdu, Teskilat Episode 4 Urdu, Teskilat 188 Urdu, Altay Ender Episode 188, Azra Teskilat Season 7, Korkut Yahya Episode 188, Bahar Yahya Teskilat, Ender Rescue Teskilat, TRT1 Teskilat Episode 188, Salahuddin Ayyubi Series, Kurulus Osman Season 5 in Urdu Subtitles, Kurulus Osman Season 6 Urdu & English Subtitles, Teskilat Season 4 Urdu Subtitles, Mehmed: Fetihler Sultani - Urdu & English Subtitles, Al Sancak | Sipahi, Alparslan: Büyük Selçuklu, Ates Kuslari, Barbarosslar, Destan, Ertugrul Ghazi, Keiki Sniper, Kosem Sultan, Mendirman Jaloliddin Khawarzam, Mevlana Celaleddin Rumi, Soz Series, Sultan Abdulhamid, Sultan Mehmat Fatih, The Pit (Cukur), Turkish Dramas, Yunus Emre, Turkish series with Urdu subtitles, watch Turkish dramas online, historical Turkish series in Urdu, Ottoman Empire series with English subtitles, Islamic history dramas in Urdu, Turkish action series with Urdu dubbing, latest Turkish series 2024, Urdu dubbed Turkish historical dramas, stream Turkish series in HD, family-friendly Turkish dramas, Turkish war series with Urdu subtitles, best Turkish series to watch online, Turkish dramas based on true stories, top-rated Turkish series in Urdu, Turkish romantic dramas with English subtitles, Turkish thriller series in Urdu, online streaming of Turkish historical series, Turkish series with dual subtitles, popular Turkish dramas in Pakistan, Turkish series episodes in Urdu, best streaming platforms for Turkish series, online education games for kids, top adventure games for adults, fitness and health articles, latest technology news articles, financial advice for families, home improvement articles, educational articles for students, html5 games, games for children`;
@@ -838,11 +862,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   {/* Right button panel */}
                   <div className="lg:col-span-4 flex items-center lg:justify-end gap-3 flex-wrap sm:flex-nowrap w-full">
                     <button
-                      onClick={() => handleOpenEpisode(EPISODE_188)}
+                      onClick={() => handleOpenEpisode(EPISODE_189)}
                       className="w-full lg:w-auto px-8 py-3.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:scale-[1.02]"
                     >
                       <Play className="w-4 h-4 fill-current text-slate-950" />
-                      <span>Watch Episode 188</span>
+                      <span>Watch Episode 189</span>
                     </button>
 
                     <a
@@ -864,7 +888,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 
                 <div className="space-y-1">
                   <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                    SEASON 7 &bull; EPISODE 188 (SEASON 7 EPISODE 4)
+                    SEASON 7 &bull; EPISODE 189 (SEASON 7 EPISODE 5)
                   </div>
                   <h2 className="text-2xl sm:text-4xl font-black text-[#0B0B0D]">
                     Latest Episode
@@ -875,20 +899,20 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   
                   {/* Thumbnail */}
                   <a 
-                    href="/teskilat/episode-188"
-                    onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_188); }}
+                    href="/teskilat/episode-189"
+                    onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_189); }}
                     className="lg:col-span-6 relative rounded-2xl overflow-hidden bg-slate-100 shadow-xl border border-slate-200 block group aspect-video"
                   >
-                    {EPISODE_188.thumbnailUrl ? (
+                    {EPISODE_189.thumbnailUrl ? (
                       <img 
-                        src={EPISODE_188.directoryThumbnailUrl || EPISODE_188.thumbnailUrl} 
-                        alt="Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" 
-                        title="Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu"
+                        src={EPISODE_189.directoryThumbnailUrl || EPISODE_189.thumbnailUrl} 
+                        alt="Teskilat Episode 189, Teskilat 189, teskilat urdu, teskilat episode 189 urdu" 
+                        title="Teskilat Episode 189, Teskilat 189, teskilat urdu, teskilat episode 189 urdu"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-[#09090c] via-[#111116] to-[#021d12] flex flex-col items-center justify-center p-4 border border-white/5">
-                        <span className="text-xs font-mono font-bold tracking-widest text-[#22C55E] uppercase bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-1 rounded-full mb-1 animate-pulse">EPISODE 188 TEASER</span>
+                        <span className="text-xs font-mono font-bold tracking-widest text-[#22C55E] uppercase bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-1 rounded-full mb-1 animate-pulse">EPISODE 189 TEASER</span>
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">COVER ART UPLOADING SOON</span>
                       </div>
                     )}
@@ -906,15 +930,15 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     </div>
 
                     <h3 className="text-2xl sm:text-3xl font-black text-[#0B0B0D]">
-                      Teskilat Season 7 Episode 4 (Bolum 188) Urdu
+                      Teskilat Season 7 Episode 5 (Bolum 189) Urdu
                     </h3>
 
                     <div className="text-lg font-urdu-slim text-slate-800 dir-rtl text-right font-normal leading-relaxed">
-                      تشکیلات سیزن 7 قسط 188 اردو ترجمہ کے ساتھ دیکھیں۔
+                      ڈرامہ تشکیلات قسط 189 اردو سب ٹائٹلز – التائے پر غداری کا الزام اور ازرا کا غیر متوقع وار
                     </div>
 
                     <p className="text-slate-600 text-sm leading-relaxed">
-                      Stream Teskilat Season 7 Episode 4 (Bolum 188) Turkish drama with premium Urdu subtitles on FEVIQO. Stream official story recaps, full HD 1080p video player, and complete espionage missions.
+                      Stream Teskilat Season 7 Episode 5 (Bolum 189) Turkish drama with premium Urdu subtitles on FEVIQO. Stream official story recaps, full HD 1080p video player, and complete espionage missions.
                     </p>
 
                     {/* Minimal Information Strip */}
@@ -931,16 +955,16 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     {/* Actions */}
                     <div className="flex items-center gap-4 pt-3">
                       <button
-                        onClick={() => handleOpenEpisode(EPISODE_188)}
+                        onClick={() => handleOpenEpisode(EPISODE_189)}
                         className="px-6 py-3 rounded-full bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs transition cursor-pointer inline-flex items-center gap-2"
                       >
                         <Play className="w-4 h-4 fill-current text-slate-950" />
-                        <span>Watch Episode 188</span>
+                        <span>Watch Episode 189</span>
                       </button>
 
                       <a
-                        href="/teskilat/episode-188"
-                        onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_188); }}
+                        href="/teskilat/episode-189"
+                        onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_189); }}
                         className="text-xs font-bold text-slate-700 hover:text-[#0B0B0D] transition cursor-pointer"
                       >
                         Read Story &rarr;
@@ -1029,7 +1053,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           <span>{ep.duration}</span>
                         </div>
                         <h3 className="text-sm sm:text-base font-black text-[#0B0B0D] group-hover:text-[#22C55E] transition line-clamp-2">
-                          Teskilat Season 7 Episode {ep.episodeNumber === 188 ? '4' : ep.episodeNumber === 187 ? '3' : '2'} (Bolum {ep.episodeNumber})
+                          Teskilat Season 7 Episode {ep.episodeNumber === 189 ? '5' : ep.episodeNumber === 188 ? '4' : ep.episodeNumber === 187 ? '3' : '2'} (Bolum {ep.episodeNumber})
                         </h3>
                       </div>
                       
@@ -1069,7 +1093,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
 
                 <h1 className="text-xl sm:text-4xl font-black text-[#0B0B0D] tracking-tight">
-                  Teskilat Season 7 Episode {selectedEpisode.episodeNumber === 188 ? "4" : selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles - Bolum {selectedEpisode.episodeNumber} {selectedEpisode.episodeNumber === 188 ? "Ender Rescue" : selectedEpisode.episodeNumber === 187 ? "Azra Betrayal" : "The Wolf Awakens"}
+                  {selectedEpisode.episodeNumber === 189 ? (
+                    "Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu"
+                  ) : (
+                    `Teskilat Season 7 Episode ${selectedEpisode.episodeNumber === 188 ? "4" : selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles - Bolum ${selectedEpisode.episodeNumber} ${selectedEpisode.episodeNumber === 188 ? "Ender Rescue" : selectedEpisode.episodeNumber === 187 ? "Azra Betrayal" : "The Wolf Awakens"}`
+                  )}
                 </h1>
 
                 <p className="text-xs font-bold text-slate-500 pt-0.5">
@@ -1316,7 +1344,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 <div className="grid grid-cols-3 items-center text-xs font-bold">
                   <button 
                     onClick={() => {
-                      if (selectedEpisode.episodeNumber === 187) {
+                      if (selectedEpisode.episodeNumber === 189) {
+                        handleOpenEpisode(EPISODE_188);
+                      } else if (selectedEpisode.episodeNumber === 188) {
+                        handleOpenEpisode(EPISODE_187);
+                      } else if (selectedEpisode.episodeNumber === 187) {
                         handleOpenEpisode(FEATURED_SEASON7_EPISODE);
                       } else {
                         showToast('Episode 185 loading...');
@@ -1326,7 +1358,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   >
                     <div className="text-slate-400 text-[10px] uppercase font-bold">&larr; Previous</div>
                     <div className="text-[#0B0B0D] font-extrabold text-sm mt-0.5 group-hover:text-[#22C55E] transition">
-                      Episode {selectedEpisode.episodeNumber === 187 ? 186 : 185}
+                      Episode {selectedEpisode.episodeNumber === 189 ? 188 : selectedEpisode.episodeNumber === 188 ? 187 : selectedEpisode.episodeNumber === 187 ? 186 : 185}
                     </div>
                   </button>
 
@@ -1343,15 +1375,17 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                         handleOpenEpisode(EPISODE_187);
                       } else if (selectedEpisode.episodeNumber === 187) {
                         handleOpenEpisode(EPISODE_188);
+                      } else if (selectedEpisode.episodeNumber === 188) {
+                        handleOpenEpisode(EPISODE_189);
                       } else {
-                        showToast('You are watching the latest episode (Episode 188)!');
+                        showToast('You are watching the latest episode (Episode 189)!');
                       }
                     }}
                     className="p-4 rounded-2xl border border-slate-200/80 hover:border-slate-400 text-right transition group cursor-pointer"
                   >
                     <div className="text-slate-400 text-[10px] uppercase font-bold">Next &rarr;</div>
                     <div className="text-[#0B0B0D] font-extrabold text-sm mt-0.5 group-hover:text-[#22C55E] transition">
-                      Episode {selectedEpisode.episodeNumber === 186 ? 187 : 188}
+                      Episode {selectedEpisode.episodeNumber === 186 ? 187 : selectedEpisode.episodeNumber === 187 ? 188 : selectedEpisode.episodeNumber === 188 ? 189 : 189}
                     </div>
                   </button>
                 </div>

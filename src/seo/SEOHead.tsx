@@ -113,19 +113,26 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
     }
 
     if (config.schemaType === 'TVEpisode' || pathname.includes('/teskilat/episode-') || pathname.includes('/teskilat-urdu/episode-')) {
+      const is189 = pathname.includes('189');
       const is188 = pathname.includes('188');
       const is187 = pathname.includes('187');
-      const num = is188 ? "188" : is187 ? "187" : "186";
-      const subNum = is188 ? "4" : is187 ? "3" : "2";
-      const date = is188 ? "2026-10-11T08:00:00+00:00" : is187 ? "2026-10-03T08:00:00+00:00" : "2026-09-28T08:00:00+00:00";
-      const dur = is188 ? "PT2H20M" : is187 ? "PT2H25M" : "PT2H32M";
-      const thumb = is188 
+      const num = is189 ? "189" : is188 ? "188" : is187 ? "187" : "186";
+      const subNum = is189 ? "5" : is188 ? "4" : is187 ? "3" : "2";
+      const date = is189 ? "2026-10-18T08:00:00+00:00" : is188 ? "2026-10-11T08:00:00+00:00" : is187 ? "2026-10-03T08:00:00+00:00" : "2026-09-28T08:00:00+00:00";
+      const dur = is189 ? "PT2H25M" : is188 ? "PT2H20M" : is187 ? "PT2H25M" : "PT2H32M";
+      const thumb = is189
+        ? "https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC"
+        : is188 
         ? "https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc" 
         : is187 
         ? "https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw" 
         : "https://feviqo.com/images/teskialt186thumbnIL.png";
-      const episodeName = `Teskilat Season 7 Episode ${subNum} Urdu Subtitles - Bolum ${num}`;
-      const episodeDesc = is188
+      const episodeName = is189
+        ? "Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu"
+        : `Teskilat Season 7 Episode ${subNum} Urdu Subtitles - Bolum ${num}`;
+      const episodeDesc = is189
+        ? "Watch Teşkilat Episode 189 with Urdu subtitles. Framed for high treason, Altay Yalçın escapes custody to clear his name, leading to a shocking Swiss showdown."
+        : is188
         ? "Watch Teskilat Season 7 Episode 4 Urdu Subtitles (Bolum 188). Altay closes in on Ender as suspicion around Azra grows and Korkut corners Yahya."
         : is187 
         ? "Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in."
@@ -153,11 +160,11 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
       schemaGraph.push({
         "@type": "VideoObject",
         "@id": `https://feviqo.com/teskilat/episode-${num}#video`,
-        "name": `Teskilat Season 7 Episode ${subNum} Urdu Subtitles - Bolum ${num}`,
+        "name": episodeName,
         "description": episodeDesc,
         "thumbnailUrl": [thumb],
         "uploadDate": date,
-        "contentUrl": is188 ? "https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8" : is187 ? "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8" : "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
+        "contentUrl": is189 ? "https://stream.mux.com/toXOVmLVaJSsRkVRJUxYiColdHPoHLSI8qBM00KBHyuA.m3u8" : is188 ? "https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8" : is187 ? "https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8" : "https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8",
         "embedUrl": `https://feviqo.com/teskilat/episode-${num}`,
         "duration": dur,
         "isFamilyFriendly": true,
