@@ -2459,9 +2459,27 @@ import {
   updateSitemapFiles 
 } from './src/seo/sitemapGenerator';
 
-// Initial sitemap sync on boot
+// Initial sitemap sync & search engine IndexNow ping on boot
 try {
   updateSitemapFiles();
+  pingSearchEnginesForReindexing({
+    urls: [
+      'https://feviqo.com/',
+      'https://feviqo.com/teskilat',
+      'https://feviqo.com/teskilat/episode-189',
+      'https://feviqo.com/teskilat/episode-188',
+      'https://feviqo.com/teskilat/episode-187',
+      'https://feviqo.com/teskilat/episode-186',
+      'https://feviqo.com/mehmed-fetihler-sultani',
+      'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
+      'https://feviqo.com/mehmed-fetihler-sultani/episode-87',
+      'https://feviqo.com/gunesin-dogdugu-yer',
+      'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
+      'https://feviqo.com/dramas',
+      'https://feviqo.com/sitemap.xml'
+    ],
+    reason: 'Server startup / IndexNow automated episode ping'
+  }).catch((e) => console.error('Auto ping error:', e));
 } catch (e) {
   console.error('Initial sitemap sync error:', e);
 }
