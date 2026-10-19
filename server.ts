@@ -170,30 +170,69 @@ app.use('/videos', express.static(path.join(process.cwd(), 'public', 'videos')))
 app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
 
 // Explicit SEO endpoints for search engine crawlers (Google, Bing, Yahoo, Ahrefs, SEMrush)
+// Explicit SEO endpoints for search engine crawlers (Google, Bing, Yahoo, Ahrefs, SEMrush)
 app.get('/robots.txt', (_req, res) => {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  return res.status(200).send("User-agent: *\nAllow: /\nSitemap: https://feviqo.com/sitemap.xml\n");
+  const robotsText = "User-agent: *\r\nAllow: /\r\n\r\nSitemap: https://feviqo.com/sitemap.xml\r\nSitemap: https://feviqo.com/sitemap-episodes.xml\r\n";
+  return res.status(200).send(robotsText);
 });
 
+// Dynamic Server-Side Route for Master XML Sitemap (pulls all episodes & page URLs in real-time)
 app.get('/sitemap.xml', (_req, res) => {
   res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
-  if (fs.existsSync(sitemapPath)) {
-    return res.sendFile(sitemapPath);
-  }
+  res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=3600');
   try {
     const xml = generateSitemapXml();
+    // Asynchronously sync to disk for secondary tools
+    const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+    fs.writeFile(sitemapPath, xml, 'utf-8', () => {});
     return res.status(200).send(xml);
   } catch (err: any) {
-    console.error('Error serving sitemap.xml:', err);
-    return res.status(500).send('Error serving sitemap');
+    console.error('Error generating dynamic sitemap.xml:', err);
+    return res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Error generating sitemap</error>');
   }
 });
 
-app.get(['/sitemap-index.xml', '/sitemap_index.xml', '/sitemap-main.xml', '/sitemap-episodes.xml', '/sitemap-trending.xml'], (_req, res) => {
-  return res.redirect(301, 'https://feviqo.com/sitemap.xml');
+// Dynamic Sub-Sitemap Routes for Granular Indexing
+app.get('/sitemap-main.xml', (_req, res) => {
+  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  try {
+    return res.status(200).send(generateMainSitemapXml());
+  } catch (err: any) {
+    return res.status(500).send('Error generating main sitemap');
+  }
+});
+
+app.get('/sitemap-episodes.xml', (_req, res) => {
+  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=3600');
+  try {
+    return res.status(200).send(generateEpisodesSitemapXml());
+  } catch (err: any) {
+    return res.status(500).send('Error generating episodes sitemap');
+  }
+});
+
+app.get('/sitemap-trending.xml', (_req, res) => {
+  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  try {
+    return res.status(200).send(generateTrendingSitemapXml());
+  } catch (err: any) {
+    return res.status(500).send('Error generating trending sitemap');
+  }
+});
+
+app.get(['/sitemap-index.xml', '/sitemap_index.xml'], (_req, res) => {
+  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  try {
+    return res.status(200).send(generateSitemapIndexXml());
+  } catch (err: any) {
+    return res.status(500).send('Error generating sitemap index');
+  }
 });
 
 app.get('/feviqo-indexnow-key-2026.txt', (_req, res) => {
