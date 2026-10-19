@@ -45,7 +45,7 @@ export function attachHlsStream(
 ): (() => void) | undefined {
   if (!videoElement || !src) return;
 
-  // If element is <mux-video> custom element, it natively handles HLS streaming via src
+  // If element is <mux-video> custom element, it natively handles HLS streaming via its own engine
   if (videoElement.tagName === 'MUX-VIDEO') {
     if (videoElement.getAttribute('src') !== src) {
       videoElement.setAttribute('src', src);
@@ -60,6 +60,34 @@ export function attachHlsStream(
   const isHls = isHlsStream(src);
 
   if (isHls) {
+    // Check for native Apple HLS support (Safari on iPhone, iPad, Mac)
+    const canPlayNativeHls = Boolean(
+      videoElement.canPlayType('application/vnd.apple.mpegurl') || 
+      videoElement.canPlayType('application/x-mpegURL')
+    );
+
+    // iOS Safari / WebKit doesn't support MediaSource for HLS, but natively plays .m3u8 via AVPlayer
+    const isAppleDevice = typeof navigator !== 'undefined' && (
+      /iPad|iPhone|iPod|Macintosh/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
+
+    if (canPlayNativeHls && isAppleDevice) {
+      if (videoElement.src !== src) {
+        videoElement.src = src;
+      }
+      const handleLoaded = () => {
+        options.onReady?.();
+        if (options.autoPlay) {
+          videoElement.play().catch(() => {});
+        }
+      };
+      videoElement.addEventListener('loadedmetadata', handleLoaded, { once: true });
+      return () => {
+        videoElement.removeEventListener('loadedmetadata', handleLoaded);
+      };
+    }
+
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
@@ -79,7 +107,7 @@ export function attachHlsStream(
         options.onReady?.();
         if (options.autoPlay) {
           videoElement.play().catch(() => {
-            // Handled (autoplay policy)
+            // Autoplay policy handled
           });
         }
       });
@@ -94,8 +122,17 @@ export function attachHlsStream(
               hls.recoverMediaError();
               break;
             default:
-              hls.destroy();
-              options.onError?.(data);
+              if (canPlayNativeHls) {
+                // Fallback to native Safari HLS
+                hls.destroy();
+                videoElement.src = src;
+                if (options.autoPlay) {
+                  videoElement.play().catch(() => {});
+                }
+              } else {
+                hls.destroy();
+                options.onError?.(data);
+              }
               break;
           }
         }
@@ -108,16 +145,18 @@ export function attachHlsStream(
           // Handled
         }
       };
-    } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-      // Native Apple HLS (Safari, iOS)
-      videoElement.src = src;
+    } else if (canPlayNativeHls) {
+      // General native HLS fallback
+      if (videoElement.src !== src) {
+        videoElement.src = src;
+      }
       const handleLoaded = () => {
         options.onReady?.();
         if (options.autoPlay) {
           videoElement.play().catch(() => {});
         }
       };
-      videoElement.addEventListener('loadedmetadata', handleLoaded);
+      videoElement.addEventListener('loadedmetadata', handleLoaded, { once: true });
       return () => {
         videoElement.removeEventListener('loadedmetadata', handleLoaded);
       };
@@ -125,7 +164,9 @@ export function attachHlsStream(
   }
 
   // Standard progressive MP4 / WebM fallback
-  videoElement.src = src;
+  if (videoElement.src !== src) {
+    videoElement.src = src;
+  }
   options.onReady?.();
   if (options.autoPlay) {
     videoElement.play().catch(() => {});

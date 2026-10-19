@@ -329,24 +329,14 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   const [showPreRollAd, setShowPreRollAd] = useState(false);
 
   useEffect(() => {
-    if (activeView === 'episode-detail' && videoRef.current && selectedEpisode.videoUrl) {
-      const cleanup = attachHlsStream(videoRef.current, selectedEpisode.videoUrl, {
-        autoPlay: false,
-      });
-      return () => {
-        if (cleanup) cleanup();
-      };
-    }
-  }, [activeView, selectedEpisode]);
+    setShowPosterOverlay(true);
+  }, [selectedEpisode.id]);
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
     if (videoRef.current) {
-      videoRef.current.play().then(() => {
-        if (videoRef.current) videoRef.current.pause();
-      }).catch(() => {});
+      videoRef.current.play().catch(() => {});
     }
-    setShowPreRollAd(true);
   };
 
   const handleAdComplete = () => {
@@ -477,58 +467,12 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
   const hlsRef = useRef<Hls | null>(null);
 
-  // Initialize and attach HLS stream for .m3u8 video URL
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !selectedEpisode.videoUrl) return;
 
-    const streamUrl = selectedEpisode.videoUrl;
-
-    if (streamUrl.includes('.m3u8') || streamUrl.endsWith('.m3u8')) {
-      if (Hls.isSupported()) {
-        if (hlsRef.current) {
-          hlsRef.current.destroy();
-        }
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: false,
-          startLevel: -1,
-          capLevelToPlayerSize: true,
-          maxBufferLength: 30,
-          maxMaxBufferLength: 60,
-          maxBufferSize: 12 * 1024 * 1024,
-          autoStartLoad: true,
-        });
-        hls.loadSource(streamUrl);
-        hls.attachMedia(video);
-        hls.startLoad();
-
-        hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                hls.recoverMediaError();
-                break;
-              default:
-                try { hls.destroy(); } catch {}
-                break;
-            }
-          }
-        });
-
-        hlsRef.current = hls;
-
-        return () => {
-          hls.destroy();
-        };
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = streamUrl;
-      }
-    } else {
-      video.src = streamUrl;
+    if (video.getAttribute('src') !== selectedEpisode.videoUrl) {
+      video.setAttribute('src', selectedEpisode.videoUrl);
     }
   }, [selectedEpisode.videoUrl]);
 
@@ -1141,10 +1085,6 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </a>
                 </div>
 
-                <style>{`
-                  mux-video, video-skin, video-player { object-fit: contain !important; }
-                  mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
-                `}</style>
                 {showPosterOverlay && (
                   <div 
                     onClick={handleStartPlayback}
@@ -1171,12 +1111,25 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   />
                 )}
 
+                <style>{`
+                  mux-video, video-skin, video-player { object-fit: contain !important; }
+                  mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
+                  media-error-dialog, .media-error-dialog, [class*="dialog-root"], media-dialog-backdrop, media-dialog-popup {
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                    pointer-events: none !important;
+                  }
+                `}</style>
+
                 {/* Official VideoJS / Mux Video Player Web Components */}
                 <video-player className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden">
                   <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
                     <mux-video
                       ref={videoRef as any}
                       src={selectedEpisode.videoUrl}
+                      playback-id={extractMuxPlaybackId(selectedEpisode.videoUrl) || undefined}
+                      crossorigin="anonymous"
                       playsinline
                       poster={selectedEpisode.thumbnailUrl}
                       onContextMenu={(e: any) => e.preventDefault()}

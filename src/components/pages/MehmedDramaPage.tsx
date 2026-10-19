@@ -199,11 +199,8 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
     if (videoRef.current) {
-      videoRef.current.play().then(() => {
-        if (videoRef.current) videoRef.current.pause();
-      }).catch(() => {});
+      videoRef.current.play().catch(() => {});
     }
-    setShowPreRollAd(true);
   };
 
   const handleAdComplete = () => {
@@ -621,11 +618,6 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   onContextMenu={(e) => e.preventDefault()}
                   className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center select-none aspect-video border border-slate-200/80 mx-auto"
                 >
-                  <style>{`
-                    mux-video, video-skin, video-player { object-fit: contain !important; }
-                    mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
-                  `}</style>
-                  
                   {/* Poster Overlay with Official Episode Thumbnail */}
                   {showPosterOverlay && (
                     <div 
@@ -652,12 +644,25 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     />
                   )}
 
+                  <style>{`
+                    mux-video, video-skin, video-player { object-fit: contain !important; }
+                    mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
+                    media-error-dialog, .media-error-dialog, [class*="dialog-root"], media-dialog-backdrop, media-dialog-popup {
+                      display: none !important;
+                      visibility: hidden !important;
+                      opacity: 0 !important;
+                      pointer-events: none !important;
+                    }
+                  `}</style>
+
                   {/* Official VideoJS / Mux Video Player Web Components */}
                   <video-player className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden">
                     <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
                       <mux-video
                         ref={videoRef as any}
                         src={currentStreamUrl}
+                        playback-id={extractMuxPlaybackId(currentStreamUrl) || undefined}
+                        crossorigin="anonymous"
                         playsinline
                         poster={selectedEpisode.thumbnail}
                         onContextMenu={(e: any) => e.preventDefault()}

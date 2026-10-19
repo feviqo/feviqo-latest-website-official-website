@@ -2488,8 +2488,9 @@ async function startServer() {
         const indexPath = path.join(process.cwd(), 'index.html');
         let rawHtml = fs.readFileSync(indexPath, 'utf-8');
         rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
-        const seoHtml = transformHTMLForRoute(rawHtml, req.path);
-        const canonicalUrl = `https://feviqo.com${req.path === '/' ? '/' : req.path}`;
+        const requestPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
+        const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
+        const canonicalUrl = `https://feviqo.com${requestPath === '/' ? '/' : requestPath}`;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
         return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
       } catch (e) {
@@ -2509,10 +2510,11 @@ async function startServer() {
       try {
         const indexPath = path.join(distPath, 'index.html');
         const rawHtml = fs.readFileSync(indexPath, 'utf-8');
-        const seoHtml = transformHTMLForRoute(rawHtml, req.path);
-        const canonicalUrl = `https://feviqo.com${req.path === '/' ? '/' : req.path}`;
+        const requestPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
+        const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
+        const canonicalUrl = `https://feviqo.com${requestPath === '/' ? '/' : requestPath}`;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
-        return res.status(200).set({ 'Content-Type': 'text/html' }).end(seoHtml);
+        return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
       } catch {
         return res.sendFile(path.join(distPath, 'index.html'));
       }

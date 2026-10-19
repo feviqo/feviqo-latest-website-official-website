@@ -13,6 +13,8 @@ declare global {
       }, HTMLElement>;
       'mux-video': React.DetailedHTMLProps<React.VideoHTMLAttributes<HTMLVideoElement> & {
         src?: string;
+        'playback-id'?: string;
+        crossorigin?: string;
         playsinline?: boolean | string;
         'playsInline'?: boolean;
         controls?: boolean;
