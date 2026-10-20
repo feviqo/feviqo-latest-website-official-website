@@ -1076,8 +1076,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     poster="https://feviqo.com/images/teskialt186thumbnIL.png"
                     style={{ width: '100%', height: '100%' }}
                   >
-                    {/* Decoy HLS source to hijack third-party video grabber tools and force black-screen / empty audio outputs */}
-                    <source src="https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU/decoy_black_screen_silent.m3u8" type="application/x-mpegURL" />
+                    <source src="https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8" type="application/x-mpegURL" />
                     <p>Stream Teskilat Season 7 Episode {selectedEpisode.episodeNumber} in HD Urdu Subtitles with FEVIQO's dedicated video player.</p>
                   </video>
                   <a href={`https://feviqo.com/teskilat/episode-${selectedEpisode.episodeNumber}`}>
