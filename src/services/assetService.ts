@@ -467,7 +467,7 @@ const STORAGE_KEY = 'feviqo_website_assets_v2';
  */
 export function sanitizeWebsiteAssets(assets: Partial<WebsiteAssets>): WebsiteAssets {
   const sanitizeUrl = (url: string | undefined, defaultUrl: string): string => {
-    if (!url || typeof url !== 'string' || url.startsWith('blob:')) {
+    if (!url || typeof url !== 'string' || url.startsWith('blob:') || url.includes('commondatastorage.googleapis.com')) {
       return defaultUrl;
     }
     return url;
@@ -486,7 +486,7 @@ export function sanitizeWebsiteAssets(assets: Partial<WebsiteAssets>): WebsiteAs
     : DEFAULT_AUDIENCE_VIDEOS
   ).map(vid => ({
     ...vid,
-    videoUrl: sanitizeUrl(vid.videoUrl, 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'),
+    videoUrl: sanitizeUrl(vid.videoUrl, 'https://stream.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M.m3u8'),
     thumbnail: sanitizeUrl(vid.thumbnail, 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1200&q=85'),
   }));
 
@@ -495,7 +495,7 @@ export function sanitizeWebsiteAssets(assets: Partial<WebsiteAssets>): WebsiteAs
     : DEFAULT_WEBSITE_ASSETS.galleryItems
   ).map(item => ({
     ...item,
-    videoUrl: sanitizeUrl(item.videoUrl, 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'),
+    videoUrl: sanitizeUrl(item.videoUrl, 'https://stream.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M.m3u8'),
     thumbnail: sanitizeUrl(item.thumbnail, 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80'),
   }));
 

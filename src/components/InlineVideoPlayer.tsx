@@ -55,6 +55,14 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
   const playableSrc = resolvePlayableVideo(driveId, rawSource, isVertical);
   const resolvedPoster = customPoster || resolveVideoPoster(playableSrc, isVertical);
 
+  const isIframeSource = Boolean(
+    playableSrc && (
+      playableSrc.includes('drive.google.com') ||
+      playableSrc.includes('youtube') ||
+      playableSrc.includes('vimeo')
+    )
+  );
+
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isMuted, setIsMuted] = useState(initialMuted);
   const [progress, setProgress] = useState(0);
@@ -118,14 +126,14 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
 
   const handleContainerClick = (e: React.MouseEvent) => {
     triggerShowPhoneActions();
-    if (resolvedDriveId) return;
+    if (isIframeSource) return;
     // Tap directly toggles play / pause immediately
     togglePlay(e);
   };
 
   // Handle HLS stream or standard video attachment and Autoplay safely
   useEffect(() => {
-    if (resolvedDriveId || !isInView) return; // Wait until visible in viewport
+    if (isIframeSource || !isInView) return; // Wait until visible in viewport
     const video = videoRef.current;
     if (!video) return;
 
@@ -159,7 +167,7 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
     return () => {
       if (cleanupHls) cleanupHls();
     };
-  }, [playableSrc, autoPlay, resolvedDriveId, isInView]);
+  }, [playableSrc, autoPlay, isIframeSource, isInView]);
 
   // Sync mute state with video element
   const toggleMute = useCallback((e: React.MouseEvent) => {
@@ -173,7 +181,7 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
 
   // Toggle Play / Pause for native video
   const togglePlay = useCallback((e?: React.MouseEvent) => {
-    if (resolvedDriveId) return; // Managed by Google Drive iframe
+    if (isIframeSource) return; // Managed by Google Drive iframe
     if (e) e.stopPropagation();
     const video = videoRef.current;
     if (!video) return;
@@ -227,13 +235,13 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
       className={`relative w-full ${containerAspect} bg-[#03150D] rounded-xl sm:rounded-2xl md:rounded-3xl overflow-hidden select-none group border border-emerald-900/30 shadow-md transition-all duration-300 ${className}`}
       style={{ isolation: 'isolate' }}
     >
-      {/* 1. GOOGLE DRIVE EMBEDDED IFRAME PLAYER (When Drive ID is provided) */}
-      {resolvedDriveId ? (
+      {/* 1. EMBEDDED IFRAME PLAYER (When external iframe is provided) */}
+      {isIframeSource ? (
         <div className={`w-full h-full relative overflow-hidden bg-black flex items-center justify-center ${
           isVertical ? 'gdrive-reel-wrapper' : 'gdrive-frame-wrapper'
         }`}>
           <iframe
-            src={buildGoogleDrivePreviewUrl(resolvedDriveId, false)}
+            src={buildGoogleDrivePreviewUrl(resolvedDriveId || '', false)}
             className="absolute inset-0 w-full h-full border-0 block"
             allow="autoplay; encrypted-media; fullscreen"
             allowFullScreen
@@ -242,7 +250,7 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
           />
         </div>
       ) : (
-        /* 2. NATIVE HTML5 VIDEO FALLBACK (For direct uploads or local videos) */
+        /* 2. NATIVE HTML5 VIDEO FALLBACK (For direct uploads, local videos, or Mux HLS streams) */
         <>
           {resolvedPoster && (
             <img
@@ -272,11 +280,19 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
               setIsLoaded(true);
               setHasError(false);
             }}
+            onPlaying={() => {
+              setIsPlaying(true);
+              setIsLoaded(true);
+              setHasError(false);
+            }}
             onTimeUpdate={() => {
               const video = videoRef.current;
               if (!video || !video.duration) return;
               setCurrentTime(video.currentTime);
               setProgress((video.currentTime / video.duration) * 100);
+              if (!video.paused && !isPlaying) {
+                setIsPlaying(true);
+              }
             }}
             onDurationChange={() => {
               const video = videoRef.current;
@@ -315,17 +331,22 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
             </div>
           )}
 
-          {/* Center Play Indicator - perfectly centered on mobile and desktop */}
+          {/* Center Play Indicator - vanishes automatically when video plays or opens modal on click */}
           {!isPlaying && (
             <div 
               onClick={(e) => {
-                togglePlay(e);
-                triggerShowPhoneActions();
+                if (onOpenModal) {
+                  e.stopPropagation();
+                  onOpenModal(playableSrc, title, isVertical ? '9/16' : '16/9');
+                } else {
+                  togglePlay(e);
+                  triggerShowPhoneActions();
+                }
               }}
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-[1px] transition-all cursor-pointer pointer-events-auto"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-[1px] transition-opacity duration-300 cursor-pointer pointer-events-auto hover:bg-black/10"
             >
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[#22C55E] text-black flex items-center justify-center shadow-2xl shadow-black/80 transform active:scale-90 hover:scale-110 transition-all">
-                <Play className="w-5 h-5 sm:w-7 sm:h-7 fill-current translate-x-0.5" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[#22C55E] text-black flex items-center justify-center shadow-2xl shadow-black/80 transform active:scale-90 hover:scale-110 transition-all cursor-pointer">
+                <Play className="w-5 h-5 sm:w-7 sm:h-7 fill-current translate-x-0.5 text-black" />
               </div>
             </div>
           )}
@@ -341,7 +362,7 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {!resolvedDriveId && (
+        {!isIframeSource && (
           <button
             type="button"
             onClick={(e) => {

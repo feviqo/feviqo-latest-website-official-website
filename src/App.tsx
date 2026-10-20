@@ -275,17 +275,18 @@ export default function App() {
 
   const handleOpenVideo = (vimeoIdOrSource: string, title?: string, aspect?: '16/9' | '9/16') => {
     const item = findVideoItem(vimeoIdOrSource);
-    const cleanId = item ? item.id : (vimeoIdOrSource.startsWith('http') ? 'reel-3' : vimeoIdOrSource);
+    const videoSource = item ? (item.src || item.id) : vimeoIdOrSource;
     const cleanTitle = title || item?.title || '';
     const cleanAspect = aspect || (item?.orientation === 'vertical' ? '9/16' : '16/9');
 
-    setActiveVideoModal(cleanId);
+    setActiveVideoModal(videoSource);
     setActiveVideoTitle(cleanTitle);
     setActiveVideoAspect(cleanAspect);
 
     try {
-      const sharePath = `/watch?v=${encodeURIComponent(cleanId)}`;
-      window.history.pushState({ v: cleanId }, '', sharePath);
+      const shareId = item?.id || videoSource;
+      const sharePath = `/watch?v=${encodeURIComponent(shareId)}`;
+      window.history.pushState({ v: shareId }, '', sharePath);
     } catch {}
   };
 

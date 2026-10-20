@@ -1,6 +1,9 @@
 export async function pushUrlsToGoogleIndexingApi(urls: string[]): Promise<{ successCount: number; failCount: number }> {
   try {
-    const res = await fetch('/api/seo/google-indexing-push', {
+    const origin = typeof window !== 'undefined'
+      ? ''
+      : `http://127.0.0.1:${process.env.PORT || 3000}`;
+    const res = await fetch(`${origin}/api/seo/google-indexing-push`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ urls })

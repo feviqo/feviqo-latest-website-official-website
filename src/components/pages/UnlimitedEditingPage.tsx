@@ -102,7 +102,7 @@ const RECENT_HORIZONTAL_VIDEOS = [
     duration: '14:20',
     views: '420K views',
     thumbnail: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
-    videoSrc: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
+    videoSrc: 'https://stream.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M.m3u8',
   },
   {
     id: 'hz-2',
@@ -111,7 +111,7 @@ const RECENT_HORIZONTAL_VIDEOS = [
     duration: '08:45',
     views: '185K views',
     thumbnail: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&auto=format&fit=crop&q=80',
-    videoSrc: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
+    videoSrc: 'https://stream.mux.com/OWmigFb1rqJZ7H3cjtFkEWYbLs2vBQDyNCmm1V4lnEc.m3u8',
   },
   {
     id: 'hz-3',
@@ -120,7 +120,7 @@ const RECENT_HORIZONTAL_VIDEOS = [
     duration: '22:15',
     views: '630K views',
     thumbnail: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=800&auto=format&fit=crop&q=80',
-    videoSrc: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
+    videoSrc: 'https://stream.mux.com/KA56Y3M8FLwvVDX91p012krrmMftMnLQSwlar01QlEkqc.m3u8',
   },
 ];
 

@@ -40,7 +40,7 @@ export const PersonalizedVideoPlayer: React.FC<PersonalizedVideoPlayerProps> = (
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Default video sources
-  const DEFAULT_SAMPLE_VIDEO = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4';
+  const DEFAULT_SAMPLE_VIDEO = 'https://stream.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M.m3u8';
   
   // Local uploaded/selected video URL (allows client/editor to test any real video file)
   const [localVideoUrl, setLocalVideoUrl] = useState<string | null>(null);

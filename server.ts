@@ -180,21 +180,36 @@ app.use('/videos', express.static(path.join(process.cwd(), 'public', 'videos')))
 app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
 
 // Explicit SEO endpoints for search engine crawlers (Google, Bing, Yahoo, Ahrefs, SEMrush)
-// Explicit SEO endpoints for search engine crawlers (Google, Bing, Yahoo, Ahrefs, SEMrush)
 app.get('/robots.txt', (_req, res) => {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  const robotsText = "User-agent: *\r\nAllow: /\r\n\r\nSitemap: https://feviqo.com/sitemap.xml\r\nSitemap: https://feviqo.com/sitemap-episodes.xml\r\n";
+  const robotsText = "User-agent: *\r\nAllow: /\r\n\r\nSitemap: https://feviqo.com/google-index-fetch.xml\r\nSitemap: https://feviqo.com/sitemap.xml\r\nSitemap: https://feviqo.com/sitemap-episodes.xml\r\n";
   return res.status(200).send(robotsText);
+});
+
+// Cache-Bypassing Direct Google Indexing Sitemap Route (Bypasses Edge Caching for GSC)
+app.get(['/google-index-fetch.xml', '/google-sitemap.xml'], (_req, res) => {
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, s-maxage=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  try {
+    const xml = generateSitemapXml();
+    const fetchPath = path.join(process.cwd(), 'public', 'google-index-fetch.xml');
+    fs.writeFile(fetchPath, xml, 'utf-8', () => {});
+    return res.status(200).send(xml);
+  } catch (err: any) {
+    console.error('Error generating google-index-fetch.xml:', err);
+    return res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Error generating google-index-fetch sitemap</error>');
+  }
 });
 
 // Dynamic Server-Side Route for Master XML Sitemap (pulls all episodes & page URLs in real-time)
 app.get('/sitemap.xml', (_req, res) => {
   res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=3600');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, s-maxage=0');
   try {
     const xml = generateSitemapXml();
-    // Asynchronously sync to disk for secondary tools
     const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
     fs.writeFile(sitemapPath, xml, 'utf-8', () => {});
     return res.status(200).send(xml);

@@ -20,9 +20,9 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/': {
     path: '/',
     pageName: 'Home Page',
-    seoTitle: 'Feviqo — Unlimited Video Editing Services | Flat-rate Video Editing Agency',
-    metaDescription: 'Scale your content with FEVIQO unlimited video editing. Dedicated professional editors, flat monthly rates, 24-48h turnaround for creators & brands.',
-    focusKeyword: 'unlimited video editing services',
+    seoTitle: 'FEVIQO — Unlimited Video Editing Agency | Flat-Rate Post Production Services',
+    metaDescription: 'FEVIQO is the premier unlimited video editing agency for content creators, brands, and marketing agencies worldwide. Dedicated video editors, flat monthly rates, 24-48h turnaround, and Turkish drama Urdu portals.',
+    focusKeyword: 'FEVIQO video editing agency',
     secondaryKeywords: [
       'unlimited video editing services',
       'video editing subscription',

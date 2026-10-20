@@ -58,6 +58,13 @@ export const VideoModal: React.FC<VideoModalProps> = ({
   const vimeoId = !driveId ? extractVimeoId(source) : null;
   const youtubeId = (!driveId && !vimeoId) ? extractYoutubeId(source) : null;
   const directPlayableSrc = resolvePlayableVideo(driveId, source, isVertical);
+  const isIframeSource = Boolean(
+    directPlayableSrc && (
+      directPlayableSrc.includes('drive.google.com') ||
+      directPlayableSrc.includes('youtube') ||
+      directPlayableSrc.includes('vimeo')
+    )
+  );
 
   const cleanId = matchedItem?.id || (source.startsWith('http') ? undefined : source);
   const videoIdForShare = cleanId || propVimeoId || 'reel-3';
@@ -156,7 +163,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({
 
         {/* Player Container */}
         <div className="relative w-full flex items-center justify-center bg-black overflow-hidden">
-          {driveId ? (
+          {isIframeSource && driveId ? (
             <div className={`w-full relative overflow-hidden bg-black flex items-center justify-center ${
               isVertical ? 'aspect-[9/16] max-h-[82vh] gdrive-reel-wrapper' : 'aspect-video gdrive-frame-wrapper'
             }`}>
@@ -169,7 +176,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({
                 title={title || matchedItem?.title || 'FEVIQO Google Drive Video'}
               />
             </div>
-          ) : vimeoId ? (
+          ) : isIframeSource && vimeoId ? (
             <div className={`w-full relative overflow-hidden bg-black flex items-center justify-center ${
               isVertical ? 'aspect-[9/16]' : 'aspect-video'
             }`}>
@@ -182,7 +189,7 @@ export const VideoModal: React.FC<VideoModalProps> = ({
                 title={title || matchedItem?.title || 'FEVIQO Video'}
               />
             </div>
-          ) : youtubeId ? (
+          ) : isIframeSource && youtubeId ? (
             <div className={`w-full relative overflow-hidden bg-black flex items-center justify-center ${
               isVertical ? 'aspect-[9/16]' : 'aspect-video'
             }`}>
