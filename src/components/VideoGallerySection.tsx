@@ -63,7 +63,6 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
                         aspectTag={item.aspectTag}
                         duration={item.duration}
                         isVertical={isVertical}
-                        onOpenModal={onOpenVideo}
                       />
                     </div>
                   );
@@ -85,7 +84,6 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
                 tag="YOUTUBE LONG-FORM"
                 duration="8:15"
                 isVertical={false}
-                onOpenModal={onOpenVideo}
               />
             </div>
 
@@ -100,7 +98,6 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
                   tag="RETENTION REEL"
                   duration="0:30"
                   isVertical={true}
-                  onOpenModal={onOpenVideo}
                 />
               </div>
               <div className="bg-[#03150D] rounded-2xl overflow-hidden shadow-lg border border-emerald-800/40">
@@ -112,7 +109,6 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
                   tag="KINETIC MOTION"
                   duration="0:22"
                   isVertical={true}
-                  onOpenModal={onOpenVideo}
                 />
               </div>
             </div>
@@ -127,7 +123,6 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
                 tag="PRODUCT DEMO"
                 duration="2:45"
                 isVertical={false}
-                onOpenModal={onOpenVideo}
               />
             </div>
 
@@ -141,7 +136,6 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
                 tag="FOUNDER SERIES"
                 duration="9:30"
                 isVertical={false}
-                onOpenModal={onOpenVideo}
               />
             </div>
 
@@ -156,7 +150,6 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
                   tag="VIRAL REEL"
                   duration="0:22"
                   isVertical={true}
-                  onOpenModal={onOpenVideo}
                 />
               </div>
               <div className="bg-[#03150D] rounded-2xl overflow-hidden shadow-lg border border-emerald-800/40">
@@ -168,7 +161,6 @@ export const VideoGallerySection: React.FC<VideoGallerySectionProps> = ({
                   tag="PODCAST CUT"
                   duration="0:30"
                   isVertical={true}
-                  onOpenModal={onOpenVideo}
                 />
               </div>
             </div>

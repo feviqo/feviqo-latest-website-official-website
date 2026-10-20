@@ -320,7 +320,6 @@ const GalleryCard: React.FC<{
         duration={video.duration}
         isVertical={isVertical}
         aspectRatioClass={isVertical ? 'aspect-[9/16]' : 'aspect-video'}
-        onOpenModal={onOpenModal}
         onPlay={onPlayVideo}
         onStop={onStopVideo}
       />
