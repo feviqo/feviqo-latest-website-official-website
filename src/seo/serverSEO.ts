@@ -640,6 +640,58 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     });
   }
 
+  if (cleanPath === '/mehmed-fetihler-sultani/episode-89' || cleanPath === '/mehmed/episode-89') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push({
+      "@type": "TVEpisode",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-89#episode",
+      "url": "https://feviqo.com/mehmed-fetihler-sultani/episode-89",
+      "name": "Mehmed Season 4 Episode 89 Urdu Subtitles | Bolum 89",
+      "episodeNumber": "89",
+      "seasonNumber": "4",
+      "inLanguage": "Urdu",
+      "subtitleLanguage": "Urdu Subtitles",
+      "description": "Watch Mehmed Fetihler Sultani Season 4 Episode 89 Urdu Subtitles (Bolum 89) in 1080p HD on FEVIQO. Sultan Mehmed II executes a decisive tactical siege as secret alliances threaten the empire.",
+      "image": "https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5",
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-89",
+      "isPartOf": {
+        "@type": "TVSeries",
+        "name": "Mehmed: Fetihler Sultani",
+        "url": "https://feviqo.com/mehmed-fetihler-sultani"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "VideoObject",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-89#video",
+      "name": "Mehmed Season 4 Episode 89 Urdu Subtitles | Bolum 89",
+      "description": "Watch Mehmed Fetihler Sultani Season 4 Episode 89 Urdu Subtitles (Bolum 89) in 1080p HD on FEVIQO. Sultan Mehmed II executes a decisive tactical siege as secret alliances threaten the empire.",
+      "thumbnailUrl": [
+        "https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5"
+      ],
+      "uploadDate": "2026-10-21T04:00:00.000Z",
+      "contentUrl": "https://stream.mux.com/q3MFc527rZ7V0101YFeDLV8aCbWBk5oSnRsNQscKjDRuQ.m3u8",
+      "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-89",
+      "duration": "PT2H32M",
+      "isFamilyFriendly": true,
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-89",
+      "publisher": {
+        "@id": "https://feviqo.com/#organization"
+      }
+    });
+
+    schemaObj["@graph"].push({
+      "@type": "ImageObject",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-89#image",
+      "url": "https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5",
+      "contentUrl": "https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5",
+      "name": "Mehmed Fetihler Sultani Episode 89 Urdu Subtitles HD Thumbnail",
+      "caption": "Mehmed Episode 89, Bolum 89 Urdu Subtitles HD Thumbnail",
+      "description": "Official Mehmed Fetihler Sultani Episode 89 Urdu Subtitles HD Thumbnail image."
+    });
+  }
+
   if (cleanPath === '/mehmed-fetihler-sultani/episode-88' || cleanPath === '/mehmed/episode-88') {
     transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
 
@@ -746,7 +798,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   transformed = transformed.replace('</head>', `  ${jsonLdScript}\n  </head>`);
 
   // Inject prerendered semantic body content inside <noscript> inside <div id="root"> so search crawlers see full text & internal links while normal browsers never flash raw text/tags
-  const prerenderedBody = `<div id="root"><noscript><div id="seo-crawler-content"><header><nav aria-label="FEVIQO Master Navigation"><a href="/">Home</a> | <a href="/unlimited-editing">Unlimited Video Editing</a> | <a href="/creators">Creators</a> | <a href="/agencies">Agencies</a> | <a href="/business">Business & Brands</a> | <a href="/gallery">Video Showcase</a> | <a href="/pricing">Pricing</a> | <a href="/about">About Us</a> | <a href="/dramas">Turkish Dramas Directory</a> | <a href="/turkish-drama">Turkish Series Hub</a> | <a href="/teskilat">Teskilat Season 7</a> | <a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani</a> | <a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer</a> | <a href="/trending">Trending Hub</a></nav></header><main><header><h1>${config.seoTitle}</h1><p>${config.metaDescription}</p></header><article><h2>FEVIQO — Watch Online with Urdu Subtitles HD & Video Post-Production</h2><p>Experience full HD 1080p streaming with complete story recaps, character breakdowns, and official video streams on FEVIQO.</p></article><section><h2>Complete FEVIQO Sitemap Directory & Navigation Links</h2><ul><li><a href="/">FEVIQO Unlimited Video Editing Agency Home</a></li><li><a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani Main Hub</a></li><li><a href="/mehmed-fetihler-sultani/episode-88">Mehmed Fetihler Sultani Episode 88 (Bolum 88) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-87">Mehmed Fetihler Sultani Episode 87 (Bolum 87) Urdu Subtitles</a></li><li><a href="/teskilat">Teskilat Season 7 Main Hub</a></li><li><a href="/teskilat/episode-189">Teskilat Season 7 Episode 189 (Bolum 189) Urdu Subtitles</a></li><li><a href="/teskilat/episode-188">Teskilat Season 7 Episode 188 (Bolum 188) Urdu Subtitles - Ender Rescue</a></li><li><a href="/teskilat/episode-187">Teskilat Season 7 Episode 187 (Bolum 187) Urdu Subtitles</a></li><li><a href="/teskilat/episode-186">Teskilat Season 7 Episode 186 (Bolum 186) Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer Main Hub</a></li><li><a href="/gunesin-dogdugu-yer/episode-5">Gunesin Dogdugu Yer Episode 5 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-4">Gunesin Dogdugu Yer Episode 4 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-3">Gunesin Dogdugu Yer Episode 3 Urdu Subtitles</a></li><li><a href="/dramas">Turkish Drama Urdu Subtitles Directory</a></li><li><a href="/unlimited-editing">Unlimited Video Editing Subscription</a></li><li><a href="/creators">High-Retention Video Editing for Content Creators</a></li><li><a href="/agencies">White-Label Video Editing Pods for Agencies</a></li><li><a href="/business">Performance Ad Creatives for Business & Brands</a></li><li><a href="/gallery">FEVIQO Video Portfolio & Showreel Showcase</a></li><li><a href="/pricing">Transparent Flat-Rate Pricing Plans</a></li><li><a href="/about">About FEVIQO Creative Agency</a></li><li><a href="/booking">Book a Creative Strategy Call</a></li><li><a href="/trending">FEVIQO Trending News & Analysis Hub</a></li><li><a href="/trending/h1b-visa-2026-latest-update">H-1B Visa 2026 Latest Rules & Updates</a></li></ul></section></main></div></noscript><div style="min-height:100vh;background-color:#0B0F17;display:flex;align-items:center;justify-content:center;color:#22C55E;font-family:ui-sans-serif,system-ui,sans-serif;font-weight:800;font-size:22px;letter-spacing:3px;text-transform:uppercase;">FEVIQO</div></div>`;
+  const prerenderedBody = `<div id="root"><noscript><div id="seo-crawler-content"><header><nav aria-label="FEVIQO Master Navigation"><a href="/">Home</a> | <a href="/unlimited-editing">Unlimited Video Editing</a> | <a href="/creators">Creators</a> | <a href="/agencies">Agencies</a> | <a href="/business">Business & Brands</a> | <a href="/gallery">Video Showcase</a> | <a href="/pricing">Pricing</a> | <a href="/about">About Us</a> | <a href="/dramas">Turkish Dramas Directory</a> | <a href="/turkish-drama">Turkish Series Hub</a> | <a href="/teskilat">Teskilat Season 7</a> | <a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani</a> | <a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer</a> | <a href="/trending">Trending Hub</a></nav></header><main><header><h1>${config.seoTitle}</h1><p>${config.metaDescription}</p></header><article><h2>FEVIQO — Watch Online with Urdu Subtitles HD & Video Post-Production</h2><p>Experience full HD 1080p streaming with complete story recaps, character breakdowns, and official video streams on FEVIQO.</p></article><section><h2>Complete FEVIQO Sitemap Directory & Navigation Links</h2><ul><li><a href="/">FEVIQO Unlimited Video Editing Agency Home</a></li><li><a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani Main Hub</a></li><li><a href="/mehmed-fetihler-sultani/episode-89">Mehmed Fetihler Sultani Episode 89 (Bolum 89) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-88">Mehmed Fetihler Sultani Episode 88 (Bolum 88) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-87">Mehmed Fetihler Sultani Episode 87 (Bolum 87) Urdu Subtitles</a></li><li><a href="/teskilat">Teskilat Season 7 Main Hub</a></li><li><a href="/teskilat/episode-189">Teskilat Season 7 Episode 189 (Bolum 189) Urdu Subtitles</a></li><li><a href="/teskilat/episode-188">Teskilat Season 7 Episode 188 (Bolum 188) Urdu Subtitles - Ender Rescue</a></li><li><a href="/teskilat/episode-187">Teskilat Season 7 Episode 187 (Bolum 187) Urdu Subtitles</a></li><li><a href="/teskilat/episode-186">Teskilat Season 7 Episode 186 (Bolum 186) Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer Main Hub</a></li><li><a href="/gunesin-dogdugu-yer/episode-5">Gunesin Dogdugu Yer Episode 5 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-4">Gunesin Dogdugu Yer Episode 4 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-3">Gunesin Dogdugu Yer Episode 3 Urdu Subtitles</a></li><li><a href="/dramas">Turkish Drama Urdu Subtitles Directory</a></li><li><a href="/unlimited-editing">Unlimited Video Editing Subscription</a></li><li><a href="/creators">High-Retention Video Editing for Content Creators</a></li><li><a href="/agencies">White-Label Video Editing Pods for Agencies</a></li><li><a href="/business">Performance Ad Creatives for Business & Brands</a></li><li><a href="/gallery">FEVIQO Video Portfolio & Showreel Showcase</a></li><li><a href="/pricing">Transparent Flat-Rate Pricing Plans</a></li><li><a href="/about">About FEVIQO Creative Agency</a></li><li><a href="/booking">Book a Creative Strategy Call</a></li><li><a href="/trending">FEVIQO Trending News & Analysis Hub</a></li><li><a href="/trending/h1b-visa-2026-latest-update">H-1B Visa 2026 Latest Rules & Updates</a></li></ul></section></main></div></noscript><div style="min-height:100vh;background-color:#0B0F17;display:flex;align-items:center;justify-content:center;color:#22C55E;font-family:ui-sans-serif,system-ui,sans-serif;font-weight:800;font-size:22px;letter-spacing:3px;text-transform:uppercase;">FEVIQO</div></div>`;
 
   transformed = transformed.replace('<div id="root"></div>', prerenderedBody);
 

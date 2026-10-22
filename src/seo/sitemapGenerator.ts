@@ -391,6 +391,13 @@ export function generateSitemapXml(): string {
         description: 'Watch Gunesin Dogdugu Yer Episode 5 in HD Urdu Subtitles with story recap on FEVIQO.com.',
         contentLoc: 'https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8'
       };
+    } else if (routeKey === '/mehmed-fetihler-sultani/episode-89') {
+      videoInfo = {
+        thumbnail: 'https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5',
+        title: 'Mehmed Season 4 Episode 89 Urdu Subtitles | Bolum 89 - Mehmed Fetihler Sultani',
+        description: 'Watch Mehmed Fetihler Sultani Season 4 Episode 89 Urdu Subtitles (Bolum 89) in 1080p HD on FEVIQO. Sultan Mehmed II executes a decisive tactical siege as secret alliances threaten the empire.',
+        contentLoc: 'https://stream.mux.com/q3MFc527rZ7V0101YFeDLV8aCbWBk5oSnRsNQscKjDRuQ.m3u8'
+      };
     } else if (routeKey === '/mehmed-fetihler-sultani/episode-88') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',

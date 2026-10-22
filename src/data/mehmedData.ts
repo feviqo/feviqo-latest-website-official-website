@@ -65,6 +65,35 @@ export const MEHMED_SERIES_DATA: MehmedSeries = {
 
 export const MEHMED_EPISODES: MehmedEpisode[] = [
   {
+    number: 89,
+    season: 4,
+    seasonEpisodeNumber: 6,
+    slug: "episode-89",
+    title: "Mehmed Season 4 Episode 89 Urdu Subtitles | Bolum 89",
+    airDate: "2026-10-21T04:00:00.000Z",
+    thumbnail: "https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5",
+    duration: "2h 32m",
+    shortSummary: "Watch Mehmed Season 4 Episode 89 Urdu Subtitles (Mehmed Fetihler Sultani Bolum 89) in 1080p HD on FEVIQO. Sultan Mehmed II executes a decisive tactical siege as secret alliances threaten the empire.",
+    recap: `Mehmed Season 4 Episode 6 Urdu Subtitles (Mehmed Fetihler Sultani Bolum 89) delivers high-velocity Ottoman military strategy, espionage, and imperial court drama. Sultan Mehmed II confronts treasonous plots while advancing heavy siege artillery toward crucial frontier strongholds.
+
+Imperial Warfare & Tactical Siege Operations
+As enemy commanders attempt to assemble a hostile coalition, Sultan Mehmed II unleashes an unexpected encirclement strategy. On the diplomatic front, covert negotiations in Edirne test the loyalty of key grand viziers and military commanders.
+
+Watch Mehmed Season 4 Episode 89 with Urdu Subtitles in crystal-clear 1080p HD on FEVIQO. Experience the historical conquests and military genius of Sultan Mehmed II.`,
+    recapUrdu: `مہمد فتحلر سلطان سیزن 4 قسط 89 (بولم 89) میں سلطان محمد فاتح کی عظیم عثمانی فتوحات اور محاصرے کی سنسنی خیز داستان جاری ہے۔ عثمانی افواج نے دشمن کے قلعوں کو گھیر لیا ہے جبکہ محلاتی سازشوں کا منہ توڑ جواب دیا جا رہا ہے۔ فیویکو پر مکمل قسط ایچ ڈی اردو سب ٹائٹلز کے ساتھ دیکھیں۔`,
+    downloadUrl: "https://shrinkme.click/mehmedepisode89urdu",
+    embeds: [
+      {
+        label: "Server 1 (Fast HLS 1080p)",
+        src: "https://stream.mux.com/q3MFc527rZ7V0101YFeDLV8aCbWBk5oSnRsNQscKjDRuQ.m3u8"
+      },
+      {
+        label: "Server 2 (FEVIQO Mirror 1080p)",
+        src: "https://stream.mux.com/q3MFc527rZ7V0101YFeDLV8aCbWBk5oSnRsNQscKjDRuQ.m3u8"
+      }
+    ]
+  },
+  {
     number: 88,
     season: 4,
     seasonEpisodeNumber: 5,
