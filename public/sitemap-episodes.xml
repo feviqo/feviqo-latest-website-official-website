@@ -4,7 +4,7 @@
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://feviqo.com/teskilat/episode-189</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -23,7 +23,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-188</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -42,7 +42,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-187</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -61,7 +61,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/teskilat/episode-186</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -80,7 +80,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/mehmed-fetihler-sultani/episode-88</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -99,7 +99,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/mehmed-fetihler-sultani/episode-87</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -118,7 +118,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-5</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -137,7 +137,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-4</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -156,7 +156,7 @@
   </url>
   <url>
     <loc>https://feviqo.com/gunesin-dogdugu-yer/episode-3</loc>
-    <lastmod>2026-10-20</lastmod>
+    <lastmod>2026-10-23</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -168,6 +168,25 @@
       <video:title>Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3</video:title>
       <video:description>Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles with story recap on FEVIQO.com.</video:description>
       <video:content_loc>https://stream.mux.com/ff2G9XfcMerNcnD02iPnysGkByH6SMTSa7p2yP01DuzT4.m3u8</video:content_loc>
+      <video:duration>8700</video:duration>
+      <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
+      <video:family_friendly>YES</video:family_friendly>
+    </video:video>
+  </url>
+  <url>
+    <loc>https://feviqo.com/mehmed-fetihler-sultani/episode-89</loc>
+    <lastmod>2026-10-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5</image:loc>
+      <image:title>Mehmed Season 4 Episode 89 Urdu Subtitles | Bolum 89</image:title>
+    </image:image>
+    <video:video>
+      <video:thumbnail_loc>https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5</video:thumbnail_loc>
+      <video:title>Mehmed Season 4 Episode 89 Urdu Subtitles | Bolum 89</video:title>
+      <video:description>Watch Mehmed Season 4 Episode 89 Urdu Subtitles (Mehmed Fetihler Sultani Bolum 89) in 1080p HD on FEVIQO. Sultan Mehmed II executes a decisive tactical siege as secret alliances threaten the empire.</video:description>
+      <video:content_loc>https://stream.mux.com/q3MFc527rZ7V0101YFeDLV8aCbWBk5oSnRsNQscKjDRuQ.m3u8</video:content_loc>
       <video:duration>8700</video:duration>
       <video:publication_date>2026-10-08T18:00:00+00:00</video:publication_date>
       <video:family_friendly>YES</video:family_friendly>
