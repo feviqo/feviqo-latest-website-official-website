@@ -660,6 +660,19 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
 
 const STORAGE_KEY = 'feviqo_seo_overrides_v1';
 
+function formatCanonicalUrl(url: string): string {
+  if (!url) return 'https://feviqo.com/';
+  try {
+    const u = new URL(url);
+    if (!u.pathname.endsWith('/') && !u.pathname.includes('.')) {
+      u.pathname += '/';
+    }
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+
 export function getSEOConfigForPath(pathname: string): PageSEOConfig {
   let cleanPath = (pathname || '/').split('?')[0].split('#')[0].toLowerCase();
   if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
@@ -677,38 +690,51 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
   }
 
   if (savedOverrides[cleanPath]) {
-    return savedOverrides[cleanPath];
+    const cfg = savedOverrides[cleanPath];
+    return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
   }
 
   if (DEFAULT_PAGE_SEO[cleanPath]) {
-    return DEFAULT_PAGE_SEO[cleanPath];
+    const cfg = DEFAULT_PAGE_SEO[cleanPath];
+    return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
   }
 
   // Alias lookups for Mehmed, Teskilat, and drama variations
   if (cleanPath === '/mehmed' || cleanPath === '/mehmed/') {
     if (DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani']) {
-      return DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani'];
+      const cfg = DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani'];
+      return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
     }
   }
-  if (cleanPath.includes('mehmed') && cleanPath.includes('87')) {
-    if (DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani/episode-87']) {
-      return DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani/episode-87'];
+  if (cleanPath.includes('mehmed') && cleanPath.includes('89')) {
+    if (DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani/episode-89']) {
+      const cfg = DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani/episode-89'];
+      return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
+    }
+  }
+  if (cleanPath.includes('mehmed') && cleanPath.includes('88')) {
+    if (DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani/episode-88']) {
+      const cfg = DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani/episode-88'];
+      return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
     }
   }
   if ((cleanPath.includes('189') || cleanPath.includes('episode-189')) && (cleanPath.includes('teskilat') || cleanPath.includes('episode'))) {
     if (DEFAULT_PAGE_SEO['/teskilat/episode-189']) {
-      return DEFAULT_PAGE_SEO['/teskilat/episode-189'];
+      const cfg = DEFAULT_PAGE_SEO['/teskilat/episode-189'];
+      return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
     }
   }
   if ((cleanPath.includes('188') || cleanPath.includes('episode-188')) && (cleanPath.includes('teskilat') || cleanPath.includes('episode'))) {
     if (DEFAULT_PAGE_SEO['/teskilat/episode-188']) {
-      return DEFAULT_PAGE_SEO['/teskilat/episode-188'];
+      const cfg = DEFAULT_PAGE_SEO['/teskilat/episode-188'];
+      return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
     }
   }
 
   // Dynamic fallback for unlisted routes
   const cleanTitle = pathname.replace('/', '').replace('-', ' ');
   const capitalized = cleanTitle ? cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1) : 'Page';
+  const rawCanonical = `https://feviqo.com${pathname.endsWith('/') ? pathname : pathname + '/'}`;
 
   return {
     path: pathname,
@@ -717,11 +743,11 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
     metaDescription: `${capitalized} page for FEVIQO Performance Creative Studio. Unlimited video editing and performance ad creatives at scale.`,
     focusKeyword: cleanTitle || 'video editing',
     secondaryKeywords: GLOBAL_KEYWORD_TAXONOMY.BRAND,
-    canonicalUrl: `https://feviqo.com${pathname}`,
+    canonicalUrl: rawCanonical,
     ogTitle: `${capitalized} — ${BRAND_SYSTEM.name}`,
     ogDescription: BRAND_SYSTEM.positioning,
     ogImage: BRAND_SYSTEM.defaultOgImage,
-    robots: 'index, follow',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'WebSite'
   };
 }

@@ -35,8 +35,11 @@ function formatUrlNode(
   imageTitle?: string,
   videoInfo?: VideoXmlInfo
 ): string {
-  const cleanPath = urlPath.startsWith('/') ? urlPath : `/${urlPath}`;
-  const fullLoc = `${SITE_ORIGIN}${cleanPath === '/' ? '/' : cleanPath}`;
+  let normalizedPath = urlPath.startsWith('/') ? urlPath : `/${urlPath}`;
+  if (!normalizedPath.endsWith('/') && !normalizedPath.includes('.')) {
+    normalizedPath += '/';
+  }
+  const fullLoc = `${SITE_ORIGIN}${normalizedPath}`;
   
   let node = `  <url>\r\n`;
   node += `    <loc>${escapeXml(fullLoc)}</loc>\r\n`;
@@ -336,10 +339,13 @@ export function generateSitemapXml(): string {
     imageTitle?: string,
     videoInfo?: VideoXmlInfo
   ) => {
-    const cleanPath = urlPath.startsWith('/') ? urlPath : `/${urlPath}`;
-    if (seenUrls.has(cleanPath)) return;
-    seenUrls.add(cleanPath);
-    xml += formatUrlNode(cleanPath, priority, changefreq, lastmod, imageLoc, imageTitle, videoInfo);
+    let normalizedPath = urlPath.startsWith('/') ? urlPath : `/${urlPath}`;
+    if (!normalizedPath.endsWith('/') && !normalizedPath.includes('.')) {
+      normalizedPath += '/';
+    }
+    if (seenUrls.has(normalizedPath)) return;
+    seenUrls.add(normalizedPath);
+    xml += formatUrlNode(normalizedPath, priority, changefreq, lastmod, imageLoc, imageTitle, videoInfo);
   };
 
   // 1. Core pages
