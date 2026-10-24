@@ -71,23 +71,35 @@ app.use((req, res, next) => {
   // 2. Canonical URL 301 Redirects for alias routes (production / feviqo.com requests only)
   if (process.env.NODE_ENV === 'production' || host.includes('feviqo.com')) {
     const aliasMap: Record<string, string> = {
-      '/mehmed': '/mehmed-fetihler-sultani',
-      '/mehmed/': '/mehmed-fetihler-sultani',
-      '/mehmed/episode-87': '/mehmed-fetihler-sultani/episode-87',
-      '/teskilat-189': '/teskilat/episode-189',
-      '/teskilat-188': '/teskilat/episode-188',
-      '/teskilat-187': '/teskilat/episode-187',
-      '/teskilat-186': '/teskilat/episode-186',
-      '/episode-189': '/teskilat/episode-189',
-      '/episode-188': '/teskilat/episode-188',
-      '/episode-187': '/teskilat/episode-187',
-      '/episode-186': '/teskilat/episode-186',
-      '/teskilat-urdu': '/teskilat',
-      '/teskilat-urdu/episode-189': '/teskilat/episode-189',
-      '/teskilat-urdu/episode-188': '/teskilat/episode-188',
+      '/mehmed': '/mehmed-fetihler-sultani/',
+      '/mehmed/': '/mehmed-fetihler-sultani/',
+      '/mehmed-fetihler-sultani': '/mehmed-fetihler-sultani/',
+      '/mehmed/episode-87': '/mehmed-fetihler-sultani/episode-87/',
+      '/mehmed/episode-88': '/mehmed-fetihler-sultani/episode-88/',
+      '/mehmed/episode-89': '/mehmed-fetihler-sultani/episode-89/',
+      '/mehmed-fetihler-sultani/episode-87': '/mehmed-fetihler-sultani/episode-87/',
+      '/mehmed-fetihler-sultani/episode-88': '/mehmed-fetihler-sultani/episode-88/',
+      '/mehmed-fetihler-sultani/episode-89': '/mehmed-fetihler-sultani/episode-89/',
+      '/teskilat': '/teskilat/',
+      '/teskilat-189': '/teskilat/episode-189/',
+      '/teskilat-188': '/teskilat/episode-188/',
+      '/teskilat-187': '/teskilat/episode-187/',
+      '/teskilat-186': '/teskilat/episode-186/',
+      '/teskilat/episode-189': '/teskilat/episode-189/',
+      '/teskilat/episode-188': '/teskilat/episode-188/',
+      '/teskilat/episode-187': '/teskilat/episode-187/',
+      '/teskilat/episode-186': '/teskilat/episode-186/',
+      '/episode-189': '/teskilat/episode-189/',
+      '/episode-188': '/teskilat/episode-188/',
+      '/episode-187': '/teskilat/episode-187/',
+      '/episode-186': '/teskilat/episode-186/',
+      '/teskilat-urdu': '/teskilat/',
+      '/teskilat-urdu/': '/teskilat/',
+      '/teskilat-urdu/episode-189': '/teskilat/episode-189/',
+      '/teskilat-urdu/episode-188': '/teskilat/episode-188/',
     };
 
-    if (aliasMap[rawPath]) {
+    if (aliasMap[rawPath] && aliasMap[rawPath] !== rawPath) {
       return res.redirect(301, aliasMap[rawPath]);
     }
   }
@@ -2584,9 +2596,10 @@ async function startServer() {
         const indexPath = path.join(process.cwd(), 'index.html');
         let rawHtml = fs.readFileSync(indexPath, 'utf-8');
         rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
-        const requestPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
+        const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
+        const requestPath = rawPath === '/' ? '/' : (rawPath.endsWith('/') ? rawPath : `${rawPath}/`);
         const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
-        const canonicalUrl = `https://feviqo.com${requestPath === '/' ? '/' : requestPath}`;
+        const canonicalUrl = `https://feviqo.com${requestPath}`;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
         return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
       } catch (e) {
@@ -2606,9 +2619,10 @@ async function startServer() {
       try {
         const indexPath = path.join(distPath, 'index.html');
         const rawHtml = fs.readFileSync(indexPath, 'utf-8');
-        const requestPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
+        const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
+        const requestPath = rawPath === '/' ? '/' : (rawPath.endsWith('/') ? rawPath : `${rawPath}/`);
         const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
-        const canonicalUrl = `https://feviqo.com${requestPath === '/' ? '/' : requestPath}`;
+        const canonicalUrl = `https://feviqo.com${requestPath}`;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
         return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
       } catch {
