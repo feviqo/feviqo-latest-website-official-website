@@ -75,6 +75,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         
+        {/* Editorial Feature / New Release Power Link Badge */}
+        <div className="flex justify-center mb-5">
+          <a
+            href="/mehmed-fetihler-sultani/episode-89/"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-xs sm:text-sm font-semibold text-emerald-900 transition-all duration-150 shadow-xs group"
+          >
+            <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+            <span className="text-[11px] font-black tracking-wider uppercase text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">Streaming Now</span>
+            <span className="text-slate-800 font-medium">Mehmed Fetihler Sultanı Episode 89 (Urdu Subtitles)</span>
+            <span className="text-emerald-700 font-bold group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+          </a>
+        </div>
+
         {/* Dual-Typography Hero Title */}
         <h1 className="font-coolvetica text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-[#0B0B0D] leading-[1.06] max-w-4xl mx-auto mb-4">
           Unlimited Video Editing <span className="font-editorial-italic font-bold text-[#16a34a]">Service</span>

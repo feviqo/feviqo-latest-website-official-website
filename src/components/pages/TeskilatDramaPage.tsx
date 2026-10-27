@@ -1009,6 +1009,37 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </a>
                 ))}
               </div>
+
+              {/* CROSS-DISCOVERY: Mehmed Fetihler Sultanı Episode 89 Power Card */}
+              <div className="mt-12 p-6 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-950 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-800">
+                <div className="space-y-2 text-left">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-[#22C55E] text-xs font-black uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+                    Trending Now On FEVIQO
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                    Mehmed: Fetihler Sultanı Episode 89 (Urdu Subtitles)
+                  </h3>
+                  <p className="text-sm text-slate-300 max-w-xl">
+                    Stream the new Mehmed Bolum 89 release in 1080p Ultra HD with synced Urdu translation.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <a
+                    href="/mehmed-fetihler-sultani/episode-89/"
+                    className="px-6 py-3 bg-[#22C55E] hover:bg-emerald-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition-all shadow-md flex items-center gap-2"
+                  >
+                    <span>Watch Episode 89</span>
+                    <ChevronRight className="w-4 h-4 text-slate-950" />
+                  </a>
+                  <a
+                    href="/mehmed-fetihler-sultani/"
+                    className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm rounded-xl transition border border-white/10"
+                  >
+                    Series Hub
+                  </a>
+                </div>
+              </div>
             </section>
 
           </div>
@@ -1352,6 +1383,21 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <ArrowLeft className="w-3.5 h-3.5" />
                   <span>Back to Teskilat Season 7 Overview</span>
                 </button>
+              </div>
+
+              {/* CROSS-EPISODE RECOMMENDATION: Mehmed Episode 89 */}
+              <div className="mt-8 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-left">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 block">Recommended Turkish Drama</span>
+                  <p className="text-xs sm:text-sm font-bold text-slate-900">Mehmed: Fetihler Sultanı Episode 89 (Bolum 89) Urdu Subtitles</p>
+                </div>
+                <a
+                  href="/mehmed-fetihler-sultani/episode-89/"
+                  className="px-4 py-2 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 text-xs font-black rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
+                >
+                  <span>Watch Mehmed 89</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </a>
               </div>
 
             </div>

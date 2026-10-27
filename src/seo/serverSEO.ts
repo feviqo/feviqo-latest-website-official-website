@@ -803,6 +803,4 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   transformed = transformed.replace('<div id="root"></div>', prerenderedBody);
 
   return transformed;
-
-  return transformed;
 }

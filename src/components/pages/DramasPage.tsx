@@ -25,6 +25,8 @@ interface DramaItem {
   image: string;
   href: string;
   buttonLabel: string;
+  latestEpisodeUrl?: string;
+  latestEpisodeLabel?: string;
 }
 
 const dramas: DramaItem[] = [
@@ -34,8 +36,10 @@ const dramas: DramaItem[] = [
     subtitle: "Season 7 · Turkish Drama · Urdu Subtitles",
     description: "An intense intelligence drama of missions, loyalty, sacrifice and betrayal. Altay and his secret operatives face dangerous operations to protect their homeland from international threats.",
     image: "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
-    href: "/teskilat",
-    buttonLabel: "Watch Teskilat"
+    href: "/teskilat/",
+    buttonLabel: "Watch Teskilat Season 7",
+    latestEpisodeUrl: "/teskilat/episode-189/",
+    latestEpisodeLabel: "Episode 189 (Latest)"
   },
   {
     id: "gunesin-dogdugu-yer",
@@ -43,17 +47,21 @@ const dramas: DramaItem[] = [
     subtitle: "Turkish Drama · Urdu Subtitles",
     description: "A powerful Turkish story of people, ambition, struggle and the choices that shape their lives. Follow an intense family saga, deep regional rivalries, and lovers torn apart by secrets.",
     image: "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
-    href: "/gunesin-dogdugu-yer",
-    buttonLabel: "Watch Gunesin Dogdugu Yer"
+    href: "/gunesin-dogdugu-yer/",
+    buttonLabel: "Watch Gunesin Dogdugu Yer",
+    latestEpisodeUrl: "/gunesin-dogdugu-yer/episode-5/",
+    latestEpisodeLabel: "Episode 5 (Latest)"
   },
   {
     id: "mehmed-fetihler-sultani",
     title: "Mehmed: Fetihler Sultani",
     subtitle: "Season 4 · Turkish Drama · Urdu Subtitles",
-    description: "The epic historical saga of Sultan Mehmed II, the Conqueror of Constantinople. Watch Saruca's battle, Gedik Ahmed Pasha's peril in Tabriz, and royal warfare in HD Urdu Subtitles.",
+    description: "The epic historical saga of Sultan Mehmed II, the Conqueror of Constantinople. Watch tactical siege operations, imperial intrigue, and royal warfare in HD Urdu Subtitles.",
     image: "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
-    href: "/mehmed-fetihler-sultani",
-    buttonLabel: "Watch Mehmed Fetihler Sultani"
+    href: "/mehmed-fetihler-sultani/",
+    buttonLabel: "Explore Mehmed Hub",
+    latestEpisodeUrl: "/mehmed-fetihler-sultani/episode-89/",
+    latestEpisodeLabel: "Episode 89 (New Release)"
   }
 ];
 
@@ -365,17 +373,21 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                 >
                   
                   {/* Artwork Panel (55–60% width) showing full original color in full rectangular 16:9 aspect-video */}
-                  <div 
-                    onClick={() => {
-                      if (drama.id === 'teskilat') {
-                        onNavigatePage('teskilat-urdu');
-                      } else if (drama.id === 'mehmed-fetihler-sultani') {
-                        onNavigatePage('mehmed-fetihler-sultani');
-                      } else {
-                        onNavigatePage('gunesin-dogdugu-yer');
+                  <a 
+                    href={drama.href}
+                    onClick={(e) => {
+                      if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        if (drama.id === 'teskilat') {
+                          onNavigatePage('teskilat-urdu');
+                        } else if (drama.id === 'mehmed-fetihler-sultani') {
+                          onNavigatePage('mehmed-fetihler-sultani');
+                        } else {
+                          onNavigatePage('gunesin-dogdugu-yer');
+                        }
                       }
                     }}
-                    className="w-full lg:w-[58%] aspect-video rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 relative shadow-md shrink-0 cursor-pointer group"
+                    className="w-full lg:w-[58%] aspect-video rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 relative shadow-md shrink-0 cursor-pointer group block"
                   >
                     <img 
                       src={drama.image} 
@@ -385,7 +397,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                     />
                     {/* Balanced visual depth gradient on bottom */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-transparent pointer-events-none" />
-                  </div>
+                  </a>
 
                   {/* Narrative details panel (40–45% width) */}
                   <div className="flex-1 text-left space-y-4 sm:space-y-6">
@@ -395,7 +407,24 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                         {drama.subtitle}
                       </p>
                       <h3 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight leading-none font-sans">
-                        {drama.title}
+                        <a 
+                          href={drama.href}
+                          onClick={(e) => {
+                            if (!e.metaKey && !e.ctrlKey) {
+                              e.preventDefault();
+                              if (drama.id === 'teskilat') {
+                                onNavigatePage('teskilat-urdu');
+                              } else if (drama.id === 'mehmed-fetihler-sultani') {
+                                onNavigatePage('mehmed-fetihler-sultani');
+                              } else {
+                                onNavigatePage('gunesin-dogdugu-yer');
+                              }
+                            }
+                          }}
+                          className="hover:text-emerald-600 transition-colors"
+                        >
+                          {drama.title}
+                        </a>
                       </h3>
                     </div>
 
@@ -403,39 +432,54 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                       {drama.description}
                     </p>
 
+                    {/* Latest Episode Direct Crawlable Power Link */}
+                    {drama.latestEpisodeUrl && (
+                      <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                          <span className="text-xs font-bold text-slate-900">
+                            Latest Stream: <span className="text-emerald-700">{drama.latestEpisodeLabel || 'New Episode'}</span>
+                          </span>
+                        </div>
+                        <a
+                          href={drama.latestEpisodeUrl}
+                          className="text-xs font-black text-emerald-700 hover:text-emerald-800 underline flex items-center gap-1 shrink-0"
+                        >
+                          <span>Watch Now</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+
                     {/* Highly premium buttons */}
                     <div className="pt-2 flex flex-wrap items-center gap-3">
-                      <button 
-                        onClick={() => {
-                          if (drama.id === 'teskilat') {
-                            onNavigatePage('teskilat-urdu');
-                          } else if (drama.id === 'mehmed-fetihler-sultani') {
-                            onNavigatePage('mehmed-fetihler-sultani');
-                          } else {
-                            onNavigatePage('gunesin-dogdugu-yer');
-                          }
-                        }}
+                      <a 
+                        href={drama.latestEpisodeUrl || drama.href}
                         className="px-6 py-3 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs sm:text-sm tracking-wide rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                       >
                         <Play className="w-4 h-4 fill-current text-slate-950" />
-                        <span>{drama.buttonLabel}</span>
-                      </button>
+                        <span>{drama.latestEpisodeLabel ? `Watch ${drama.latestEpisodeLabel}` : drama.buttonLabel}</span>
+                      </a>
 
-                      <button 
-                        onClick={() => {
-                          if (drama.id === 'teskilat') {
-                            onNavigatePage('teskilat-urdu');
-                          } else if (drama.id === 'mehmed-fetihler-sultani') {
-                            onNavigatePage('mehmed-fetihler-sultani');
-                          } else {
-                            onNavigatePage('gunesin-dogdugu-yer');
+                      <a 
+                        href={drama.href}
+                        onClick={(e) => {
+                          if (!e.metaKey && !e.ctrlKey) {
+                            e.preventDefault();
+                            if (drama.id === 'teskilat') {
+                              onNavigatePage('teskilat-urdu');
+                            } else if (drama.id === 'mehmed-fetihler-sultani') {
+                              onNavigatePage('mehmed-fetihler-sultani');
+                            } else {
+                              onNavigatePage('gunesin-dogdugu-yer');
+                            }
                           }
                         }}
                         className="px-5 py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 font-extrabold text-xs sm:text-sm rounded-lg transition border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <span>Explore Series Hub</span>
                         <ChevronRight className="w-4 h-4 text-slate-400" />
-                      </button>
+                      </a>
                     </div>
 
                   </div>

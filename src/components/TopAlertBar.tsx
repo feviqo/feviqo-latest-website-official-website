@@ -37,7 +37,7 @@ export const TopAlertBar: React.FC<TopAlertBarProps> = ({ onBookCall }) => {
         }
       `}</style>
 
-      <div className="relative max-w-7xl mx-auto flex items-center justify-center gap-2 sm:gap-3 text-center flex-wrap z-10">
+      <div className="relative max-w-7xl mx-auto flex items-center justify-center gap-2 sm:gap-4 text-center flex-wrap z-10 text-xs sm:text-[13px]">
         {/* Animated Highlighted Text */}
         <div className="inline-flex items-center gap-1 font-extrabold text-black tracking-tight">
           <Sparkles className="w-3.5 h-3.5 text-black shrink-0 animate-spin" style={{ animationDuration: '6s' }} />
@@ -49,12 +49,24 @@ export const TopAlertBar: React.FC<TopAlertBarProps> = ({ onBookCall }) => {
           onClick={onBookCall}
           className="group inline-flex items-center gap-1 font-bold underline decoration-black/40 hover:decoration-black transition cursor-pointer text-black hover:opacity-90"
         >
-          <span>Book a call to reserve</span>
+          <span>Book a call</span>
           <ArrowRight 
             className="w-3.5 h-3.5 ml-0.5 inline transition-transform group-hover:translate-x-1" 
             style={{ animation: 'gentleBounce 2s infinite ease-in-out' }}
           />
         </button>
+
+        {/* High-Authority Power Link to Mehmed Episode 89 */}
+        <span className="hidden sm:inline text-black/30 font-bold">•</span>
+        <a 
+          href="/mehmed-fetihler-sultani/episode-89/"
+          className="group inline-flex items-center gap-1.5 font-black text-black hover:text-emerald-950 transition cursor-pointer bg-black/10 hover:bg-black/15 px-2.5 py-0.5 rounded-full"
+          title="Watch Mehmed Season 4 Episode 89 Urdu Subtitles (Bolum 89)"
+        >
+          <Flame className="w-3.5 h-3.5 text-red-700 fill-red-700 shrink-0" />
+          <span>Trending: Mehmed Episode 89 Urdu Subtitles</span>
+          <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+        </a>
       </div>
     </aside>
   );
