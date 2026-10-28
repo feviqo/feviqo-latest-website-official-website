@@ -323,7 +323,9 @@ export const NativeVideoPlayer: React.FC<NativeVideoPlayerProps> = ({
           if (onEnded) onEnded();
         }}
         className="w-full h-full object-cover cursor-pointer block mx-auto my-auto object-center"
-      />
+      >
+        <track kind="captions" src="/captions/empty.vtt" srcLang="en" label="English" default />
+      </video>
 
       {/* Buffering Spinner */}
       {isBuffering && (

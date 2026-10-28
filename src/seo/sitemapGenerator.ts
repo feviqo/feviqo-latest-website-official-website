@@ -166,6 +166,18 @@ export function generateEpisodesSitemapXml(): string {
       description: 'Watch Teskilat Season 7 Episode 2 Urdu Subtitles (Bolum 186) with story recaps on FEVIQO.',
       contentLoc: 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8'
     },
+    '/mehmed-fetihler-sultani/episode-90': {
+      thumbnail: 'https://lh3.googleusercontent.com/d/1Ql7rSRtgL6HfxOyO-BSfPN8CdfUooJ1p',
+      title: 'Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90',
+      description: 'Watch Mehmed Fetihler Sultani Season 4 Episode 90 Urdu Subtitles (Bolum 90) in 1080p HD on FEVIQO. Sultan Mehmed II confronts an imperial crisis as enemy armies assemble and secret betrayals unfold.',
+      contentLoc: 'https://stream.mux.com/iZwLfzcSIyWE302WmxZ39wVyGRbT00hw2gYJsdmKosn7s.m3u8'
+    },
+    '/mehmed-fetihler-sultani/episode-89': {
+      thumbnail: 'https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5',
+      title: 'Mehmed Season 4 Episode 89 Urdu Subtitles | Bolum 89',
+      description: 'Watch Mehmed Fetihler Sultani Season 4 Episode 89 Urdu Subtitles (Bolum 89) in 1080p HD on FEVIQO. Sultan Mehmed II executes a decisive tactical siege as secret alliances threaten the empire.',
+      contentLoc: 'https://stream.mux.com/q3MFc527rZ7V0101YFeDLV8aCbWBk5oSnRsNQscKjDRuQ.m3u8'
+    },
     '/mehmed-fetihler-sultani/episode-88': {
       thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
       title: 'Mehmed Fetihler Sultani Episode 88 Urdu Subtitles | Bolum 88',
@@ -493,19 +505,8 @@ export function generateSitemapXml(): string {
     );
   });
 
-  // 4. Trending Articles
-  INITIAL_TRENDING_ARTICLES.forEach((article) => {
-    const articlePath = `/trending/${article.slug}`;
-    const pubDate = article.updatedAt ? article.updatedAt.split('T')[0] : today;
-    addNode(
-      articlePath,
-      article.featured ? '1.0' : '0.9',
-      'daily',
-      pubDate,
-      article.featuredImage,
-      article.title
-    );
-  });
+  // 4. Trending Hub Page is already included via DEFAULT_PAGE_SEO.
+  // Individual trending articles are intentionally excluded from the sitemap to maintain high site quality and avoid spam flags.
 
   xml += `</urlset>\n`;
   return xml;

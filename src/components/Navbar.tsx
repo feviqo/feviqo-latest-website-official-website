@@ -284,6 +284,30 @@ export const Navbar: React.FC<NavbarProps> = ({
             {dramasOpen && (
               <div className="absolute top-full right-0 w-80 bg-slate-900/60 backdrop-blur-3xl border border-white/20 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-white/10">
                 <div className="space-y-1">
+                  <a 
+                    href="/mehmed-fetihler-sultani/"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavigatePage('mehmed-fetihler-sultani' as any);
+                      setDramasOpen(false);
+                      if (typeof window !== 'undefined' && window.history) {
+                        window.history.pushState({}, '', '/mehmed-fetihler-sultani/');
+                      }
+                    }}
+                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
+                  >
+                    <div className="p-2 rounded-xl bg-white/10 text-emerald-400 border border-white/10 group-hover:bg-white/20 transition shadow-inner">
+                      <Globe className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        <span>Mehmed: Fetihler Sultanı</span>
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 text-[9px] font-black uppercase">URDU</span>
+                      </div>
+                      <div className="text-slate-300 text-xs mt-0.5">Season 4 Urdu Subtitles. Sultan Mehmed II historical conquest.</div>
+                    </div>
+                  </a>
+
                   <button 
                     onClick={() => {
                       onNavigatePage('teskilat-urdu');
@@ -319,43 +343,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
 
                   <a 
-                    href="/mehmed-fetihler-sultani/episode-89/"
+                    href="/dramas/"
                     onClick={(e) => {
                       e.preventDefault();
-                      onNavigatePage('mehmed-fetihler-sultani' as any);
+                      onNavigatePage('dramas');
                       setDramasOpen(false);
-                      if (typeof window !== 'undefined' && window.history) {
-                        window.history.pushState({}, '', '/mehmed-fetihler-sultani/episode-89/');
-                      }
-                    }}
-                    className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-amber-400/30 bg-amber-950/20"
-                  >
-                    <div className="p-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-400/30 group-hover:bg-amber-500/30 transition shadow-inner">
-                      <Globe className="w-4 h-4 text-amber-300" />
-                    </div>
-                    <div>
-                      <div className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                        <span>Mehmed Episode 89</span>
-                        <span className="px-1.5 py-0.2 rounded bg-red-600 text-white text-[9px] font-black uppercase">NEW</span>
-                      </div>
-                      <div className="text-amber-200 text-xs mt-0.5">Bolum 89 with Urdu Subtitles. Sultan Mehmed II tactical siege.</div>
-                    </div>
-                  </a>
-
-                  <a 
-                    href="/mehmed-fetihler-sultani/"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onNavigatePage('mehmed-fetihler-sultani' as any);
-                      setDramasOpen(false);
-                      if (typeof window !== 'undefined' && window.history) {
-                        window.history.pushState({}, '', '/mehmed-fetihler-sultani/');
-                      }
                     }}
                     className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center gap-2.5 transition group cursor-pointer text-slate-300 hover:text-white"
                   >
                     <Globe className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-xs font-semibold">Mehmed: Fetihler Sultanı Series Hub</span>
+                    <span className="text-xs font-semibold">All Turkish Dramas Directory</span>
                   </a>
                 </div>
               </div>
@@ -504,16 +501,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="border-t border-[#064e3b] pt-3.5 mt-3.5 space-y-1.5">
                 <div className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Turkish Dramas</div>
                 
-                <button 
-                  onClick={() => {
-                    onNavigatePage('dramas');
+                <a 
+                  href="/mehmed-fetihler-sultani/"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigatePage('mehmed-fetihler-sultani' as any);
                     setMobileMenuOpen(false);
+                    if (typeof window !== 'undefined' && window.history) {
+                      window.history.pushState({}, '', '/mehmed-fetihler-sultani/');
+                    }
                   }}
-                  className="w-full text-left py-2.5 px-3 rounded-xl bg-emerald-500 text-slate-950 font-black cursor-pointer flex items-center justify-between shadow-md"
+                  className="w-full text-left py-2.5 px-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/60 font-extrabold cursor-pointer text-emerald-300 flex items-center justify-between border border-emerald-500/10"
                 >
-                  <span>Browse All Turkish Dramas</span>
-                  <ChevronRight className="w-4 h-4 text-slate-950" />
-                </button>
+                  <span>Mehmed: Fetihler Sultanı</span>
+                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">URDU</span>
+                </a>
                 
                 <button 
                   onClick={() => {
@@ -539,37 +541,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">NEW</span>
                 </button>
 
-                <a 
-                  href="/mehmed-fetihler-sultani/episode-89/"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onNavigatePage('mehmed-fetihler-sultani' as any);
+                <button 
+                  onClick={() => {
+                    onNavigatePage('dramas');
                     setMobileMenuOpen(false);
-                    if (typeof window !== 'undefined' && window.history) {
-                      window.history.pushState({}, '', '/mehmed-fetihler-sultani/episode-89/');
-                    }
-                  }}
-                  className="w-full text-left py-2.5 px-3 rounded-xl bg-amber-950/40 hover:bg-amber-900/60 font-extrabold cursor-pointer text-amber-300 flex items-center justify-between border border-amber-500/20"
-                >
-                  <span>Mehmed Episode 89 (Urdu)</span>
-                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-red-600 text-white font-black">NEW</span>
-                </a>
-
-                <a 
-                  href="/mehmed-fetihler-sultani/"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onNavigatePage('mehmed-fetihler-sultani' as any);
-                    setMobileMenuOpen(false);
-                    if (typeof window !== 'undefined' && window.history) {
-                      window.history.pushState({}, '', '/mehmed-fetihler-sultani/');
-                    }
                   }}
                   className="w-full text-left py-2 px-3 rounded-xl hover:bg-white/5 font-semibold cursor-pointer text-slate-300 flex items-center justify-between text-xs"
                 >
-                  <span>Mehmed: Fetihler Sultanı Hub</span>
+                  <span>All Turkish Dramas Directory</span>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                </a>
+                </button>
               </div>
 
               {/* Turkish TV Licensing placed in the end on phone */}

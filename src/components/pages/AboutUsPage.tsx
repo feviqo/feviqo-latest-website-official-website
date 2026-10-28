@@ -149,9 +149,13 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({ onBookCall, onNavigate
               <div className="flex flex-col items-center text-center mb-8">
                 <div className="w-44 h-44 sm:w-56 sm:h-56 rounded-full overflow-hidden border-4 border-[#22C55E] bg-slate-950 p-1 mb-5 shadow-2xl shadow-[#22C55E]/30 relative group flex-shrink-0">
                   <img 
-                    src="/images/CEO.jpeg" 
+                    src="/images/CEO.webp" 
+                    width={224}
+                    height={224}
+                    loading="lazy"
+                    decoding="async"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/feviqo1.png';
+                      (e.target as HTMLImageElement).src = '/feviqo1.webp';
                     }}
                     alt="Rex Carter - CEO of FEVIQO" 
                     className="w-full h-full object-cover rounded-full bg-slate-900 group-hover:scale-105 transition-transform duration-300"
@@ -218,9 +222,13 @@ export const AboutUsPage: React.FC<AboutUsPageProps> = ({ onBookCall, onNavigate
               <div className="flex flex-col items-center text-center mb-8">
                 <div className="w-44 h-44 sm:w-56 sm:h-56 rounded-full overflow-hidden border-4 border-[#22C55E] bg-slate-950 p-1 mb-5 shadow-2xl shadow-[#22C55E]/30 relative group flex-shrink-0">
                   <img 
-                    src="/images/FOUNDER.jpeg" 
+                    src="/images/FOUNDER.webp" 
+                    width={224}
+                    height={224}
+                    loading="lazy"
+                    decoding="async"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/feviqo1.png';
+                      (e.target as HTMLImageElement).src = '/feviqo1.webp';
                     }}
                     alt="Amer Shahzad - Founder & Creative Director" 
                     className="w-full h-full object-cover rounded-full bg-slate-900 group-hover:scale-105 transition-transform duration-300"

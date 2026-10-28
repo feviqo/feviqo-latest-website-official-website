@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackSrc?: string;
   hideOnError?: boolean;
+  fetchPriority?: 'high' | 'low' | 'auto';
 }
 
 /**
@@ -20,6 +21,7 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   className = '',
   loading = 'lazy',
   decoding = 'async',
+  fetchPriority,
   referrerPolicy = 'no-referrer',
   onError,
   onLoad,
@@ -49,6 +51,7 @@ export const SafeImage: React.FC<SafeImageProps> = ({
       alt={alt}
       loading={loading}
       decoding={decoding}
+      fetchPriority={fetchPriority}
       referrerPolicy={referrerPolicy}
       onLoad={(e) => {
         setIsLoaded(true);

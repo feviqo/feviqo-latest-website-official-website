@@ -22,46 +22,21 @@ async function main() {
     fs.mkdirSync(distDir, { recursive: true });
   }
 
-  // 1. Regenerate master sitemaps & robots.txt on disk
-  updateSitemapFiles();
+  // 1. Maintain single clean sitemap.xml & robots.txt + agent discovery files
+  const sitemapXml = fs.readFileSync(path.join(publicDir, 'sitemap.xml'), 'utf-8');
+  const robotsTxt = fs.readFileSync(path.join(publicDir, 'robots.txt'), 'utf-8');
 
-  const masterSitemapXml = generateSitemapXml();
-
-  // Write master sitemaps directly into dist/ for static hosts (Cloudflare Pages, Vercel, Netlify)
-  fs.writeFileSync(path.join(distDir, 'sitemap.xml'), masterSitemapXml, 'utf-8');
-  fs.writeFileSync(path.join(distDir, 'google-index-fetch.xml'), masterSitemapXml, 'utf-8');
-  fs.writeFileSync(path.join(distDir, 'sitemap-index.xml'), masterSitemapXml, 'utf-8');
-
-  // Generate clean robots.txt in dist/, public/, and root
-  const robotsTxt = [
-    'User-agent: *',
-    'Allow: /',
-    '',
-    'User-agent: Googlebot',
-    'Allow: /',
-    '',
-    'User-agent: Googlebot-Image',
-    'Allow: /',
-    '',
-    'User-agent: Googlebot-Video',
-    'Allow: /',
-    '',
-    'User-agent: Mediapartners-Google',
-    'Allow: /',
-    '',
-    'User-agent: AdsBot-Google',
-    'Allow: /',
-    '',
-    'User-agent: Bingbot',
-    'Allow: /',
-    '',
-    'Sitemap: https://feviqo.com/sitemap.xml',
-    'Sitemap: https://feviqo.com/google-index-fetch.xml',
-  ].join('\r\n');
-
+  fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemapXml, 'utf-8');
   fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsTxt, 'utf-8');
-  fs.writeFileSync(path.join(publicDir, 'robots.txt'), robotsTxt, 'utf-8');
   fs.writeFileSync(path.join(rootDir, 'robots.txt'), robotsTxt, 'utf-8');
+
+  // Copy agentic discovery assets
+  if (fs.existsSync(path.join(publicDir, 'llms.txt'))) {
+    fs.copyFileSync(path.join(publicDir, 'llms.txt'), path.join(distDir, 'llms.txt'));
+  }
+  if (fs.existsSync(path.join(publicDir, 'ai-catalog.json'))) {
+    fs.copyFileSync(path.join(publicDir, 'ai-catalog.json'), path.join(distDir, 'ai-catalog.json'));
+  }
 
   // 2. Read compiled dist/index.html
   const distIndexPath = path.join(distDir, 'index.html');
@@ -73,7 +48,7 @@ async function main() {
   const baseHtml = fs.readFileSync(distIndexPath, 'utf-8');
 
   // 3. Extract all URLs from sitemap
-  const urlMatches = masterSitemapXml.match(/<loc>(.*?)<\/loc>/g) || [];
+  const urlMatches = sitemapXml.match(/<loc>(.*?)<\/loc>/g) || [];
   const routePaths: string[] = [];
 
   urlMatches.forEach(match => {

@@ -77,9 +77,9 @@ const RIGHT_BENEFITS: WorkflowBenefit[] = [
 ];
 
 const PHASE_IMAGES = [
-  '/images/last test.png',
-  '/images/1 Creative Decisions.png',
-  '/images/2 Faster Turnaround.png',
+  '/images/last test.webp',
+  '/images/1 Creative Decisions.webp',
+  '/images/2 Faster Turnaround.webp',
 ];
 
 const PHASES = [
@@ -88,21 +88,21 @@ const PHASES = [
     title: 'Phase 01',
     subtitle: 'Format & Social Reach',
     summary: 'Mastering short-form (9:16) & long-form (16:9) video cuts.',
-    image: '/images/last test.png',
+    image: '/images/last test.webp',
   },
   {
     idx: 1,
     title: 'Phase 02',
     subtitle: 'Brand Style & Dedicated Lead',
     summary: 'Tailoring every cut to your aesthetic with your assigned editor.',
-    image: '/images/1 Creative Decisions.png',
+    image: '/images/1 Creative Decisions.webp',
   },
   {
     idx: 2,
     title: 'Phase 03',
     subtitle: 'Sound FX & 24–48h Delivery',
     summary: 'Complete sound FX, motion design, and rapid sprint delivery.',
-    image: '/images/2 Faster Turnaround.png',
+    image: '/images/2 Faster Turnaround.webp',
   },
 ];
 
@@ -231,10 +231,14 @@ export const ProcessFeatures: React.FC = () => {
               }}
             >
               <img
-                src={assets.structuredWorkflowImage || '/images/last test.png'}
+                src={assets.structuredWorkflowImage || '/images/last test.webp'}
                 alt="Video Creation Should be Easy"
+                width={600}
+                height={490}
+                loading="lazy"
+                decoding="async"
                 referrerPolicy="no-referrer"
-                onError={(e) => { e.currentTarget.src = "/images/last test.png"; }}
+                onError={(e) => { e.currentTarget.src = "/images/last test.webp"; }}
                 style={{
                   maxHeight: assets.displaySettings?.workflowImageHeight 
                     ? `${assets.displaySettings.workflowImageHeight + 100}px` 
@@ -302,10 +306,14 @@ export const ProcessFeatures: React.FC = () => {
             {/* Artwork Card */}
             <div className="flex items-center justify-center p-1">
               <img
-                src={assets.structuredWorkflowImage || '/images/last test.png'}
+                src={assets.structuredWorkflowImage || '/images/last test.webp'}
                 alt="Video Creation Should be Easy"
+                width={500}
+                height={380}
+                loading="lazy"
+                decoding="async"
                 referrerPolicy="no-referrer"
-                onError={(e) => { e.currentTarget.src = "/images/last test.png"; }}
+                onError={(e) => { e.currentTarget.src = "/images/last test.webp"; }}
                 className="w-full h-auto max-h-[460px] object-contain block mx-auto drop-shadow-lg rounded-2xl"
               />
             </div>

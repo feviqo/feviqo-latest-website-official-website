@@ -65,6 +65,35 @@ export const MEHMED_SERIES_DATA: MehmedSeries = {
 
 export const MEHMED_EPISODES: MehmedEpisode[] = [
   {
+    number: 90,
+    season: 4,
+    seasonEpisodeNumber: 7,
+    slug: "episode-90",
+    title: "Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90",
+    airDate: "2026-10-28T04:00:00.000Z",
+    thumbnail: "https://lh3.googleusercontent.com/d/1Ql7rSRtgL6HfxOyO-BSfPN8CdfUooJ1p",
+    duration: "2h 35m",
+    shortSummary: "Watch Mehmed Season 4 Episode 90 Urdu Subtitles (Mehmed Fetihler Sultani Bolum 90) in 1080p HD on FEVIQO. Sultan Mehmed II confronts an imperial crisis as enemy armies assemble and secret betrayals unfold.",
+    recap: `Mehmed Season 4 Episode 7 Urdu Subtitles (Mehmed Fetihler Sultani Bolum 90) delivers breathtaking Ottoman battlefield warfare and court strategy. Sultan Mehmed II prepares an unstoppable offensive while uncovering secret alliances that threaten the throne.
+
+Imperial Warfare & Royal Court Clashes
+As the enemy coalition prepares to attack Ottoman frontiers, Sultan Mehmed II deploys tactical maneuvers to outflank opposing generals. In Edirne, loyal viziers work tirelessly to secure supply lines and defend the imperial court from hidden saboteurs.
+
+Watch Mehmed Season 4 Episode 90 with Urdu Subtitles in full 1080p HD on FEVIQO. Experience the legendary conquests and leadership of Sultan Mehmed II.`,
+    recapUrdu: `مہمد فتحلر سلطان سیزن 4 قسط 90 (بولم 90) میں سلطان محمد فاتح کی عظیم عثمانی فتوحات اور نئی جنگی حکمت عملی کا آغاز ہو چکا ہے۔ دشمن افواج کے گٹھ جوڑ اور محلاتی سازشوں کے خلاف عثمانی فوج ایک زبردست کارروائی کے لیے تیار ہے۔ فیویکو پر مکمل قسط ایچ ڈی اردو سب ٹائٹلز کے ساتھ دیکھیں۔`,
+    downloadUrl: "https://shrinkme.click/mehmedepisode90urdu",
+    embeds: [
+      {
+        label: "Server 1 (Fast HLS 1080p)",
+        src: "https://stream.mux.com/iZwLfzcSIyWE302WmxZ39wVyGRbT00hw2gYJsdmKosn7s.m3u8"
+      },
+      {
+        label: "Server 2 (FEVIQO Mirror 1080p)",
+        src: "https://stream.mux.com/iZwLfzcSIyWE302WmxZ39wVyGRbT00hw2gYJsdmKosn7s.m3u8"
+      }
+    ]
+  },
+  {
     number: 89,
     season: 4,
     seasonEpisodeNumber: 6,

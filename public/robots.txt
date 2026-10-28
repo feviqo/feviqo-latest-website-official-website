@@ -20,4 +20,3 @@ User-agent: Bingbot
 Allow: /
 
 Sitemap: https://feviqo.com/sitemap.xml
-Sitemap: https://feviqo.com/google-index-fetch.xml

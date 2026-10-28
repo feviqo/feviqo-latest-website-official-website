@@ -18,10 +18,13 @@ export const StillHavingDoubtsBanner: React.FC<StillHavingDoubtsBannerProps> = (
         {/* Left Side: Representative Cutout */}
         <div className="w-full md:w-1/2 flex items-end justify-center md:justify-start pt-6 sm:pt-10 md:pt-0 pl-0 md:pl-8 lg:pl-12 self-end z-10">
           <img
-            src="/images/pic%20ullimited%20page-1.png"
+            src="/images/pic%20ullimited%20page-1.webp"
             alt="Customer Support Lead"
+            width={420}
+            height={420}
             className="w-auto h-[280px] sm:h-[340px] md:h-[380px] lg:h-[420px] object-contain object-bottom drop-shadow-2xl select-none pointer-events-none"
             loading="lazy"
+            decoding="async"
           />
         </div>
 

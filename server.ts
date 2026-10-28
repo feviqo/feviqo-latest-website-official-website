@@ -129,6 +129,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Best Practices & Security Headers (Lighthouse 100 Best Practices & Security)
+app.use((req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; img-src 'self' https: data: blob:; media-src 'self' https: blob: data:; connect-src 'self' https: wss: blob:; frame-src 'self' https:;"
+  );
+
+  // Set long cache lifetimes for static assets (images, css, js, fonts)
+  if (req.path.match(/\.(js|css|webp|avif|png|jpg|jpeg|svg|woff2?|ttf|eot)$/i)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+
+  next();
+});
+
 // Ensure data and upload directories exist
 const DATA_DIR = path.join(process.cwd(), 'data');
 if (!fs.existsSync(DATA_DIR)) {
@@ -195,9 +216,13 @@ app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')))
 app.get('/robots.txt', (_req, res) => {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  const robotsFilePath = path.join(process.cwd(), 'robots.txt');
-  if (fs.existsSync(robotsFilePath)) {
-    return res.status(200).send(fs.readFileSync(robotsFilePath, 'utf-8'));
+  const publicRobotsPath = path.join(process.cwd(), 'public', 'robots.txt');
+  const rootRobotsPath = path.join(process.cwd(), 'robots.txt');
+  if (fs.existsSync(publicRobotsPath)) {
+    return res.status(200).send(fs.readFileSync(publicRobotsPath, 'utf-8'));
+  }
+  if (fs.existsSync(rootRobotsPath)) {
+    return res.status(200).send(fs.readFileSync(rootRobotsPath, 'utf-8'));
   }
   const robotsText = [
     'User-agent: *',
@@ -222,56 +247,28 @@ app.get('/robots.txt', (_req, res) => {
     'Allow: /',
     '',
     'Sitemap: https://feviqo.com/sitemap.xml',
-    'Sitemap: https://feviqo.com/google-index-fetch.xml',
     ''
   ].join('\r\n');
   return res.status(200).send(robotsText);
 });
 
-// Single Master All-In-One Sitemap Endpoints (Contains 100% of pages, episodes, and articles in one file)
-app.get([
-  '/sitemap.xml',
-  '/google-index-fetch.xml',
-  '/google-sitemap.xml',
-  '/sitemap-index.xml',
-  '/sitemap-main.xml',
-  '/sitemap-episodes.xml',
-  '/sitemap-trending.xml'
-], (_req, res) => {
+// Single Master Sitemap Endpoint (Directly serves clean public/sitemap.xml)
+app.get('/sitemap.xml', (_req, res) => {
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0, s-maxage=0');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
+  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
   try {
-    const xml = generateSitemapXml();
-    const fetchPath = path.join(process.cwd(), 'public', 'google-index-fetch.xml');
     const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
-    fs.writeFile(fetchPath, xml, 'utf-8', () => {});
-    fs.writeFile(sitemapPath, xml, 'utf-8', () => {});
-    return res.status(200).send(xml);
+    if (fs.existsSync(sitemapPath)) {
+      return res.status(200).send(fs.readFileSync(sitemapPath, 'utf-8'));
+    }
+    const distSitemapPath = path.join(process.cwd(), 'dist', 'sitemap.xml');
+    if (fs.existsSync(distSitemapPath)) {
+      return res.status(200).send(fs.readFileSync(distSitemapPath, 'utf-8'));
+    }
+    return res.status(200).send(generateSitemapXml());
   } catch (err: any) {
-    console.error('Error generating single master sitemap:', err);
+    console.error('Error generating master sitemap:', err);
     return res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Error generating master sitemap</error>');
-  }
-});
-
-app.get('/sitemap-trending.xml', (_req, res) => {
-  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  try {
-    return res.status(200).send(generateTrendingSitemapXml());
-  } catch (err: any) {
-    return res.status(500).send('Error generating trending sitemap');
-  }
-});
-
-app.get(['/sitemap-index.xml', '/sitemap_index.xml'], (_req, res) => {
-  res.setHeader('Content-Type', 'text/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  try {
-    return res.status(200).send(generateSitemapIndexXml());
-  } catch (err: any) {
-    return res.status(500).send('Error generating sitemap index');
   }
 });
 
@@ -284,6 +281,7 @@ app.post('/api/seo/google-indexing-push', async (req, res) => {
   const urls: string[] = req.body?.urls || [
     'https://feviqo.com/',
     'https://feviqo.com/mehmed-fetihler-sultani/',
+    'https://feviqo.com/mehmed-fetihler-sultani/episode-90/',
     'https://feviqo.com/mehmed-fetihler-sultani/episode-89/',
     'https://feviqo.com/mehmed-fetihler-sultani/episode-88/',
     'https://feviqo.com/mehmed-fetihler-sultani/episode-87/',

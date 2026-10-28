@@ -312,7 +312,9 @@ export const InlineVideoPlayer: React.FC<InlineVideoPlayerProps> = ({
               setHasError(true);
             }}
             className="w-full h-full object-cover block relative z-10"
-          />
+          >
+            <track kind="captions" src="/captions/empty.vtt" srcLang="en" label="English" default />
+          </video>
 
           {hasError && (
             <div className="absolute inset-0 z-20 bg-black/85 flex flex-col items-center justify-center p-4 text-center">

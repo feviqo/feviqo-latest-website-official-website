@@ -46,12 +46,17 @@ export const FeviqoHeaderLogo: React.FC<{
   if (theme === 'dark') {
     return (
       <img
-        src="/HEADER-removebg-preview.png"
+        src="/HEADER-removebg-preview.webp"
         alt="FEVIQO Logo"
+        width={150}
+        height={32}
+        fetchPriority="high"
+        loading="eager"
+        decoding="async"
         style={inlineStyle}
         className={`${className} object-contain transition-all duration-200`}
         onError={(e) => {
-          e.currentTarget.src = "/HEADER-removebg-preview.svg";
+          e.currentTarget.src = "/HEADER-removebg-preview.png";
         }}
       />
     );

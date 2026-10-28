@@ -25,7 +25,6 @@ import {
   Sliders
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
-import { Footer } from '../Footer';
 import { StillHavingDoubtsBanner } from '../StillHavingDoubtsBanner';
 import { HorizontalVideoShowcase } from '../HorizontalVideoShowcase';
 import { PricingMatrixSection } from '../PricingMatrixSection';
@@ -506,16 +505,6 @@ export const UnlimitedEditingPage: React.FC<UnlimitedEditingPageProps> = ({
           const el = document.getElementById('pricing');
           el?.scrollIntoView({ behavior: 'smooth' });
         }}
-      />
-
-      {/* Footer */}
-      <Footer 
-        onBookCall={() => onBookCall()}
-        onGetStarted={() => onBookCall()}
-        onNavigateSection={onNavigateSection || onBackToHome}
-        onNavigatePricing={onNavigatePricing}
-        onNavigateFlow={onOpenFlow}
-        onNavigatePage={onNavigatePage}
       />
     </div>
   );

@@ -129,7 +129,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
     } else {
       const pageTitle = "Mehmed Fetihler Sultani Urdu Subtitles - Watch Online - FEVIQO.com";
       const metaDesc = "Watch Mehmed Fetihler Sultani Turkish Drama in HD Urdu Subtitles (مہمد فتحلر سلطان اردو). Stream official episodes with story recaps on FEVIQO.com.";
-      const keywords = "mehmed fetihler sultani urdu, mehmed fetihler sultani urdu subtitles, watch mehmed fetihler sultani urdu, mehmed fetihler sultani season 4, mehmed fetihler sultani bolum 88 urdu, mehmed fetihler sultani episode 88 urdu subtitles, mehmed fetihler sultani bolum 87 urdu, sultan mehmed II urdu";
+      const keywords = "mehmed fetihler sultani urdu, mehmed fetihler sultani urdu subtitles, watch mehmed fetihler sultani urdu, mehmed fetihler sultani season 4, mehmed fetihler sultani bolum 90 urdu, mehmed fetihler sultani episode 90 urdu subtitles, mehmed fetihler sultani bolum 89 urdu, mehmed fetihler sultani episode 89 urdu subtitles, sultan mehmed II urdu";
 
       document.title = pageTitle;
 

@@ -145,10 +145,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
                   muted={isMuted}
                   loop
                   playsInline
-                  preload="auto"
+                  preload="metadata"
                   className="w-full h-full object-cover cursor-pointer aspect-[16/9]"
                   onClick={toggleSound}
-                />
+                >
+                  <track kind="captions" src="/captions/empty.vtt" srcLang="en" label="English" default />
+                </video>
               </div>
             </div>
 
@@ -191,9 +193,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
                   </span>
                 </div>
 
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight leading-tight">
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight leading-tight">
                   Trusted by many!
-                </h3>
+                </h2>
               </div>
 
               {/* Middle Section: 4.9 • Reviews 75 • Excellent + Green Stars */}

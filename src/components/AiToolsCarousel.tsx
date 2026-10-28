@@ -11,7 +11,7 @@ export const AiToolsCarousel: React.FC = () => {
       icon: Sparkles,
       title: 'Generate Scripts',
       description: 'Get well-structured, on-brand video ideas and scripts instantly with FEVIQO AI.',
-      image: '/images/tools2b.png',
+      image: '/images/tools2b.webp',
       cardBg: 'bg-gradient-to-r from-[#58ADFC] via-[#3b82f6] to-[#1d4ed8]',
     },
     {
@@ -20,7 +20,7 @@ export const AiToolsCarousel: React.FC = () => {
       icon: Flame,
       title: 'Create Trendy Videos',
       description: 'Use high-performing video templates to create viral and trendy video content.',
-      image: '/images/tools3.png',
+      image: '/images/tools3.webp',
       cardBg: 'bg-gradient-to-r from-[#D8226B] via-[#e11d48] to-[#be123c]',
     },
     {
@@ -29,7 +29,7 @@ export const AiToolsCarousel: React.FC = () => {
       icon: Scissors,
       title: 'Repurpose to Clips',
       description: 'Find the most engaging moments and hooks from your long-form videos with FEVIQO AI.',
-      image: '/images/tools1.png',
+      image: '/images/tools1.webp',
       cardBg: 'bg-gradient-to-r from-[#22C55E] via-[#16a34a] to-[#15803d]',
     },
   ];
@@ -119,6 +119,9 @@ export const AiToolsCarousel: React.FC = () => {
                     <img
                       src={tool.image}
                       alt={tool.title}
+                      width={420}
+                      height={320}
+                      decoding="async"
                       className="w-full max-w-[360px] sm:max-w-[420px] max-h-[260px] sm:max-h-[320px] object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-105"
                       loading="lazy"
                       referrerPolicy="no-referrer"

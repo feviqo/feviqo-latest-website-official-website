@@ -136,8 +136,12 @@ export const ComparisonSection: React.FC<ComparisonSectionProps> = ({ onChooseOp
 
                   <div className="flex items-center gap-2.5 mb-3 flex-wrap">
                     <img
-                      src="/images/feviqo1.png"
+                      src="/images/feviqo1.webp"
                       alt="FEVIQO Logo"
+                      width={110}
+                      height={28}
+                      loading="lazy"
+                      decoding="async"
                       className="h-7 w-auto object-contain shrink-0"
                       onError={(e) => { e.currentTarget.src = '/feviqo1.png'; }}
                     />
@@ -223,8 +227,12 @@ export const ComparisonSection: React.FC<ComparisonSectionProps> = ({ onChooseOp
 
                 <div className="flex items-center gap-3 mb-6 flex-wrap">
                   <img
-                    src="/images/feviqo1.png"
+                    src="/images/feviqo1.webp"
                     alt="FEVIQO Logo"
+                    width={140}
+                    height={36}
+                    loading="lazy"
+                    decoding="async"
                     className="h-8 sm:h-10 w-auto object-contain shrink-0"
                     onError={(e) => { e.currentTarget.src = '/feviqo1.png'; }}
                   />

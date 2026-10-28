@@ -60,8 +60,12 @@ export const ValuePillars: React.FC<ValuePillarsProps> = ({ onGetStarted }) => {
               <div className="w-full max-w-2xl flex justify-center items-center">
                 <SafeImage
                   src={assets.creativeDecisionsImage}
-                  fallbackSrc="/images/1 Creative Decisions.png"
+                  fallbackSrc="/images/1 Creative Decisions.webp"
                   alt="Creative Decisions"
+                  width={640}
+                  height={460}
+                  loading="lazy"
+                  decoding="async"
                   style={pillarImageStyle}
                   className="w-full h-auto max-h-[460px] object-contain transition-all duration-300 rounded-xl"
                 />
@@ -75,8 +79,12 @@ export const ValuePillars: React.FC<ValuePillarsProps> = ({ onGetStarted }) => {
               <div className="w-full max-w-2xl flex justify-center items-center">
                 <SafeImage
                   src={assets.fasterTurnaroundImage}
-                  fallbackSrc="/images/2 Faster Turnaround.png"
+                  fallbackSrc="/images/2 Faster Turnaround.webp"
                   alt="Faster Turnaround"
+                  width={640}
+                  height={460}
+                  loading="lazy"
+                  decoding="async"
                   style={pillarImageStyle}
                   className="w-full h-auto max-h-[460px] object-contain transition-all duration-300 rounded-xl"
                 />
@@ -122,8 +130,12 @@ export const ValuePillars: React.FC<ValuePillarsProps> = ({ onGetStarted }) => {
               <div className="w-full max-w-2xl flex justify-center items-center">
                 <SafeImage
                   src={assets.streamlinedProcessImage}
-                  fallbackSrc="/images/3 Streamlined Process.png"
+                  fallbackSrc="/images/3 Streamlined Process.webp"
                   alt="Streamlined Process"
+                  width={640}
+                  height={460}
+                  loading="lazy"
+                  decoding="async"
                   style={pillarImageStyle}
                   className="w-full h-auto max-h-[460px] object-contain transition-all duration-300 rounded-xl"
                 />

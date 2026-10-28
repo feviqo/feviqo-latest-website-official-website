@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TopAlertBar } from './components/TopAlertBar';
 import { Navbar } from './components/Navbar';
@@ -18,40 +18,39 @@ import { ComparisonSection } from './components/ComparisonSection';
 import { FaqSection } from './components/FaqSection';
 import { BookingSection } from './components/BookingSection';
 import { Footer } from './components/Footer';
-import { VideoModal } from './components/VideoModal';
-import { BookCallModal } from './components/BookCallModal';
 import { CookieBanner } from './components/CookieBanner';
-import { PricingPage } from './components/PricingPage';
-import { FeviqoFlowApp } from './components/FeviqoFlowApp';
 
-// Dedicated Sub-Pages
-import { BookingPage } from './components/pages/BookingPage';
-import { VideoGalleryPage } from './components/pages/VideoGalleryPage';
-import { ContentCreatorsPage } from './components/pages/ContentCreatorsPage';
-import { BusinessOwnersPage } from './components/pages/BusinessOwnersPage';
-import { AgenciesPage } from './components/pages/AgenciesPage';
-import { TestimonialsPage } from './components/pages/TestimonialsPage';
-import { CaseStudiesPage } from './components/pages/CaseStudiesPage';
-import { UnlimitedEditingPage } from './components/pages/UnlimitedEditingPage';
-import { PlatformOverviewPage } from './components/pages/PlatformOverviewPage';
-import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
-import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
-import { GunesinDramaPage } from './components/pages/GunesinDramaPage';
-import { MehmedDramaPage } from './components/pages/MehmedDramaPage';
+// Dynamic Code Splitting for Modals & Sub-Pages (Reduces initial payload & unused JS)
+const VideoModal = lazy(() => import('./components/VideoModal').then(m => ({ default: m.VideoModal })));
+const BookCallModal = lazy(() => import('./components/BookCallModal').then(m => ({ default: m.BookCallModal })));
+const PricingPage = lazy(() => import('./components/PricingPage').then(m => ({ default: m.PricingPage })));
+const FeviqoFlowApp = lazy(() => import('./components/FeviqoFlowApp').then(m => ({ default: m.FeviqoFlowApp })));
+const BookingPage = lazy(() => import('./components/pages/BookingPage').then(m => ({ default: m.BookingPage })));
+const VideoGalleryPage = lazy(() => import('./components/pages/VideoGalleryPage').then(m => ({ default: m.VideoGalleryPage })));
+const ContentCreatorsPage = lazy(() => import('./components/pages/ContentCreatorsPage').then(m => ({ default: m.ContentCreatorsPage })));
+const BusinessOwnersPage = lazy(() => import('./components/pages/BusinessOwnersPage').then(m => ({ default: m.BusinessOwnersPage })));
+const AgenciesPage = lazy(() => import('./components/pages/AgenciesPage').then(m => ({ default: m.AgenciesPage })));
+const TestimonialsPage = lazy(() => import('./components/pages/TestimonialsPage').then(m => ({ default: m.TestimonialsPage })));
+const CaseStudiesPage = lazy(() => import('./components/pages/CaseStudiesPage').then(m => ({ default: m.CaseStudiesPage })));
+const UnlimitedEditingPage = lazy(() => import('./components/pages/UnlimitedEditingPage').then(m => ({ default: m.UnlimitedEditingPage })));
+const PlatformOverviewPage = lazy(() => import('./components/pages/PlatformOverviewPage').then(m => ({ default: m.PlatformOverviewPage })));
+const TurkishDramaPage = lazy(() => import('./components/pages/TurkishDramaPage').then(m => ({ default: m.TurkishDramaPage })));
+const TeskilatDramaPage = lazy(() => import('./components/pages/TeskilatDramaPage').then(m => ({ default: m.TeskilatDramaPage })));
+const GunesinDramaPage = lazy(() => import('./components/pages/GunesinDramaPage').then(m => ({ default: m.GunesinDramaPage })));
+const MehmedDramaPage = lazy(() => import('./components/pages/MehmedDramaPage').then(m => ({ default: m.MehmedDramaPage })));
+const DramasPage = lazy(() => import('./components/pages/DramasPage').then(m => ({ default: m.DramasPage })));
+const AboutUsPage = lazy(() => import('./components/pages/AboutUsPage').then(m => ({ default: m.AboutUsPage })));
+const PrivacyPolicyPage = lazy(() => import('./components/pages/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsPage = lazy(() => import('./components/pages/TermsPage').then(m => ({ default: m.TermsPage })));
+const TrendingHubPage = lazy(() => import('./components/pages/TrendingHubPage').then(m => ({ default: m.TrendingHubPage })));
+const TrendingArticlePage = lazy(() => import('./components/pages/TrendingArticlePage').then(m => ({ default: m.TrendingArticlePage })));
+const SEOAdminModal = lazy(() => import('./components/admin/SEOAdminModal').then(m => ({ default: m.SEOAdminModal })));
+
 import { getSEOConfigForPath } from './seo/seoStore';
-import { DramasPage } from './components/pages/DramasPage';
-import { AboutUsPage } from './components/pages/AboutUsPage';
-import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
-import { TermsPage } from './components/pages/TermsPage';
-import { TrendingHubPage } from './components/pages/TrendingHubPage';
-import { TrendingArticlePage } from './components/pages/TrendingArticlePage';
-
 import { AppRoute, PreselectedPlan } from './types';
 import { initializeAssetSync } from './services/assetService';
 import { findVideoItem } from './data/videoRegistry';
-
 import SEOHead from './seo/SEOHead';
-import { SEOAdminModal } from './components/admin/SEOAdminModal';
 
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
@@ -232,7 +231,7 @@ export default function App() {
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
       'teskilat-urdu': 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188 - FEVIQO.com',
       'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',
-      'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 88 Urdu Subtitles | Bolum 88 - FEVIQO',
+      'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90 - FEVIQO',
       'dramas': 'Turkish Dramas Portal - Stream Premium Series & Movies | FEVIQO',
       'trending': 'FEVIQO Trending – What People Are Searching & Talking About Right Now',
       'trending-article': 'FEVIQO Trending Article',
@@ -868,34 +867,40 @@ export default function App() {
     <>
       <SEOHead pathname={getPathForRoute(currentRoute)} />
 
-      <div className="w-full">
-        {renderCurrentRoute()}
-      </div>
+      <Suspense fallback={<div className="min-h-screen bg-white" />}>
+        <div className="w-full">
+          {renderCurrentRoute()}
+        </div>
 
-      {/* Admin SEO CMS Control Modal */}
-      <SEOAdminModal 
-        isOpen={isSEOAdminOpen}
-        onClose={() => setIsSEOAdminOpen(false)}
-        currentPath={getPathForRoute(currentRoute)}
-      />
+        {/* Admin SEO CMS Control Modal */}
+        {isSEOAdminOpen && (
+          <SEOAdminModal 
+            isOpen={isSEOAdminOpen}
+            onClose={() => setIsSEOAdminOpen(false)}
+            currentPath={getPathForRoute(currentRoute)}
+          />
+        )}
 
-      {/* Global Video Modal Player */}
-      {activeVideoModal && (
-        <VideoModal 
-          vimeoId={activeVideoModal}
-          videoUrl={activeVideoModal}
-          title={activeVideoTitle}
-          aspectRatio={activeVideoAspect}
-          onClose={handleCloseVideo}
-        />
-      )}
+        {/* Global Video Modal Player */}
+        {activeVideoModal && (
+          <VideoModal 
+            vimeoId={activeVideoModal}
+            videoUrl={activeVideoModal}
+            title={activeVideoTitle}
+            aspectRatio={activeVideoAspect}
+            onClose={handleCloseVideo}
+          />
+        )}
 
-      {/* Global Book a Strategy Call Modal */}
-      <BookCallModal 
-        isOpen={isBookCallModalOpen}
-        onClose={handleCloseBookCall}
-        preselectedPlan={preselectedPlanForBooking}
-      />
+        {/* Global Book a Strategy Call Modal */}
+        {isBookCallModalOpen && (
+          <BookCallModal 
+            isOpen={isBookCallModalOpen}
+            onClose={handleCloseBookCall}
+            preselectedPlan={preselectedPlanForBooking}
+          />
+        )}
+      </Suspense>
 
       {/* Global Cookie Consent Banner */}
       <CookieBanner />
