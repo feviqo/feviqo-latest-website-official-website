@@ -131,16 +131,27 @@ app.use((req, res, next) => {
 
 // Best Practices & Security Headers (Lighthouse 100 Best Practices & Security)
 app.use((req, res, next) => {
+  const isProductionDomain = req.headers.host?.includes('feviqo.com');
+
   res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; img-src 'self' https: data: blob:; media-src 'self' https: blob: data:; connect-src 'self' https: wss: blob:; frame-src 'self' https:;"
-  );
+
+  if (isProductionDomain) {
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; img-src 'self' https: data: blob:; media-src 'self' https: blob: data:; connect-src 'self' https: wss: blob:; frame-src 'self' https:;"
+    );
+  } else {
+    // In dev / preview iframe environments, permit framing and dev server WebSockets
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self' http: https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' http: https: blob:; style-src 'self' 'unsafe-inline' http: https:; font-src 'self' http: https: data:; img-src 'self' http: https: data: blob:; media-src 'self' http: https: blob: data:; connect-src 'self' http: https: ws: wss: blob:; frame-src 'self' http: https:; frame-ancestors 'self' https: *;"
+    );
+  }
 
   // Set long cache lifetimes for static assets (images, css, js, fonts)
   if (req.path.match(/\.(js|css|webp|avif|png|jpg|jpeg|svg|woff2?|ttf|eot)$/i)) {
