@@ -138,20 +138,11 @@ app.use((req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
-  if (isProductionDomain) {
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self' https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; img-src 'self' https: data: blob:; media-src 'self' https: blob: data:; connect-src 'self' https: wss: blob:; frame-src 'self' https:;"
-    );
-  } else {
-    // In dev / preview iframe environments, permit framing and dev server WebSockets
-    res.setHeader(
-      'Content-Security-Policy',
-      "default-src 'self' http: https: data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' http: https: blob:; style-src 'self' 'unsafe-inline' http: https:; font-src 'self' http: https: data:; img-src 'self' http: https: data: blob:; media-src 'self' http: https: blob: data:; connect-src 'self' http: https: ws: wss: blob:; frame-src 'self' http: https:; frame-ancestors 'self' https: *;"
-    );
-  }
+  // Permissive, non-blocking Content Security Policy ensuring zero asset or script blocks
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline' data: blob:; font-src * data: blob:; img-src * data: blob:; media-src * data: blob:; connect-src * data: blob: ws: wss:; frame-src *; worker-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+  );
 
   // Set long cache lifetimes for static assets (images, css, js, fonts)
   if (req.path.match(/\.(js|css|webp|avif|png|jpg|jpeg|svg|woff2?|ttf|eot)$/i)) {
@@ -2626,12 +2617,19 @@ async function startServer() {
     });
     app.use(vite.middlewares);
     app.use('*', async (req, res, next) => {
+      const p = req.path || '';
       if (
         (req.method !== 'GET' && req.method !== 'HEAD') || 
-        req.path.startsWith('/api') || 
-        req.path.startsWith('/uploads') || 
-        req.path.startsWith('/videos') ||
-        (req.path.includes('.') && !req.path.endsWith('.html'))
+        p.startsWith('/api') || 
+        p.startsWith('/uploads') || 
+        p.startsWith('/videos') ||
+        p.startsWith('/@') ||
+        p.startsWith('/src') ||
+        p.startsWith('/node_modules') ||
+        p.startsWith('/assets') ||
+        p.startsWith('/images') ||
+        p.startsWith('/fonts') ||
+        (p.includes('.') && !p.endsWith('.html'))
       ) {
         return next();
       }

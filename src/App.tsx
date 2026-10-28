@@ -308,7 +308,8 @@ export default function App() {
     } else if (typeof plan === 'string') {
       const lower = plan.toLowerCase();
       const name = lower.includes('scale') ? 'Scale Plan' : lower.includes('in-house') || lower.includes('inhouse') ? 'In-House Studio' : 'Pro Plan';
-      setPreselectedPlanForBooking({ name, monthlyRate: 0, cycle: 'quarterly', details: '' });
+      const id = lower.includes('scale') ? 'scale' : lower.includes('in-house') || lower.includes('inhouse') ? 'inhouse' : 'pro';
+      setPreselectedPlanForBooking({ id, name, monthlyRate: 0, cycle: 'quarterly' });
     } else {
       setPreselectedPlanForBooking(null);
     }

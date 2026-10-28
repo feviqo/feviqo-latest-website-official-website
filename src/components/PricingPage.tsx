@@ -238,7 +238,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
               Schedule Strategy Call
             </button>
             <button
-              onClick={onOpenFlow}
+              onClick={() => onOpenFlow()}
               className="px-8 py-4 rounded-full bg-[#032415]/80 hover:bg-[#032415] text-white font-bold text-sm sm:text-base cursor-pointer border border-emerald-400/40 transition-all backdrop-blur-md hover:scale-105 active:scale-95"
             >
               Open FEVIQO Flow

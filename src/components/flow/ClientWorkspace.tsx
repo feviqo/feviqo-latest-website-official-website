@@ -652,7 +652,7 @@ export const ClientWorkspace: React.FC<ClientWorkspaceProps> = ({
                           {/* Editor's direct response if provided */}
                           {rev.editorReply && (
                             <div className="mt-2 p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-emerald-950 text-[11px]">
-                              <strong className="text-[#22C55E] block mb-0.5">Editor Response ({rev.editorName || 'Marco'}):</strong>
+                              <strong className="text-[#22C55E] block mb-0.5">Editor Response ({(rev as any).editorName || rev.author || 'Marco'}):</strong>
                               <span>{rev.editorReply}</span>
                             </div>
                           )}

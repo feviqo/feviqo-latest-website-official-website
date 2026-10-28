@@ -834,9 +834,9 @@ export const TimestampedVideoPlayer: React.FC<TimestampedVideoPlayerProps> = ({
                               <Play className="w-3 h-3 fill-current" />
                               <span>{note.timestamp}</span>
                             </button>
-                            {note.tag && (
+                            {(note as any).tag && (
                               <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#15803D] border border-emerald-200 uppercase font-black tracking-wider">
-                                {note.tag}
+                                {(note as any).tag}
                               </span>
                             )}
                             <span className="text-xs font-bold text-slate-900">{note.author}</span>

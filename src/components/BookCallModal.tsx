@@ -81,6 +81,8 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
     email: '',
     countryCode: '+1',
     phoneNumber: '',
+    company: '',
+    website: '',
     industry: 'E-Commerce & DTC',
     videoType: 'Reels / TikTok (9:16)',
     monthlyVolume: '5-10',

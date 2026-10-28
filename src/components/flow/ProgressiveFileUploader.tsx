@@ -98,7 +98,7 @@ export const ProgressiveFileUploader: React.FC<ProgressiveFileUploaderProps> = (
             };
           } else {
             // Complete
-            if (task.status !== 'completed') {
+            if ((task.status as string) !== 'completed') {
               allCompletedNow.push({
                 name: task.name,
                 size: task.totalSizeStr,

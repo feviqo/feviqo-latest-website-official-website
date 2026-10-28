@@ -251,12 +251,11 @@ export const BookingPage: React.FC<BookingPageProps> = ({
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans antialiased selection:bg-[#22C55E] selection:text-slate-950">
       {/* Top Navbar */}
       <Navbar
+        onBookCall={() => window.scrollTo({ top: 200, behavior: 'smooth' })}
         onNavigateSection={() => onNavigateHome()}
         onNavigatePricing={onNavigatePricing}
         onNavigateFlow={onOpenFlow}
         onNavigatePage={onNavigatePage}
-        onGetStarted={() => window.scrollTo({ top: 200, behavior: 'smooth' })}
-        currentRoute="booking"
       />
 
       {/* Main Content Area */}

@@ -200,9 +200,11 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({
       </main>
 
       <Footer
-        onNavigateHome={() => onNavigatePage('home')}
-        onNavigatePricing={() => onNavigatePage('pricing')}
-        onNavigateGallery={() => onNavigatePage('gallery')}
+        onBookCall={onBookCall}
+        onGetStarted={onBookCall}
+        onNavigateSection={() => onBackToHome()}
+        onNavigatePricing={onNavigatePricing}
+        onNavigateFlow={() => onNavigateFlow()}
         onNavigatePage={onNavigatePage}
       />
     </div>

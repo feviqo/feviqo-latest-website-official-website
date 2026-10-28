@@ -7,14 +7,18 @@ import './index.css';
 const container = document.getElementById('root');
 
 if (container) {
-  const root = createRoot(container);
-  root.render(
-    <StrictMode>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    </StrictMode>
-  );
+  try {
+    const root = createRoot(container);
+    root.render(
+      <StrictMode>
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </StrictMode>
+    );
+  } catch (err) {
+    console.error('[FEVIQO] Error mounting React application:', err);
+  }
 } else {
   console.error('[FEVIQO] FATAL: #root container missing from DOM');
 }

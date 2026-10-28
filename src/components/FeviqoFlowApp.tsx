@@ -206,7 +206,7 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
               // Merge unique by subject + toEmail
               const combined = [...prev];
               for (const se of serverEmails) {
-                if (!combined.some((e) => e.toEmail === se.toEmail && e.subject === se.subject)) {
+                if (!combined.some((e) => e.to === se.toEmail && e.subject === se.subject)) {
                   combined.unshift(se);
                 }
               }
