@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Sparkles, Flame } from 'lucide-react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 interface TopAlertBarProps {
   onBookCall: () => void;
@@ -55,18 +55,6 @@ export const TopAlertBar: React.FC<TopAlertBarProps> = ({ onBookCall }) => {
             style={{ animation: 'gentleBounce 2s infinite ease-in-out' }}
           />
         </button>
-
-        {/* High-Authority Power Link to Mehmed Episode 89 */}
-        <span className="hidden sm:inline text-black/30 font-bold">•</span>
-        <a 
-          href="/mehmed-fetihler-sultani/episode-89/"
-          className="group inline-flex items-center gap-1.5 font-black text-black hover:text-emerald-950 transition cursor-pointer bg-black/10 hover:bg-black/15 px-2.5 py-0.5 rounded-full"
-          title="Watch Mehmed Season 4 Episode 89 Urdu Subtitles (Bolum 89)"
-        >
-          <Flame className="w-3.5 h-3.5 text-red-700 fill-red-700 shrink-0" />
-          <span>Trending: Mehmed Episode 89 Urdu Subtitles</span>
-          <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
-        </a>
       </div>
     </aside>
   );

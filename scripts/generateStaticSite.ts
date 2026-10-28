@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { generateSitemapXml, updateSitemapFiles } from '../src/seo/sitemapGenerator';
 import { transformHTMLForRoute } from '../src/seo/serverSEO';
+import { notifyGoogleIndexing } from '../google-instant-index.js';
 
 /**
  * FEVIQO Static Site Generator & SEO Pre-Renderer
@@ -31,7 +32,7 @@ async function main() {
   fs.writeFileSync(path.join(distDir, 'google-index-fetch.xml'), masterSitemapXml, 'utf-8');
   fs.writeFileSync(path.join(distDir, 'sitemap-index.xml'), masterSitemapXml, 'utf-8');
 
-  // Generate clean robots.txt in dist/
+  // Generate clean robots.txt in dist/, public/, and root
   const robotsTxt = [
     'User-agent: *',
     'Allow: /',
@@ -48,12 +49,19 @@ async function main() {
     'User-agent: Mediapartners-Google',
     'Allow: /',
     '',
+    'User-agent: AdsBot-Google',
+    'Allow: /',
+    '',
+    'User-agent: Bingbot',
+    'Allow: /',
+    '',
     'Sitemap: https://feviqo.com/sitemap.xml',
     'Sitemap: https://feviqo.com/google-index-fetch.xml',
   ].join('\r\n');
 
   fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsTxt, 'utf-8');
   fs.writeFileSync(path.join(publicDir, 'robots.txt'), robotsTxt, 'utf-8');
+  fs.writeFileSync(path.join(rootDir, 'robots.txt'), robotsTxt, 'utf-8');
 
   // 2. Read compiled dist/index.html
   const distIndexPath = path.join(distDir, 'index.html');
@@ -108,6 +116,14 @@ async function main() {
     const targetHtmlPath = path.join(targetDir, 'index.html');
     fs.writeFileSync(targetHtmlPath, routeSeoHtml, 'utf-8');
     renderedCount++;
+
+    // Hook: The moment a new episode or drama page file writes successfully, immediately notify Google Indexing API
+    if (routePath.includes('/episode-') || routePath.includes('/mehmed-fetihler-sultani') || routePath.includes('/teskilat')) {
+      const canonicalLiveUrl = `https://feviqo.com${routePath.endsWith('/') ? routePath : routePath + '/'}`;
+      notifyGoogleIndexing(canonicalLiveUrl).catch((err) => {
+        console.warn(`[Indexing Trigger] Non-blocking warning for ${canonicalLiveUrl}:`, err);
+      });
+    }
   }
 
   console.log(`✅ Pre-rendered ${renderedCount} static HTML pages into dist/ for instant Googlebot discovery & Cloudflare Pages hosting!`);

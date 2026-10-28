@@ -740,7 +740,7 @@ export default function App() {
       default:
         return (
           <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white text-slate-900 font-sans flex flex-col selection:bg-[#22C55E] selection:text-white">
-            {/* Top Banner Alert */}
+            {/* Top Banner Alert (Original Agency Announcement) */}
             <TopAlertBar onBookCall={handleOpenBookCall} />
 
             {/* Main Navigation Bar */}

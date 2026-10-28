@@ -195,7 +195,36 @@ app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')))
 app.get('/robots.txt', (_req, res) => {
   res.setHeader('Content-Type', 'text/plain; charset=utf-8');
   res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-  const robotsText = "User-agent: *\r\nAllow: /\r\n\r\nSitemap: https://feviqo.com/google-index-fetch.xml\r\nSitemap: https://feviqo.com/sitemap.xml\r\n";
+  const robotsFilePath = path.join(process.cwd(), 'robots.txt');
+  if (fs.existsSync(robotsFilePath)) {
+    return res.status(200).send(fs.readFileSync(robotsFilePath, 'utf-8'));
+  }
+  const robotsText = [
+    'User-agent: *',
+    'Allow: /',
+    '',
+    'User-agent: Googlebot',
+    'Allow: /',
+    '',
+    'User-agent: Googlebot-Image',
+    'Allow: /',
+    '',
+    'User-agent: Googlebot-Video',
+    'Allow: /',
+    '',
+    'User-agent: Mediapartners-Google',
+    'Allow: /',
+    '',
+    'User-agent: AdsBot-Google',
+    'Allow: /',
+    '',
+    'User-agent: Bingbot',
+    'Allow: /',
+    '',
+    'Sitemap: https://feviqo.com/sitemap.xml',
+    'Sitemap: https://feviqo.com/google-index-fetch.xml',
+    ''
+  ].join('\r\n');
   return res.status(200).send(robotsText);
 });
 
@@ -254,17 +283,22 @@ app.get('/feviqo-indexnow-key-2026.txt', (_req, res) => {
 app.post('/api/seo/google-indexing-push', async (req, res) => {
   const urls: string[] = req.body?.urls || [
     'https://feviqo.com/',
-    'https://feviqo.com/teskilat',
-    'https://feviqo.com/teskilat/episode-189',
-    'https://feviqo.com/teskilat/episode-188',
-    'https://feviqo.com/teskilat/episode-187',
-    'https://feviqo.com/teskilat/episode-186',
-    'https://feviqo.com/mehmed-fetihler-sultani',
-    'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
-    'https://feviqo.com/gunesin-dogdugu-yer',
-    'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
-    'https://feviqo.com/dramas',
-    'https://feviqo.com/sitemap.xml'
+    'https://feviqo.com/mehmed-fetihler-sultani/',
+    'https://feviqo.com/mehmed-fetihler-sultani/episode-89/',
+    'https://feviqo.com/mehmed-fetihler-sultani/episode-88/',
+    'https://feviqo.com/mehmed-fetihler-sultani/episode-87/',
+    'https://feviqo.com/teskilat/',
+    'https://feviqo.com/teskilat/episode-189/',
+    'https://feviqo.com/teskilat/episode-188/',
+    'https://feviqo.com/teskilat/episode-187/',
+    'https://feviqo.com/teskilat/episode-186/',
+    'https://feviqo.com/gunesin-dogdugu-yer/',
+    'https://feviqo.com/gunesin-dogdugu-yer/episode-5/',
+    'https://feviqo.com/gunesin-dogdugu-yer/episode-4/',
+    'https://feviqo.com/gunesin-dogdugu-yer/episode-3/',
+    'https://feviqo.com/dramas/',
+    'https://feviqo.com/sitemap.xml',
+    'https://feviqo.com/google-index-fetch.xml'
   ];
 
   const KEY_PATH = path.join(process.cwd(), 'service_account.json');
