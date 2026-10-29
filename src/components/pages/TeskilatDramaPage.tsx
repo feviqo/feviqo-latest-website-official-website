@@ -330,7 +330,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
   useEffect(() => {
     setShowPosterOverlay(true);
-  }, [selectedEpisode.id]);
+  }, [selectedEpisode?.id]);
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
