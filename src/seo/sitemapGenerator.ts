@@ -287,19 +287,14 @@ export function generateTrendingSitemapXml(): string {
   xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n`;
   xml += `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n`;
 
-  INITIAL_TRENDING_ARTICLES.forEach((article) => {
-    const articlePath = `/trending/${article.slug}`;
-    const pubDate = article.updatedAt ? article.updatedAt.split('T')[0] : today;
-
-    xml += formatUrlNode(
-      articlePath,
-      article.featured ? '1.0' : '0.9',
-      'daily',
-      pubDate,
-      article.featuredImage,
-      article.title
-    );
-  });
+  xml += formatUrlNode(
+    '/trending',
+    '0.8',
+    'daily',
+    today,
+    `${SITE_ORIGIN}/HEADER-removebg-preview.png`,
+    'Trending Editorial Hub & News Analysis | FEVIQO'
+  );
 
   xml += `</urlset>\n`;
   return xml;
@@ -315,8 +310,7 @@ export function generateSitemapIndexXml(): string {
 
   const sitemaps = [
     '/sitemap-main.xml',
-    '/sitemap-episodes.xml',
-    '/sitemap-trending.xml'
+    '/sitemap-episodes.xml'
   ];
 
   sitemaps.forEach((sm) => {

@@ -377,8 +377,8 @@ export const DEFAULT_WEBSITE_ASSETS: WebsiteAssets = {
   },
   heroVideoMediaId: 'feviqo-hero-video',
   heroPosterMediaId: 'feviqo-hero-poster',
-  heroVideo: 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8',
-  heroVideoWebm: 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8',
+  heroVideo: '/videos/feviqo-hero-video.mp4',
+  heroVideoWebm: 'https://stream.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M.m3u8',
   heroPoster: 'https://feviqo.com/images/feviqo-hero-poster.jpg',
   creativeDecisionsImage: '/images/1 Creative Decisions.webp',
   fasterTurnaroundImage: '/images/2 Faster Turnaround.webp',
@@ -512,11 +512,11 @@ export function sanitizeWebsiteAssets(assets: Partial<WebsiteAssets>): WebsiteAs
   };
 
   let cleanHeroVideo = sanitizeUrl(assets.heroVideo, DEFAULT_WEBSITE_ASSETS.heroVideo);
-  if (cleanHeroVideo.includes('/videos/Sequence') || cleanHeroVideo.includes('/videos/hero') || cleanHeroVideo === '/videos/Sequence-01.mp4') {
+  if (cleanHeroVideo.includes('hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs') || cleanHeroVideo.includes('/videos/Sequence') || cleanHeroVideo.includes('/videos/hero') || cleanHeroVideo === '/videos/Sequence-01.mp4') {
     cleanHeroVideo = DEFAULT_WEBSITE_ASSETS.heroVideo;
   }
   let cleanHeroVideoWebm = sanitizeUrl(assets.heroVideoWebm, DEFAULT_WEBSITE_ASSETS.heroVideoWebm);
-  if (cleanHeroVideoWebm.includes('/videos/Sequence') || cleanHeroVideoWebm.includes('/videos/hero') || cleanHeroVideoWebm === '/videos/hero-showcase.webm') {
+  if (cleanHeroVideoWebm.includes('hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs') || cleanHeroVideoWebm.includes('/videos/Sequence') || cleanHeroVideoWebm.includes('/videos/hero') || cleanHeroVideoWebm === '/videos/hero-showcase.webm') {
     cleanHeroVideoWebm = DEFAULT_WEBSITE_ASSETS.heroVideoWebm;
   }
 

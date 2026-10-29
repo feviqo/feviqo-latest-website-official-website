@@ -25,7 +25,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
     });
   }, []);
 
-  const heroVideoSrc = assets.heroVideo || 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8';
+  const [isPlaying, setIsPlaying] = useState(false);
+  const heroVideoSrc = assets.heroVideo || '/videos/feviqo-hero-video.mp4';
   const heroPosterSrc = assets.heroPoster || 'https://feviqo.com/images/feviqo-hero-poster.jpg';
 
   // Handle HLS stream or native playback with muted autoplay
@@ -35,10 +36,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
 
     const cleanupHls = attachHlsStream(vid, heroVideoSrc, {
       autoPlay: true,
+      onReady: () => {
+        vid.muted = isMuted;
+        vid.play().then(() => setIsPlaying(true)).catch(() => {});
+      },
       onError: () => {
-        if (vid && heroVideoSrc !== 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8') {
-          vid.src = 'https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8';
-          vid.play().catch(() => {});
+        if (vid && vid.src !== '/videos/feviqo-hero-video.mp4') {
+          vid.src = '/videos/feviqo-hero-video.mp4';
+          vid.muted = isMuted;
+          vid.play().then(() => setIsPlaying(true)).catch(() => {});
         }
       },
     });
@@ -46,22 +52,52 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
     vid.defaultMuted = true;
     vid.muted = isMuted;
     vid.playsInline = true;
-    const playPromise = vid.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(() => {});
-    }
+
+    const attemptPlay = () => {
+      if (!vid) return;
+      vid.muted = true;
+      const playPromise = vid.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => setIsPlaying(true))
+          .catch(() => {
+            vid.muted = true;
+            vid.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+          });
+      }
+    };
+
+    attemptPlay();
 
     return () => {
       if (cleanupHls) cleanupHls();
     };
   }, [heroVideoSrc]);
 
-  const toggleSound = () => {
+  const toggleSound = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const vid = videoRef.current;
     if (vid) {
       const nextMuted = !vid.muted;
       vid.muted = nextMuted;
       setIsMuted(nextMuted);
+      if (vid.paused) {
+        vid.play().then(() => setIsPlaying(true)).catch(() => {});
+      }
+    }
+  };
+
+  const handlePlayClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const vid = videoRef.current;
+    if (vid) {
+      if (vid.paused) {
+        vid.muted = false;
+        setIsMuted(false);
+        vid.play().then(() => setIsPlaying(true)).catch(() => {});
+      } else {
+        toggleSound();
+      }
     }
   };
 
@@ -139,18 +175,44 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
                 {/* Horizontal Widescreen Video Player */}
                 <video
                   ref={videoRef}
-                  src={isHlsStream(heroVideoSrc) ? undefined : heroVideoSrc}
+                  src={heroVideoSrc}
                   poster={heroPosterSrc}
                   autoPlay
                   muted={isMuted}
                   loop
                   playsInline
-                  preload="metadata"
+                  preload="auto"
+                  onPlaying={() => setIsPlaying(true)}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onError={() => {
+                    const vid = videoRef.current;
+                    if (vid && vid.src !== '/videos/feviqo-hero-video.mp4') {
+                      vid.src = '/videos/feviqo-hero-video.mp4';
+                      vid.play().then(() => setIsPlaying(true)).catch(() => {});
+                    }
+                  }}
                   className="w-full h-full object-cover cursor-pointer aspect-[16/9]"
                   onClick={toggleSound}
                 >
+                  <source src={heroVideoSrc} />
+                  <source src="/videos/feviqo-hero-video.mp4" type="video/mp4" />
                   <track kind="captions" src="/captions/empty.vtt" srcLang="en" label="English" default />
                 </video>
+
+                {/* Optional Play Overlay if Autoplay was blocked */}
+                {!isPlaying && (
+                  <div
+                    onClick={handlePlayClick}
+                    className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity cursor-pointer"
+                  >
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all">
+                      <svg className="w-8 h-8 fill-current translate-x-0.5" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
