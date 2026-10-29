@@ -9,10 +9,6 @@ import { createServer as createViteServer } from 'vite';
 import { transformHTMLForRoute } from './src/seo/serverSEO';
 import { 
   generateSitemapXml, 
-  generateSitemapIndexXml,
-  generateMainSitemapXml,
-  generateEpisodesSitemapXml,
-  generateTrendingSitemapXml,
   updateSitemapFiles 
 } from './src/seo/sitemapGenerator';
 import { uploadMiddleware, processUploadedFile } from './server/uploadService';

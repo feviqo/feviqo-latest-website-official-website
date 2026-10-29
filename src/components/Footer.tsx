@@ -293,11 +293,7 @@ export const Footer: React.FC<FooterProps> = ({
                   <span>partner@feviqo.com</span>
                 </a>
               </li>
-              <li>
-                <a href="/trending" onClick={(e) => { e.preventDefault(); nav('trending'); }} className="hover:text-white transition cursor-pointer text-[#22C55E] font-bold block">
-                  Trending Articles &amp; News
-                </a>
-              </li>
+
               <li>
                 <div className="text-[11px] text-emerald-300/80 font-medium">
                   Average Response: &lt; 15 minutes
