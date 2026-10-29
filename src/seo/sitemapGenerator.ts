@@ -356,6 +356,9 @@ export function generateSitemapXml(): string {
 
   // 1. Core pages
   Object.keys(DEFAULT_PAGE_SEO).forEach((routeKey) => {
+    // Exclude sub-article trending URLs to protect domain against quality spam filters
+    if (routeKey.startsWith('/trending/')) return;
+
     const config = DEFAULT_PAGE_SEO[routeKey];
     let priority = '0.9';
     let changefreq = 'daily';
