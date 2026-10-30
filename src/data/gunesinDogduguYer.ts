@@ -61,6 +61,28 @@ export const GUNESIN_SERIES_DATA: GunesinSeries = {
 
 export const GUNESIN_EPISODES: GunesinEpisode[] = [
   {
+    number: 7,
+    slug: "episode-7",
+    title: "Gunesin Dogdugu Yer Episode 7 Urdu Subtitles | Bolum 7",
+    airDate: "2026-10-30T04:00:00.000Z",
+    thumbnail: "https://lh3.googleusercontent.com/d/137w7jkmYW4bpn4rfdipcJ4gJksnpqeL4",
+    duration: "2h 30m",
+    shortSummary: "Watch Gunesin Dogdugu Yer Episode 7 Urdu Subtitles (Bolum 7) in 1080p HD on FEVIQO. High-stakes family secrets and dramatic betrayals reach an explosive peak in the new episode.",
+    recap: `Gunesin Dogdugu Yer Episode 7 (Bolum 7) delivers an intense continuation filled with high-stakes suspense and dramatic turnarounds. As family rivalries reach an absolute boiling point, hidden motives are brought directly into the light.
+
+In this explosive new installment, the core characters must navigate betrayal from close allies while fighting to protect their legacy. Every choice triggers immediate consequences across the entire network, keeping viewers on the edge of their seats.
+
+Watch Gunesin Dogdugu Yer Episode 7 with Urdu Subtitles in full 1080p HD exclusively on FEVIQO. Experience the latest episode of this captivating Turkish drama.`,
+    downloadUrl: "https://shrinkme.click/gunesindogduguyerepisode7urdu",
+    embeds: [
+      {
+        label: "Server 1 (Fast HLS 1080p)",
+        src: "https://stream.mux.com/neflT01u9Ey4vSvhNwuZQH8LcR9IpeWcDFnHO4hS7N02M.m3u8"
+      }
+    ],
+    season: 1
+  },
+  {
     number: 5,
     slug: "episode-5",
     title: "Gunesin Dogdugu Yer Episode 5 Urdu Subtitles | Bolum 5",

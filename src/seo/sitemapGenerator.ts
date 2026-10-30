@@ -176,6 +176,13 @@ export function generateSitemapXml(): string {
         description: 'Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87) on FEVIQO.',
         contentLoc: 'https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8'
       };
+    } else if (routeKey === '/gunesin-dogdugu-yer/episode-7') {
+      videoInfo = {
+        thumbnail: 'https://lh3.googleusercontent.com/d/137w7jkmYW4bpn4rfdipcJ4gJksnpqeL4',
+        title: 'Gunesin Dogdugu Yer Episode 7 Urdu Subtitles – Bolum 7',
+        description: 'Watch Gunesin Dogdugu Yer Episode 7 in HD Urdu Subtitles with story recap on FEVIQO.com.',
+        contentLoc: 'https://stream.mux.com/neflT01u9Ey4vSvhNwuZQH8LcR9IpeWcDFnHO4hS7N02M.m3u8'
+      };
     } else if (routeKey === '/gunesin-dogdugu-yer/episode-5') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO',

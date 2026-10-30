@@ -2594,6 +2594,7 @@ try {
       'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
       'https://feviqo.com/mehmed-fetihler-sultani/episode-87',
       'https://feviqo.com/gunesin-dogdugu-yer',
+      'https://feviqo.com/gunesin-dogdugu-yer/episode-7',
       'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
       'https://feviqo.com/dramas',
       'https://feviqo.com/sitemap.xml'

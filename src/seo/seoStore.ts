@@ -211,6 +211,22 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },
+  '/gunesin-dogdugu-yer/episode-7': {
+    path: '/gunesin-dogdugu-yer/episode-7',
+    pageName: 'Gunesin Dogdugu Yer Episode 7 Watch Page',
+    seoTitle: 'Gunesin Dogdugu Yer Episode 7 Urdu Subtitles | Bolum 7',
+    metaDescription: 'Watch Gunesin Dogdugu Yer Episode 7 Urdu Subtitles (Bolum 7) in HD on FEVIQO. High-stakes family secrets and dramatic betrayals reach an explosive peak in the new episode.',
+    focusKeyword: 'Gunesin Dogdugu Yer Episode 7 Urdu Subtitles',
+    secondaryKeywords: [
+      'Gunesin Dogdugu Yer Episode 7', 'Gunesin Dogdugu Yer Episode 7 Urdu Subtitles', 'Gunesin Dogdugu Yer Bolum 7', 'Gunesin Dogdugu Yer Bolum 7 Urdu Subtitles', 'Gunesin Dogdugu Yer Episode 7 Urdu', 'Gunesin Dogdugu Yer Season 1 Episode 7', 'Gunesin Dogdugu Yer Season 1 Episode 7 Urdu Subtitles', 'Gunesin Dogdugu Yer Urdu Subtitles', 'Gunesin Dogdugu Yer Watch Online', 'Gunesin Dogdugu Yer HD', 'Gunesin Dogdugu Yer 1080p', 'Gunesin Dogdugu Yer Turkish Drama', 'Gunesin Dogdugu Yer Series Urdu Subtitles', 'Gunesin Dogdugu Yer Turkish Series', 'Gunesin Dogdugu Yer Episode 7 Watch Online', 'Gunesin Dogdugu Yer Episode 7 HD', 'FEVIQO Gunesin Dogdugu Yer', 'FEVIQO Episode 7', 'FEVIQO Urdu Subtitles'
+    ],
+    canonicalUrl: 'https://feviqo.com/gunesin-dogdugu-yer/episode-7',
+    ogTitle: 'Gunesin Dogdugu Yer Episode 7 Urdu Subtitles | Bolum 7',
+    ogDescription: 'Watch Gunesin Dogdugu Yer Episode 7 Urdu Subtitles (Bolum 7) in HD on FEVIQO. High-stakes family secrets and dramatic betrayals reach an explosive peak in the new episode.',
+    ogImage: 'https://lh3.googleusercontent.com/d/137w7jkmYW4bpn4rfdipcJ4gJksnpqeL4',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
   '/gunesin-dogdugu-yer/episode-5': {
     path: '/gunesin-dogdugu-yer/episode-5',
     pageName: 'Gunesin Dogdugu Yer Episode 5 Watch Page',
