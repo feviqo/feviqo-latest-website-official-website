@@ -2652,6 +2652,11 @@ async function startServer() {
       etag: true,
       index: false
     }));
+    // Prevent missing static assets from returning index.html (prevents MIME type errors)
+    app.get(['/assets/*', '/images/*', '/fonts/*'], (req, res) => {
+      res.status(404).send('Asset not found');
+    });
+
     app.get('*', (req, res) => {
       try {
         const indexPath = path.join(distPath, 'index.html');
