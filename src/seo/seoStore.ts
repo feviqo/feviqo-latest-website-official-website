@@ -20,8 +20,8 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/': {
     path: '/',
     pageName: 'Home Page',
-    seoTitle: 'FEVIQO — Unlimited Video Editing Agency | Flat-Rate Post Production Services',
-    metaDescription: 'FEVIQO is the premier unlimited video editing agency for content creators, brands, and marketing agencies worldwide. Dedicated video editors, flat monthly rates, 24-48h turnaround, and Turkish drama Urdu portals.',
+    seoTitle: 'FEVIQO | Unlimited Video Editing & Performance Creative Studio',
+    metaDescription: 'FEVIQO provides dedicated video editing, short-form content, and performance ad creative production for brands, creators, and agencies.',
     focusKeyword: 'FEVIQO video editing agency',
     secondaryKeywords: [
       'unlimited video editing services',
@@ -40,8 +40,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
       'e-commerce video ad creators',
       'TikTok virality video editors',
       'talking head podcast video editor',
-      'Teskilat Urdu Portal',
-      'Teskilat Season 7 Urdu Subtitles'
+      'Performance creative video editing'
     ],
     canonicalUrl: 'https://feviqo.com/',
     ogTitle: 'FEVIQO — Unlimited Video Editing, Performance Ads & YouTube Content Production',
@@ -123,15 +122,19 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/teskilat': {
     path: '/teskilat',
     pageName: 'Teskilat Season 7 Main Page',
-    seoTitle: 'Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal',
-    metaDescription: 'Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in.',
-    focusKeyword: 'Teskilat Season 7 Episode 3 Urdu Subtitles',
+    seoTitle: 'Teşkilat Season 7 Urdu Subtitles | Episodes & Story Guides | FEVIQO',
+    metaDescription: 'Explore Teşkilat Season 7 on FEVIQO with episode guides, story recaps, and Urdu subtitles. Find the latest available episodes and follow the story of Altay and his team.',
+    focusKeyword: 'Teşkilat Season 7 Urdu subtitles',
     secondaryKeywords: [
-      'Teskilat Season 7', 'Teskilat Season 7 Urdu Subtitles', 'Teskilat Urdu Subtitles', 'Teşkilat Season 7 Urdu', 'Teskilat Season 7 Watch Online', 'Teskilat Episode 185 Urdu Subtitles', 'Teskilat Bolum 185 Urdu', 'Altay Teskilat Season 7', 'Korkut Teskilat', 'Turkish Series Urdu Subtitles', 'Turkish Action Series Urdu', 'Turkish Intelligence Series', 'TRT1 Teskilat', 'Teskilat New Season Urdu', 'Teskilat NiaziPlay', 'Teskilat Season 7 Episode 3 Urdu Subtitles', 'Teskilat Episode 187 Urdu Subtitles', 'Teskilat Bolum 187 Urdu', 'Teskilat Season 7 Urdu', 'Teskilat Episode 3 Urdu', 'Teskilat 187 Urdu', 'Altay Ender Episode 187', 'Azra Betrayal Teskilat', 'Korkut Bahar Episode 187', 'Yahya Teskilat Season 7', 'TRT1 Teskilat Episode 187'
+      'Teşkilat Season 7',
+      'Teskilat Urdu subtitles',
+      'Teskilat Season 7 episodes',
+      'Turkish action drama Urdu',
+      'Altay Yalçın series'
     ],
     canonicalUrl: 'https://feviqo.com/teskilat',
-    ogTitle: 'Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal',
-    ogDescription: 'Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in.',
+    ogTitle: 'Teşkilat Season 7 Urdu Subtitles | Episodes & Story Guides | FEVIQO',
+    ogDescription: 'Explore Teşkilat Season 7 on FEVIQO with episode guides, story recaps, and Urdu subtitles.',
     ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
@@ -153,15 +156,19 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/teskilat/episode-187': {
     path: '/teskilat/episode-187',
     pageName: 'Teskilat Episode 187 Watch Page',
-    seoTitle: 'Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal',
-    metaDescription: 'Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in.',
-    focusKeyword: 'Teskilat Season 7 Episode 3 Urdu Subtitles',
+    seoTitle: 'Teşkilat Season 7 Episode 3 (Bolum 187) Urdu Subtitles | FEVIQO',
+    metaDescription: 'Watch Teşkilat Season 7 Episode 3 (Bolum 187) with Urdu subtitles. Read the episode recap and follow Altay, Azra, and Ender as the story unfolds.',
+    focusKeyword: 'Teşkilat episode 187 Urdu subtitles',
     secondaryKeywords: [
-      'Teskilat Season 7', 'Teskilat Season 7 Urdu Subtitles', 'Teskilat Urdu Subtitles', 'Teşkilat Season 7 Urdu', 'Teskilat Season 7 Watch Online', 'Teskilat Episode 185 Urdu Subtitles', 'Teskilat Bolum 185 Urdu', 'Altay Teskilat Season 7', 'Korkut Teskilat', 'Turkish Series Urdu Subtitles', 'Turkish Action Series Urdu', 'Turkish Intelligence Series', 'TRT1 Teskilat', 'Teskilat New Season Urdu', 'Teskilat NiaziPlay', 'Teskilat Season 7 Episode 3 Urdu Subtitles', 'Teskilat Episode 187 Urdu Subtitles', 'Teskilat Bolum 187 Urdu', 'Teskilat Season 7 Urdu', 'Teskilat Episode 3 Urdu', 'Teskilat 187 Urdu', 'Altay Ender Episode 187', 'Azra Betrayal Teskilat', 'Korkut Bahar Episode 187', 'Yahya Teskilat Season 7', 'Turkish Series Urdu Subtitles', 'Teskilat NiaziPlay', 'TRT1 Teskilat Episode 187', 'Salahuddin Ayyubi Series', 'Kurulus Osman Season 5 in Urdu Subtitles', 'Kurulus Osman Season 6 Urdu & English Subtitles', 'Teskilat Season 4 Urdu Subtitles', 'Mehmed: Fetihler Sultani - Urdu & English Subtitles', 'Al Sancak | Sipahi', 'Alparslan: Büyük Selçuklu', 'Ates Kuslari', 'Barbarosslar', 'Destan', 'Ertugrul Ghazi', 'Keiki Sniper', 'Kosem Sultan', 'Mendirman Jaloliddin Khawarzam', 'Mevlana Celaleddin Rumi', 'Soz Series', 'Sultan Abdulhamid', 'Sultan Mehmat Fatih', 'The Pit (Cukur)', 'Turkish Dramas', 'Yunus Emre', 'Turkish series with Urdu subtitles', 'watch Turkish dramas online', 'historical Turkish series in Urdu', 'Ottoman Empire series with English subtitles', 'Islamic history dramas in Urdu', 'Turkish action series with Urdu dubbing', 'latest Turkish series 2024', 'Urdu dubbed Turkish historical dramas', 'stream Turkish series in HD', 'family-friendly Turkish dramas', 'Turkish war series with Urdu subtitles', 'best Turkish series to watch online', 'Turkish dramas based on true stories', 'top-rated Turkish series in Urdu', 'Turkish romantic dramas with English subtitles', 'Turkish thriller series in Urdu', 'online streaming of Turkish historical series', 'Turkish series with dual subtitles', 'popular Turkish dramas in Pakistan', 'Turkish series episodes in Urdu', 'best streaming platforms for Turkish series'
+      'Teskilat episode 187',
+      'Teşkilat Bolum 187',
+      'Teskilat Season 7 Episode 3',
+      'Altay Azra Ender episode 187',
+      'Turkish drama Urdu subtitles'
     ],
     canonicalUrl: 'https://feviqo.com/teskilat/episode-187',
-    ogTitle: 'Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal',
-    ogDescription: 'Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in.',
+    ogTitle: 'Teşkilat Season 7 Episode 3 (Bolum 187) Urdu Subtitles | FEVIQO',
+    ogDescription: 'Watch Teşkilat Season 7 Episode 3 (Bolum 187) with Urdu subtitles. Read the episode recap and follow the story on FEVIQO.',
     ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
@@ -326,16 +333,20 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
   '/mehmed-fetihler-sultani': {
     path: '/mehmed-fetihler-sultani',
     pageName: 'Mehmed Fetihler Sultani Hub Page',
-    seoTitle: 'Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90 - FEVIQO',
-    metaDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 90 Urdu Subtitles (Bolum 90) in 1080p HD on FEVIQO. Sultan Mehmed II confronts an imperial crisis as enemy armies assemble and secret betrayals unfold.',
-    focusKeyword: 'Mehmed Season 4 Episode 90 Urdu Subtitles',
+    seoTitle: 'Mehmed: Fetihler Sultani Season 4 | Urdu Subtitles & Episodes | FEVIQO',
+    metaDescription: 'Explore Mehmed: Fetihler Sultani Season 4 on FEVIQO with episode guides, story recaps, and Urdu subtitles. Browse available episodes and follow Sultan Mehmed II’s campaign.',
+    focusKeyword: 'Mehmed Fetihler Sultani Urdu subtitles',
     secondaryKeywords: [
-      'Mehmed Season 4 Episode 90 Urdu Subtitles', 'Mehmed Season 4 Episode 90', 'Urdu Subtitles', 'Mehmed Fetihler Sultani Season 4 Episode 90', 'Mehmed Fetihler Sultani Season 4 Episode 90 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 90', 'mehmed 90 urdu', 'mehmed episode 90 urdu', 'Mehmed Episode 90 Urdu Subtitles', 'Mehmed Bolum 90 Urdu', 'Episode 90 Urdu', 'Mehmed Fetihler Sultani Season 4 Urdu Subtitles', 'Mehmed Season 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Urdu Subtitles', 'Sultan Mehmed Series Urdu', 'Fatih Sultan Mehmed Series', 'Turkish Historical Series Urdu Subtitles', 'Ottoman Empire Series', 'Turkish Drama Urdu Subtitles', 'FEVIQO Mehmed Season 4', 'Sultan Muhammad Fateh Episode 90'
+      'Mehmed Fetihler Sultani Season 4',
+      'Mehmed Urdu subtitles',
+      'Sultan Mehmed series',
+      'Mehmed Season 4 episodes',
+      'Ottoman historical drama'
     ],
     canonicalUrl: 'https://feviqo.com/mehmed-fetihler-sultani',
-    ogTitle: 'Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90 - FEVIQO',
-    ogDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 90 Urdu Subtitles (Bolum 90) in 1080p HD on FEVIQO. Sultan Mehmed II confronts an imperial crisis as enemy armies assemble and secret betrayals unfold.',
-    ogImage: 'https://lh3.googleusercontent.com/d/1Ql7rSRtgL6HfxOyO-BSfPN8CdfUooJ1p',
+    ogTitle: 'Mehmed: Fetihler Sultani Season 4 | Urdu Subtitles & Episodes | FEVIQO',
+    ogDescription: 'Explore Mehmed: Fetihler Sultani Season 4 on FEVIQO with episode guides, story recaps, and Urdu subtitles.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
   },
@@ -439,6 +450,62 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'Service'
   },
+  '/turkish-drama': {
+    path: '/turkish-drama',
+    pageName: 'Turkish Drama Licensing',
+    seoTitle: 'Turkish Drama Licensing & Urdu Subtitle Partnerships | FEVIQO',
+    metaDescription: 'Explore Turkish drama content licensing, Urdu subtitle production, and distribution partnerships with FEVIQO.',
+    focusKeyword: 'Turkish drama licensing',
+    secondaryKeywords: ['Turkish drama distribution', 'Urdu subtitle production', 'Turkish series licensing'],
+    canonicalUrl: 'https://feviqo.com/turkish-drama',
+    ogTitle: 'Turkish Drama Licensing & Urdu Subtitle Partnerships — FEVIQO',
+    ogDescription: 'Turkish drama content licensing, Urdu subtitle production, and distribution partnerships.',
+    ogImage: 'https://feviqo.com/HEADER-removebg-preview.png',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'Service'
+  },
+  '/privacy': {
+    path: '/privacy',
+    pageName: 'Privacy Policy',
+    seoTitle: 'Privacy Policy | FEVIQO',
+    metaDescription: 'Read how FEVIQO handles personal information, website data, cookies, and privacy requests.',
+    focusKeyword: 'FEVIQO privacy policy',
+    secondaryKeywords: ['privacy', 'data protection', 'cookies'],
+    canonicalUrl: 'https://feviqo.com/privacy',
+    ogTitle: 'Privacy Policy — FEVIQO',
+    ogDescription: 'Information about FEVIQO privacy practices and website data.',
+    ogImage: 'https://feviqo.com/feviqo1.png',
+    robots: 'index, follow',
+    schemaType: 'WebSite'
+  },
+  '/terms': {
+    path: '/terms',
+    pageName: 'Terms of Service',
+    seoTitle: 'Terms of Service | FEVIQO',
+    metaDescription: 'Read the terms governing access to and use of FEVIQO services and website.',
+    focusKeyword: 'FEVIQO terms of service',
+    secondaryKeywords: ['terms of use', 'service terms'],
+    canonicalUrl: 'https://feviqo.com/terms',
+    ogTitle: 'Terms of Service — FEVIQO',
+    ogDescription: 'Terms governing use of FEVIQO services and website.',
+    ogImage: 'https://feviqo.com/feviqo1.png',
+    robots: 'index, follow',
+    schemaType: 'WebSite'
+  },
+  '/platform': {
+    path: '/platform',
+    pageName: 'FEVIQO Flow Platform',
+    seoTitle: 'FEVIQO Flow Platform | Video Editing Workspace',
+    metaDescription: 'Access the FEVIQO Flow workspace for managing video editing requests, projects, and review workflows.',
+    focusKeyword: 'FEVIQO Flow platform',
+    secondaryKeywords: ['video editing client portal', 'video project management'],
+    canonicalUrl: 'https://feviqo.com/platform',
+    ogTitle: 'FEVIQO Flow Platform',
+    ogDescription: 'Manage video editing requests, projects, and reviews in FEVIQO Flow.',
+    ogImage: 'https://feviqo.com/feviqo1.png',
+    robots: 'noindex, follow',
+    schemaType: 'Service'
+  },
   '/admin': {
     path: '/admin',
     pageName: 'Admin Portal',
@@ -496,6 +563,24 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
     return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
   }
 
+  // Canonical aliases used by the application route resolver.
+  const canonicalAliasTargets: Record<string, string> = {
+    '/for-creators': '/creators',
+    '/for-business': '/business',
+    '/for-agencies': '/agencies',
+    '/flow': '/admin',
+    '/teskilat-urdu': '/teskilat',
+    '/teskilat-urdu/episode-189': '/teskilat/episode-189',
+    '/teskilat-urdu/episode-188': '/teskilat/episode-188',
+    '/teskilat-urdu/episode-187': '/teskilat/episode-187',
+    '/teskilat-urdu/episode-186': '/teskilat/episode-186'
+  };
+  const aliasTarget = canonicalAliasTargets[cleanPath];
+  if (aliasTarget && DEFAULT_PAGE_SEO[aliasTarget]) {
+    const cfg = DEFAULT_PAGE_SEO[aliasTarget];
+    return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
+  }
+
   // Alias lookups for Mehmed, Teskilat, and drama variations
   if (cleanPath === '/mehmed' || cleanPath === '/mehmed/') {
     if (DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani']) {
@@ -528,23 +613,20 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
     }
   }
 
-  // Dynamic fallback for unlisted routes
-  const cleanTitle = pathname.replace('/', '').replace('-', ' ');
-  const capitalized = cleanTitle ? cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1) : 'Page';
-  const rawCanonical = `https://feviqo.com${pathname.endsWith('/') ? pathname : pathname + '/'}`;
-
+  // Unknown URLs currently fall through to the homepage in the React app.
+  // Do not give those soft-404 routes self-canonicals or indexable metadata.
   return {
-    path: pathname,
-    pageName: capitalized,
-    seoTitle: `${capitalized} | ${BRAND_SYSTEM.titleSuffix}`,
-    metaDescription: `${capitalized} page for FEVIQO Performance Creative Studio. Unlimited video editing and performance ad creatives at scale.`,
-    focusKeyword: cleanTitle || 'video editing',
-    secondaryKeywords: GLOBAL_KEYWORD_TAXONOMY.BRAND,
-    canonicalUrl: rawCanonical,
-    ogTitle: `${capitalized} — ${BRAND_SYSTEM.name}`,
-    ogDescription: BRAND_SYSTEM.positioning,
+    path: cleanPath,
+    pageName: 'Unknown Route',
+    seoTitle: `Page Not Found | ${BRAND_SYSTEM.name}`,
+    metaDescription: 'This FEVIQO page could not be found.',
+    focusKeyword: 'page not found',
+    secondaryKeywords: [],
+    canonicalUrl: 'https://feviqo.com/',
+    ogTitle: `Page Not Found | ${BRAND_SYSTEM.name}`,
+    ogDescription: 'This FEVIQO page could not be found.',
     ogImage: BRAND_SYSTEM.defaultOgImage,
-    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    robots: 'noindex, follow',
     schemaType: 'WebSite'
   };
 }
