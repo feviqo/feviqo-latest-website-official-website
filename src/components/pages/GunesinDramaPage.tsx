@@ -462,9 +462,13 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                 {filteredEpisodes.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {filteredEpisodes.map((ep) => (
-                      <div 
+                      <a
                         key={ep.slug}
-                        onClick={() => navigateToEpisode(ep)}
+                        href={`/gunesin-dogdugu-yer/${ep.slug}/`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigateToEpisode(ep);
+                        }}
                         className="group bg-slate-50/20 hover:bg-slate-50/50 border border-slate-100 hover:border-slate-300 rounded-2xl overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition duration-200 text-left select-none cursor-pointer flex flex-col h-full shadow-sm"
                       >
                         
@@ -501,7 +505,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                           </div>
                         </div>
 
-                      </div>
+                      </a>
                     ))}
                   </div>
                 ) : (
@@ -789,10 +793,14 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     {GUNESIN_EPISODES.filter(ep => ep.number !== selectedEpisode.number).map(ep => (
-                      <div 
+                      <a
                         key={ep.slug}
-                        onClick={() => navigateToEpisode(ep)}
-                        className="group bg-slate-50 border border-slate-100 hover:border-slate-300 rounded-xl overflow-hidden hover:scale-105 transition cursor-pointer select-none"
+                        href={`/gunesin-dogdugu-yer/${ep.slug}/`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigateToEpisode(ep);
+                        }}
+                        className="block group bg-slate-50 border border-slate-100 hover:border-slate-300 rounded-xl overflow-hidden hover:scale-105 transition cursor-pointer select-none"
                       >
                         <div className="aspect-video relative overflow-hidden bg-slate-100">
                           <img 
@@ -807,7 +815,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                             {ep.title}
                           </h4>
                         </div>
-                      </div>
+                      </a>
                     ))}
                   </div>
                 </div>
