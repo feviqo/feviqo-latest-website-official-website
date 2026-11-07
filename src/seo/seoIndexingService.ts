@@ -45,12 +45,15 @@ export function formatCanonicalUrls(inputUrls: string[], origin: string = DEFAUL
       const cleanPath = fullUrl.startsWith('/') ? fullUrl : `/${fullUrl}`;
       fullUrl = `${origin}${cleanPath}`;
     }
+    try {
+      if (new URL(fullUrl).pathname === '/sitemap.xml') continue;
+    } catch {
+      continue;
+    }
     urlSet.add(fullUrl);
   }
 
-  // Always ensure sitemap and home are included in priority pings
-  urlSet.add(DEFAULT_SITEMAP_URL);
-  
+  // Sitemap discovery is handled separately; IndexNow accepts page URLs, not sitemap files.
   return Array.from(urlSet);
 }
 
