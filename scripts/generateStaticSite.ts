@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { generateSitemapXml } from '../src/seo/sitemapGenerator';
 import { transformHTMLForRoute } from '../src/seo/serverSEO';
-import { notifyGoogleIndexing } from '../google-instant-index.js';
 
 /**
  * FEVIQO Static Site Generator & SEO Pre-Renderer
@@ -78,13 +77,7 @@ async function main() {
     fs.writeFileSync(path.join(targetDir, 'index.html'), routeSeoHtml, 'utf-8');
     renderedCount++;
 
-    // Google Indexing API notifications are best-effort only. They do not guarantee indexing.
-    if (routePath.includes('/episode-')) {
-      const canonicalLiveUrl = `https://feviqo.com${routePath.endsWith('/') ? routePath : routePath + '/'}`;
-      notifyGoogleIndexing(canonicalLiveUrl).catch((err) => {
-        console.warn(`[Indexing notification] ${canonicalLiveUrl}:`, err);
-      });
-    }
+
   }
 
   console.log(`Pre-rendered ${renderedCount} routes into dist/.`);
