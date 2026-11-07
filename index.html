@@ -1,42 +1,6 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Safe window.fetch descriptor guard against browser extension assignment errors -->
-    <script>
-      (function() {
-        try {
-          var originalFetch = window.fetch;
-          var _currentFetch = originalFetch;
-          Object.defineProperty(window, 'fetch', {
-            get: function() {
-              return _currentFetch;
-            },
-            set: function(val) {
-              _currentFetch = val;
-            },
-            configurable: true,
-            enumerable: true
-          });
-        } catch (e) {}
-      })();
-
-      window.onerror = function (msg, url, line, col, error) {
-        if (msg && typeof msg === 'string' && msg.indexOf('fetch') !== -1) {
-          console.warn('[FEVIQO Suppressed Extension Fetch Error]', msg);
-          return true; // Suppress extension fetch assignment errors
-        }
-        console.error('[FEVIQO Early Runtime Error]', { msg, url, line, col, error });
-        return false;
-      };
-
-      window.onunhandledrejection = function (event) {
-        if (event && event.reason && event.reason.message && event.reason.message.indexOf('fetch') !== -1) {
-          console.warn('[FEVIQO Suppressed Extension Fetch Promise Error]', event.reason);
-          return;
-        }
-        console.error('[FEVIQO Unhandled Promise Rejection]', event ? event.reason : null);
-      };
-    </script>
     <meta charset="UTF-8" />
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
