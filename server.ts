@@ -2657,7 +2657,7 @@ async function startServer() {
       try {
         const indexPath = path.join(distPath, 'index.html');
         const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
-        const cleanRoutePath = rawPath.replace(/^\\/+|\\/+$/g, '');
+        const cleanRoutePath = rawPath.replace(/^\/+|\/+$/g, '');
         const requestPath = rawPath === '/' ? '/' : `/${cleanRoutePath}/`;
 
         // Serve the route-specific pre-rendered HTML directly for clean URLs.
