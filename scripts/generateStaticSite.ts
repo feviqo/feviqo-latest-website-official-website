@@ -1,18 +1,15 @@
 import fs from 'fs';
 import path from 'path';
-import { generateSitemapXml, updateSitemapFiles } from '../src/seo/sitemapGenerator';
+import { generateSitemapXml } from '../src/seo/sitemapGenerator';
 import { transformHTMLForRoute } from '../src/seo/serverSEO';
-import { notifyGoogleIndexing } from '../google-instant-index.js';
 
 /**
  * FEVIQO Static Site Generator & SEO Pre-Renderer
- * Pre-renders static HTML pages for 100% of sitemap routes into dist/
- * Ensures Cloudflare Pages, Vercel, Netlify, & static CDNs serve complete
- * SSR HTML with titles, meta tags, schema.org, and internal links without SPA soft 404s.
+ * Generates the sitemap from the same route source used by the application,
+ * then pre-renders every canonical sitemap route into dist/.
  */
-
 async function main() {
-  console.log('🚀 Starting FEVIQO Static Site & Sitemap Pre-Renderer...');
+  console.log('Starting FEVIQO static site and sitemap pre-renderer...');
 
   const rootDir = process.cwd();
   const publicDir = path.join(rootDir, 'public');
@@ -22,89 +19,71 @@ async function main() {
     fs.mkdirSync(distDir, { recursive: true });
   }
 
-  // 1. Maintain single clean sitemap.xml & robots.txt + agent discovery files
-  const sitemapXml = fs.readFileSync(path.join(publicDir, 'sitemap.xml'), 'utf-8');
+  // Generate the sitemap from the live SEO route and episode data.
+  // Do not copy a manually maintained sitemap that can fall behind new episodes.
+  const sitemapXml = generateSitemapXml();
   const robotsTxt = fs.readFileSync(path.join(publicDir, 'robots.txt'), 'utf-8');
 
+  fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), sitemapXml, 'utf-8');
   fs.writeFileSync(path.join(distDir, 'sitemap.xml'), sitemapXml, 'utf-8');
   fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsTxt, 'utf-8');
   fs.writeFileSync(path.join(rootDir, 'robots.txt'), robotsTxt, 'utf-8');
 
-  // Copy agentic discovery assets
-  if (fs.existsSync(path.join(publicDir, 'llms.txt'))) {
-    fs.copyFileSync(path.join(publicDir, 'llms.txt'), path.join(distDir, 'llms.txt'));
-  }
-  if (fs.existsSync(path.join(publicDir, 'ai-catalog.json'))) {
-    fs.copyFileSync(path.join(publicDir, 'ai-catalog.json'), path.join(distDir, 'ai-catalog.json'));
+  // Copy optional discovery files.
+  for (const file of ['llms.txt', 'ai-catalog.json']) {
+    const source = path.join(publicDir, file);
+    if (fs.existsSync(source)) {
+      fs.copyFileSync(source, path.join(distDir, file));
+    }
   }
 
-  // 2. Read compiled dist/index.html
   const distIndexPath = path.join(distDir, 'index.html');
   if (!fs.existsSync(distIndexPath)) {
-    console.error('❌ dist/index.html not found! Run vite build before static generation.');
-    process.exit(1);
+    throw new Error('dist/index.html not found. Run vite build before static generation.');
   }
 
   const baseHtml = fs.readFileSync(distIndexPath, 'utf-8');
-
-  // 3. Extract all URLs from sitemap
   const urlMatches = sitemapXml.match(/<loc>(.*?)<\/loc>/g) || [];
   const routePaths: string[] = [];
 
-  urlMatches.forEach(match => {
+  for (const match of urlMatches) {
     const loc = match.replace('<loc>', '').replace('</loc>', '').trim();
     try {
       const url = new URL(loc);
-      let routePath = url.pathname;
-      if (!routePath.startsWith('/')) routePath = '/' + routePath;
-      if (!routePaths.includes(routePath)) {
-        routePaths.push(routePath);
-      }
+      if (url.origin !== 'https://feviqo.com') continue;
+      const routePath = url.pathname.startsWith('/') ? url.pathname : `/${url.pathname}`;
+      if (!routePaths.includes(routePath)) routePaths.push(routePath);
     } catch {
-      // Ignore invalid URL
+      // Ignore malformed sitemap locations.
     }
-  });
+  }
 
-  console.log(`📄 Extracted ${routePaths.length} unique route URLs for static HTML pre-rendering.`);
-
+  console.log(`Pre-rendering ${routePaths.length} canonical routes from sitemap.xml...`);
   let renderedCount = 0;
 
   for (const routePath of routePaths) {
-    if (routePath === '/admin') continue; // Skip admin panel static export
+    if (routePath === '/admin' || routePath === '/admin/') continue;
 
     const routeSeoHtml = transformHTMLForRoute(baseHtml, routePath);
-
     if (routePath === '/') {
       fs.writeFileSync(distIndexPath, routeSeoHtml, 'utf-8');
       renderedCount++;
       continue;
     }
 
-    // Strip leading/trailing slashes for directory path creation
     const cleanRouteDir = routePath.replace(/^\/+|\/+$/g, '');
     const targetDir = path.join(distDir, cleanRouteDir);
-
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
-    }
-
-    const targetHtmlPath = path.join(targetDir, 'index.html');
-    fs.writeFileSync(targetHtmlPath, routeSeoHtml, 'utf-8');
+    fs.mkdirSync(targetDir, { recursive: true });
+    fs.writeFileSync(path.join(targetDir, 'index.html'), routeSeoHtml, 'utf-8');
     renderedCount++;
 
-    // Hook: The moment a new episode or drama page file writes successfully, immediately notify Google Indexing API
-    if (routePath.includes('/episode-') || routePath.includes('/mehmed-fetihler-sultani') || routePath.includes('/teskilat')) {
-      const canonicalLiveUrl = `https://feviqo.com${routePath.endsWith('/') ? routePath : routePath + '/'}`;
-      notifyGoogleIndexing(canonicalLiveUrl).catch((err) => {
-        console.warn(`[Indexing Trigger] Non-blocking warning for ${canonicalLiveUrl}:`, err);
-      });
-    }
+
   }
 
-  console.log(`✅ Pre-rendered ${renderedCount} static HTML pages into dist/ for instant Googlebot discovery & Cloudflare Pages hosting!`);
+  console.log(`Pre-rendered ${renderedCount} routes into dist/.`);
 }
 
-main().catch(err => {
-  console.error('❌ Static generation failed:', err);
+main().catch((err) => {
+  console.error('Static generation failed:', err);
   process.exit(1);
 });

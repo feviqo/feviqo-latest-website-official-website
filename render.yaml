@@ -2,9 +2,9 @@ services:
   - type: web
     name: feviqo
     runtime: node
-    plan: standard
+    plan: free
     buildCommand: npm install && npm run build
-    startCommand: node server.ts
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
