@@ -529,9 +529,11 @@ function formatCanonicalUrl(url: string): string {
   if (!url) return 'https://feviqo.com/';
   try {
     const u = new URL(url);
-    if (!u.pathname.endsWith('/') && !u.pathname.includes('.')) {
-      u.pathname += '/';
+    if (u.pathname !== '/' && u.pathname.endsWith('/')) {
+      u.pathname = u.pathname.slice(0, -1);
     }
+    u.protocol = 'https:';
+    u.host = 'feviqo.com';
     return u.toString();
   } catch {
     return url;

@@ -48,6 +48,7 @@ import {
 } from './src/seo/seoIndexingService';
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Canonical 301 Redirect Middleware: Enforce feviqo.com primary domain & no-trailing-slash URLs
