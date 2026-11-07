@@ -18,6 +18,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           persist-credentials: true
       - name: Set up Node.js
         uses: actions/setup-node@v4
