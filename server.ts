@@ -1,12 +1,12 @@
 import express from 'express';
 import compression from 'compression';
-import { google } from 'googleapis';
 import path from 'path';
 import fs from 'fs';
 import { execFile } from 'child_process';
 import nodemailer from 'nodemailer';
 import { createServer as createViteServer } from 'vite';
 import { transformHTMLForRoute } from './src/seo/serverSEO';
+import { getSEOConfigForPath } from './src/seo/seoStore';
 import { 
   generateSitemapXml, 
   updateSitemapFiles 
@@ -73,6 +73,7 @@ app.use((req, res, next) => {
       '/mehmed/episode-87': '/mehmed-fetihler-sultani/episode-87/',
       '/mehmed/episode-88': '/mehmed-fetihler-sultani/episode-88/',
       '/mehmed/episode-89': '/mehmed-fetihler-sultani/episode-89/',
+      '/mehmed/episode-90': '/mehmed-fetihler-sultani/episode-90/',
       '/mehmed-fetihler-sultani/episode-87': '/mehmed-fetihler-sultani/episode-87/',
       '/mehmed-fetihler-sultani/episode-88': '/mehmed-fetihler-sultani/episode-88/',
       '/mehmed-fetihler-sultani/episode-89': '/mehmed-fetihler-sultani/episode-89/',
@@ -93,6 +94,11 @@ app.use((req, res, next) => {
       '/teskilat-urdu/': '/teskilat/',
       '/teskilat-urdu/episode-189': '/teskilat/episode-189/',
       '/teskilat-urdu/episode-188': '/teskilat/episode-188/',
+      '/teskilat-urdu/episode-187': '/teskilat/episode-187/',
+      '/teskilat-urdu/episode-186': '/teskilat/episode-186/',
+      '/for-creators': '/creators/',
+      '/for-business': '/business/',
+      '/for-agencies': '/agencies/',
     };
 
     if (aliasMap[rawPath] && aliasMap[rawPath] !== rawPath) {
@@ -275,60 +281,8 @@ app.get('/feviqo-indexnow-key-2026.txt', (_req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=86400');
   return res.status(200).send('feviqo-indexnow-key-2026');
 });
-app.post('/api/seo/google-indexing-push', async (req, res) => {
-  const urls: string[] = req.body?.urls || [
-    'https://feviqo.com/',
-    'https://feviqo.com/mehmed-fetihler-sultani/',
-    'https://feviqo.com/mehmed-fetihler-sultani/episode-90/',
-    'https://feviqo.com/mehmed-fetihler-sultani/episode-89/',
-    'https://feviqo.com/mehmed-fetihler-sultani/episode-88/',
-    'https://feviqo.com/mehmed-fetihler-sultani/episode-87/',
-    'https://feviqo.com/teskilat/',
-    'https://feviqo.com/teskilat/episode-189/',
-    'https://feviqo.com/teskilat/episode-188/',
-    'https://feviqo.com/teskilat/episode-187/',
-    'https://feviqo.com/teskilat/episode-186/',
-    'https://feviqo.com/gunesin-dogdugu-yer/',
-    'https://feviqo.com/gunesin-dogdugu-yer/episode-5/',
-    'https://feviqo.com/gunesin-dogdugu-yer/episode-4/',
-    'https://feviqo.com/gunesin-dogdugu-yer/episode-3/',
-    'https://feviqo.com/dramas/',
-    'https://feviqo.com/sitemap.xml',
-    'https://feviqo.com/google-index-fetch.xml'
-  ];
-
-  const KEY_PATH = path.join(process.cwd(), 'service_account.json');
-  if (!fs.existsSync(KEY_PATH)) {
-    return res.status(404).json({ success: false, error: 'service_account.json not found' });
-  }
-
-  try {
-    const auth = new google.auth.GoogleAuth({
-      keyFile: KEY_PATH,
-      scopes: ['https://www.googleapis.com/auth/indexing'],
-    });
-
-    const authClient = await auth.getClient();
-    const indexing = google.indexing({ version: 'v3', auth: authClient as any });
-
-    const results: any[] = [];
-    for (const url of urls) {
-      try {
-        const publishRes = await indexing.urlNotifications.publish({
-          requestBody: { url, type: 'URL_UPDATED' }
-        });
-        results.push({ url, status: publishRes.status, success: publishRes.status === 200 });
-      } catch (err: any) {
-        results.push({ url, status: 500, error: err?.message || 'Error' });
-      }
-    }
-
-    const successCount = results.filter(r => r.success).length;
-    return res.status(200).json({ success: true, successCount, totalCount: urls.length, results });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err?.message || 'Google Auth Error' });
-  }
-});
+// Google Indexing API is intentionally not exposed: Google documents it
+// for JobPosting and BroadcastEvent pages, not ordinary FEVIQO site pages.
 
 app.get('/ads.txt', (_req, res) => {
   const adsPath = path.join(process.cwd(), 'public', 'ads.txt');
@@ -2636,8 +2590,12 @@ async function startServer() {
         rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
         const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
         const requestPath = rawPath === '/' ? '/' : (rawPath.endsWith('/') ? rawPath : `${rawPath}/`);
+        const routeConfig = getSEOConfigForPath(requestPath);
         const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
-        const canonicalUrl = `https://feviqo.com${requestPath}`;
+        if (routeConfig.pageName === 'Unknown Route') {
+          return res.status(404).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
+        }
+        const canonicalUrl = routeConfig.canonicalUrl;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
         return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
       } catch (e) {
@@ -2664,8 +2622,12 @@ async function startServer() {
         const rawHtml = fs.readFileSync(indexPath, 'utf-8');
         const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
         const requestPath = rawPath === '/' ? '/' : (rawPath.endsWith('/') ? rawPath : `${rawPath}/`);
+        const routeConfig = getSEOConfigForPath(requestPath);
         const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
-        const canonicalUrl = `https://feviqo.com${requestPath}`;
+        if (routeConfig.pageName === 'Unknown Route') {
+          return res.status(404).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
+        }
+        const canonicalUrl = routeConfig.canonicalUrl;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
         return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
       } catch {
