@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - npm-security-fixes-2026-11-07
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
