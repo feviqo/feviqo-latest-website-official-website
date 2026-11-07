@@ -1,6 +1,5 @@
 import express from 'express';
 import compression from 'compression';
-import { google } from 'googleapis';
 import path from 'path';
 import fs from 'fs';
 import { execFile } from 'child_process';
@@ -282,60 +281,8 @@ app.get('/feviqo-indexnow-key-2026.txt', (_req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=86400');
   return res.status(200).send('feviqo-indexnow-key-2026');
 });
-app.post('/api/seo/google-indexing-push', async (req, res) => {
-  const urls: string[] = req.body?.urls || [
-    'https://feviqo.com/',
-    'https://feviqo.com/mehmed-fetihler-sultani/',
-    'https://feviqo.com/mehmed-fetihler-sultani/episode-90/',
-    'https://feviqo.com/mehmed-fetihler-sultani/episode-89/',
-    'https://feviqo.com/mehmed-fetihler-sultani/episode-88/',
-    'https://feviqo.com/mehmed-fetihler-sultani/episode-87/',
-    'https://feviqo.com/teskilat/',
-    'https://feviqo.com/teskilat/episode-189/',
-    'https://feviqo.com/teskilat/episode-188/',
-    'https://feviqo.com/teskilat/episode-187/',
-    'https://feviqo.com/teskilat/episode-186/',
-    'https://feviqo.com/gunesin-dogdugu-yer/',
-    'https://feviqo.com/gunesin-dogdugu-yer/episode-5/',
-    'https://feviqo.com/gunesin-dogdugu-yer/episode-4/',
-    'https://feviqo.com/gunesin-dogdugu-yer/episode-3/',
-    'https://feviqo.com/dramas/',
-    'https://feviqo.com/sitemap.xml',
-    'https://feviqo.com/google-index-fetch.xml'
-  ];
-
-  const KEY_PATH = path.join(process.cwd(), 'service_account.json');
-  if (!fs.existsSync(KEY_PATH)) {
-    return res.status(404).json({ success: false, error: 'service_account.json not found' });
-  }
-
-  try {
-    const auth = new google.auth.GoogleAuth({
-      keyFile: KEY_PATH,
-      scopes: ['https://www.googleapis.com/auth/indexing'],
-    });
-
-    const authClient = await auth.getClient();
-    const indexing = google.indexing({ version: 'v3', auth: authClient as any });
-
-    const results: any[] = [];
-    for (const url of urls) {
-      try {
-        const publishRes = await indexing.urlNotifications.publish({
-          requestBody: { url, type: 'URL_UPDATED' }
-        });
-        results.push({ url, status: publishRes.status, success: publishRes.status === 200 });
-      } catch (err: any) {
-        results.push({ url, status: 500, error: err?.message || 'Error' });
-      }
-    }
-
-    const successCount = results.filter(r => r.success).length;
-    return res.status(200).json({ success: true, successCount, totalCount: urls.length, results });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err?.message || 'Google Auth Error' });
-  }
-});
+// Google Indexing API is intentionally not exposed: Google documents it
+// for JobPosting and BroadcastEvent pages, not ordinary FEVIQO site pages.
 
 app.get('/ads.txt', (_req, res) => {
   const adsPath = path.join(process.cwd(), 'public', 'ads.txt');
