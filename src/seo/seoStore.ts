@@ -450,6 +450,27 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'Service'
   },
+  '/dramas': {
+    path: '/dramas',
+    pageName: 'Turkish Dramas Directory',
+    seoTitle: 'Turkish Dramas with Urdu Subtitles | FEVIQO',
+    metaDescription: 'Explore Turkish drama series and available episodes with Urdu subtitles on FEVIQO. Browse Teşkilat, Güneşin Doğduğu Yer, and Mehmed: Fetihler Sultani episode guides.',
+    focusKeyword: 'Turkish dramas Urdu subtitles',
+    secondaryKeywords: [
+      'Turkish series Urdu subtitles',
+      'watch Turkish dramas',
+      'Turkish drama episodes',
+      'Teşkilat Urdu subtitles',
+      'Güneşin Doğduğu Yer Urdu subtitles',
+      'Mehmed Fetihler Sultani Urdu subtitles'
+    ],
+    canonicalUrl: 'https://feviqo.com/dramas',
+    ogTitle: 'Turkish Dramas with Urdu Subtitles | FEVIQO',
+    ogDescription: 'Browse Turkish drama series and available Urdu-subtitled episodes on FEVIQO.',
+    ogImage: 'https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVSeries'
+  },
   '/turkish-drama': {
     path: '/turkish-drama',
     pageName: 'Turkish Drama Licensing',
