@@ -6,6 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+service_account.json
 
 # Exclude large user videos from AI Studio IDE sync to bypass the 30 MB web editor file size limit
 public/videos/1.mp4
