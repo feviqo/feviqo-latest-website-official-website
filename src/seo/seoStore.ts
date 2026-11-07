@@ -552,6 +552,24 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
     return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
   }
 
+  // Canonical aliases used by the application route resolver.
+  const canonicalAliasTargets: Record<string, string> = {
+    '/for-creators': '/creators',
+    '/for-business': '/business',
+    '/for-agencies': '/agencies',
+    '/flow': '/admin',
+    '/teskilat-urdu': '/teskilat',
+    '/teskilat-urdu/episode-189': '/teskilat/episode-189',
+    '/teskilat-urdu/episode-188': '/teskilat/episode-188',
+    '/teskilat-urdu/episode-187': '/teskilat/episode-187',
+    '/teskilat-urdu/episode-186': '/teskilat/episode-186'
+  };
+  const aliasTarget = canonicalAliasTargets[cleanPath];
+  if (aliasTarget && DEFAULT_PAGE_SEO[aliasTarget]) {
+    const cfg = DEFAULT_PAGE_SEO[aliasTarget];
+    return { ...cfg, canonicalUrl: formatCanonicalUrl(cfg.canonicalUrl) };
+  }
+
   // Alias lookups for Mehmed, Teskilat, and drama variations
   if (cleanPath === '/mehmed' || cleanPath === '/mehmed/') {
     if (DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani']) {
