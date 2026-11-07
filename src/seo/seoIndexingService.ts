@@ -1,23 +1,3 @@
-export async function pushUrlsToGoogleIndexingApi(urls: string[]): Promise<{ successCount: number; failCount: number }> {
-  try {
-    const origin = typeof window !== 'undefined'
-      ? ''
-      : `http://127.0.0.1:${process.env.PORT || 3000}`;
-    const res = await fetch(`${origin}/api/seo/google-indexing-push`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ urls })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      return { successCount: data.successCount || urls.length, failCount: 0 };
-    }
-  } catch (err: any) {
-    console.warn('[SEO Service] API push trigger error:', err?.message || err);
-  }
-  return { successCount: urls.length, failCount: 0 };
-}
-
 export interface SearchEnginePingOptions {
   urls?: string[];           // Target URLs to force re-index (e.g. ['https://feviqo.com/teskilat/episode-188'])
   sitemapUrl?: string;       // Sitemap location (defaults to https://feviqo.com/sitemap.xml)
@@ -40,7 +20,6 @@ export interface SearchEnginePingResult {
     bingSitemap: { success: boolean; status: number; message: string };
     indexNowBing: { success: boolean; status: number; message: string };
     indexNowGlobal: { success: boolean; status: number; message: string };
-    googleIndexingApi?: { success: boolean; status: number; message: string };
   };
 }
 
@@ -102,27 +81,17 @@ export async function pingSearchEnginesForReindexing(
     bingSitemap: { success: false, status: 0, message: 'Pending' },
     indexNowBing: { success: false, status: 0, message: 'Pending' },
     indexNowGlobal: { success: false, status: 0, message: 'Pending' },
-    googleIndexingApi: { success: false, status: 0, message: 'Notification sent' },
   };
 
-  // 1. Google Sitemap Re-Indexing Ping
-  try {
-    const googlePingUrl = `https://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`;
-    const googleRes = await fetch(googlePingUrl, { method: 'GET', headers: { 'User-Agent': 'FEVIQO-SEO-Indexer/1.0' } });
-    details.googleSitemap = {
-      success: googleRes.ok || googleRes.status === 200,
-      status: googleRes.status,
-      message: googleRes.ok ? 'Google sitemap ping received successfully' : `Google ping returned HTTP ${googleRes.status}`
-    };
-  } catch (err: any) {
-    details.googleSitemap = {
-      success: true, // Non-blocking fallback for local CORS/fetch environments
-      status: 200,
-      message: `Google sitemap ping dispatched: ${err?.message || 'Handled'}`
-    };
-  }
+  // Google retired its public sitemap ping endpoint. Discovery is handled
+  // through the sitemap URL in robots.txt and Search Console.
+  details.googleSitemap = {
+    success: true,
+    status: 0,
+    message: 'Sitemap discovery is configured through robots.txt and Search Console; no Google ping endpoint is called.'
+  };
 
-  // 2. Bing Sitemap Re-Indexing Ping
+  // 1. Bing Sitemap Re-Indexing Ping
   try {
     const bingPingUrl = `https://www.bing.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`;
     const bingRes = await fetch(bingPingUrl, { method: 'GET', headers: { 'User-Agent': 'FEVIQO-SEO-Indexer/1.0' } });
@@ -194,22 +163,6 @@ export async function pingSearchEnginesForReindexing(
       success: true,
       status: 202,
       message: `IndexNow global ping dispatched: ${err?.message || 'Accepted'}`
-    };
-  }
-
-  // 4. Google Indexing API push via service_account.json
-  try {
-    const googleRes = await pushUrlsToGoogleIndexingApi(urlsPinged);
-    details.googleIndexingApi = {
-      success: googleRes.successCount > 0 || googleRes.failCount === 0,
-      status: 200,
-      message: `Google Indexing API pushed ${googleRes.successCount}/${urlsPinged.length} URLs successfully.`
-    };
-  } catch (err: any) {
-    details.googleIndexingApi = {
-      success: true,
-      status: 200,
-      message: `Google Indexing API push completed with response.`
     };
   }
 
