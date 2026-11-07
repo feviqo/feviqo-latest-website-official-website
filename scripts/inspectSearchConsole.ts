@@ -40,7 +40,7 @@ async function main() {
   const response = await fetch(SITEMAP_URL);
   if (!response.ok) throw new Error(`Could not fetch sitemap: HTTP ${response.status}`);
   const xml = await response.text();
-  const urls = [...xml.matchAll(/<loc>([\\s\\S]*?)<\\/loc>/g)]
+  const urls = [...xml.matchAll(/<loc>([\s\S]*?)<\/loc>/g)]
     .map((match) => match[1].trim())
     .filter((url) => url.startsWith('https://feviqo.com/'));
   const uniqueUrls = [...new Set(urls)];
@@ -82,7 +82,7 @@ async function main() {
       });
       console.log(`[${status?.verdict || 'UNKNOWN'}] ${url} — ${status?.coverageState || 'No coverage state returned'}`);
     } catch (error: any) {
-      const message = String(error?.message || error).replace(/https?:\\/\\/[^\\s]+/g, '[URL]');
+      const message = String(error?.message || error).replace(/https?:\/\/\S+/g, '[URL]');
       results.push({ url, error: message });
       console.error(`[INSPECTION ERROR] ${url}: ${message}`);
     }
@@ -122,10 +122,10 @@ async function main() {
     ...[...counts.entries()].map(([label, count]) => `|${label.replace(/\\|/g, '\\|')}|${count}|`),
     '',
     'Full URL-by-URL details are saved in the workflow artifact `gsc-url-inspection.json`.',
-  ].join('\\n');
+  ].join('\n');
 
   if (process.env.GITHUB_STEP_SUMMARY) {
-    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\\n');
+    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary + '\n');
   }
   console.log(summary);
 
