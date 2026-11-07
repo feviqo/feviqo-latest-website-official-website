@@ -791,9 +791,15 @@ export default function App() {
     }
   };
 
+  const seoPath = typeof window !== 'undefined'
+    && currentRoute === 'home'
+    && window.location.pathname !== '/'
+    ? window.location.pathname
+    : getPathForRoute(currentRoute);
+
   return (
     <>
-      <SEOHead pathname={getPathForRoute(currentRoute)} />
+      <SEOHead pathname={seoPath} />
 
       <Suspense fallback={<div className="min-h-screen bg-white" />}>
         <div className="w-full">
