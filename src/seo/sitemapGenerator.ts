@@ -109,6 +109,8 @@ export function generateSitemapXml(): string {
     if (routeKey.startsWith('/trending')) return;
 
     const config = DEFAULT_PAGE_SEO[routeKey];
+    // A sitemap must not advertise pages explicitly marked noindex.
+    if (config?.robots?.toLowerCase().includes('noindex')) return;
     let priority = '0.9';
     let changefreq = 'daily';
 
