@@ -44,7 +44,7 @@ async function main() {
   }
 
   const baseHtml = fs.readFileSync(distIndexPath, 'utf-8');
-  const urlMatches = sitemapXml.match(/<loc>(.*?)<\\/loc>/g) || [];
+  const urlMatches = sitemapXml.match(/<loc>(.*?)<\/loc>/g) || [];
   const routePaths: string[] = [];
 
   for (const match of urlMatches) {
@@ -72,7 +72,7 @@ async function main() {
       continue;
     }
 
-    const cleanRouteDir = routePath.replace(/^\\/+|\\/+$/g, '');
+    const cleanRouteDir = routePath.replace(/^\/+|\/+$/g, '');
     const targetDir = path.join(distDir, cleanRouteDir);
     fs.mkdirSync(targetDir, { recursive: true });
     fs.writeFileSync(path.join(targetDir, 'index.html'), routeSeoHtml, 'utf-8');
