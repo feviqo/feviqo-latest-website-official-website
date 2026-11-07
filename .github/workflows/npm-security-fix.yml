@@ -25,8 +25,12 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install
+      - name: Update Express within the current major version
+        run: npm install express@^4.22.3 --save
       - name: Apply compatible security patches
         run: npm audit fix
+      - name: Verify no advisories remain
+        run: npm audit
       - name: Verify production build
         run: npm run build
       - name: Commit updated dependency lockfile
