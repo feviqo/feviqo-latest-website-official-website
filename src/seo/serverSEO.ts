@@ -603,8 +603,8 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
 
     schemaObj["@graph"].push({
       "@type": "TVEpisode",
-      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-87/#episode",
-      "url": "https://feviqo.com/mehmed-fetihler-sultani/episode-87/",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-87#episode",
+      "url": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
       "name": "Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87",
       "episodeNumber": "87",
       "seasonNumber": "4",
@@ -612,17 +612,17 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "subtitleLanguage": "Urdu Subtitles",
       "description": "Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.",
       "image": "https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg",
-      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-87/",
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
       "isPartOf": {
         "@type": "TVSeries",
         "name": "Mehmed: Fetihler Sultani",
-        "url": "https://feviqo.com/mehmed-fetihler-sultani/"
+        "url": "https://feviqo.com/mehmed-fetihler-sultani"
       }
     });
 
     schemaObj["@graph"].push({
       "@type": "VideoObject",
-      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-87/#video",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-87#video",
       "name": "Mehmed Season 4 Episode 4 Urdu Subtitles | Episode 87",
       "description": "Watch Mehmed Fetihler Sultani Season 4 Episode 4 Urdu Subtitles (Bolum 87). Saruca is attacked as Gedik Ahmed Pasha faces danger in Tabriz.",
       "thumbnailUrl": [
@@ -630,10 +630,10 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       ],
       "uploadDate": "2026-10-06T18:00:00+00:00",
       "contentUrl": "https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8",
-      "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-87/",
+      "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
       "duration": "PT2H30M",
       "isFamilyFriendly": true,
-      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-87/",
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-87",
       "publisher": {
         "@id": "https://feviqo.com/#organization"
       }
@@ -645,8 +645,8 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
 
     schemaObj["@graph"].push({
       "@type": "TVEpisode",
-      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-90/#episode",
-      "url": "https://feviqo.com/mehmed-fetihler-sultani/episode-90/",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-90#episode",
+      "url": "https://feviqo.com/mehmed-fetihler-sultani/episode-90",
       "name": "Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90",
       "episodeNumber": "90",
       "seasonNumber": "4",
@@ -654,17 +654,17 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "subtitleLanguage": "Urdu Subtitles",
       "description": "Watch Mehmed Fetihler Sultani Season 4 Episode 90 Urdu Subtitles (Bolum 90) in 1080p HD on FEVIQO. Sultan Mehmed II confronts an imperial crisis as enemy armies assemble and secret betrayals unfold.",
       "image": "https://lh3.googleusercontent.com/d/1Ql7rSRtgL6HfxOyO-BSfPN8CdfUooJ1p",
-      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-90/",
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-90",
       "isPartOf": {
         "@type": "TVSeries",
         "name": "Mehmed: Fetihler Sultani",
-        "url": "https://feviqo.com/mehmed-fetihler-sultani/"
+        "url": "https://feviqo.com/mehmed-fetihler-sultani"
       }
     });
 
     schemaObj["@graph"].push({
       "@type": "VideoObject",
-      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-90/#video",
+      "@id": "https://feviqo.com/mehmed-fetihler-sultani/episode-90#video",
       "name": "Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90",
       "description": "Watch Mehmed Fetihler Sultani Season 4 Episode 90 Urdu Subtitles (Bolum 90) in 1080p HD on FEVIQO. Sultan Mehmed II confronts an imperial crisis as enemy armies assemble and secret betrayals unfold.",
       "thumbnailUrl": [
@@ -672,10 +672,10 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       ],
       "uploadDate": "2026-10-28T04:00:00.000Z",
       "contentUrl": "https://stream.mux.com/iZwLfzcSIyWE302WmxZ39wVyGRbT00hw2gYJsdmKosn7s.m3u8",
-      "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-90/",
+      "embedUrl": "https://feviqo.com/mehmed-fetihler-sultani/episode-90",
       "duration": "PT2H35M",
       "isFamilyFriendly": true,
-      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-90/",
+      "mainEntityOfPage": "https://feviqo.com/mehmed-fetihler-sultani/episode-90",
       "publisher": {
         "@id": "https://feviqo.com/#organization"
       }

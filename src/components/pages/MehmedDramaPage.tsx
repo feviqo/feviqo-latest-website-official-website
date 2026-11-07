@@ -838,7 +838,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
                   <a
-                    href="/mehmed-fetihler-sultani/"
+                    href="/mehmed-fetihler-sultani"
                     onClick={(e) => {
                       e.preventDefault();
                       handleBackToOverview();

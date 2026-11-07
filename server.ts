@@ -50,7 +50,7 @@ import {
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-// Canonical 301 Redirect Middleware: Enforce feviqo.com primary domain in production only
+// Canonical 301 Redirect Middleware: Enforce feviqo.com primary domain & no-trailing-slash URLs
 app.use((req, res, next) => {
   const host = (req.headers.host || '').toLowerCase();
   const rawPath = (req.path || '/').toLowerCase();
@@ -64,46 +64,77 @@ app.use((req, res, next) => {
     return res.redirect(301, `https://feviqo.com${req.url}`);
   }
 
-  // 2. Canonical URL 301 Redirects for alias routes (production / feviqo.com requests only)
-  if (process.env.NODE_ENV === 'production' || host.includes('feviqo.com')) {
-    const aliasMap: Record<string, string> = {
-      '/mehmed': '/mehmed-fetihler-sultani/',
-      '/mehmed/': '/mehmed-fetihler-sultani/',
-      '/mehmed-fetihler-sultani': '/mehmed-fetihler-sultani/',
-      '/mehmed/episode-87': '/mehmed-fetihler-sultani/episode-87/',
-      '/mehmed/episode-88': '/mehmed-fetihler-sultani/episode-88/',
-      '/mehmed/episode-89': '/mehmed-fetihler-sultani/episode-89/',
-      '/mehmed/episode-90': '/mehmed-fetihler-sultani/episode-90/',
-      '/mehmed-fetihler-sultani/episode-87': '/mehmed-fetihler-sultani/episode-87/',
-      '/mehmed-fetihler-sultani/episode-88': '/mehmed-fetihler-sultani/episode-88/',
-      '/mehmed-fetihler-sultani/episode-89': '/mehmed-fetihler-sultani/episode-89/',
-      '/teskilat': '/teskilat/',
-      '/teskilat-189': '/teskilat/episode-189/',
-      '/teskilat-188': '/teskilat/episode-188/',
-      '/teskilat-187': '/teskilat/episode-187/',
-      '/teskilat-186': '/teskilat/episode-186/',
-      '/teskilat/episode-189': '/teskilat/episode-189/',
-      '/teskilat/episode-188': '/teskilat/episode-188/',
-      '/teskilat/episode-187': '/teskilat/episode-187/',
-      '/teskilat/episode-186': '/teskilat/episode-186/',
-      '/episode-189': '/teskilat/episode-189/',
-      '/episode-188': '/teskilat/episode-188/',
-      '/episode-187': '/teskilat/episode-187/',
-      '/episode-186': '/teskilat/episode-186/',
-      '/teskilat-urdu': '/teskilat/',
-      '/teskilat-urdu/': '/teskilat/',
-      '/teskilat-urdu/episode-189': '/teskilat/episode-189/',
-      '/teskilat-urdu/episode-188': '/teskilat/episode-188/',
-      '/teskilat-urdu/episode-187': '/teskilat/episode-187/',
-      '/teskilat-urdu/episode-186': '/teskilat/episode-186/',
-      '/for-creators': '/creators/',
-      '/for-business': '/business/',
-      '/for-agencies': '/agencies/',
-    };
+  // 2. Canonical URL 301 Redirects for alias routes (production & local)
+  const aliasMap: Record<string, string> = {
+    '/mehmed': '/mehmed-fetihler-sultani',
+    '/mehmed/': '/mehmed-fetihler-sultani',
+    '/mehmed-fetihler-sultani/': '/mehmed-fetihler-sultani',
+    '/mehmed/episode-87': '/mehmed-fetihler-sultani/episode-87',
+    '/mehmed/episode-87/': '/mehmed-fetihler-sultani/episode-87',
+    '/mehmed/episode-88': '/mehmed-fetihler-sultani/episode-88',
+    '/mehmed/episode-88/': '/mehmed-fetihler-sultani/episode-88',
+    '/mehmed/episode-89': '/mehmed-fetihler-sultani/episode-89',
+    '/mehmed/episode-89/': '/mehmed-fetihler-sultani/episode-89',
+    '/mehmed/episode-90': '/mehmed-fetihler-sultani/episode-90',
+    '/mehmed/episode-90/': '/mehmed-fetihler-sultani/episode-90',
+    '/mehmed-fetihler-sultani/episode-87/': '/mehmed-fetihler-sultani/episode-87',
+    '/mehmed-fetihler-sultani/episode-88/': '/mehmed-fetihler-sultani/episode-88',
+    '/mehmed-fetihler-sultani/episode-89/': '/mehmed-fetihler-sultani/episode-89',
+    '/mehmed-fetihler-sultani/episode-90/': '/mehmed-fetihler-sultani/episode-90',
+    '/teskilat/': '/teskilat',
+    '/teskilat-189': '/teskilat/episode-189',
+    '/teskilat-189/': '/teskilat/episode-189',
+    '/teskilat-188': '/teskilat/episode-188',
+    '/teskilat-188/': '/teskilat/episode-188',
+    '/teskilat-187': '/teskilat/episode-187',
+    '/teskilat-187/': '/teskilat/episode-187',
+    '/teskilat-186': '/teskilat/episode-186',
+    '/teskilat-186/': '/teskilat/episode-186',
+    '/teskilat/episode-189/': '/teskilat/episode-189',
+    '/teskilat/episode-188/': '/teskilat/episode-188',
+    '/teskilat/episode-187/': '/teskilat/episode-187',
+    '/teskilat/episode-186/': '/teskilat/episode-186',
+    '/episode-189': '/teskilat/episode-189',
+    '/episode-189/': '/teskilat/episode-189',
+    '/episode-188': '/teskilat/episode-188',
+    '/episode-188/': '/teskilat/episode-188',
+    '/episode-187': '/teskilat/episode-187',
+    '/episode-187/': '/teskilat/episode-187',
+    '/episode-186': '/teskilat/episode-186',
+    '/episode-186/': '/teskilat/episode-186',
+    '/teskilat-urdu': '/teskilat',
+    '/teskilat-urdu/': '/teskilat',
+    '/teskilat-urdu/episode-189': '/teskilat/episode-189',
+    '/teskilat-urdu/episode-189/': '/teskilat/episode-189',
+    '/teskilat-urdu/episode-188': '/teskilat/episode-188',
+    '/teskilat-urdu/episode-188/': '/teskilat/episode-188',
+    '/teskilat-urdu/episode-187': '/teskilat/episode-187',
+    '/teskilat-urdu/episode-187/': '/teskilat/episode-187',
+    '/teskilat-urdu/episode-186': '/teskilat/episode-186',
+    '/teskilat-urdu/episode-186/': '/teskilat/episode-186',
+    '/gunesin-dogdugu-yer/': '/gunesin-dogdugu-yer',
+    '/gunesin-dogdugu-yer/episode-3/': '/gunesin-dogdugu-yer/episode-3',
+    '/gunesin-dogdugu-yer/episode-4/': '/gunesin-dogdugu-yer/episode-4',
+    '/gunesin-dogdugu-yer/episode-5/': '/gunesin-dogdugu-yer/episode-5',
+    '/gunesin-dogdugu-yer/episode-7/': '/gunesin-dogdugu-yer/episode-7',
+    '/for-creators': '/creators',
+    '/for-creators/': '/creators',
+    '/for-business': '/business',
+    '/for-business/': '/business',
+    '/for-agencies': '/agencies',
+    '/for-agencies/': '/agencies',
+  };
 
-    if (aliasMap[rawPath] && aliasMap[rawPath] !== rawPath) {
-      return res.redirect(301, aliasMap[rawPath]);
-    }
+  if (aliasMap[rawPath] && aliasMap[rawPath] !== rawPath) {
+    const query = req.url.slice(rawPath.length);
+    return res.redirect(301, aliasMap[rawPath] + query);
+  }
+
+  // 3. Trailing-slash normalization rule for all non-homepage, non-API routes
+  if (rawPath !== '/' && rawPath.endsWith('/') && !rawPath.startsWith('/api/')) {
+    const query = req.url.slice(rawPath.length);
+    const cleanPath = rawPath.slice(0, -1);
+    return res.redirect(301, cleanPath + query);
   }
 
   next();
