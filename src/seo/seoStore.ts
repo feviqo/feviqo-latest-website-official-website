@@ -124,17 +124,17 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     pageName: 'Teskilat Season 7 Main Page',
     seoTitle: 'Teşkilat Season 7 Urdu Subtitles | Episodes & Story Guides | FEVIQO',
     metaDescription: 'Explore Teşkilat Season 7 on FEVIQO with episode guides, story recaps, and Urdu subtitles. Find the latest available episodes and follow the story of Altay and his team.',
-    focusKeyword: 'Teskilat Season 7 Episode 3 Urdu Subtitles',
+    focusKeyword: 'Teşkilat Season 7 Urdu subtitles',
     secondaryKeywords: [
       'Teşkilat Season 7',
       'Teskilat Urdu subtitles',
       'Teskilat Season 7 episodes',
       'Turkish action drama Urdu',
       'Altay Yalçın series'
-    ]
+    ],
     canonicalUrl: 'https://feviqo.com/teskilat',
-    ogTitle: 'Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal',
-    ogDescription: 'Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in.',
+    ogTitle: 'Teşkilat Season 7 Urdu Subtitles | Episodes & Story Guides | FEVIQO',
+    ogDescription: 'Explore Teşkilat Season 7 on FEVIQO with episode guides, story recaps, and Urdu subtitles.'
     ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
@@ -165,10 +165,10 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
       'Teskilat Season 7 Episode 3',
       'Altay Azra Ender episode 187',
       'Turkish drama Urdu subtitles'
-    ]
+    ],
     canonicalUrl: 'https://feviqo.com/teskilat/episode-187',
-    ogTitle: 'Teskilat Season 7 Episode 3 Urdu Subtitles - Bolum 187 Azra Betrayal',
-    ogDescription: 'Watch Teskilat Season 7 Episode 3 Urdu Subtitles (Bolum 187). Altay hunts Azra and risks everything to rescue Ender as new traps close in.',
+    ogTitle: 'Teşkilat Season 7 Episode 3 (Bolum 187) Urdu Subtitles | FEVIQO',
+    ogDescription: 'Watch Teşkilat Season 7 Episode 3 (Bolum 187) with Urdu subtitles. Read the episode recap and follow the story on FEVIQO.'
     ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
@@ -337,12 +337,16 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     metaDescription: 'Explore Mehmed: Fetihler Sultani Season 4 on FEVIQO with episode guides, story recaps, and Urdu subtitles. Browse available episodes and follow Sultan Mehmed II’s campaign.',
     focusKeyword: 'Mehmed Fetihler Sultani Urdu subtitles',
     secondaryKeywords: [
-      'Mehmed Season 4 Episode 90 Urdu Subtitles', 'Mehmed Season 4 Episode 90', 'Urdu Subtitles', 'Mehmed Fetihler Sultani Season 4 Episode 90', 'Mehmed Fetihler Sultani Season 4 Episode 90 Urdu Subtitles', 'Mehmed Fetihler Sultani Bolum 90', 'mehmed 90 urdu', 'mehmed episode 90 urdu', 'Mehmed Episode 90 Urdu Subtitles', 'Mehmed Bolum 90 Urdu', 'Episode 90 Urdu', 'Mehmed Fetihler Sultani Season 4 Urdu Subtitles', 'Mehmed Season 4 Urdu Subtitles', 'Mehmed Fetihler Sultani Urdu Subtitles', 'Sultan Mehmed Series Urdu', 'Fatih Sultan Mehmed Series', 'Turkish Historical Series Urdu Subtitles', 'Ottoman Empire Series', 'Turkish Drama Urdu Subtitles', 'FEVIQO Mehmed Season 4', 'Sultan Muhammad Fateh Episode 90'
+      'Mehmed Fetihler Sultani Season 4',
+      'Mehmed Urdu subtitles',
+      'Sultan Mehmed series',
+      'Mehmed Season 4 episodes',
+      'Ottoman historical drama'
     ],
     canonicalUrl: 'https://feviqo.com/mehmed-fetihler-sultani',
-    ogTitle: 'Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90 - FEVIQO',
-    ogDescription: 'Watch Mehmed Fetihler Sultani Season 4 Episode 90 Urdu Subtitles (Bolum 90) in 1080p HD on FEVIQO. Sultan Mehmed II confronts an imperial crisis as enemy armies assemble and secret betrayals unfold.',
-    ogImage: 'https://lh3.googleusercontent.com/d/1Ql7rSRtgL6HfxOyO-BSfPN8CdfUooJ1p',
+    ogTitle: 'Mehmed: Fetihler Sultani Season 4 | Urdu Subtitles & Episodes | FEVIQO',
+    ogDescription: 'Explore Mehmed: Fetihler Sultani Season 4 on FEVIQO with episode guides, story recaps, and Urdu subtitles.'
+    ogImage: 'https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
   },
