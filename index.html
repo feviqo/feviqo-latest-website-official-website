@@ -11,6 +11,27 @@
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="google-site-verification" content="Bpjxxa-Hx8mJuUKR77oNf7CuHzUs_zOSKWlFAoh7E7M" />
     
+    <!-- Chrome Extension Error Suppression Handler -->
+    <script>
+      window.addEventListener('error', function(e) {
+        if ((e.filename && e.filename.indexOf('chrome-extension://') !== -1) ||
+            (e.message && e.message.indexOf('property fetch of') !== -1)) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          return true;
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(e) {
+        if (e.reason && (
+          (e.reason.message && e.reason.message.indexOf('property fetch of') !== -1) ||
+          (e.reason.stack && e.reason.stack.indexOf('chrome-extension://') !== -1)
+        )) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+        }
+      }, true);
+    </script>
+    
     <!-- Google AdSense Official Verification & Ad Delivery Script -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4691262355758432" crossorigin="anonymous"></script>
     

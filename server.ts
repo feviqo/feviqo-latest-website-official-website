@@ -2641,9 +2641,14 @@ async function startServer() {
       maxAge: '1y',
       immutable: true,
       etag: true,
-      index: false
+      index: false,
+      // Static pre-render routes are directories containing index.html.
+      // Do not let serve-static append "/" because the canonical middleware
+      // above intentionally strips trailing slashes; that would create a
+      // redirect loop for every pre-rendered route.
+      redirect: false
     }));
-    // Prevent missing static assets from returning index.html (prevents MIME type errors)
+    // Prevent missing static assets from returning index.html (preventing MIME type errors)
     app.get(['/assets/*', '/images/*', '/fonts/*'], (req, res) => {
       res.status(404).send('Asset not found');
     });
@@ -2651,11 +2656,27 @@ async function startServer() {
     app.get('*', (req, res) => {
       try {
         const indexPath = path.join(distPath, 'index.html');
-        const rawHtml = fs.readFileSync(indexPath, 'utf-8');
         const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
-        const requestPath = rawPath === '/' ? '/' : (rawPath.endsWith('/') ? rawPath : `${rawPath}/`);
+        const cleanRoutePath = rawPath.replace(/^\/+|\/+$/g, '');
+        const requestPath = rawPath === '/' ? '/' : `/${cleanRoutePath}`;
+
+        // Serve the route-specific pre-rendered HTML directly for clean URLs.
+        // This avoids relying on express.static directory redirects or a
+        // trailing-slash URL to reach nested index.html files.
+        const distRoot = path.resolve(distPath) + path.sep;
+        const candidatePath = cleanRoutePath
+          ? path.resolve(distPath, cleanRoutePath, 'index.html')
+          : indexPath;
+        const pagePath = (candidatePath.startsWith(distRoot) || candidatePath === path.resolve(indexPath))
+          ? candidatePath
+          : indexPath;
+        const hasPrerenderedPage = fs.existsSync(pagePath);
+        const rawHtml = fs.readFileSync(hasPrerenderedPage ? pagePath : indexPath, 'utf-8');
         const routeConfig = getSEOConfigForPath(requestPath);
-        const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
+        const seoHtml = hasPrerenderedPage
+          ? rawHtml
+          : transformHTMLForRoute(rawHtml, requestPath);
+
         if (routeConfig.pageName === 'Unknown Route') {
           return res.status(404).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
         }
