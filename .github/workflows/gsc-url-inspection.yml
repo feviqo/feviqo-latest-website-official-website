@@ -1,0 +1,44 @@
+name: Google Search Console URL Inspection
+
+on:
+  workflow_dispatch:
+    inputs:
+      property:
+        description: Search Console property to inspect
+        required: true
+        default: sc-domain:feviqo.com
+      sitemap_url:
+        description: Sitemap URL
+        required: true
+        default: https://feviqo.com/sitemap.xml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Inspect sitemap URLs in Google Search Console
+        env:
+          GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
+          GSC_PROPERTY: ${{ inputs.property }}
+          GSC_SITEMAP_URL: ${{ inputs.sitemap_url }}
+        run: npx tsx scripts/inspectSearchConsole.ts
+      - name: Upload URL inspection results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feviqo-gsc-url-inspection
+          path: artifacts/gsc-url-inspection.json
+          if-no-files-found: ignore
+          retention-days: 14
