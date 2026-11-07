@@ -134,7 +134,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     ],
     canonicalUrl: 'https://feviqo.com/teskilat',
     ogTitle: 'Teşkilat Season 7 Urdu Subtitles | Episodes & Story Guides | FEVIQO',
-    ogDescription: 'Explore Teşkilat Season 7 on FEVIQO with episode guides, story recaps, and Urdu subtitles.'
+    ogDescription: 'Explore Teşkilat Season 7 on FEVIQO with episode guides, story recaps, and Urdu subtitles.',
     ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
@@ -168,7 +168,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     ],
     canonicalUrl: 'https://feviqo.com/teskilat/episode-187',
     ogTitle: 'Teşkilat Season 7 Episode 3 (Bolum 187) Urdu Subtitles | FEVIQO',
-    ogDescription: 'Watch Teşkilat Season 7 Episode 3 (Bolum 187) with Urdu subtitles. Read the episode recap and follow the story on FEVIQO.'
+    ogDescription: 'Watch Teşkilat Season 7 Episode 3 (Bolum 187) with Urdu subtitles. Read the episode recap and follow the story on FEVIQO.',
     ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
@@ -345,7 +345,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     ],
     canonicalUrl: 'https://feviqo.com/mehmed-fetihler-sultani',
     ogTitle: 'Mehmed: Fetihler Sultani Season 4 | Urdu Subtitles & Episodes | FEVIQO',
-    ogDescription: 'Explore Mehmed: Fetihler Sultani Season 4 on FEVIQO with episode guides, story recaps, and Urdu subtitles.'
+    ogDescription: 'Explore Mehmed: Fetihler Sultani Season 4 on FEVIQO with episode guides, story recaps, and Urdu subtitles.',
     ogImage: 'https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
