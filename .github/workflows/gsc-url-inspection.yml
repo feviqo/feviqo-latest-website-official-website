@@ -1,6 +1,9 @@
 name: Google Search Console URL Inspection
 
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       property:
@@ -16,7 +19,22 @@ permissions:
   contents: read
 
 jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Validate inspection script syntax
+        run: npx esbuild scripts/inspectSearchConsole.ts --bundle --platform=node --format=esm --packages=external --outfile=/tmp/gsc-inspection.mjs
   inspect:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
