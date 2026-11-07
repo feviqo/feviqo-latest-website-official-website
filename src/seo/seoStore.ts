@@ -439,6 +439,62 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'Service'
   },
+  '/turkish-drama': {
+    path: '/turkish-drama',
+    pageName: 'Turkish Drama Licensing',
+    seoTitle: 'Turkish Drama Licensing & Urdu Subtitle Partnerships | FEVIQO',
+    metaDescription: 'Explore Turkish drama content licensing, Urdu subtitle production, and distribution partnerships with FEVIQO.',
+    focusKeyword: 'Turkish drama licensing',
+    secondaryKeywords: ['Turkish drama distribution', 'Urdu subtitle production', 'Turkish series licensing'],
+    canonicalUrl: 'https://feviqo.com/turkish-drama',
+    ogTitle: 'Turkish Drama Licensing & Urdu Subtitle Partnerships — FEVIQO',
+    ogDescription: 'Turkish drama content licensing, Urdu subtitle production, and distribution partnerships.',
+    ogImage: 'https://feviqo.com/HEADER-removebg-preview.png',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'Service'
+  },
+  '/privacy': {
+    path: '/privacy',
+    pageName: 'Privacy Policy',
+    seoTitle: 'Privacy Policy | FEVIQO',
+    metaDescription: 'Read how FEVIQO handles personal information, website data, cookies, and privacy requests.',
+    focusKeyword: 'FEVIQO privacy policy',
+    secondaryKeywords: ['privacy', 'data protection', 'cookies'],
+    canonicalUrl: 'https://feviqo.com/privacy',
+    ogTitle: 'Privacy Policy — FEVIQO',
+    ogDescription: 'Information about FEVIQO privacy practices and website data.',
+    ogImage: 'https://feviqo.com/feviqo1.png',
+    robots: 'index, follow',
+    schemaType: 'WebSite'
+  },
+  '/terms': {
+    path: '/terms',
+    pageName: 'Terms of Service',
+    seoTitle: 'Terms of Service | FEVIQO',
+    metaDescription: 'Read the terms governing access to and use of FEVIQO services and website.',
+    focusKeyword: 'FEVIQO terms of service',
+    secondaryKeywords: ['terms of use', 'service terms'],
+    canonicalUrl: 'https://feviqo.com/terms',
+    ogTitle: 'Terms of Service — FEVIQO',
+    ogDescription: 'Terms governing use of FEVIQO services and website.',
+    ogImage: 'https://feviqo.com/feviqo1.png',
+    robots: 'index, follow',
+    schemaType: 'WebSite'
+  },
+  '/platform': {
+    path: '/platform',
+    pageName: 'FEVIQO Flow Platform',
+    seoTitle: 'FEVIQO Flow Platform | Video Editing Workspace',
+    metaDescription: 'Access the FEVIQO Flow workspace for managing video editing requests, projects, and review workflows.',
+    focusKeyword: 'FEVIQO Flow platform',
+    secondaryKeywords: ['video editing client portal', 'video project management'],
+    canonicalUrl: 'https://feviqo.com/platform',
+    ogTitle: 'FEVIQO Flow Platform',
+    ogDescription: 'Manage video editing requests, projects, and reviews in FEVIQO Flow.',
+    ogImage: 'https://feviqo.com/feviqo1.png',
+    robots: 'noindex, follow',
+    schemaType: 'Service'
+  },
   '/admin': {
     path: '/admin',
     pageName: 'Admin Portal',
@@ -528,23 +584,20 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
     }
   }
 
-  // Dynamic fallback for unlisted routes
-  const cleanTitle = pathname.replace('/', '').replace('-', ' ');
-  const capitalized = cleanTitle ? cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1) : 'Page';
-  const rawCanonical = `https://feviqo.com${pathname.endsWith('/') ? pathname : pathname + '/'}`;
-
+  // Unknown URLs currently fall through to the homepage in the React app.
+  // Do not give those soft-404 routes self-canonicals or indexable metadata.
   return {
-    path: pathname,
-    pageName: capitalized,
-    seoTitle: `${capitalized} | ${BRAND_SYSTEM.titleSuffix}`,
-    metaDescription: `${capitalized} page for FEVIQO Performance Creative Studio. Unlimited video editing and performance ad creatives at scale.`,
-    focusKeyword: cleanTitle || 'video editing',
-    secondaryKeywords: GLOBAL_KEYWORD_TAXONOMY.BRAND,
-    canonicalUrl: rawCanonical,
-    ogTitle: `${capitalized} — ${BRAND_SYSTEM.name}`,
-    ogDescription: BRAND_SYSTEM.positioning,
+    path: cleanPath,
+    pageName: 'Unknown Route',
+    seoTitle: `Page Not Found | ${BRAND_SYSTEM.name}`,
+    metaDescription: 'This FEVIQO page could not be found.',
+    focusKeyword: 'page not found',
+    secondaryKeywords: [],
+    canonicalUrl: 'https://feviqo.com/',
+    ogTitle: `Page Not Found | ${BRAND_SYSTEM.name}`,
+    ogDescription: 'This FEVIQO page could not be found.',
     ogImage: BRAND_SYSTEM.defaultOgImage,
-    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    robots: 'noindex, follow',
     schemaType: 'WebSite'
   };
 }
