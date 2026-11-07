@@ -1,0 +1,48 @@
+name: Apply non-breaking npm security fixes
+
+on:
+  push:
+    branches:
+      - npm-security-fixes-2026-11-07
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  audit-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          persist-credentials: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Update Express within the current major version
+        run: npm install express@^4.22.3 --save
+      - name: Apply compatible security patches
+        run: npm audit fix
+      - name: Verify no advisories remain
+        run: npm audit
+      - name: Verify production build
+        run: npm run build
+      - name: Commit updated dependency lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- package.json package-lock.json; then
+            git add package.json package-lock.json
+            git commit -m "fix(deps): apply non-breaking npm security patches"
+            git push origin HEAD:npm-security-fixes-2026-11-07
+          else
+            echo "No dependency changes were needed."
+          fi
