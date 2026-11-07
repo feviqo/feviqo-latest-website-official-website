@@ -1,0 +1,39 @@
+name: Apply non-breaking npm security fixes
+
+on:
+  push:
+    branches:
+      - npm-security-fixes-2026-11-07
+
+permissions:
+  contents: write
+
+jobs:
+  audit-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Apply compatible security patches
+        run: npm audit fix
+      - name: Verify production build
+        run: npm run build
+      - name: Commit updated dependency lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- package.json package-lock.json; then
+            git add package.json package-lock.json
+            git commit -m "fix(deps): apply non-breaking npm security patches"
+            git push origin HEAD:npm-security-fixes-2026-11-07
+          else
+            echo "No dependency changes were needed."
+          fi
