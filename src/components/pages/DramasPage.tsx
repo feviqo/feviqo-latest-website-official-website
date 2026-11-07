@@ -36,9 +36,9 @@ const dramas: DramaItem[] = [
     subtitle: "Season 7 · Turkish Drama · Urdu Subtitles",
     description: "An intense intelligence drama of missions, loyalty, sacrifice and betrayal. Altay and his secret operatives face dangerous operations to protect their homeland from international threats.",
     image: "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
-    href: "/teskilat/",
+    href: "/teskilat",
     buttonLabel: "Watch Teskilat Season 7",
-    latestEpisodeUrl: "/teskilat/episode-189/",
+    latestEpisodeUrl: "/teskilat/episode-189",
     latestEpisodeLabel: "Episode 189 (Latest)"
   },
   {
@@ -47,10 +47,10 @@ const dramas: DramaItem[] = [
     subtitle: "Turkish Drama · Urdu Subtitles",
     description: "A powerful Turkish story of people, ambition, struggle and the choices that shape their lives. Follow an intense family saga, deep regional rivalries, and lovers torn apart by secrets.",
     image: "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
-    href: "/gunesin-dogdugu-yer/",
+    href: "/gunesin-dogdugu-yer",
     buttonLabel: "Watch Gunesin Dogdugu Yer",
-    latestEpisodeUrl: "/gunesin-dogdugu-yer/episode-5/",
-    latestEpisodeLabel: "Episode 5 (Latest)"
+    latestEpisodeUrl: "/gunesin-dogdugu-yer/episode-7",
+    latestEpisodeLabel: "Episode 7 (Latest)"
   },
   {
     id: "mehmed-fetihler-sultani",
@@ -58,10 +58,10 @@ const dramas: DramaItem[] = [
     subtitle: "Season 4 · Turkish Drama · Urdu Subtitles",
     description: "The epic historical saga of Sultan Mehmed II, the Conqueror of Constantinople. Watch tactical siege operations, imperial intrigue, and royal warfare in HD Urdu Subtitles.",
     image: "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
-    href: "/mehmed-fetihler-sultani/",
+    href: "/mehmed-fetihler-sultani",
     buttonLabel: "Explore Mehmed Hub",
-    latestEpisodeUrl: "/mehmed-fetihler-sultani/episode-89/",
-    latestEpisodeLabel: "Episode 89 (New Release)"
+    latestEpisodeUrl: "/mehmed-fetihler-sultani/episode-90",
+    latestEpisodeLabel: "Episode 90 (New Release)"
   }
 ];
 

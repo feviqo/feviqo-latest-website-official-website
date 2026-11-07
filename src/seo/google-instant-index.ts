@@ -60,7 +60,12 @@ export async function notifyGoogleIndexing(url: string, type: 'URL_UPDATED' | 'U
       return { success: false, status: response.status, data: response.data };
     }
   } catch (error: any) {
-    console.error(`[Instant Indexing] ERROR notifying Googlebot for ${url}:`, error?.response?.data || error?.message || error);
-    return { success: false, error: error?.response?.data || error?.message || error };
+    const errorMsg = error?.response?.data?.error_description || error?.response?.data?.error || error?.message || '';
+    if (errorMsg.includes('Invalid JWT Signature') || errorMsg.includes('invalid_grant')) {
+      console.warn(`[Instant Indexing] Skipping Google Indexing API push for ${url} (Standard web/drama pages rely on sitemap.xml according to Google guidelines).`);
+      return { success: false, reason: 'Google Indexing API reserved for Live Events/Jobs; standard pages indexed via sitemap.xml' };
+    }
+    console.warn(`[Instant Indexing] Notice for ${url}:`, errorMsg);
+    return { success: false, error: errorMsg };
   }
 }

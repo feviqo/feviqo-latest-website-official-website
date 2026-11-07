@@ -1026,14 +1026,14 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <a
-                    href="/mehmed-fetihler-sultani/episode-89/"
+                    href="/mehmed-fetihler-sultani/episode-90"
                     className="px-6 py-3 bg-[#22C55E] hover:bg-emerald-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition-all shadow-md flex items-center gap-2"
                   >
-                    <span>Watch Episode 89</span>
+                    <span>Watch Episode 90</span>
                     <ChevronRight className="w-4 h-4 text-slate-950" />
                   </a>
                   <a
-                    href="/mehmed-fetihler-sultani/"
+                    href="/mehmed-fetihler-sultani"
                     className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm rounded-xl transition border border-white/10"
                   >
                     Series Hub

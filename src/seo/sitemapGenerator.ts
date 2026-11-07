@@ -35,8 +35,8 @@ function formatUrlNode(
   videoInfo?: VideoXmlInfo
 ): string {
   let normalizedPath = urlPath.startsWith('/') ? urlPath : `/${urlPath}`;
-  if (!normalizedPath.endsWith('/') && !normalizedPath.includes('.')) {
-    normalizedPath += '/';
+  if (normalizedPath !== '/' && normalizedPath.endsWith('/')) {
+    normalizedPath = normalizedPath.slice(0, -1);
   }
   const fullLoc = `${SITE_ORIGIN}${normalizedPath}`;
   
@@ -94,8 +94,8 @@ export function generateSitemapXml(): string {
     videoInfo?: VideoXmlInfo
   ) => {
     let normalizedPath = urlPath.startsWith('/') ? urlPath : `/${urlPath}`;
-    if (!normalizedPath.endsWith('/') && !normalizedPath.includes('.')) {
-      normalizedPath += '/';
+    if (normalizedPath !== '/' && normalizedPath.endsWith('/')) {
+      normalizedPath = normalizedPath.slice(0, -1);
     }
     // Block all trending subpaths
     if (normalizedPath.startsWith('/trending')) return;

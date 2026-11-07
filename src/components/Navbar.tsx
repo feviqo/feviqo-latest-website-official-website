@@ -277,13 +277,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="absolute top-full right-0 w-80 bg-slate-900/60 backdrop-blur-3xl border border-white/20 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-white/10">
                 <div className="space-y-1">
                   <a 
-                    href="/mehmed-fetihler-sultani/"
+                    href="/mehmed-fetihler-sultani"
                     onClick={(e) => {
                       e.preventDefault();
                       onNavigatePage('mehmed-fetihler-sultani' as any);
                       setDramasOpen(false);
                       if (typeof window !== 'undefined' && window.history) {
-                        window.history.pushState({}, '', '/mehmed-fetihler-sultani/');
+                        window.history.pushState({}, '', '/mehmed-fetihler-sultani');
                       }
                     }}
                     className="w-full text-left p-3 rounded-xl hover:bg-white/15 flex items-start gap-3 transition group cursor-pointer border border-transparent hover:border-white/15"
@@ -335,7 +335,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
 
                   <a 
-                    href="/dramas/"
+                    href="/dramas"
                     onClick={(e) => {
                       e.preventDefault();
                       onNavigatePage('dramas');
@@ -484,13 +484,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Turkish Dramas</div>
                 
                 <a 
-                  href="/mehmed-fetihler-sultani/"
+                  href="/mehmed-fetihler-sultani"
                   onClick={(e) => {
                     e.preventDefault();
                     onNavigatePage('mehmed-fetihler-sultani' as any);
                     setMobileMenuOpen(false);
                     if (typeof window !== 'undefined' && window.history) {
-                      window.history.pushState({}, '', '/mehmed-fetihler-sultani/');
+                      window.history.pushState({}, '', '/mehmed-fetihler-sultani');
                     }
                   }}
                   className="w-full text-left py-2.5 px-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/60 font-extrabold cursor-pointer text-emerald-300 flex items-center justify-between border border-emerald-500/10"

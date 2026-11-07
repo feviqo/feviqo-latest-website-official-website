@@ -5,23 +5,23 @@
 ## Core Navigation & Services
 
 - [Homepage](https://feviqo.com/): FEVIQO creative video post-production agency, showreel, and unlimited video editing subscriptions.
-- [Unlimited Video Editing](https://feviqo.com/unlimited-editing/): Flat-rate monthly editing plans with dedicated lead editors and unlimited revisions.
-- [Pricing Plans](https://feviqo.com/pricing/): Transparent subscription tiers for creators, brands, and agencies with no lock-in contracts.
-- [Content Creators](https://feviqo.com/creators/): High-retention editing for YouTube, TikTok (9:16), Reels, and podcasts.
-- [Agencies](https://feviqo.com/agencies/): Scalable white-label video editing pods for marketing agencies and growth teams.
-- [Business & Brands](https://feviqo.com/business/): Direct-response performance video ads, VSLs, and product launch assets.
-- [Video Showcase](https://feviqo.com/gallery/): Filterable video portfolio and showreel showcase across short-form and long-form formats.
-- [Book a Strategy Call](https://feviqo.com/booking/): 1-on-1 creative strategy and onboarding consultation.
-- [About FEVIQO](https://feviqo.com/about/): Agency leadership, creative directors, and company background.
+- [Unlimited Video Editing](https://feviqo.com/unlimited-editing): Flat-rate monthly editing plans with dedicated lead editors and unlimited revisions.
+- [Pricing Plans](https://feviqo.com/pricing): Transparent subscription tiers for creators, brands, and agencies with no lock-in contracts.
+- [Content Creators](https://feviqo.com/creators): High-retention editing for YouTube, TikTok (9:16), Reels, and podcasts.
+- [Agencies](https://feviqo.com/agencies): Scalable white-label video editing pods for marketing agencies and growth teams.
+- [Business & Brands](https://feviqo.com/business): Direct-response performance video ads, VSLs, and product launch assets.
+- [Video Showcase](https://feviqo.com/gallery): Filterable video portfolio and showreel showcase across short-form and long-form formats.
+- [Book a Strategy Call](https://feviqo.com/booking): 1-on-1 creative strategy and onboarding consultation.
+- [About FEVIQO](https://feviqo.com/about): Agency leadership, creative directors, and company background.
 
 ## Turkish Drama Portals
 
-- [Turkish Dramas Directory](https://feviqo.com/dramas/): Comprehensive streaming index of premium Turkish television series with Urdu subtitles.
-- [Mehmed: Fetihler Sultanı](https://feviqo.com/mehmed-fetihler-sultani/): Historical drama series detailing Sultan Mehmed II's conquests with high-definition Urdu subtitles.
-- [Mehmed Episode 89](https://feviqo.com/mehmed-fetihler-sultani/episode-89/): Official streaming page for Episode 89 (Bolum 89) in 1080p HD.
-- [Teşkilat Season 7](https://feviqo.com/teskilat/): Turkish espionage and intelligence agency action series with Urdu subtitles.
-- [Teşkilat Episode 189](https://feviqo.com/teskilat/episode-189/): Official streaming portal for Episode 189 (Bolum 189).
-- [Güneşin Doğduğu Yer](https://feviqo.com/gunesin-dogdugu-yer/): Emotional family drama portal with Urdu subtitles.
+- [Turkish Dramas Directory](https://feviqo.com/dramas): Comprehensive streaming index of premium Turkish television series with Urdu subtitles.
+- [Mehmed: Fetihler Sultanı](https://feviqo.com/mehmed-fetihler-sultani): Historical drama series detailing Sultan Mehmed II's conquests with high-definition Urdu subtitles.
+- [Mehmed Episode 89](https://feviqo.com/mehmed-fetihler-sultani/episode-89): Official streaming page for Episode 89 (Bolum 89) in 1080p HD.
+- [Teşkilat Season 7](https://feviqo.com/teskilat): Turkish espionage and intelligence agency action series with Urdu subtitles.
+- [Teşkilat Episode 189](https://feviqo.com/teskilat/episode-189): Official streaming portal for Episode 189 (Bolum 189).
+- [Güneşin Doğduğu Yer](https://feviqo.com/gunesin-dogdugu-yer): Emotional family drama portal with Urdu subtitles.
 
 ## Machine-Readable Resources
 

@@ -169,14 +169,14 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
     setActiveServerIndex(0);
 
     if (typeof window !== 'undefined' && window.history) {
-      window.history.pushState({}, '', `/mehmed-fetihler-sultani/${ep.slug}/`);
+      window.history.pushState({}, '', `/mehmed-fetihler-sultani/${ep.slug}`);
     }
   };
 
   const handleBackToOverview = () => {
     setActiveView('overview');
     if (typeof window !== 'undefined' && window.history) {
-      window.history.pushState({}, '', '/mehmed-fetihler-sultani/');
+      window.history.pushState({}, '', '/mehmed-fetihler-sultani');
     }
   };
 
@@ -340,7 +340,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     {/* Right button panel */}
                     <div className="lg:col-span-4 flex items-center lg:justify-end w-full">
                       <a 
-                        href={`/mehmed-fetihler-sultani/${latestEpisode.slug}/`}
+                        href={`/mehmed-fetihler-sultani/${latestEpisode.slug}`}
                         onClick={(e) => {
                           e.preventDefault();
                           navigateToEpisode(latestEpisode);
@@ -363,7 +363,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   
                   {/* Thumbnail Cover */}
                   <a 
-                    href={`/mehmed-fetihler-sultani/${latestEpisode.slug}/`}
+                    href={`/mehmed-fetihler-sultani/${latestEpisode.slug}`}
                     onClick={(e) => {
                       e.preventDefault();
                       navigateToEpisode(latestEpisode);
@@ -394,7 +394,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                         <span>EPISODE {latestEpisode.number} (BOLUM {latestEpisode.number})</span>
                       </div>
                       <a 
-                        href={`/mehmed-fetihler-sultani/${latestEpisode.slug}/`}
+                        href={`/mehmed-fetihler-sultani/${latestEpisode.slug}`}
                         onClick={(e) => {
                           e.preventDefault();
                           navigateToEpisode(latestEpisode);
@@ -417,7 +417,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     </p>
 
                     <a 
-                      href={`/mehmed-fetihler-sultani/${latestEpisode.slug}/`}
+                      href={`/mehmed-fetihler-sultani/${latestEpisode.slug}`}
                       onClick={(e) => {
                         e.preventDefault();
                         navigateToEpisode(latestEpisode);
@@ -485,7 +485,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     {filteredEpisodes.map((ep) => (
                       <a 
                         key={ep.slug}
-                        href={`/mehmed-fetihler-sultani/${ep.slug}/`}
+                        href={`/mehmed-fetihler-sultani/${ep.slug}`}
                         onClick={(e) => {
                           e.preventDefault();
                           navigateToEpisode(ep);
@@ -618,9 +618,9 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                 <nav aria-label="Breadcrumb" className="text-xs text-slate-500 font-medium flex items-center gap-2">
                   <a href="/" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); onNavigatePage('home'); }}>FEVIQO</a>
                   <span className="text-slate-300">/</span>
-                  <a href="/dramas/" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); onNavigatePage('dramas'); }}>Turkish Dramas</a>
+                  <a href="/dramas" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); onNavigatePage('dramas'); }}>Turkish Dramas</a>
                   <span className="text-slate-300">/</span>
-                  <a href="/mehmed-fetihler-sultani/" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); handleBackToOverview(); }}>Mehmed Fetihler Sultani</a>
+                  <a href="/mehmed-fetihler-sultani" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); handleBackToOverview(); }}>Mehmed Fetihler Sultani</a>
                   <span className="text-slate-300">/</span>
                   <span className="text-emerald-600 font-bold">Episode {selectedEpisode.number}</span>
                 </nav>

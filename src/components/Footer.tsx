@@ -226,43 +226,43 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2 text-xs text-emerald-100 font-normal">
               <li>
-                <a href="/mehmed-fetihler-sultani/episode-89/" onClick={(e) => { e.preventDefault(); if (onNavigatePage) onNavigatePage('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer font-black text-amber-300 flex items-center justify-between">
-                  <span>Mehmed Episode 89 (Bolum 89)</span>
+                <a href="/mehmed-fetihler-sultani/episode-90" onClick={(e) => { e.preventDefault(); if (onNavigatePage) onNavigatePage('mehmed-fetihler-sultani-ep90' as any); }} className="hover:text-white transition cursor-pointer font-black text-amber-300 flex items-center justify-between">
+                  <span>Mehmed Episode 90 (Bolum 90)</span>
                   <span className="px-1.5 py-0.5 rounded bg-red-600/90 text-white font-black text-[9px] uppercase tracking-wider">NEW</span>
                 </a>
               </li>
               <li>
-                <a href="/mehmed-fetihler-sultani/episode-88/" onClick={(e) => { e.preventDefault(); if (onNavigatePage) onNavigatePage('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer font-bold text-emerald-200 block">
-                  Mehmed Ep 88 (Bolum 88)
+                <a href="/mehmed-fetihler-sultani/episode-89" onClick={(e) => { e.preventDefault(); if (onNavigatePage) onNavigatePage('mehmed-fetihler-sultani-ep89' as any); }} className="hover:text-white transition cursor-pointer font-bold text-emerald-200 block">
+                  Mehmed Ep 89 (Bolum 89)
                 </a>
               </li>
               <li>
-                <a href="/mehmed-fetihler-sultani/episode-87/" onClick={(e) => { e.preventDefault(); if (onNavigatePage) onNavigatePage('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer text-emerald-300 block">
-                  Mehmed Season 4 Ep 4 (87)
-                </a>
-              </li>
-              <li>
-                <a href="/mehmed-fetihler-sultani/" onClick={(e) => { e.preventDefault(); nav('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
+                <a href="/mehmed-fetihler-sultani" onClick={(e) => { e.preventDefault(); nav('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
                   Mehmed: Fetihler Sultanı Hub
                 </a>
               </li>
               <li>
-                <a href="/teskilat/episode-189/" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer font-bold text-amber-300 block">
+                <a href="/gunesin-dogdugu-yer/episode-7" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer-ep7' as any); }} className="hover:text-white transition cursor-pointer font-bold text-amber-300 block">
+                  Güneşin Doğduğu Yer Ep 7
+                </a>
+              </li>
+              <li>
+                <a href="/teskilat/episode-189" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer font-bold text-emerald-300 block">
                   Teşkilat Ep 189 (Bolum 189)
                 </a>
               </li>
               <li>
-                <a href="/teskilat/" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
+                <a href="/teskilat" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
                   Teşkilat Season 7 Hub
                 </a>
               </li>
               <li>
-                <a href="/gunesin-dogdugu-yer/" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer font-bold text-emerald-300 block">
-                  Güneşin Doğduğu Yer
+                <a href="/gunesin-dogdugu-yer" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer font-bold text-emerald-300 block">
+                  Güneşin Doğduğu Yer Hub
                 </a>
               </li>
               <li>
-                <a href="/dramas/" onClick={(e) => { e.preventDefault(); nav('dramas'); }} className="hover:text-white transition cursor-pointer text-[#DBFF4C] font-extrabold underline block mt-1">
+                <a href="/dramas" onClick={(e) => { e.preventDefault(); nav('dramas'); }} className="hover:text-white transition cursor-pointer text-[#DBFF4C] font-extrabold underline block mt-1">
                   View All Drama Portals &rarr;
                 </a>
               </li>
