@@ -93,6 +93,11 @@ app.use((req, res, next) => {
       '/teskilat-urdu/': '/teskilat/',
       '/teskilat-urdu/episode-189': '/teskilat/episode-189/',
       '/teskilat-urdu/episode-188': '/teskilat/episode-188/',
+      '/teskilat-urdu/episode-187': '/teskilat/episode-187/',
+      '/teskilat-urdu/episode-186': '/teskilat/episode-186/',
+      '/for-creators': '/creators/',
+      '/for-business': '/business/',
+      '/for-agencies': '/agencies/',
     };
 
     if (aliasMap[rawPath] && aliasMap[rawPath] !== rawPath) {
