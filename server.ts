@@ -7,6 +7,7 @@ import { execFile } from 'child_process';
 import nodemailer from 'nodemailer';
 import { createServer as createViteServer } from 'vite';
 import { transformHTMLForRoute } from './src/seo/serverSEO';
+import { getSEOConfigForPath } from './src/seo/seoStore';
 import { 
   generateSitemapXml, 
   updateSitemapFiles 
@@ -73,6 +74,7 @@ app.use((req, res, next) => {
       '/mehmed/episode-87': '/mehmed-fetihler-sultani/episode-87/',
       '/mehmed/episode-88': '/mehmed-fetihler-sultani/episode-88/',
       '/mehmed/episode-89': '/mehmed-fetihler-sultani/episode-89/',
+      '/mehmed/episode-90': '/mehmed-fetihler-sultani/episode-90/',
       '/mehmed-fetihler-sultani/episode-87': '/mehmed-fetihler-sultani/episode-87/',
       '/mehmed-fetihler-sultani/episode-88': '/mehmed-fetihler-sultani/episode-88/',
       '/mehmed-fetihler-sultani/episode-89': '/mehmed-fetihler-sultani/episode-89/',
@@ -2641,8 +2643,12 @@ async function startServer() {
         rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
         const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
         const requestPath = rawPath === '/' ? '/' : (rawPath.endsWith('/') ? rawPath : `${rawPath}/`);
+        const routeConfig = getSEOConfigForPath(requestPath);
         const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
-        const canonicalUrl = `https://feviqo.com${requestPath}`;
+        if (routeConfig.pageName === 'Unknown Route') {
+          return res.status(404).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
+        }
+        const canonicalUrl = routeConfig.canonicalUrl;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
         return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
       } catch (e) {
@@ -2669,8 +2675,12 @@ async function startServer() {
         const rawHtml = fs.readFileSync(indexPath, 'utf-8');
         const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
         const requestPath = rawPath === '/' ? '/' : (rawPath.endsWith('/') ? rawPath : `${rawPath}/`);
+        const routeConfig = getSEOConfigForPath(requestPath);
         const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
-        const canonicalUrl = `https://feviqo.com${requestPath}`;
+        if (routeConfig.pageName === 'Unknown Route') {
+          return res.status(404).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
+        }
+        const canonicalUrl = routeConfig.canonicalUrl;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
         return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
       } catch {
