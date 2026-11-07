@@ -55,6 +55,17 @@ async function main() {
   });
   const client = await auth.getClient();
   const searchConsole = google.searchconsole({ version: 'v1', auth: client as any });
+
+  // Diagnose which Search Console properties Google actually exposes to this identity.
+  const sitesResponse = await searchConsole.sites.list();
+  const visibleProperties = (sitesResponse.data.siteEntry || []).map((site) => ({
+    siteUrl: site.siteUrl,
+    permissionLevel: site.permissionLevel,
+  }));
+  console.log('Search Console properties visible to this service account:');
+  console.log(JSON.stringify(visibleProperties, null, 2));
+  console.log(`Requested property visible: ${visibleProperties.some((site) => site.siteUrl === PROPERTY)}`);
+
   const results: InspectionRow[] = [];
 
   for (const url of uniqueUrls) {
