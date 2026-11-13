@@ -1,0 +1,11 @@
+[
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "admin_bootstrapped",
+    "targetId": "adm-1794577927114-c1a5a6",
+    "details": "Primary administrator account initialized for partner@feviqo.com.",
+    "id": "aud-1794577927124-ab3f02",
+    "createdAt": "2026-11-13T13:52:07.124Z"
+  }
+]

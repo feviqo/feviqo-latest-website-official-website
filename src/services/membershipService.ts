@@ -504,3 +504,48 @@ export async function updateAdminRoleStatus(
   });
   return parseJsonSafe(res);
 }
+
+export interface AdminEmailTransportStatus {
+  smtpConfigured: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpFrom: string;
+  resendConfigured: boolean;
+  resendFrom: string;
+}
+
+export async function fetchAdminEmailTransport(): Promise<
+  { success: true; transport: AdminEmailTransportStatus } | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/email-transport', { credentials: 'include' });
+  return parseJsonSafe(res);
+}
+
+export async function saveAdminEmailTransport(payload: {
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPass?: string;
+  smtpFrom?: string;
+  resendApiKey?: string;
+  resendFrom?: string;
+  sendTestEmail?: boolean;
+}): Promise<
+  | {
+      success: true;
+      transport: AdminEmailTransportStatus;
+      testResult?: { success: boolean; provider?: string; error?: string } | null;
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/email-transport', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+

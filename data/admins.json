@@ -1,0 +1,12 @@
+[
+  {
+    "id": "adm-1794577927114-c1a5a6",
+    "email": "partner@feviqo.com",
+    "name": "FEVIQO Owner",
+    "passwordHash": "253cad7d05825de04fcd0e3e0f682c76:d14d1d97cc8520168f67615ea03b677f12284e70bdaf042a784f17749a6f5c75376b016122d40a37fb6643c7f8c063b7625d45fdbdfd2ac4e12007376b9bceeb",
+    "role": "admin",
+    "isActive": true,
+    "createdAt": "2026-11-13T13:52:07.123Z",
+    "createdBy": "initial_owner_setup"
+  }
+]

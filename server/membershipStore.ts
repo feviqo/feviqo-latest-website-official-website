@@ -435,8 +435,8 @@ const DEFAULT_CONFIG: MembershipConfig = {
   standardQrImage: '/images/qr/standard-qr.jpg',
   plusQrImage: '/images/qr/plus-qr.jpg',
   vipQrImage: '/images/qr/vip-qr.jpg',
-  whatsappNumber: (process.env.FEVIQO_WHATSAPP_NUMBER || '').trim(),
-  adminEmail: (process.env.FEVIQO_ADMIN_EMAIL || 'rexanmedia01@gmail.com').trim(),
+  whatsappNumber: (process.env.FEVIQO_WHATSAPP_NUMBER || '+923227811264').trim(),
+  adminEmail: (process.env.FEVIQO_ADMIN_EMAIL || 'partner@feviqo.com').trim(),
   supportEmail: 'partner@feviqo.com',
   supportNoteEn: 'Payments are manually verified by our team before membership activation.',
   supportNoteUr: 'ادائیگی کی دستی تصدیق کے بعد آپ کی ممبرشپ فعال کر دی جاتی ہے۔',
@@ -453,10 +453,10 @@ export function getMembershipConfig(): MembershipConfig {
     whatsappNumber:
       saved.whatsappNumber !== undefined
         ? saved.whatsappNumber
-        : (process.env.FEVIQO_WHATSAPP_NUMBER || '').trim(),
+        : (process.env.FEVIQO_WHATSAPP_NUMBER || '+923227811264').trim(),
     adminEmail:
       saved.adminEmail ||
-      (process.env.FEVIQO_ADMIN_EMAIL || 'rexanmedia01@gmail.com').trim(),
+      (process.env.FEVIQO_ADMIN_EMAIL || 'partner@feviqo.com').trim(),
     supportEmail: saved.supportEmail || DEFAULT_CONFIG.supportEmail,
     supportNoteEn: saved.supportNoteEn || DEFAULT_CONFIG.supportNoteEn,
     supportNoteUr: saved.supportNoteUr || DEFAULT_CONFIG.supportNoteUr,
@@ -659,10 +659,9 @@ export function getAdminAuthStatus(): { hasConfiguredAdmins: boolean; configured
   syncEnvAdmin();
   const admins = readJson<AdminRecord[]>(ADMINS_FILE, []);
   const hasActive = admins.some((a) => a.isActive && a.role === 'admin');
-  const cfg = getMembershipConfig();
   return {
     hasConfiguredAdmins: hasActive,
-    configuredAdminEmail: hasActive ? '' : cfg.adminEmail,
+    configuredAdminEmail: '',
   };
 }
 

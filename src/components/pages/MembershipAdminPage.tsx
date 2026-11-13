@@ -38,6 +38,8 @@ import {
   retryEmailNotification,
   grantAdminRole,
   updateAdminRoleStatus,
+  fetchAdminEmailTransport,
+  saveAdminEmailTransport,
 } from '../../services/membershipService';
 
 interface MembershipAdminPageProps {
@@ -106,6 +108,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [creatingAdmin, setCreatingAdmin] = useState(false);
 
+  // Email transport (SMTP / Resend) form state
+  const [smtpHostInput, setSmtpHostInput] = useState('smtp.gmail.com');
+  const [smtpPortInput, setSmtpPortInput] = useState('587');
+  const [smtpUserInput, setSmtpUserInput] = useState('');
+  const [smtpPassInput, setSmtpPassInput] = useState('');
+  const [resendKeyInput, setResendKeyInput] = useState('');
+  const [savingTransport, setSavingTransport] = useState(false);
+
   const syncSettingsFromOverview = (ov: AdminMembershipsOverview) => {
     setWhatsappInput(ov.config.whatsappNumber || '');
     setAdminEmailInput(ov.config.adminEmail || '');
@@ -117,7 +127,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const loadOverview = async () => {
     setLoadingOverview(true);
     try {
-      const res = await fetchAdminMembershipsOverview();
+      const [res, trRes] = await Promise.all([
+        fetchAdminMembershipsOverview(),
+        fetchAdminEmailTransport().catch(() => null),
+      ]);
       if ('error' in res) {
         setFeedbackBanner({ type: 'error', text: res.error });
         if (res.code === 'ADMIN_AUTH_REQUIRED' || res.code === 'ADMIN_FORBIDDEN') {
@@ -126,6 +139,11 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       } else {
         setOverview(res);
         syncSettingsFromOverview(res);
+      }
+      if (trRes && trRes.success && trRes.transport) {
+        setSmtpHostInput(trRes.transport.smtpHost || 'smtp.gmail.com');
+        setSmtpPortInput(String(trRes.transport.smtpPort || 587));
+        setSmtpUserInput(trRes.transport.smtpUser || '');
       }
     } catch {
       setFeedbackBanner({ type: 'error', text: 'Could not load admin dashboard overview.' });
@@ -515,7 +533,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   required
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="admin@feviqo.com"
+                  placeholder="Enter admin email"
                   className="w-full px-3.5 py-2.5 text-sm border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
                 />
               </div>
@@ -1058,6 +1076,122 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   >
                     {savingSettings ? 'Saving Settings...' : 'Save Settings'}
                   </button>
+                </form>
+
+                {/* Email Delivery Credentials (Gmail SMTP App Password / Resend API Key) */}
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setSavingTransport(true);
+                    setFeedbackBanner(null);
+                    try {
+                      const res = await saveAdminEmailTransport({
+                        smtpHost: smtpHostInput.trim(),
+                        smtpPort: Number(smtpPortInput) || 587,
+                        smtpUser: smtpUserInput.trim(),
+                        smtpPass: smtpPassInput.trim() || undefined,
+                        resendApiKey: resendKeyInput.trim() ? resendKeyInput.trim() : undefined,
+                        sendTestEmail: true,
+                      });
+                      if ('error' in res) {
+                        setFeedbackBanner({ type: 'error', text: res.error });
+                      } else {
+                        setOverview(res.overview);
+                        setSmtpPassInput('');
+                        setResendKeyInput('');
+                        if (res.testResult?.success) {
+                          setFeedbackBanner({
+                            type: 'success',
+                            text: `Email credentials saved & verified via ${res.testResult.provider?.toUpperCase()}! Check inbox for test email.`,
+                          });
+                        } else {
+                          setFeedbackBanner({
+                            type: 'error',
+                            text: `Saved settings, but test email failed: ${res.testResult?.error || 'Verify Gmail App Password or Resend key.'}`,
+                          });
+                        }
+                      }
+                    } catch {
+                      setFeedbackBanner({ type: 'error', text: 'Failed to save email transport credentials.' });
+                    } finally {
+                      setSavingTransport(false);
+                    }
+                  }}
+                  className="lg:col-span-12 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4"
+                >
+                  <div>
+                    <h2 className="text-lg font-bold text-[#0B0B0D]">
+                      Email Delivery Credentials (Gmail SMTP App Password or Resend)
+                    </h2>
+                    <p className="text-xs text-zinc-600 mt-0.5 leading-relaxed">
+                      Required for automatic admin verification alerts when a customer uploads a screenshot. For Gmail, enable 2-Step Verification and generate a 16-character App Password under Google Account → Security → App passwords.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-700 mb-1">SMTP Host</label>
+                      <input
+                        type="text"
+                        value={smtpHostInput}
+                        onChange={(e) => setSmtpHostInput(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-700 mb-1">SMTP Port</label>
+                      <input
+                        type="number"
+                        value={smtpPortInput}
+                        onChange={(e) => setSmtpPortInput(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-700 mb-1">SMTP Email (Sender)</label>
+                      <input
+                        type="email"
+                        value={smtpUserInput}
+                        onChange={(e) => setSmtpUserInput(e.target.value)}
+                        placeholder="Sender email address"
+                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                        New Gmail App Password
+                      </label>
+                      <input
+                        type="password"
+                        value={smtpPassInput}
+                        onChange={(e) => setSmtpPassInput(e.target.value)}
+                        placeholder="16-character App Password"
+                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                    <div>
+                      <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                        Or Resend API Key (Optional Alternative)
+                      </label>
+                      <input
+                        type="password"
+                        value={resendKeyInput}
+                        onChange={(e) => setResendKeyInput(e.target.value)}
+                        placeholder="re_..."
+                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={savingTransport}
+                      className="py-2.5 px-5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold transition cursor-pointer disabled:opacity-60"
+                    >
+                      {savingTransport ? 'Testing Email Delivery...' : 'Save Credentials & Send Test Email'}
+                    </button>
+                  </div>
                 </form>
               </div>
             )}

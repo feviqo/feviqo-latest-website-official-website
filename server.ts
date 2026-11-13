@@ -566,18 +566,25 @@ async function sendServerEmail(params: {
   data?: any;
 }): Promise<{ success: boolean; messageId?: string; provider?: string; error?: string; smtpError?: string }> {
   const { to, subject, html, type = 'general', data = {} } = params;
+  let resendErrorDetails: string | null = null;
   let smtpErrorDetails: string | null = null;
 
-  // 1. Try Resend HTTP API FIRST (Fastest, instant 200ms REST delivery)
-  const resendApiKey = getActiveResendKey();
-  if (resendApiKey) {
+  // 1. Try Resend HTTP API FIRST (Fastest, instant REST delivery)
+  const resendCandidates = Array.from(
+    new Set(
+      [getActiveResendKey(), (process.env.RESEND_API_KEY || '').trim()].filter(
+        (v): v is string => Boolean(v)
+      )
+    )
+  );
+  for (const resendApiKey of resendCandidates) {
     try {
       const resendFrom = getActiveResendFrom();
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${resendApiKey.trim()}`,
+          Authorization: `Bearer ${resendApiKey}`,
         },
         body: JSON.stringify({
           from: resendFrom,
@@ -592,17 +599,33 @@ async function sendServerEmail(params: {
         logDispatchedEmail({ id: json.id, to, subject, type, provider: 'resend', sentAt: new Date().toISOString() });
         return { success: true, messageId: json.id, provider: 'resend' };
       } else {
-        const resendErr = await res.json().catch(() => ({}));
+        const resendErr: any = await res.json().catch(() => ({}));
+        resendErrorDetails = resendErr?.message || `Resend HTTP ${res.status}`;
         console.warn('[Resend Rejected Dispatch, falling back]:', resendErr);
       }
-    } catch (err) {
+    } catch (err: any) {
+      resendErrorDetails = err?.message || 'Resend network error';
       console.warn('[Resend Dispatch Exception, falling back]:', err);
     }
   }
 
-  // 2. Try Nodemailer SMTP (Gmail App Password or custom SMTP)
-  const smtpConfig = getActiveSmtpConfig();
-  if (smtpConfig && smtpConfig.pass) {
+  // 2. Try Nodemailer SMTP (Gmail App Password or custom SMTP; file config then env fallback)
+  const smtpCandidates: Array<{ user: string; pass: string; host: string; port: number; from: string }> = [];
+  const fileSmtp = getActiveSmtpConfig();
+  if (fileSmtp && fileSmtp.pass) smtpCandidates.push(fileSmtp);
+  const envUser = (process.env.SMTP_USER || '').trim();
+  const envPass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
+  if (envUser && envPass && (!fileSmtp || fileSmtp.user !== envUser || fileSmtp.pass !== envPass)) {
+    smtpCandidates.push({
+      user: envUser,
+      pass: envPass,
+      host: (process.env.SMTP_HOST || 'smtp.gmail.com').trim(),
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      from: process.env.SMTP_FROM || `FEVIQO Studio <${envUser}>`,
+    });
+  }
+
+  for (const smtpConfig of smtpCandidates) {
     try {
       const transporter = createNodemailerTransporter(smtpConfig);
       const info = await transporter.sendMail({
@@ -615,12 +638,13 @@ async function sendServerEmail(params: {
       logDispatchedEmail({ id: info.messageId, to, subject, type, provider: 'smtp', sentAt: new Date().toISOString() });
       return { success: true, messageId: info.messageId, provider: 'smtp' };
     } catch (err: any) {
-      smtpErrorDetails = err.message || err.toString();
+      smtpErrorDetails = err?.message || String(err);
       console.warn('[SMTP Dispatch Error, falling back]:', smtpErrorDetails);
     }
   }
 
-  // 3. Try FormSubmit HTTP direct webhook
+  // 3. Try FormSubmit HTTP webhook (only treat as delivered if FormSubmit explicitly confirms success: true/"true")
+  let formSubmitError: string | null = null;
   try {
     const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
       method: 'POST',
@@ -640,17 +664,32 @@ async function sendServerEmail(params: {
       }),
     });
 
-    if (res.ok) {
+    const fsJson: any = await res.json().catch(() => ({}));
+    if (res.ok && (fsJson.success === true || fsJson.success === 'true')) {
       const msgId = 'fs-' + Date.now();
       console.log(`[FormSubmit Sent] to ${to}`);
       logDispatchedEmail({ id: msgId, to, subject, type, provider: 'formsubmit', sentAt: new Date().toISOString() });
       return { success: true, messageId: msgId, provider: 'formsubmit', smtpError: smtpErrorDetails || undefined };
     }
-  } catch (err) {
+    formSubmitError = fsJson?.message || `FormSubmit returned HTTP ${res.status}`;
+  } catch (err: any) {
+    formSubmitError = err?.message || 'FormSubmit request failed';
     console.error('[FormSubmit Dispatch Error]:', err);
   }
 
-  return { success: false, error: 'All email delivery channels failed', smtpError: smtpErrorDetails || undefined };
+  const combinedError = [
+    smtpErrorDetails ? `SMTP: ${smtpErrorDetails}` : null,
+    resendErrorDetails ? `Resend: ${resendErrorDetails}` : null,
+    formSubmitError ? `Fallback: ${formSubmitError}` : null,
+  ]
+    .filter(Boolean)
+    .join(' | ');
+
+  return {
+    success: false,
+    error: combinedError || 'All email delivery channels failed. Configure a valid Gmail App Password or Resend API key.',
+    smtpError: smtpErrorDetails || undefined,
+  };
 }
 
 // --- RECURSIVE BLOB URL SANITIZER ---
@@ -3309,11 +3348,94 @@ app.post('/api/admin/memberships/emails/:notifId/retry', requireAdmin, async (re
     });
     return res.json({
       success: Boolean(dispatched.success),
+      error: dispatched.success ? undefined : dispatched.error || dispatched.smtpError || 'Delivery failed',
       notification: updated,
       overview: getAdminMembershipsOverview(),
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to retry email delivery.' });
+  }
+});
+
+app.get('/api/admin/memberships/email-transport', requireAdmin, (_req: any, res) => {
+  const smtp = getActiveSmtpConfig();
+  const resendKey = getActiveResendKey();
+  return res.json({
+    success: true,
+    transport: {
+      smtpConfigured: Boolean(smtp?.user && smtp?.pass),
+      smtpHost: smtp?.host || 'smtp.gmail.com',
+      smtpPort: smtp?.port || 587,
+      smtpUser: smtp?.user || '',
+      smtpFrom: smtp?.from || 'FEVIQO Studio <partner@feviqo.com>',
+      resendConfigured: Boolean(resendKey),
+      resendFrom: getActiveResendFrom(),
+    },
+  });
+});
+
+app.post('/api/admin/memberships/email-transport', requireAdmin, async (req: any, res) => {
+  try {
+    const { smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, resendApiKey, resendFrom, sendTestEmail } = req.body || {};
+    let existing: Record<string, any> = {};
+    if (fs.existsSync(SMTP_CONFIG_FILE)) {
+      try {
+        existing = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
+      } catch {}
+    }
+
+    const updated = {
+      ...existing,
+      host: smtpHost?.trim() || existing.host || 'smtp.gmail.com',
+      port: Number(smtpPort) || Number(existing.port) || 587,
+      user: smtpUser?.trim() || existing.user || '',
+      pass: smtpPass && smtpPass.trim() ? smtpPass.trim().replace(/\s+/g, '') : existing.pass || '',
+      from: smtpFrom?.trim() || existing.from || `FEVIQO Studio <${smtpUser?.trim() || existing.user || 'partner@feviqo.com'}>`,
+      resendApiKey: resendApiKey !== undefined ? (resendApiKey.trim() || '') : (existing.resendApiKey || ''),
+      resendFrom: resendFrom?.trim() || existing.resendFrom || 'FEVIQO Studio <partner@feviqo.com>',
+      updatedAt: new Date().toISOString(),
+    };
+
+    fs.writeFileSync(SMTP_CONFIG_FILE, JSON.stringify(updated, null, 2), 'utf-8');
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'config_updated',
+      details: `Updated server email delivery credentials (SMTP user: ${updated.user || 'none'}, Resend: ${updated.resendApiKey ? 'set' : 'unset'}).`,
+    });
+
+    let testResult: { success: boolean; provider?: string; error?: string } | null = null;
+    if (sendTestEmail) {
+      const cfg = getMembershipConfig();
+      const dispatched = await sendServerEmail({
+        to: cfg.adminEmail,
+        subject: 'FEVIQO Admin Email Delivery Verified',
+        html: `<p>Your FEVIQO email notification setup is verified for <strong>${escapeHtml(cfg.adminEmail)}</strong>. You will receive verification alerts when customers submit Bank QR payment screenshots.</p>`,
+        type: 'admin_email_test',
+      });
+      testResult = {
+        success: Boolean(dispatched.success),
+        provider: dispatched.provider,
+        error: dispatched.error || dispatched.smtpError,
+      };
+    }
+
+    return res.json({
+      success: true,
+      testResult,
+      transport: {
+        smtpConfigured: Boolean(updated.user && updated.pass),
+        smtpHost: updated.host,
+        smtpPort: updated.port,
+        smtpUser: updated.user,
+        smtpFrom: updated.from,
+        resendConfigured: Boolean(updated.resendApiKey),
+        resendFrom: updated.resendFrom,
+      },
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to save email transport credentials.' });
   }
 });
 

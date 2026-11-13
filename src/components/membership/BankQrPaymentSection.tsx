@@ -130,31 +130,25 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
     }
   };
 
-  const handleOpenWhatsApp = () => {
-    setWhatsappNotice(null);
-    if (!publicConfig?.whatsappConfigured || !publicConfig.whatsappDigits) {
-      setWhatsappNotice(t(MEMBERSHIP_COPY.payment.whatsappUnconfigured));
-      return;
-    }
+  const whatsappMessage = [
+    'Assalam-o-Alaikum FEVIQO Team,',
+    'I have paid for my FEVIQO Premium Membership and am sending my payment details:',
+    `Request ID: ${order.id}`,
+    `Name: ${member.fullName}`,
+    `Email: ${member.email}`,
+    member.phone ? `Phone: ${member.phone}` : '',
+    `Plan: ${order.planName} (${order.durationDays} Days)`,
+    `Amount Paid: PKR ${order.amountPkr.toLocaleString()}`,
+    `Selected Drama(s): ${dramaTitlesText}`,
+    '(Payment screenshot attached below)',
+  ]
+    .filter(Boolean)
+    .join('\n');
 
-    const message = [
-      'Assalam-o-Alaikum FEVIQO Team,',
-      'I have paid for my FEVIQO Premium Membership and am sending my payment details:',
-      `Request ID: ${order.id}`,
-      `Name: ${member.fullName}`,
-      `Email: ${member.email}`,
-      member.phone ? `Phone: ${member.phone}` : '',
-      `Plan: ${order.planName} (${order.durationDays} Days)`,
-      `Amount Paid: PKR ${order.amountPkr.toLocaleString()}`,
-      `Selected Drama(s): ${dramaTitlesText}`,
-      '(Payment screenshot attached below)',
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    const waUrl = `https://wa.me/${publicConfig.whatsappDigits}?text=${encodeURIComponent(message)}`;
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
-  };
+  const whatsappConfigured = Boolean(publicConfig?.whatsappConfigured && publicConfig?.whatsappDigits);
+  const whatsappUrl = whatsappConfigured
+    ? `https://wa.me/${publicConfig!.whatsappDigits}?text=${encodeURIComponent(whatsappMessage)}`
+    : null;
 
   const isPendingVerification = order.status === 'pending_verification';
   const isApproved = order.status === 'approved';
@@ -439,14 +433,26 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
               {t(MEMBERSHIP_COPY.payment.whatsappAltHeading)}
             </div>
 
-            <button
-              type="button"
-              onClick={handleOpenWhatsApp}
-              className="w-full py-3 px-4 rounded-xl border border-zinc-300 hover:border-[#22C55E] hover:bg-emerald-50 text-[#0B0B0D] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
-            >
-              <MessageCircle className="w-4 h-4 text-[#16A34A]" />
-              <span>{t(MEMBERSHIP_COPY.payment.whatsappButton)}</span>
-            </button>
+            {whatsappUrl ? (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 rounded-xl border border-zinc-300 hover:border-[#22C55E] hover:bg-emerald-50 text-[#0B0B0D] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition"
+              >
+                <MessageCircle className="w-4 h-4 text-[#16A34A]" />
+                <span>{t(MEMBERSHIP_COPY.payment.whatsappButton)}</span>
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setWhatsappNotice(t(MEMBERSHIP_COPY.payment.whatsappUnconfigured))}
+                className="w-full py-3 px-4 rounded-xl border border-zinc-300 hover:border-[#22C55E] hover:bg-emerald-50 text-[#0B0B0D] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 text-[#16A34A]" />
+                <span>{t(MEMBERSHIP_COPY.payment.whatsappButton)}</span>
+              </button>
+            )}
 
             <p className="text-[11px] text-zinc-600 leading-relaxed">
               {MEMBERSHIP_COPY.payment.whatsappNoteEn}
