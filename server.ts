@@ -3,6 +3,7 @@ import compression from 'compression';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import multer from 'multer';
 import { execFile } from 'child_process';
 import nodemailer from 'nodemailer';
 import { createServer as createViteServer } from 'vite';
@@ -47,19 +48,38 @@ import {
   triggerEpisodeReindexingPing,
   getSearchEnginePingHistory
 } from './src/seo/seoIndexingService';
-import { MEMBERSHIP_PLANS, MEMBERSHIP_DRAMAS } from './src/data/membershipCatalog';
+import { MEMBERSHIP_PLANS, MEMBERSHIP_DRAMAS, getDramaById, MembershipPlanId } from './src/data/membershipCatalog';
 import {
   registerMember,
   loginMember,
   verifyMemberSessionToken,
   getMemberAccountState,
   getPaymentGatewayStatus,
+  getPublicMembershipConfig,
+  getMembershipConfig,
+  updateMembershipConfig,
+  saveUploadedQrImage,
+  resolveQrDiskPath,
   createMembershipCheckoutOrder,
-  confirmStripeCheckoutSession,
-  verifyStripeWebhookSignature,
-  activatePaidOrder,
+  submitOrderPaymentProof,
+  getAuthorizedProofFile,
+  approvePaymentRequest,
+  rejectPaymentRequest,
+  revokeMembershipByAdmin,
+  getAdminMembershipsOverview,
+  getAdminAuthStatus,
+  bootstrapFirstAdmin,
+  loginAdmin,
+  verifyAdminSessionToken,
+  createAdditionalAdmin,
+  toggleAdminActiveStatus,
+  saveEmailNotificationLog,
+  getEmailNotificationById,
+  updateEmailNotificationLog,
+  appendAdminAudit,
   cancelMemberSubscription,
   authorizeEpisodePlayback,
+  SafeAdmin,
 } from './server/membershipStore';
 
 const app = express();
@@ -2585,28 +2605,53 @@ app.delete('/api/editors/:id', (req, res) => {
 
 
 
-// 7. FEVIQO Premium Membership, Account Auth & Video Entitlement API
+// 7. FEVIQO Premium Membership, Bank QR Payment, Proof Verification & Admin RBAC API
 const MEMBER_COOKIE_NAME = 'feviqo_member_session';
+const ADMIN_COOKIE_NAME = 'feviqo_admin_session';
+
+const memoryImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+});
+
+function parseCookiesMap(req: express.Request): Record<string, string> {
+  const out: Record<string, string> = {};
+  const cookieHeader = req.headers.cookie || '';
+  for (const part of cookieHeader.split(';')) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const k = trimmed.slice(0, eqIdx).trim();
+    const v = trimmed.slice(eqIdx + 1).trim();
+    try {
+      out[k] = decodeURIComponent(v);
+    } catch {
+      out[k] = v;
+    }
+  }
+  return out;
+}
 
 function extractMemberToken(req: express.Request): string | undefined {
   const authHeader = req.headers.authorization;
   if (authHeader && /^Bearer\s+/i.test(authHeader)) {
     return authHeader.replace(/^Bearer\s+/i, '').trim();
   }
-  const cookieHeader = req.headers.cookie || '';
-  for (const part of cookieHeader.split(';')) {
-    const [k, ...rest] = part.trim().split('=');
-    if (k === MEMBER_COOKIE_NAME) {
-      return decodeURIComponent(rest.join('='));
-    }
-  }
-  return undefined;
+  const cookies = parseCookiesMap(req);
+  return cookies[MEMBER_COOKIE_NAME];
 }
 
 function getAuthenticatedMemberId(req: express.Request): string | null {
   const token = extractMemberToken(req);
   const parsed = verifyMemberSessionToken(token);
   return parsed?.memberId || null;
+}
+
+function getAuthenticatedAdmin(req: express.Request): SafeAdmin | null {
+  const cookies = parseCookiesMap(req);
+  const adminToken = cookies[ADMIN_COOKIE_NAME];
+  return verifyAdminSessionToken(adminToken);
 }
 
 function setMemberSessionCookie(res: express.Response, token: string): void {
@@ -2620,22 +2665,123 @@ function setMemberSessionCookie(res: express.Response, token: string): void {
   });
 }
 
-// Public catalogue metadata only (zero protected episode stream URLs exposed)
+function setAdminSessionCookie(res: express.Response, token: string): void {
+  const isProd = process.env.NODE_ENV === 'production';
+  res.cookie(ADMIN_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProd,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
+}
+
+function requireAdmin(
+  req: express.Request & { admin?: SafeAdmin },
+  res: express.Response,
+  next: express.NextFunction
+) {
+  const admin = getAuthenticatedAdmin(req);
+  if (!admin) {
+    const memberId = getAuthenticatedMemberId(req);
+    return res.status(memberId ? 403 : 401).json({
+      success: false,
+      code: memberId ? 'FORBIDDEN_NOT_ADMIN' : 'ADMIN_UNAUTHENTICATED',
+      error: memberId
+        ? 'Forbidden: administrator privileges are required for this action.'
+        : 'Administrator sign-in is required.',
+    });
+  }
+  req.admin = admin;
+  next();
+}
+
+function escapeHtml(text: string): string {
+  return String(text || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function dispatchTrackedEmail(params: {
+  orderId?: string;
+  to: string;
+  subject: string;
+  html: string;
+  type: 'admin_payment_verification' | 'member_payment_approved' | 'member_payment_rejected';
+}) {
+  try {
+    const res = await sendServerEmail({
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+      type: params.type,
+      data: { orderId: params.orderId },
+    });
+
+    const record = saveEmailNotificationLog({
+      orderId: params.orderId,
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+      type: params.type,
+      status: res.success ? 'sent' : 'failed',
+      provider: res.provider,
+      error: res.success ? undefined : res.error || res.smtpError || 'Email transport unavailable',
+      attempts: 1,
+    });
+    return { ...res, logRecord: record };
+  } catch (err: any) {
+    const record = saveEmailNotificationLog({
+      orderId: params.orderId,
+      to: params.to,
+      subject: params.subject,
+      html: params.html,
+      type: params.type,
+      status: 'failed',
+      error: err?.message || 'Unexpected email dispatch error',
+      attempts: 1,
+    });
+    return { success: false, error: err?.message, logRecord: record };
+  }
+}
+
+// Public catalogue metadata + QR/WhatsApp config only (zero protected episode stream URLs or secrets exposed)
 app.get('/api/membership/catalog', (_req, res) => {
   return res.json({
     success: true,
     plans: MEMBERSHIP_PLANS,
     dramas: MEMBERSHIP_DRAMAS,
+    publicConfig: getPublicMembershipConfig(),
     gatewayStatus: getPaymentGatewayStatus(),
   });
 });
 
+// Download crisp uncropped QR image for a plan cleanly without cross-origin CORS restrictions
+app.get('/api/membership/qr/:planId/download', (req, res) => {
+  const planId = req.params.planId as MembershipPlanId;
+  const plan = MEMBERSHIP_PLANS.find((p) => p.id === planId);
+  if (!plan) {
+    return res.status(404).json({ success: false, error: 'Invalid plan QR requested.' });
+  }
+  const diskPath = resolveQrDiskPath(planId);
+  if (!diskPath) {
+    return res.status(404).json({ success: false, error: 'Local QR file not found on disk.' });
+  }
+  const ext = path.extname(diskPath) || '.jpg';
+  const safeName = `FEVIQO-${plan.name}-${plan.pricePkr}PKR-QR${ext}`;
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  return res.sendFile(diskPath);
+});
+
 app.post('/api/membership/register', (req, res) => {
   try {
-    const { email, password, fullName } = req.body || {};
-    const result = registerMember({ email, password, fullName });
+    const { email, password, confirmPassword, fullName, phone } = req.body || {};
+    const result = registerMember({ email, phone, password, confirmPassword, fullName });
     if ('error' in result) {
-      return res.status(400).json({ success: false, error: result.error });
+      return res.status(result.statusCode || 400).json({ success: false, error: result.error });
     }
     setMemberSessionCookie(res, result.token);
     const account = getMemberAccountState(result.member.id);
@@ -2644,7 +2790,7 @@ app.post('/api/membership/register', (req, res) => {
       token: result.token,
       ...account,
     });
-  } catch (err) {
+  } catch {
     return res.status(500).json({ success: false, error: 'Failed to create member account.' });
   }
 });
@@ -2663,7 +2809,7 @@ app.post('/api/membership/login', (req, res) => {
       token: result.token,
       ...account,
     });
-  } catch (err) {
+  } catch {
     return res.status(500).json({ success: false, error: 'Failed to sign in.' });
   }
 });
@@ -2692,7 +2838,7 @@ app.post('/api/membership/checkout', async (req, res) => {
       return res.status(401).json({
         success: false,
         code: 'UNAUTHENTICATED',
-        error: 'Please sign in or create an account before starting checkout.',
+        error: 'Please sign in or create an account before continuing to payment.',
       });
     }
     const { planId, selectedDramaIds } = req.body || {};
@@ -2715,91 +2861,149 @@ app.post('/api/membership/checkout', async (req, res) => {
     return res.json({
       success: true,
       order: result.order,
+      qrImageUrl: result.qrImageUrl,
+      publicConfig: result.publicConfig,
       gatewayConfigured: result.gatewayConfigured,
       paymentSetupRequired: result.paymentSetupRequired,
-      checkoutUrl: result.checkoutUrl,
       gatewayStatus: result.gatewayStatus,
       account,
     });
-  } catch (err) {
+  } catch {
     return res.status(500).json({ success: false, error: 'Failed to initialize membership checkout.' });
   }
 });
 
-app.post('/api/membership/confirm-stripe', async (req, res) => {
-  try {
-    const memberId = getAuthenticatedMemberId(req);
-    if (!memberId) {
-      return res.status(401).json({ success: false, error: 'Authentication required.' });
-    }
-    const { orderId, sessionId } = req.body || {};
-    if (!orderId || !sessionId) {
-      return res.status(400).json({ success: false, error: 'Order ID and Stripe session ID are required.' });
-    }
-    const result = await confirmStripeCheckoutSession({ memberId, orderId, sessionId });
-    if ('error' in result) {
-      return res.status(402).json({ success: false, error: result.error });
-    }
-    const account = getMemberAccountState(memberId);
-    return res.json({ success: true, ...account });
-  } catch (err) {
-    return res.status(500).json({ success: false, error: 'Failed to verify Stripe payment.' });
-  }
-});
-
-app.post('/api/membership/webhook/stripe', (req: any, res) => {
-  try {
-    const sig = req.headers['stripe-signature'] as string;
-    if (!verifyStripeWebhookSignature(req.rawBody || '', sig || '')) {
-      return res.status(400).json({ success: false, error: 'Invalid Stripe webhook signature.' });
-    }
-    const event = req.body;
-    if (event?.type === 'checkout.session.completed') {
-      const session = event.data?.object;
-      const orderId = session?.metadata?.orderId;
-      if (orderId && session?.payment_status === 'paid') {
-        activatePaidOrder({
-          orderId,
-          paymentProvider: 'stripe',
-          paymentReference: session.payment_intent || session.id,
+// Upload Bank QR payment screenshot to private protected storage + notify admin email
+app.post(
+  '/api/membership/orders/:orderId/proof',
+  (req, res, next) => {
+    memoryImageUpload.single('proof')(req, res, (err: any) => {
+      if (err) {
+        const msg =
+          err.code === 'LIMIT_FILE_SIZE'
+            ? 'Screenshot file size exceeds the 8 MB limit.'
+            : err.message || 'Invalid proof file upload.';
+        return res.status(400).json({ success: false, error: msg });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      const memberId = getAuthenticatedMemberId(req);
+      if (!memberId) {
+        return res.status(401).json({
+          success: false,
+          code: 'UNAUTHENTICATED',
+          error: 'Please sign in to upload payment proof.',
         });
       }
-    }
-    return res.json({ received: true });
-  } catch {
-    return res.status(400).json({ success: false, error: 'Webhook processing error.' });
-  }
-});
 
-app.post('/api/membership/webhook', (req: any, res) => {
-  try {
-    const secret = process.env.SAFEPAY_WEBHOOK_SECRET || process.env.PAYFAST_SECURED_KEY;
-    const signature = (req.headers['x-feviqo-signature'] || req.headers['x-sfpy-signature'] || '') as string;
-    if (!secret || !signature) {
-      return res.status(403).json({ success: false, error: 'Payment webhook secret or signature missing.' });
-    }
-    const raw = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString('utf8') : JSON.stringify(req.body || {});
-    const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
-    const sigBuf = Buffer.from(signature);
-    const expBuf = Buffer.from(expected);
-    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-      return res.status(401).json({ success: false, error: 'Invalid webhook signature.' });
-    }
-    const { orderId, status, reference, provider } = req.body || {};
-    if (orderId && (status === 'paid' || status === 'PAID' || status === 'completed')) {
-      const activated = activatePaidOrder({
-        orderId,
-        paymentProvider: provider || 'verified_gateway',
-        paymentReference: reference || orderId,
-      });
-      if ('error' in activated) {
-        return res.status(404).json({ success: false, error: activated.error });
+      const { orderId } = req.params;
+      const file = req.file;
+      if (!file || !file.buffer) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please choose a payment confirmation screenshot (JPG, JPEG, PNG, or WebP).',
+        });
       }
+
+      const submission = submitOrderPaymentProof({
+        memberId,
+        orderId,
+        fileBuffer: file.buffer,
+        originalName: file.originalname,
+        paymentNote: req.body?.paymentNote,
+      });
+
+      if ('error' in submission) {
+        return res.status(submission.statusCode).json({ success: false, error: submission.error });
+      }
+
+      const { order, member } = submission;
+      const cfg = getMembershipConfig();
+      const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+      const host = req.headers.host || 'feviqo.com';
+      const baseUrl = `${proto}://${host}`;
+      const dramaTitles = order.selectedDramaIds
+        .map((id) => getDramaById(id)?.title || id)
+        .join(', ');
+      const adminReviewUrl = `${baseUrl}/admin/memberships?request=${encodeURIComponent(order.id)}`;
+
+      const adminEmailHtml = `
+        <div style="font-family:Inter,Arial,sans-serif;background:#F8FAFC;padding:24px;color:#0B0B0D;">
+          <div style="max-width:600px;margin:0 auto;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:28px;">
+            <div style="font-size:12px;font-weight:700;color:#16A34A;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+              FEVIQO Premium Membership Verification
+            </div>
+            <h2 style="margin:0 0 12px 0;font-size:20px;color:#0B0B0D;">
+              New FEVIQO Membership Payment — Verification Required
+            </h2>
+            <p style="font-size:14px;color:#475569;line-height:1.6;">
+              A customer submitted a Bank QR payment screenshot and is awaiting verification before membership activation.
+            </p>
+            <table style="width:100%;border-collapse:collapse;margin:18px 0;font-size:13px;">
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Payment Request ID</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${escapeHtml(order.id)}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Customer Name</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${escapeHtml(member.fullName)}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Customer Email</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(member.email)}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Customer Phone</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(member.phone || 'Not provided')}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Plan Selected</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${escapeHtml(order.planName)}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Amount</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;color:#16A34A;">PKR ${order.amountPkr.toLocaleString()}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Duration</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${order.durationDays} Days</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Selected Dramas</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(dramaTitles)}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Submission Time</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(order.proofSubmittedAt || order.updatedAt)}</td></tr>
+            </table>
+            <p style="font-size:12px;color:#64748B;margin-bottom:20px;">
+              For security, private payment screenshots are not attached to email. Sign in to the FEVIQO Admin Panel to inspect the full-size screenshot and approve or reject this payment.
+            </p>
+            <a href="${escapeHtml(adminReviewUrl)}" style="display:inline-block;padding:12px 22px;background:#0B0B0D;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;border-radius:10px;">
+              Review Payment in Admin Panel &rarr;
+            </a>
+          </div>
+        </div>
+      `;
+
+      const emailDispatch = await dispatchTrackedEmail({
+        orderId: order.id,
+        to: cfg.adminEmail,
+        subject: 'New FEVIQO Membership Payment — Verification Required',
+        html: adminEmailHtml,
+        type: 'admin_payment_verification',
+      });
+
+      const account = getMemberAccountState(memberId);
+      return res.json({
+        success: true,
+        order,
+        adminNotificationSent: Boolean(emailDispatch.success),
+        account,
+      });
+    } catch {
+      return res.status(500).json({ success: false, error: 'Failed to save payment proof.' });
     }
-    return res.json({ success: true });
-  } catch {
-    return res.status(400).json({ success: false, error: 'Invalid webhook payload.' });
   }
+);
+
+// Protected payment proof image viewer — strictly authorized for owning member or active admin
+app.get('/api/membership/orders/:orderId/proof', (req, res) => {
+  const memberId = getAuthenticatedMemberId(req);
+  const admin = getAuthenticatedAdmin(req);
+  const { orderId } = req.params;
+
+  const result = getAuthorizedProofFile({
+    orderId,
+    requesterMemberId: memberId,
+    admin,
+  });
+
+  if ('error' in result) {
+    return res.status(result.statusCode).json({ success: false, error: result.error });
+  }
+
+  res.setHeader('Content-Type', result.mimeType);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+  return res.sendFile(result.filePath);
 });
 
 app.post('/api/membership/cancel', (req, res) => {
@@ -2814,7 +3018,7 @@ app.post('/api/membership/cancel', (req, res) => {
     }
     const account = getMemberAccountState(memberId);
     return res.json({ success: true, membership: cancelled.membership, ...account });
-  } catch (err) {
+  } catch {
     return res.status(500).json({ success: false, error: 'Failed to cancel membership.' });
   }
 });
@@ -2838,6 +3042,308 @@ app.get('/api/membership/watch/:dramaId/:episodeSlug', (req, res) => {
     episodeTitle: auth.episodeTitle,
     planName: auth.planName,
     expiresAt: auth.expiresAt,
+  });
+});
+
+// --- ADMIN PANEL AUTHENTICATION & MEMBERSHIP MANAGEMENT ROUTES ---
+app.get('/api/admin/auth/status', (req, res) => {
+  const admin = getAuthenticatedAdmin(req);
+  const status = getAdminAuthStatus();
+  return res.json({
+    success: true,
+    authenticated: Boolean(admin),
+    admin,
+    ...status,
+  });
+});
+
+app.post('/api/admin/auth/bootstrap', (req, res) => {
+  try {
+    const { email, name, password, confirmPassword } = req.body || {};
+    const result = bootstrapFirstAdmin({ email, name, password, confirmPassword });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    setAdminSessionCookie(res, result.token);
+    return res.status(201).json({
+      success: true,
+      admin: result.admin,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to initialize administrator account.' });
+  }
+});
+
+app.post('/api/admin/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const result = loginAdmin({ email, password });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    setAdminSessionCookie(res, result.token);
+    return res.json({
+      success: true,
+      admin: result.admin,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Administrator sign-in failed.' });
+  }
+});
+
+app.post('/api/admin/auth/logout', (_req, res) => {
+  res.clearCookie(ADMIN_COOKIE_NAME, { path: '/' });
+  return res.json({ success: true });
+});
+
+app.get('/api/admin/memberships/overview', requireAdmin, (req: any, res) => {
+  try {
+    const overview = getAdminMembershipsOverview();
+    return res.json({
+      success: true,
+      currentAdmin: req.admin,
+      ...overview,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to load membership overview.' });
+  }
+});
+
+app.post('/api/admin/memberships/requests/:orderId/approve', requireAdmin, async (req: any, res) => {
+  try {
+    const { orderId } = req.params;
+    const result = approvePaymentRequest({ orderId, admin: req.admin });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+
+    const { order, membership, member } = result;
+    const dramaTitles = membership.selectedDramaIds
+      .map((id) => getDramaById(id)?.title || id)
+      .join(', ');
+
+    if (member?.email) {
+      const customerEmailHtml = `
+        <div style="font-family:Inter,Arial,sans-serif;background:#F8FAFC;padding:24px;color:#0B0B0D;">
+          <div style="max-width:580px;margin:0 auto;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:28px;">
+            <div style="font-size:12px;font-weight:700;color:#16A34A;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+              FEVIQO Premium Membership Active
+            </div>
+            <h2 style="margin:0 0 12px 0;font-size:20px;color:#0B0B0D;">
+              Your payment has been approved
+            </h2>
+            <p style="font-size:14px;color:#475569;line-height:1.6;">
+              Hello ${escapeHtml(member.fullName)}, your ${escapeHtml(membership.planName)} membership (PKR ${membership.pricePkr.toLocaleString()} / ${membership.durationDays} Days) is now active.
+            </p>
+            <p style="font-size:13px;color:#334155;">
+              <strong>Included Dramas:</strong> ${escapeHtml(dramaTitles)}<br/>
+              <strong>Valid Until:</strong> ${escapeHtml(membership.expiresAt)}
+            </p>
+          </div>
+        </div>
+      `;
+
+      await dispatchTrackedEmail({
+        orderId: order.id,
+        to: member.email,
+        subject: `FEVIQO Membership Activated — ${membership.planName}`,
+        html: customerEmailHtml,
+        type: 'member_payment_approved',
+      });
+    }
+
+    return res.json({
+      success: true,
+      order,
+      membership,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to approve payment request.' });
+  }
+});
+
+app.post('/api/admin/memberships/requests/:orderId/reject', requireAdmin, async (req: any, res) => {
+  try {
+    const { orderId } = req.params;
+    const { reason } = req.body || {};
+    const result = rejectPaymentRequest({ orderId, reason, admin: req.admin });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+
+    const { order, member } = result;
+    if (member?.email) {
+      const rejectEmailHtml = `
+        <div style="font-family:Inter,Arial,sans-serif;background:#F8FAFC;padding:24px;color:#0B0B0D;">
+          <div style="max-width:580px;margin:0 auto;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:28px;">
+            <div style="font-size:12px;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+              FEVIQO Payment Verification Update
+            </div>
+            <h2 style="margin:0 0 12px 0;font-size:20px;color:#0B0B0D;">
+              Action required for your payment submission
+            </h2>
+            <p style="font-size:14px;color:#475569;line-height:1.6;">
+              Hello ${escapeHtml(member.fullName)}, we could not verify your payment submission for Request ${escapeHtml(order.id)}.
+            </p>
+            <p style="font-size:13px;background:#FEF2F2;border:1px solid #FECACA;padding:12px;border-radius:10px;color:#991B1B;">
+              <strong>Reason:</strong> ${escapeHtml(order.rejectionReason || '')}
+            </p>
+            <p style="font-size:13px;color:#475569;">
+              Please sign in to your FEVIQO Account to upload a clearer payment confirmation screenshot.
+            </p>
+          </div>
+        </div>
+      `;
+
+      await dispatchTrackedEmail({
+        orderId: order.id,
+        to: member.email,
+        subject: 'FEVIQO Membership Payment Requires New Proof',
+        html: rejectEmailHtml,
+        type: 'member_payment_rejected',
+      });
+    }
+
+    return res.json({
+      success: true,
+      order,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to reject payment request.' });
+  }
+});
+
+app.post('/api/admin/memberships/:membershipId/revoke', requireAdmin, (req: any, res) => {
+  try {
+    const { membershipId } = req.params;
+    const { reason } = req.body || {};
+    const result = revokeMembershipByAdmin({ membershipId, reason, admin: req.admin });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      membership: result.membership,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to revoke membership.' });
+  }
+});
+
+app.put('/api/admin/memberships/config', requireAdmin, (req: any, res) => {
+  try {
+    const updated = updateMembershipConfig({ updates: req.body || {}, admin: req.admin });
+    return res.json({
+      success: true,
+      config: updated,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to update configuration settings.' });
+  }
+});
+
+app.post(
+  '/api/admin/memberships/qr/:planId',
+  requireAdmin,
+  (req, res, next) => {
+    memoryImageUpload.single('qr')(req, res, (err: any) => {
+      if (err) {
+        return res.status(400).json({ success: false, error: err.message || 'Invalid QR upload.' });
+      }
+      next();
+    });
+  },
+  (req: any, res) => {
+    const planId = req.params.planId as MembershipPlanId;
+    if (!['starter', 'standard', 'plus', 'vip'].includes(planId)) {
+      return res.status(400).json({ success: false, error: 'Invalid plan ID.' });
+    }
+    if (!req.file?.buffer) {
+      return res.status(400).json({ success: false, error: 'Please select a QR image file.' });
+    }
+    const result = saveUploadedQrImage({
+      planId,
+      buffer: req.file.buffer,
+      admin: req.admin,
+    });
+    if ('error' in result) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      imageUrl: result.imageUrl,
+      config: result.config,
+      overview: getAdminMembershipsOverview(),
+    });
+  }
+);
+
+app.post('/api/admin/memberships/emails/:notifId/retry', requireAdmin, async (req: any, res) => {
+  try {
+    const existing = getEmailNotificationById(req.params.notifId);
+    if (!existing) {
+      return res.status(404).json({ success: false, error: 'Email notification record not found.' });
+    }
+    const dispatched = await sendServerEmail({
+      to: existing.to,
+      subject: existing.subject,
+      html: existing.html,
+      type: existing.type,
+      data: { orderId: existing.orderId },
+    });
+    const updated = updateEmailNotificationLog(existing.id, {
+      status: dispatched.success ? 'sent' : 'failed',
+      provider: dispatched.provider,
+      error: dispatched.success ? undefined : dispatched.error || dispatched.smtpError || 'Delivery failed',
+    });
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'email_retried',
+      targetId: existing.id,
+      details: `Retried email notification (${existing.subject}) to ${existing.to}: ${dispatched.success ? 'Sent' : 'Failed'}.`,
+    });
+    return res.json({
+      success: Boolean(dispatched.success),
+      notification: updated,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to retry email delivery.' });
+  }
+});
+
+app.post('/api/admin/roles', requireAdmin, (req: any, res) => {
+  const { email, name, password } = req.body || {};
+  const result = createAdditionalAdmin({ email, name, password, byAdmin: req.admin });
+  if ('error' in result) {
+    return res.status(400).json({ success: false, error: result.error });
+  }
+  return res.status(201).json({
+    success: true,
+    admin: result.admin,
+    overview: getAdminMembershipsOverview(),
+  });
+});
+
+app.patch('/api/admin/roles/:adminId', requireAdmin, (req: any, res) => {
+  const { isActive } = req.body || {};
+  const result = toggleAdminActiveStatus({
+    targetAdminId: req.params.adminId,
+    isActive: Boolean(isActive),
+    byAdmin: req.admin,
+  });
+  if ('error' in result) {
+    return res.status(400).json({ success: false, error: result.error });
+  }
+  return res.json({
+    success: true,
+    admin: result.admin,
+    overview: getAdminMembershipsOverview(),
   });
 });
 

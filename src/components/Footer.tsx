@@ -18,6 +18,8 @@ import { AppRoute } from '../types';
 import { AdBanner728x90 } from './AdBanner728x90';
 import { AdBanner468x60 } from './AdBanner468x60';
 import { AdBanner320x50 } from './AdBanner320x50';
+import { useLanguage } from '../i18n/LanguageContext';
+import { MEMBERSHIP_COPY } from '../i18n/membershipTranslations';
 
 interface FooterProps {
   onBookCall: () => void;
@@ -36,6 +38,7 @@ export const Footer: React.FC<FooterProps> = ({
   onNavigateFlow,
   onNavigatePage,
 }) => {
+  const { t, isUrdu } = useLanguage();
   const [giftEmail, setGiftEmail] = useState('');
   const [giftClaimed, setGiftClaimed] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -97,8 +100,8 @@ export const Footer: React.FC<FooterProps> = ({
             >
               <FeviqoHeaderLogo theme="dark" className="h-8 sm:h-9 w-auto object-contain transition-opacity group-hover:opacity-90" />
             </a>
-            <p className="text-emerald-100/90 text-xs sm:text-sm leading-relaxed font-normal max-w-sm">
-              Unlimited professional video editing service for creators, businesses, and high-growth brands worldwide.
+            <p className="text-emerald-100/90 text-xs sm:text-sm leading-relaxed font-normal max-w-sm" dir={isUrdu ? 'rtl' : 'ltr'}>
+              {t(MEMBERSHIP_COPY.footer.tagline)}
             </p>
             <div className="flex items-center gap-3 pt-2">
               <a 
@@ -143,7 +146,7 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Column 1: Services */}
           <div>
             <h4 className="font-extrabold text-white text-sm uppercase tracking-wider mb-4">
-              Services &amp; Platform
+              {t(MEMBERSHIP_COPY.footer.servicesHeading)}
             </h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-emerald-100 font-normal">
               <li>
@@ -183,7 +186,7 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Column 2: Solutions */}
           <div>
             <h4 className="font-extrabold text-white text-sm uppercase tracking-wider mb-4">
-              Solutions
+              {t(MEMBERSHIP_COPY.footer.solutionsHeading)}
             </h4>
             <ul className="space-y-2.5 text-xs sm:text-sm text-emerald-100 font-normal">
               <li>
@@ -222,7 +225,7 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Column 3: Latest Episodes & Dramas (Crawlable Googlebot Index) */}
           <div>
             <h4 className="font-extrabold text-white text-sm uppercase tracking-wider mb-4 text-[#22C55E]">
-              Trending Dramas &amp; Episodes
+              {t(MEMBERSHIP_COPY.footer.dramasHeading)}
             </h4>
             <ul className="space-y-2 text-xs text-emerald-100 font-normal">
               <li>
@@ -268,7 +271,7 @@ export const Footer: React.FC<FooterProps> = ({
               </li>
               <li>
                 <a href="/membership" onClick={(e) => { e.preventDefault(); nav('membership'); }} className="hover:text-white transition cursor-pointer text-[#22C55E] font-bold block">
-                  Premium Drama Membership &rarr;
+                  {t(MEMBERSHIP_COPY.footer.membershipLink)} &rarr;
                 </a>
               </li>
             </ul>
@@ -311,17 +314,17 @@ export const Footer: React.FC<FooterProps> = ({
         {/* Bottom Bar: Copyright & Compliance */}
         <div className="pt-8 border-t border-emerald-900/80 flex flex-col sm:flex-row items-center justify-between text-xs text-emerald-200/80 gap-4">
           <div>
-            © 2026 FEVIQO Ltd. All rights reserved. Registered Creative Production Studio.
+            {t(MEMBERSHIP_COPY.footer.copyright)}
           </div>
           <div className="flex items-center gap-6">
             <button onClick={onNavigateFlow} className="text-[#22C55E] hover:underline font-bold transition cursor-pointer">
-              Admin &amp; Flow Portal
+              {t(MEMBERSHIP_COPY.footer.adminFlowPortal)}
             </button>
             <button onClick={() => nav('privacy')} className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer">
-              Privacy Policy
+              {t(MEMBERSHIP_COPY.footer.privacyPolicy)}
             </button>
             <button onClick={() => nav('terms')} className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer">
-              Terms of Service
+              {t(MEMBERSHIP_COPY.footer.termsOfService)}
             </button>
             <button onClick={() => onNavigateSection('faq')} className="hover:text-white transition cursor-pointer">
               Cookie Preferences

@@ -40,10 +40,12 @@ import { GunesinDramaPage } from './components/pages/GunesinDramaPage';
 import { MehmedDramaPage } from './components/pages/MehmedDramaPage';
 import { DramasPage } from './components/pages/DramasPage';
 import { MembershipPage } from './components/pages/MembershipPage';
+import { MembershipAdminPage } from './components/pages/MembershipAdminPage';
 import { AboutUsPage } from './components/pages/AboutUsPage';
 import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
 import { TermsPage } from './components/pages/TermsPage';
 import { SEOAdminModal } from './components/admin/SEOAdminModal';
+import { LanguageProvider } from './i18n/LanguageContext';
 
 import { getSEOConfigForPath } from './seo/seoStore';
 import { AppRoute, PreselectedPlan } from './types';
@@ -57,6 +59,7 @@ export default function App() {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
       
+      if (path.startsWith('/admin/memberships')) return 'admin-memberships';
       if (path.includes('/admin') || hash.includes('#admin')) return 'flow';
       if (path.includes('/flow') || hash.includes('#flow')) return 'flow';
       if (path.includes('/pricing') || hash.includes('#pricing')) return 'pricing';
@@ -74,7 +77,8 @@ export default function App() {
       if (path.includes('/gunesin-dogdugu-yer')) return 'gunesin-dogdugu-yer';
       if (path.includes('/mehmed') || path.includes('/mehmed-fetihler-sultani')) return 'mehmed-fetihler-sultani';
       if (path.includes('/dramas')) return 'dramas';
-      if (path.includes('/membership') || path.includes('/account') || hash.includes('#membership')) return 'membership';
+      if (path.startsWith('/account')) return 'account';
+      if (path.includes('/membership') || hash.includes('#membership')) return 'membership';
       if (path.includes('/about') || hash.includes('#about')) return 'about';
       if (path.includes('/privacy') || hash.includes('#privacy')) return 'privacy';
       if (path.includes('/terms') || hash.includes('#terms')) return 'terms';
@@ -86,7 +90,7 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('/admin') || hash.includes('#admin')) return 'admin';
+      if (!path.startsWith('/admin/memberships') && (path.includes('/admin') || hash.includes('#admin'))) return 'admin';
     }
     return 'login';
   });
@@ -125,7 +129,9 @@ export default function App() {
         setCurrentRoute('gallery');
       }
 
-      if (path.includes('/admin') || hash.includes('#admin')) {
+      if (path.startsWith('/admin/memberships')) {
+        setCurrentRoute('admin-memberships');
+      } else if (path.includes('/admin') || hash.includes('#admin')) {
         setCurrentRoute('flow');
         setFlowInitialView('admin');
       } else if (path.includes('/flow') || hash.includes('#flow')) {
@@ -158,7 +164,9 @@ export default function App() {
         setCurrentRoute('mehmed-fetihler-sultani');
       } else if (path.includes('/dramas')) {
         setCurrentRoute('dramas');
-      } else if (path.includes('/membership') || path.includes('/account') || hash.includes('#membership')) {
+      } else if (path.startsWith('/account')) {
+        setCurrentRoute('account');
+      } else if (path.includes('/membership') || hash.includes('#membership')) {
         setCurrentRoute('membership');
       } else if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) {
         setCurrentRoute('turkish-drama');
@@ -213,6 +221,8 @@ export default function App() {
       'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90 - FEVIQO',
       'dramas': 'Turkish Dramas Portal - Stream Premium Series & Movies | FEVIQO',
       'membership': 'FEVIQO Premium Membership & Pricing | Watch Turkish Dramas in Urdu',
+      'account': 'My Account | FEVIQO Premium Membership',
+      'admin-memberships': 'FEVIQO Membership & Payment Verification Admin',
       'privacy': 'Privacy Policy & Cookie Disclosure | FEVIQO',
       'terms': 'Terms of Service & Usage Agreement | FEVIQO'
     };
@@ -242,7 +252,12 @@ export default function App() {
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    const newPath = route === 'home' ? '/' : `/${route}`;
+    const newPath =
+      route === 'home'
+        ? '/'
+        : route === 'admin-memberships'
+        ? '/admin/memberships'
+        : `/${route}`;
     try {
       window.history.pushState({ route }, '', newPath);
     } catch {
@@ -638,13 +653,29 @@ export default function App() {
         );
 
       case 'membership':
+      case 'account':
         return (
           <MembershipPage
             onNavigatePage={(route) => navigateTo(route)}
             onBookCall={() => handleOpenBookCall()}
+            onNavigateSection={handleNavigateSection}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
             initialViewAccount={
-              typeof window !== 'undefined' && window.location.pathname.toLowerCase().startsWith('/account')
+              currentRoute === 'account' ||
+              (typeof window !== 'undefined' && window.location.pathname.toLowerCase().startsWith('/account'))
             }
+          />
+        );
+
+      case 'admin-memberships':
+        return (
+          <MembershipAdminPage
+            onBookCall={() => handleOpenBookCall()}
+            onNavigateSection={handleNavigateSection}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
+            onNavigatePage={(route) => navigateTo(route)}
           />
         );
 
@@ -786,6 +817,8 @@ export default function App() {
         return '/mehmed-fetihler-sultani';
       case 'dramas': return '/dramas';
       case 'membership': return '/membership';
+      case 'account': return '/account';
+      case 'admin-memberships': return '/admin/memberships';
       case 'privacy': return '/privacy';
       case 'terms': return '/terms';
       case 'teskilat-urdu':
@@ -815,7 +848,7 @@ export default function App() {
     : getPathForRoute(currentRoute);
 
   return (
-    <>
+    <LanguageProvider>
       <SEOHead pathname={seoPath} />
 
       <Suspense fallback={<div className="min-h-screen bg-white" />}>
@@ -855,6 +888,6 @@ export default function App() {
 
       {/* Global Cookie Consent Banner */}
       <CookieBanner />
-    </>
+    </LanguageProvider>
   );
 }

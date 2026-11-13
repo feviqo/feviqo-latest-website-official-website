@@ -199,6 +199,8 @@ export type AppRoute =
   | 'mehmed-fetihler-sultani'
   | 'dramas'
   | 'membership'
+  | 'account'
+  | 'admin-memberships'
   | 'privacy'
   | 'terms';
 

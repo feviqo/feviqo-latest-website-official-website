@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { FeviqoHeaderLogo } from './FeviqoLogo';
 import { AppRoute } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
+import { MEMBERSHIP_COPY } from '../i18n/membershipTranslations';
 
 interface NavbarProps {
   onBookCall: () => void;
@@ -33,6 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigateFlow,
   onNavigatePage,
 }) => {
+  const { lang, setLang, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [solutionsOpen, setSolutionsOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
@@ -89,9 +92,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Work / Gallery */}
           <button 
             onClick={() => onNavigatePage('gallery')}
-            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
+            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
           >
-            Work
+            {t(MEMBERSHIP_COPY.nav.work)}
           </button>
 
           {/* Solutions Dropdown */}
@@ -269,7 +272,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => onNavigatePage('dramas')}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300 whitespace-nowrap shrink-0"
             >
-              <span>Turkish Dramas</span>
+              <span>{t(MEMBERSHIP_COPY.nav.dramas)}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${dramasOpen ? 'rotate-180 text-white' : ''}`} />
             </button>
 
@@ -366,34 +369,66 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         {/* Right CTA & Access */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          {/* Global EN | اردو Switcher */}
+          <div
+            role="group"
+            aria-label="Language switcher"
+            className="inline-flex items-center rounded-full bg-white/10 border border-white/25 p-0.5 shrink-0"
+          >
+            <button
+              type="button"
+              onClick={() => setLang('en')}
+              aria-pressed={lang === 'en'}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
+                lang === 'en'
+                  ? 'bg-[#22C55E] text-slate-950'
+                  : 'text-white/85 hover:text-white'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang('ur')}
+              aria-pressed={lang === 'ur'}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
+                lang === 'ur'
+                  ? 'bg-[#22C55E] text-slate-950'
+                  : 'text-white/85 hover:text-white'
+              }`}
+            >
+              اردو
+            </button>
+          </div>
+
           {/* Desktop About Us in the Corner */}
           <button 
             onClick={() => onNavigatePage('about')}
-            className="hidden lg:inline-flex items-center gap-1 px-3.5 py-2 rounded-full text-xs font-semibold text-white/90 hover:bg-white/15 hover:text-emerald-300 transition cursor-pointer whitespace-nowrap shrink-0"
+            className="hidden lg:inline-flex items-center gap-1 px-3 py-2 rounded-full text-xs font-semibold text-white/90 hover:bg-white/15 hover:text-emerald-300 transition cursor-pointer whitespace-nowrap shrink-0"
             title="About FEVIQO"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>About Us</span>
+            <span>{t(MEMBERSHIP_COPY.nav.about)}</span>
           </button>
 
-          {/* Client Portal Login (Visible on all laptop/desktop screens, points directly to Client Login first) */}
+          {/* Client Portal Login */}
           <button 
             onClick={() => onNavigateFlow('login')}
-            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/25 transition cursor-pointer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/25 transition cursor-pointer whitespace-nowrap shrink-0"
             title="Login to FEVIQO Flow"
           >
             <Lock className="w-3.5 h-3.5 text-emerald-300" />
-            <span>Login</span>
+            <span>{t(MEMBERSHIP_COPY.nav.login)}</span>
           </button>
 
           {/* Primary Action */}
           <button
             onClick={onBookCall}
             id="nav-start-project-btn"
-            className="bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black px-5 sm:px-6 py-2.5 rounded-full text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5"
+            className="bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black px-4 sm:px-5 py-2.5 rounded-full text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 whitespace-nowrap shrink-0"
           >
-            Start a Project
+            {t(MEMBERSHIP_COPY.nav.startProject)}
           </button>
 
           {/* Mobile menu toggle */}
@@ -418,6 +453,32 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="lg:hidden absolute top-full left-0 right-0 bg-gradient-to-b from-[#032415] via-[#064e3b] to-[#032415] border-b border-[#064e3b] px-5 sm:px-6 py-5 space-y-4 shadow-2xl text-white max-h-[80vh] overflow-y-auto z-50 backdrop-blur-2xl ring-1 ring-emerald-500/20"
           >
             <div className="space-y-1">
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/10 mb-2">
+                <span className="text-xs font-semibold text-emerald-200">
+                  {lang === 'ur' ? 'زبان منتخب کریں' : 'Language'}
+                </span>
+                <div className="inline-flex items-center rounded-full bg-white/10 border border-white/25 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setLang('en')}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer ${
+                      lang === 'en' ? 'bg-[#22C55E] text-slate-950' : 'text-white'
+                    }`}
+                  >
+                    EN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLang('ur')}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold cursor-pointer ${
+                      lang === 'ur' ? 'bg-[#22C55E] text-slate-950' : 'text-white'
+                    }`}
+                  >
+                    اردو
+                  </button>
+                </div>
+              </div>
+
               <button 
                 onClick={() => { onNavigatePricing(); setMobileMenuOpen(false); }}
                 className="w-full text-left py-2.5 px-3 rounded-xl hover:bg-white/10 font-bold flex items-center justify-between text-white cursor-pointer"

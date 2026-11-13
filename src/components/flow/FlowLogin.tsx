@@ -36,59 +36,12 @@ export const FlowLogin: React.FC<FlowLoginProps> = ({
       return;
     }
 
-    // Direct check for admin credentials to guarantee login succeeds even on static/serverless deployments
-    const isAdminEmail = 
-      cleanEmail === 'rexanmedia01@gmail.com' ||
-      cleanEmail === 'partner@feviqo.com' || 
-      cleanEmail === 'admin@feviqo.com' || 
-      cleanEmail === 'feviqo@gmail.com' ||
-      cleanEmail === 'admin' ||
-      cleanEmail === 'rexan' ||
-      cleanEmail === 'partner' ||
-      cleanEmail.includes('admin') || 
-      cleanEmail.includes('rexan') ||
-      cleanEmail.includes('feviqo');
-
-    const isPassValid =
-      cleanPassword === 'Favico0322' ||
-      cleanPassword.toLowerCase() === 'favico0322' ||
-      cleanPassword.toLowerCase() === 'feviqo0322' ||
-      cleanPassword === 'admin123' ||
-      cleanPassword === 'partner123' ||
-      cleanPassword === '2026';
-
-    // If admin credentials are provided, grant admin access directly regardless of which tab is active
-    if (isAdminEmail && isPassValid) {
-      onLoginSuccess({
-        role: 'admin',
-        email: cleanEmail.includes('@') ? cleanEmail : 'partner@feviqo.com',
-        name: cleanEmail.includes('rexan') ? 'Rexan (Studio Owner)' : 'Studio Executive',
-        company: 'FEVIQO Studio Headquarters',
-      });
-      return;
-    }
-
-    if (roleTab === 'editor') {
-      const isEditorPass = 
-        cleanPassword === 'editor123' || 
-        cleanPassword === '2026' || 
-        cleanPassword === 'admin123';
-      if (isEditorPass) {
-        onLoginSuccess({
-          role: 'editor',
-          email: cleanEmail.includes('@') ? cleanEmail : 'editor@feviqo.com',
-          name: 'Studio Video Editor',
-          company: 'FEVIQO Post-Production',
-        });
-        return;
-      }
-    }
-
     setIsSubmitting(true);
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           email: cleanEmail,
           password: cleanPassword,
@@ -96,38 +49,14 @@ export const FlowLogin: React.FC<FlowLoginProps> = ({
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.session) {
-          onLoginSuccess(data.session);
-          return;
-        }
-        setErrorMsg(data.error || 'Authentication failed. Please check your credentials.');
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success && data.session) {
+        onLoginSuccess(data.session);
         return;
       }
 
-      // If server returned 404/500 (e.g. serverless without running server.ts)
-      if (roleTab === 'admin' && isAdminEmail && isPassValid) {
-        onLoginSuccess({
-          role: 'admin',
-          email: cleanEmail.includes('@') ? cleanEmail : 'rexanmedia01@gmail.com',
-          name: 'Rexan (Studio Owner)',
-          company: 'FEVIQO Studio Headquarters',
-        });
-        return;
-      }
-
-      setErrorMsg('Authentication failed. Please check your credentials.');
-    } catch (err) {
-      if (roleTab === 'admin' && isAdminEmail && isPassValid) {
-        onLoginSuccess({
-          role: 'admin',
-          email: cleanEmail.includes('@') ? cleanEmail : 'rexanmedia01@gmail.com',
-          name: 'Rexan (Studio Owner)',
-          company: 'FEVIQO Studio Headquarters',
-        });
-        return;
-      }
+      setErrorMsg(data.error || 'Authentication failed. Please check your credentials.');
+    } catch {
       setErrorMsg('Unable to connect to the authentication server. Please check your credentials.');
     } finally {
       setIsSubmitting(false);

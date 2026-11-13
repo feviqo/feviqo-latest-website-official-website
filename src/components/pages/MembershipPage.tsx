@@ -3,100 +3,98 @@ import {
   Check,
   ChevronDown,
   ArrowRight,
-  Menu,
-  X,
   AlertCircle,
-  Lock,
   User,
 } from 'lucide-react';
 import { AppRoute } from '../../types';
-import { FeviqoHeaderLogo } from '../FeviqoLogo';
+import { Navbar } from '../Navbar';
+import { Footer } from '../Footer';
 import {
   MEMBERSHIP_PLANS,
   MEMBERSHIP_DRAMAS,
-  MEMBERSHIP_POLICIES,
-  MEMBERSHIP_FAQS,
   MembershipPlan,
   MembershipPlanId,
   CatalogDramaMeta,
 } from '../../data/membershipCatalog';
 import {
+  fetchMembershipCatalog,
   fetchMemberAccount,
   logoutMemberAccount,
   createMembershipCheckout,
-  confirmStripeCheckout,
   MemberAccountState,
   MembershipOrder,
-  PaymentGatewayStatus,
+  PublicMembershipConfig,
 } from '../../services/membershipService';
 import { MembershipAuthModal } from '../membership/MembershipAuthModal';
 import { MembershipAccountPanel } from '../membership/MembershipAccountPanel';
+import { BankQrPaymentSection } from '../membership/BankQrPaymentSection';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { MEMBERSHIP_COPY } from '../../i18n/membershipTranslations';
 
 interface MembershipPageProps {
   onNavigatePage: (route: AppRoute) => void;
-  onBookCall?: () => void;
+  onBookCall: () => void;
+  onNavigateSection: (sectionId: string) => void;
+  onNavigatePricing: () => void;
+  onNavigateFlow: (view?: 'login' | 'register' | 'admin') => void;
   initialViewAccount?: boolean;
 }
 
 export const MembershipPage: React.FC<MembershipPageProps> = ({
   onNavigatePage,
   onBookCall,
+  onNavigateSection,
+  onNavigatePricing,
+  onNavigateFlow,
   initialViewAccount = false,
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { t, isUrdu, dir } = useLanguage();
   const [selectedPlanId, setSelectedPlanId] = useState<MembershipPlanId | null>(null);
   const [selectedDramaIds, setSelectedDramaIds] = useState<string[]>([]);
   const [selectionWarning, setSelectionWarning] = useState<string | null>(null);
   const [openFaqId, setOpenFaqId] = useState<string | null>('q1');
 
-  // Auth & account state
+  // Auth, catalog config & account state
   const [account, setAccount] = useState<MemberAccountState | null>(null);
+  const [publicConfig, setPublicConfig] = useState<PublicMembershipConfig | undefined>(undefined);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signup');
   const [showAccountSection, setShowAccountSection] = useState(initialViewAccount);
   const [pendingCheckoutAfterAuth, setPendingCheckoutAfterAuth] = useState(false);
 
-  // Checkout state
+  // Manual Bank QR Checkout state
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [createdOrderResult, setCreatedOrderResult] = useState<{
-    order: MembershipOrder;
-    paymentSetupRequired: boolean;
-    gatewayStatus?: PaymentGatewayStatus;
-  } | null>(null);
-  const [stripeConfirmMessage, setStripeConfirmMessage] = useState<string | null>(null);
+  const [activePaymentOrder, setActivePaymentOrder] = useState<MembershipOrder | null>(null);
 
   const pricingRef = useRef<HTMLElement | null>(null);
   const dramaSelectionRef = useRef<HTMLElement | null>(null);
+  const paymentSectionRef = useRef<HTMLDivElement | null>(null);
 
-  // Load current member session on mount + verify Stripe return URL if present
+  useEffect(() => {
+    setShowAccountSection(initialViewAccount);
+  }, [initialViewAccount]);
+
   useEffect(() => {
     let active = true;
     const init = async () => {
       try {
-        const res = await fetchMemberAccount();
-        if (active && res.success) {
-          setAccount(res);
+        const [catalogRes, accountRes] = await Promise.all([
+          fetchMembershipCatalog().catch(() => null),
+          fetchMemberAccount().catch(() => null),
+        ]);
+        if (!active) return;
+        if (catalogRes?.publicConfig) {
+          setPublicConfig(catalogRes.publicConfig);
+        }
+        if (accountRes && accountRes.success) {
+          setAccount(accountRes);
+          if (accountRes.publicConfig) {
+            setPublicConfig(accountRes.publicConfig);
+          }
         }
       } catch {
         // Guest viewer
-      }
-
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search);
-        const orderId = params.get('order');
-        const sessionId = params.get('session_id');
-        if (orderId && sessionId) {
-          const confirmed = await confirmStripeCheckout({ orderId, sessionId });
-          if (active && !('error' in confirmed)) {
-            setAccount(confirmed);
-            setShowAccountSection(true);
-            setStripeConfirmMessage('Payment verified. Your FEVIQO Premium Membership is now active.');
-            window.history.replaceState({}, '', '/membership');
-          } else if (active && 'error' in confirmed) {
-            setStripeConfirmMessage(confirmed.error || 'Payment verification is still pending.');
-          }
-        }
       }
     };
     init();
@@ -119,7 +117,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     setSelectedPlanId(plan.id);
     setSelectionWarning(null);
     setCheckoutError(null);
-    setCreatedOrderResult(null);
+    setActivePaymentOrder(null);
 
     if (plan.dramaLimit === 'all') {
       setSelectedDramaIds(MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id));
@@ -138,7 +136,11 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     setCheckoutError(null);
 
     if (selectedPlan.dramaLimit === 'all') {
-      setSelectionWarning('VIP includes all eligible VIP catalogue dramas automatically.');
+      setSelectionWarning(
+        isUrdu
+          ? 'VIP پلان میں تمام دستیاب VIP ڈرامے خودکار طور پر شامل ہیں۔'
+          : 'VIP includes all eligible VIP catalogue dramas automatically.'
+      );
       return;
     }
 
@@ -152,7 +154,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
 
     if (selectedDramaIds.length >= limit) {
       setSelectionWarning(
-        limit === 1
+        isUrdu
+          ? `آپ کے منتخب ${selectedPlan.name} پلان میں ${limit} ڈرامے شامل ہیں۔ تبدیل کرنے کے لیے پہلے موجودہ انتخاب ہٹائیں۔`
+          : limit === 1
           ? `Your ${selectedPlan.name} plan includes 1 drama. Deselect the current drama to switch, or upgrade to Plus for 2 dramas.`
           : `Your ${selectedPlan.name} plan includes ${limit} dramas. Deselect one drama first, or switch to VIP for the entire eligible catalogue.`
       );
@@ -171,29 +175,24 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         selectedDramaIds: dramaIds,
       });
 
-      if (!res.success) {
-        setCheckoutError(res.error || 'Could not initiate checkout. Please verify your selection.');
+      if (!res.success || !res.order) {
+        setCheckoutError(res.error || 'Could not initiate payment request. Please verify your selection.');
         return;
       }
 
       if (res.account) {
         setAccount(res.account);
       }
-
-      if (res.checkoutUrl) {
-        window.location.href = res.checkoutUrl;
-        return;
+      if (res.publicConfig) {
+        setPublicConfig(res.publicConfig);
       }
+      setActivePaymentOrder(res.order);
 
-      if (res.order) {
-        setCreatedOrderResult({
-          order: res.order,
-          paymentSetupRequired: Boolean(res.paymentSetupRequired),
-          gatewayStatus: res.gatewayStatus,
-        });
-      }
+      setTimeout(() => {
+        scrollToSection(paymentSectionRef.current);
+      }, 80);
     } catch {
-      setCheckoutError('Network error while creating checkout order. Please try again.');
+      setCheckoutError('Network error while preparing Bank QR payment. Please try again.');
     } finally {
       setCheckingOut(false);
     }
@@ -201,7 +200,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
 
   const handleCheckoutSubmit = async () => {
     if (!selectedPlan) {
-      setCheckoutError('Please select a membership plan above first.');
+      setCheckoutError(
+        isUrdu ? 'براہ کرم پہلے اوپر کوئی ممبرشپ پلان منتخب کریں۔' : 'Please select a membership plan above first.'
+      );
       return;
     }
 
@@ -211,15 +212,19 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     if (selectedPlan.dramaLimit !== 'all') {
       if (selectedDramaIds.length === 0) {
         setSelectionWarning(
-          `Please select ${selectedPlan.dramaLimit} drama${selectedPlan.dramaLimit > 1 ? 's' : ''} before continuing.`
+          isUrdu
+            ? `آگے بڑھنے سے پہلے براہ کرم ${selectedPlan.dramaLimit} ڈرامہ منتخب کریں۔`
+            : `Please select ${selectedPlan.dramaLimit} drama${selectedPlan.dramaLimit > 1 ? 's' : ''} before continuing.`
         );
         return;
       }
       if (selectedDramaIds.length < selectedPlan.dramaLimit) {
         setSelectionWarning(
-          `Your ${selectedPlan.name} plan includes ${selectedPlan.dramaLimit} dramas. Please select ${
-            selectedPlan.dramaLimit - selectedDramaIds.length
-          } more drama before continuing.`
+          isUrdu
+            ? `آپ کے ${selectedPlan.name} پلان میں ${selectedPlan.dramaLimit} ڈرامے شامل ہیں۔ براہ کرم ایک اور ڈرامہ منتخب کریں۔`
+            : `Your ${selectedPlan.name} plan includes ${selectedPlan.dramaLimit} dramas. Please select ${
+                selectedPlan.dramaLimit - selectedDramaIds.length
+              } more drama before continuing.`
         );
         return;
       }
@@ -242,6 +247,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
 
   const handleAuthenticated = async (loggedAccount: MemberAccountState) => {
     setAccount(loggedAccount);
+    if (loggedAccount.publicConfig) {
+      setPublicConfig(loggedAccount.publicConfig);
+    }
     setAuthModalOpen(false);
 
     if (pendingCheckoutAfterAuth && selectedPlan) {
@@ -260,7 +268,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     await logoutMemberAccount();
     setAccount(null);
     setShowAccountSection(false);
-    setCreatedOrderResult(null);
+    setActivePaymentOrder(null);
   };
 
   const handleOpenMyAccount = () => {
@@ -277,75 +285,57 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     }, 60);
   };
 
-  const heroFeatured = MEMBERSHIP_DRAMAS[0]; // Teşkilat
-  const heroSecondary = MEMBERSHIP_DRAMAS.slice(1); // Mehmed + Güneşin Doğduğu Yer
+  const heroFeatured = MEMBERSHIP_DRAMAS[0];
+  const heroSecondary = MEMBERSHIP_DRAMAS.slice(1);
 
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#0B0B0D] font-sans flex flex-col selection:bg-[#22C55E] selection:text-[#0B0B0D]">
-      {/* SECTION A — Clean Minimal Top Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <a
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              onNavigatePage('home');
-            }}
-            className="flex items-center shrink-0"
-            aria-label="FEVIQO Home"
-          >
-            <FeviqoHeaderLogo theme="light" className="h-7 sm:h-8 w-auto" />
-          </a>
+      {/* Shared Website Header */}
+      <Navbar
+        onBookCall={onBookCall}
+        onNavigateSection={onNavigateSection}
+        onNavigatePricing={onNavigatePricing}
+        onNavigateFlow={onNavigateFlow}
+        onNavigatePage={onNavigatePage}
+      />
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-700">
-            <a
-              href="/"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigatePage('home');
-              }}
-              className="hover:text-[#0B0B0D] transition-colors whitespace-nowrap shrink-0"
-            >
-              Home
-            </a>
-            <a
-              href="/dramas"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigatePage('dramas');
-              }}
-              className="hover:text-[#0B0B0D] transition-colors whitespace-nowrap shrink-0"
-            >
-              Explore Dramas
-            </a>
+      {/* Compact Member Subbar */}
+      <div dir={dir} className="bg-[#F8FAFC] border-b border-zinc-200">
+        <div
+          className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between gap-4 ${
+            isUrdu ? 'font-urdu-slim' : ''
+          }`}
+        >
+          <div className="flex items-center gap-5 text-xs font-semibold">
             <button
               type="button"
               onClick={() => {
                 setShowAccountSection(false);
                 scrollToSection(pricingRef.current);
               }}
-              className={`transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                !showAccountSection ? 'text-[#0B0B0D] font-semibold' : 'hover:text-[#0B0B0D]'
+              className={`cursor-pointer transition-colors ${
+                !showAccountSection ? 'text-[#16A34A]' : 'text-zinc-600 hover:text-[#0B0B0D]'
               }`}
             >
-              Membership
+              {t(MEMBERSHIP_COPY.subbar.membershipTab)}
             </button>
             <button
               type="button"
               onClick={handleOpenMyAccount}
-              className={`transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                showAccountSection ? 'text-[#16A34A] font-semibold' : 'hover:text-[#0B0B0D]'
+              className={`cursor-pointer transition-colors ${
+                showAccountSection ? 'text-[#16A34A]' : 'text-zinc-600 hover:text-[#0B0B0D]'
               }`}
             >
-              My Account
+              {t(MEMBERSHIP_COPY.subbar.myAccountTab)}
             </button>
+          </div>
 
+          <div className="flex items-center gap-3">
             {account ? (
               <button
                 type="button"
                 onClick={handleOpenMyAccount}
-                className="px-4 py-2 rounded-xl bg-[#0B0B0D] hover:bg-zinc-800 text-white text-xs font-semibold flex items-center gap-2 transition cursor-pointer whitespace-nowrap shrink-0"
+                className="px-3.5 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-zinc-800 text-white text-xs font-semibold inline-flex items-center gap-2 transition cursor-pointer"
               >
                 <User className="w-3.5 h-3.5 text-[#22C55E]" />
                 <span>{account.member.fullName}</span>
@@ -358,108 +348,16 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                   setAuthModalMode('signup');
                   setAuthModalOpen(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-semibold transition cursor-pointer whitespace-nowrap shrink-0"
+                className="px-3.5 py-1.5 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-semibold transition cursor-pointer"
               >
-                Sign In / Create Account
+                {t(MEMBERSHIP_COPY.subbar.signInSignUp)}
               </button>
             )}
-          </nav>
-
-          {/* Mobile Menu Toggle */}
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="md:hidden p-2 rounded-lg text-[#0B0B0D] hover:bg-zinc-100 cursor-pointer"
-            aria-label="Toggle navigation menu"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-
-        {/* Mobile Drawer */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-zinc-200 bg-white px-4 py-4 space-y-2">
-            <a
-              href="/"
-              onClick={(e) => {
-                e.preventDefault();
-                setMobileMenuOpen(false);
-                onNavigatePage('home');
-              }}
-              className="block py-2.5 px-3 rounded-lg text-sm font-medium text-[#0B0B0D] hover:bg-zinc-50"
-            >
-              Home
-            </a>
-            <a
-              href="/dramas"
-              onClick={(e) => {
-                e.preventDefault();
-                setMobileMenuOpen(false);
-                onNavigatePage('dramas');
-              }}
-              className="block py-2.5 px-3 rounded-lg text-sm font-medium text-[#0B0B0D] hover:bg-zinc-50"
-            >
-              Explore Dramas
-            </a>
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setShowAccountSection(false);
-                scrollToSection(pricingRef.current);
-              }}
-              className="block w-full text-left py-2.5 px-3 rounded-lg text-sm font-semibold text-[#0B0B0D] hover:bg-zinc-50 cursor-pointer"
-            >
-              Membership
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                handleOpenMyAccount();
-              }}
-              className="block w-full text-left py-2.5 px-3 rounded-lg text-sm font-medium text-[#0B0B0D] hover:bg-zinc-50 cursor-pointer"
-            >
-              My Account
-            </button>
-            <div className="pt-2">
-              {account ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleOpenMyAccount();
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#0B0B0D] text-white text-sm font-semibold cursor-pointer"
-                >
-                  {account.member.fullName} — View Account
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setPendingCheckoutAfterAuth(false);
-                    setAuthModalMode('signup');
-                    setAuthModalOpen(true);
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#22C55E] text-[#0B0B0D] text-sm font-semibold cursor-pointer"
-                >
-                  Sign In / Create Account
-                </button>
-              )}
-            </div>
           </div>
-        )}
-      </header>
-
-      {stripeConfirmMessage && (
-        <div className="bg-zinc-50 border-b border-zinc-200 px-4 py-3 text-center text-sm font-medium text-[#0B0B0D]">
-          {stripeConfirmMessage}
         </div>
-      )}
+      </div>
 
-      {/* Optional My Account Drawer View when authenticated & opened */}
+      {/* Optional My Account Panel */}
       {account && showAccountSection && (
         <div className="border-b border-zinc-200 bg-white">
           <MembershipAccountPanel
@@ -474,28 +372,27 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         </div>
       )}
 
-      <main className="flex-1">
-        {/* SECTION B — Editorial Hero */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 sm:pt-20 sm:pb-24">
+      <main dir={dir} className={`flex-1 ${isUrdu ? 'font-urdu-slim' : ''}`}>
+        {/* Editorial Hero */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 sm:pt-18 sm:pb-22">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-14 items-center">
             <div className="lg:col-span-6 space-y-6">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#16A34A]">
-                FEVIQO PREMIUM MEMBERSHIP
+                {t(MEMBERSHIP_COPY.hero.eyebrow)}
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-[54px] font-bold tracking-tight text-[#0B0B0D] leading-[1.06]">
-                Your Favourite Turkish Dramas. In Urdu.
+              <h1 className="text-4xl sm:text-5xl lg:text-[52px] font-bold tracking-tight text-[#0B0B0D] leading-[1.08]">
+                {t(MEMBERSHIP_COPY.hero.title)}
               </h1>
 
-              <p
-                dir="rtl"
-                className="font-urdu-slim text-2xl sm:text-[28px] text-[#0B0B0D]/85 pt-1"
-              >
-                اپنے پسندیدہ ترکی ڈرامے اردو زبان میں دیکھیں۔
-              </p>
+              {!isUrdu && (
+                <p dir="rtl" className="font-urdu-slim text-2xl sm:text-[26px] text-[#0B0B0D]/85 pt-1">
+                  {MEMBERSHIP_COPY.hero.subtitleUrLine}
+                </p>
+              )}
 
               <p className="text-base sm:text-lg text-zinc-600 leading-relaxed max-w-xl">
-                Choose the exact series you follow or unlock the full eligible VIP catalogue in Urdu—built for smooth, high-definition viewing across Pakistan.
+                {t(MEMBERSHIP_COPY.hero.description)}
               </p>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-3.5 pt-2">
@@ -504,7 +401,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                   onClick={() => scrollToSection(pricingRef.current)}
                   className="px-6 py-3.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
                 >
-                  <span>Explore Memberships</span>
+                  <span>{t(MEMBERSHIP_COPY.hero.exploreMemberships)}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <a
@@ -515,19 +412,18 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                   }}
                   className="px-6 py-3.5 rounded-xl border border-zinc-300 hover:border-[#0B0B0D] text-[#0B0B0D] text-sm font-semibold inline-flex items-center justify-center transition"
                 >
-                  Explore Dramas
+                  {t(MEMBERSHIP_COPY.hero.exploreDramas)}
                 </a>
               </div>
             </div>
 
-            {/* Approved FEVIQO Drama Visual Showcase (Real 3-Series Catalogue Only) */}
+            {/* Approved FEVIQO Drama Visual Showcase */}
             <div className="lg:col-span-6 space-y-4">
-              {/* Primary 16:9 Drama Showcase Frame */}
               <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#0B0B0D] border border-zinc-200">
                 <img
                   src={heroFeatured.posterUrl}
                   referrerPolicy="no-referrer"
-                  alt={`${heroFeatured.title} — ${heroFeatured.seasonLabel} in Urdu`}
+                  alt={`${heroFeatured.title} — ${heroFeatured.seasonLabel} Urdu Dubbed`}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     if (e.currentTarget.src !== window.location.origin + heroFeatured.fallbackPosterUrl) {
@@ -539,7 +435,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                 <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 text-white">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#22C55E]">
-                      {heroFeatured.seasonLabel} · {heroFeatured.languageLabel}
+                      {heroFeatured.seasonLabel} · {t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)}
                     </div>
                     <div className="text-xl sm:text-2xl font-bold tracking-tight mt-0.5">
                       {heroFeatured.title}
@@ -551,7 +447,6 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                 </div>
               </div>
 
-              {/* Supporting Real FEVIQO Series Pair */}
               <div className="grid grid-cols-2 gap-4">
                 {heroSecondary.map((drama) => (
                   <div
@@ -561,7 +456,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                     <img
                       src={drama.posterUrl}
                       referrerPolicy="no-referrer"
-                      alt={`${drama.title} — ${drama.seasonLabel} in Urdu`}
+                      alt={`${drama.title} — ${drama.seasonLabel} Urdu Dubbed`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         if (e.currentTarget.src !== window.location.origin + drama.fallbackPosterUrl) {
@@ -572,11 +467,10 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
                     <div className="absolute bottom-3 left-3.5 right-3.5 text-white">
                       <div className="text-[10px] font-medium text-zinc-300">
-                        {drama.seasonLabel} · {drama.episodes.length} Episodes
+                        {drama.seasonLabel} · {t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)} · {drama.episodes.length}{' '}
+                        {t(MEMBERSHIP_COPY.dramaSelection.episodes)}
                       </div>
-                      <div className="text-sm font-bold leading-snug truncate mt-0.5">
-                        {drama.title}
-                      </div>
+                      <div className="text-sm font-bold leading-snug truncate mt-0.5">{drama.title}</div>
                     </div>
                   </div>
                 ))}
@@ -585,68 +479,67 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </section>
 
-        {/* SECTION C — How Membership Works */}
-        <section className="bg-[#F8FAFC] border-y border-zinc-200/80 py-16 sm:py-24">
+        {/* How Membership Works */}
+        <section className="bg-[#F8FAFC] border-y border-zinc-200/80 py-16 sm:py-22">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
             <div className="max-w-2xl space-y-2">
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
-                How Membership Works
+                {t(MEMBERSHIP_COPY.howItWorks.eyebrow)}
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0B0B0D]">
-                Your Membership. Your Choice.
+                {t(MEMBERSHIP_COPY.howItWorks.heading)}
               </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
               <div className="space-y-3 pt-4 border-t border-zinc-300">
                 <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#16A34A]">
-                  01 — Choose Your Dramas
+                  {t(MEMBERSHIP_COPY.howItWorks.step1Title)}
                 </div>
                 <p className="text-sm sm:text-base text-zinc-600 leading-relaxed">
-                  Pick the membership tier that matches how you watch, then choose one or two specific Turkish dramas—or unlock all eligible VIP titles at once.
+                  {t(MEMBERSHIP_COPY.howItWorks.step1Desc)}
                 </p>
               </div>
 
               <div className="space-y-3 pt-4 border-t border-zinc-300">
                 <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#16A34A]">
-                  02 — Activate Your Membership
+                  {t(MEMBERSHIP_COPY.howItWorks.step2Title)}
                 </div>
                 <p className="text-sm sm:text-base text-zinc-600 leading-relaxed">
-                  Sign in or create your personal FEVIQO account and verify your order to begin your 15-day or 30-day membership term.
+                  {t(MEMBERSHIP_COPY.howItWorks.step2Desc)}
                 </p>
               </div>
 
               <div className="space-y-3 pt-4 border-t border-zinc-300">
                 <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#16A34A]">
-                  03 — Enjoy New Episodes
+                  {t(MEMBERSHIP_COPY.howItWorks.step3Title)}
                 </div>
                 <p className="text-sm sm:text-base text-zinc-600 leading-relaxed">
-                  Stream existing episodes right away and receive every newly published eligible episode for your selected dramas throughout your term.
+                  {t(MEMBERSHIP_COPY.howItWorks.step3Desc)}
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* SECTION D — Membership Pricing */}
+        {/* Membership Pricing */}
         <section
           id="membership-pricing"
           ref={pricingRef}
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 space-y-12"
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-22 space-y-12"
         >
           <div className="max-w-2xl space-y-3">
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0B0B0D]">
-              Choose Your Membership
+              {t(MEMBERSHIP_COPY.plans.heading)}
             </h2>
-            <p className="text-base text-zinc-600">
-              The right membership for the dramas you want to watch.
-            </p>
+            <p className="text-base text-zinc-600">{t(MEMBERSHIP_COPY.plans.subheading)}</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {MEMBERSHIP_PLANS.map((plan) => {
               const isSelected = selectedPlanId === plan.id;
               const isPopular = Boolean(plan.isFeatured);
+              const copy = MEMBERSHIP_COPY.plans.items[plan.id];
 
               return (
                 <div
@@ -661,43 +554,33 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                 >
                   <div className="space-y-5">
                     <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="text-lg font-bold tracking-tight">{plan.name}</h3>
+                      <h3 className="text-lg font-bold tracking-tight">{t(copy.name)}</h3>
                       {plan.featuredLabel && (
                         <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#22C55E]">
-                          {plan.featuredLabel}
+                          {t(MEMBERSHIP_COPY.plans.mostPopular)}
                         </span>
                       )}
                     </div>
 
                     <div className="space-y-1">
-                      <div className="text-3xl font-bold tracking-tight tabular-nums">
+                      <div className="text-3xl font-bold tracking-tight tabular-nums" dir="ltr">
                         {plan.priceDisplay}
                       </div>
-                      <div
-                        className={`text-xs font-medium ${
-                          isPopular ? 'text-zinc-400' : 'text-zinc-500'
-                        }`}
-                      >
-                        {plan.durationLabel}
+                      <div className={`text-xs font-medium ${isPopular ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                        {t(copy.durationLabel)}
                       </div>
                     </div>
 
                     <div
                       className={`pt-4 border-t text-sm font-semibold ${
-                        isPopular
-                          ? 'border-zinc-800 text-white'
-                          : 'border-zinc-100 text-[#0B0B0D]'
+                        isPopular ? 'border-zinc-800 text-white' : 'border-zinc-100 text-[#0B0B0D]'
                       }`}
                     >
-                      {plan.inclusionText}
+                      {t(copy.inclusionText)}
                     </div>
 
-                    <p
-                      className={`text-xs leading-relaxed ${
-                        isPopular ? 'text-zinc-300' : 'text-zinc-600'
-                      }`}
-                    >
-                      {plan.summary}
+                    <p className={`text-xs leading-relaxed ${isPopular ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                      {t(copy.summary)}
                     </p>
                   </div>
 
@@ -712,7 +595,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                         : 'bg-[#F4F4F5] hover:bg-[#0B0B0D] text-[#0B0B0D] hover:text-white'
                     }`}
                   >
-                    {isSelected ? `${plan.name} Selected` : plan.ctaLabel}
+                    {isSelected
+                      ? `${t(copy.name)} · ${t(MEMBERSHIP_COPY.plans.selectedSuffix)}`
+                      : t(copy.ctaLabel)}
                   </button>
                 </div>
               );
@@ -720,7 +605,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </section>
 
-        {/* SECTION E — Drama Selection (Appears after selecting a plan) */}
+        {/* Drama Selection & Bank QR Payment Flow */}
         {selectedPlan && (
           <section
             id="drama-selection"
@@ -732,24 +617,28 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
               <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-zinc-200">
                 <div className="space-y-1.5">
                   <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
-                    Step 2 · {selectedPlan.name} Plan ({selectedPlan.priceDisplay} / {selectedPlan.durationLabel})
+                    {t(MEMBERSHIP_COPY.dramaSelection.stepEyebrow)} · {selectedPlan.name} (
+                    <span dir="ltr">{selectedPlan.priceDisplay}</span> /{' '}
+                    {t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})
                   </div>
                   <h2 id="drama-selection-heading" className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0B0B0D]">
                     {selectedPlan.dramaLimit === 'all'
-                      ? 'All Eligible VIP Catalogue Dramas Included'
-                      : `Select ${selectedPlan.dramaLimit} Drama${selectedPlan.dramaLimit > 1 ? 's' : ''} for Your Membership`}
+                      ? t(MEMBERSHIP_COPY.dramaSelection.allVipHeading)
+                      : selectedPlan.dramaLimit === 2
+                      ? t(MEMBERSHIP_COPY.dramaSelection.selectTwoHeading)
+                      : t(MEMBERSHIP_COPY.dramaSelection.selectOneHeading)}
                   </h2>
                   <p className="text-sm text-zinc-600">
                     {selectedPlan.dramaLimit === 'all'
-                      ? 'Your VIP plan unlocks every eligible Turkish series below for 30 days.'
-                      : `Choose ${selectedPlan.dramaLimit} series from the official FEVIQO catalogue (${selectedDramaIds.length} of ${selectedPlan.dramaLimit} selected).`}
+                      ? t(MEMBERSHIP_COPY.dramaSelection.vipDesc)
+                      : t(MEMBERSHIP_COPY.dramaSelection.chooseCountDesc)}
                   </p>
                 </div>
 
-                <div className="text-sm font-semibold text-[#0B0B0D] tabular-nums shrink-0">
+                <div className="text-sm font-semibold text-[#0B0B0D] tabular-nums shrink-0" dir="ltr">
                   {selectedPlan.dramaLimit === 'all'
-                    ? `${MEMBERSHIP_DRAMAS.length} of ${MEMBERSHIP_DRAMAS.length} included`
-                    : `${selectedDramaIds.length} / ${selectedPlan.dramaLimit} selected`}
+                    ? `${MEMBERSHIP_DRAMAS.length} / ${MEMBERSHIP_DRAMAS.length}`
+                    : `${selectedDramaIds.length} / ${selectedPlan.dramaLimit}`}
                 </div>
               </div>
 
@@ -775,9 +664,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                       type="button"
                       onClick={() => handleToggleDrama(drama)}
                       className={`text-left rounded-2xl overflow-hidden bg-white transition flex flex-col cursor-pointer ${
-                        isChosen
-                          ? 'border-2 border-[#22C55E]'
-                          : 'border border-zinc-200 hover:border-zinc-400'
+                        isChosen ? 'border-2 border-[#22C55E]' : 'border border-zinc-200 hover:border-zinc-400'
                       }`}
                     >
                       <div className="relative aspect-video w-full bg-[#0B0B0D]">
@@ -808,22 +695,21 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                             </span>
                           </div>
                           <div className="text-xs font-medium text-zinc-500">
-                            {drama.seasonLabel} · {drama.genreLabel} · {drama.episodes.length} Episodes
+                            {drama.seasonLabel} · {drama.genreLabel} · {drama.episodes.length}{' '}
+                            {t(MEMBERSHIP_COPY.dramaSelection.episodes)}
                           </div>
-                          <p className="text-xs text-zinc-600 leading-relaxed">
-                            {drama.synopsis}
-                          </p>
+                          <p className="text-xs text-zinc-600 leading-relaxed">{drama.synopsis}</p>
                         </div>
 
                         <div className="pt-3 border-t border-zinc-100 text-xs font-semibold flex items-center justify-between">
                           <span className={isChosen ? 'text-[#16A34A]' : 'text-zinc-600'}>
                             {isVipAuto
-                              ? 'Included with VIP'
+                              ? t(MEMBERSHIP_COPY.dramaSelection.includedVip)
                               : isChosen
-                              ? 'Selected for Membership'
-                              : 'Select Drama'}
+                              ? t(MEMBERSHIP_COPY.dramaSelection.selectedForMembership)
+                              : t(MEMBERSHIP_COPY.dramaSelection.selectDrama)}
                           </span>
-                          <span className="text-zinc-400">{drama.languageLabel}</span>
+                          <span className="text-zinc-500">{t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)}</span>
                         </div>
                       </div>
                     </button>
@@ -841,65 +727,17 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                 </div>
               )}
 
-              {/* Honest Pending Order / Payment Verification Notice (Never fakes activation) */}
-              {createdOrderResult && (
-                <div className="rounded-2xl bg-white border border-zinc-300 p-6 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-zinc-100">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
-                        Order Saved · Pending Payment Verification
-                      </div>
-                      <h3 className="text-lg font-bold text-[#0B0B0D] mt-0.5">
-                        {createdOrderResult.order.planName} Plan — PKR{' '}
-                        {createdOrderResult.order.amountPkr.toLocaleString()} ({createdOrderResult.order.durationDays} Days)
-                      </h3>
-                    </div>
-                    <div className="text-xs text-zinc-500 tabular-nums">
-                      Order ID: {createdOrderResult.order.id}
-                    </div>
-                  </div>
-
-                  {createdOrderResult.paymentSetupRequired && (
-                    <div className="space-y-2 text-sm text-zinc-700 leading-relaxed">
-                      <div className="flex items-center gap-2 font-semibold text-[#0B0B0D]">
-                        <Lock className="w-4 h-4 text-zinc-500" />
-                        <span>Payment Gateway Credentials Required for Activation</span>
-                      </div>
-                      <p className="text-xs text-zinc-600 leading-relaxed">
-                        Your checkout selection has been securely recorded under your account as <strong>Pending Payment</strong>. Because live merchant payment credentials are not configured on this server yet, this membership remains inactive until payment settlement is verified.
-                      </p>
-                      {createdOrderResult.gatewayStatus && (
-                        <ul className="text-xs text-zinc-500 list-disc pl-5 space-y-1 pt-1">
-                          {createdOrderResult.gatewayStatus.missingCredentials.map((cred) => (
-                            <li key={cred}>{cred}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={handleOpenMyAccount}
-                      className="px-4 py-2 rounded-xl border border-zinc-300 text-xs font-semibold text-[#0B0B0D] hover:bg-zinc-100 transition cursor-pointer"
-                    >
-                      View Order in My Account
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Checkout Action Bar */}
               <div className="rounded-2xl bg-white border border-zinc-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="text-sm font-bold text-[#0B0B0D]">
-                    {selectedPlan.name} · {selectedPlan.priceDisplay} for {selectedPlan.durationLabel}
+                    {selectedPlan.name} · <span dir="ltr">{selectedPlan.priceDisplay}</span> (
+                    {t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})
                   </div>
                   <div className="text-xs text-zinc-600">
                     {account
-                      ? `Signed in as ${account.member.email}`
-                      : 'Sign in or create a personal FEVIQO account at the next step to complete verification.'}
+                      ? `${t(MEMBERSHIP_COPY.dramaSelection.signedInAs)} ${account.member.email}`
+                      : t(MEMBERSHIP_COPY.dramaSelection.guestCheckoutNote)}
                   </div>
                 </div>
 
@@ -911,53 +749,75 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                 >
                   <span>
                     {checkingOut
-                      ? 'Preparing Checkout...'
+                      ? t(MEMBERSHIP_COPY.dramaSelection.preparingCheckout)
                       : account
-                      ? 'Proceed to Checkout'
-                      : 'Continue to Sign In & Checkout'}
+                      ? t(MEMBERSHIP_COPY.dramaSelection.proceedToPayment)
+                      : t(MEMBERSHIP_COPY.dramaSelection.continueSignInCheckout)}
                   </span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* Manual Bank QR Payment & Proof Upload Section */}
+              {activePaymentOrder && account && (
+                <div ref={paymentSectionRef}>
+                  <BankQrPaymentSection
+                    order={activePaymentOrder}
+                    member={account.member}
+                    publicConfig={publicConfig}
+                    onProofSubmitted={(updatedAcc, updatedOrd) => {
+                      setAccount(updatedAcc);
+                      setActivePaymentOrder(updatedOrd);
+                    }}
+                    onViewMyAccount={() => {
+                      setShowAccountSection(true);
+                      setTimeout(() => {
+                        const el = document.getElementById('my-account');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 60);
+                    }}
+                  />
+                </div>
+              )}
             </div>
           </section>
         )}
 
-        {/* SECTION F — Important Membership Information */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 space-y-12">
+        {/* Important Membership Information */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-22 space-y-12">
           <div className="max-w-2xl space-y-2">
             <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
-              Membership Details
+              {t(MEMBERSHIP_COPY.policies.eyebrow)}
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0B0B0D]">
-              Everything You Need to Know
+              {t(MEMBERSHIP_COPY.policies.heading)}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8 border-t border-zinc-200 pt-10">
-            {MEMBERSHIP_POLICIES.map((policy) => (
+            {MEMBERSHIP_COPY.policies.items.map((policy) => (
               <div key={policy.id} className="space-y-2">
-                <h3 className="text-base font-bold text-[#0B0B0D]">{policy.title}</h3>
-                <p className="text-sm text-zinc-600 leading-relaxed">{policy.description}</p>
+                <h3 className="text-base font-bold text-[#0B0B0D]">{t(policy.title)}</h3>
+                <p className="text-sm text-zinc-600 leading-relaxed">{t(policy.description)}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* SECTION G — Frequently Asked Questions */}
-        <section className="bg-[#F8FAFC] border-y border-zinc-200/80 py-16 sm:py-24">
+        {/* Frequently Asked Questions */}
+        <section className="bg-[#F8FAFC] border-y border-zinc-200/80 py-16 sm:py-22">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
             <div className="space-y-2">
               <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
-                Questions &amp; Answers
+                {t(MEMBERSHIP_COPY.faq.eyebrow)}
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0B0B0D]">
-                Frequently Asked Questions
+                {t(MEMBERSHIP_COPY.faq.heading)}
               </h2>
             </div>
 
             <div className="divide-y divide-zinc-200 border-y border-zinc-200">
-              {MEMBERSHIP_FAQS.map((faq) => {
+              {MEMBERSHIP_COPY.faq.items.map((faq) => {
                 const isOpen = openFaqId === faq.id;
                 return (
                   <div key={faq.id} className="py-5">
@@ -967,9 +827,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                       aria-expanded={isOpen}
                       className="w-full flex items-center justify-between gap-4 text-left cursor-pointer"
                     >
-                      <span className="text-base font-semibold text-[#0B0B0D]">
-                        {faq.question}
-                      </span>
+                      <span className="text-base font-semibold text-[#0B0B0D]">{t(faq.question)}</span>
                       <ChevronDown
                         className={`w-4 h-4 text-zinc-500 shrink-0 transition-transform duration-200 ${
                           isOpen ? 'rotate-180 text-[#0B0B0D]' : ''
@@ -977,9 +835,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                       />
                     </button>
                     {isOpen && (
-                      <p className="mt-3 text-sm text-zinc-600 leading-relaxed pr-6">
-                        {faq.answer}
-                      </p>
+                      <p className="mt-3 text-sm text-zinc-600 leading-relaxed pr-6">{t(faq.answer)}</p>
                     )}
                   </div>
                 );
@@ -988,13 +844,13 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </section>
 
-        {/* SECTION H — Final CTA & Minimalist Footer */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 text-center space-y-6">
+        {/* Final CTA */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-18 sm:py-24 text-center space-y-6">
           <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#0B0B0D] max-w-2xl mx-auto leading-tight">
-            Your Next Favourite Story Is Waiting.
+            {t(MEMBERSHIP_COPY.finalCta.heading)}
           </h2>
           <p className="text-base sm:text-lg text-zinc-600 max-w-xl mx-auto">
-            Join FEVIQO Premium and experience Turkish dramas in Urdu.
+            {t(MEMBERSHIP_COPY.finalCta.subtitle)}
           </p>
           <div className="pt-2">
             <button
@@ -1002,94 +858,22 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
               onClick={() => scrollToSection(pricingRef.current)}
               className="px-7 py-3.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-semibold inline-flex items-center gap-2 transition cursor-pointer"
             >
-              <span>Choose Your Membership</span>
+              <span>{t(MEMBERSHIP_COPY.finalCta.cta)}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </section>
       </main>
 
-      {/* Clean Membership Footer */}
-      <footer className="border-t border-zinc-200 bg-[#FFFFFF] py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-3">
-              <FeviqoHeaderLogo theme="light" className="h-6 w-auto" />
-              <span className="sr-only">FEVIQO</span>
-            </div>
-            <p dir="rtl" className="font-urdu-slim text-lg text-zinc-700">
-              ترکی کہانیاں، اب آپ کی زبان میں۔
-            </p>
-          </div>
-
-          <nav
-            aria-label="Footer navigation"
-            className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-zinc-600"
-          >
-            <a
-              href="/"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigatePage('home');
-              }}
-              className="hover:text-[#0B0B0D] transition-colors"
-            >
-              Home
-            </a>
-            <a
-              href="/dramas"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigatePage('dramas');
-              }}
-              className="hover:text-[#0B0B0D] transition-colors"
-            >
-              Explore Dramas
-            </a>
-            <a
-              href="/membership"
-              onClick={(e) => {
-                e.preventDefault();
-                scrollToSection(pricingRef.current);
-              }}
-              className="hover:text-[#0B0B0D] font-medium text-[#0B0B0D] transition-colors"
-            >
-              Membership
-            </a>
-            <a
-              href="/booking"
-              onClick={(e) => {
-                e.preventDefault();
-                if (onBookCall) onBookCall();
-                else onNavigatePage('booking');
-              }}
-              className="hover:text-[#0B0B0D] transition-colors"
-            >
-              Contact
-            </a>
-            <a
-              href="/terms"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigatePage('terms');
-              }}
-              className="hover:text-[#0B0B0D] transition-colors"
-            >
-              Terms
-            </a>
-            <a
-              href="/privacy"
-              onClick={(e) => {
-                e.preventDefault();
-                onNavigatePage('privacy');
-              }}
-              className="hover:text-[#0B0B0D] transition-colors"
-            >
-              Privacy Policy
-            </a>
-          </nav>
-        </div>
-      </footer>
+      {/* Shared Website Footer */}
+      <Footer
+        onBookCall={onBookCall}
+        onGetStarted={onBookCall}
+        onNavigateSection={onNavigateSection}
+        onNavigatePricing={onNavigatePricing}
+        onNavigateFlow={() => onNavigateFlow()}
+        onNavigatePage={onNavigatePage}
+      />
 
       <MembershipAuthModal
         isOpen={authModalOpen}

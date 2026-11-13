@@ -32,6 +32,7 @@ export interface CatalogDramaMeta {
   seasonLabel: string;
   genreLabel: string;
   languageLabel: string;
+  languageLabelUr: string;
   vipEligible: boolean;
   posterUrl: string;
   fallbackPosterUrl: string;
@@ -100,7 +101,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
     urduTitle: 'تشکیلات',
     seasonLabel: 'Season 7',
     genreLabel: 'Espionage Action',
-    languageLabel: 'Urdu Subtitles',
+    languageLabel: 'Urdu Dubbed',
+    languageLabelUr: 'اردو ڈبنگ',
     vipEligible: true,
     posterUrl: 'https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2',
     fallbackPosterUrl: '/images/teskialt186thumbnIL.webp',
@@ -156,7 +158,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
     urduTitle: 'مہمد: فتحلر سلطان',
     seasonLabel: 'Season 4',
     genreLabel: 'Historical Epic',
-    languageLabel: 'Urdu Subtitles',
+    languageLabel: 'Urdu Dubbed',
+    languageLabelUr: 'اردو ڈبنگ',
     vipEligible: true,
     posterUrl: 'https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1',
     fallbackPosterUrl: '/images/MEHMED.webp',
@@ -212,7 +215,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
     urduTitle: 'گنیشین دوغدوغو یر',
     seasonLabel: 'Season 1',
     genreLabel: 'Family Drama',
-    languageLabel: 'Urdu Subtitles',
+    languageLabel: 'Urdu Dubbed',
+    languageLabelUr: 'اردو ڈبنگ',
     vipEligible: true,
     posterUrl: 'https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh',
     fallbackPosterUrl: '/images/posters/poster-horiz-narrative-storytelling.jpg',
@@ -326,7 +330,7 @@ export const MEMBERSHIP_FAQS: MembershipFaqItem[] = [
     id: 'q1',
     question: 'Q1. What is included in a FEVIQO Premium Membership?',
     answer:
-      'A FEVIQO Premium Membership gives your personal account access to Urdu-subtitled Turkish drama episodes for the dramas included in your chosen plan, with automatic access to newly added eligible episodes while your membership is active.',
+      'A FEVIQO Premium Membership gives your personal account access to Urdu-dubbed Turkish drama episodes for the dramas included in your chosen plan, with automatic access to newly added eligible episodes while your membership is active.',
   },
   {
     id: 'q2',
