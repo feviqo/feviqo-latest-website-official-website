@@ -39,6 +39,7 @@ import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
 import { GunesinDramaPage } from './components/pages/GunesinDramaPage';
 import { MehmedDramaPage } from './components/pages/MehmedDramaPage';
 import { DramasPage } from './components/pages/DramasPage';
+import { MembershipPage } from './components/pages/MembershipPage';
 import { AboutUsPage } from './components/pages/AboutUsPage';
 import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
 import { TermsPage } from './components/pages/TermsPage';
@@ -73,6 +74,7 @@ export default function App() {
       if (path.includes('/gunesin-dogdugu-yer')) return 'gunesin-dogdugu-yer';
       if (path.includes('/mehmed') || path.includes('/mehmed-fetihler-sultani')) return 'mehmed-fetihler-sultani';
       if (path.includes('/dramas')) return 'dramas';
+      if (path.includes('/membership') || path.includes('/account') || hash.includes('#membership')) return 'membership';
       if (path.includes('/about') || hash.includes('#about')) return 'about';
       if (path.includes('/privacy') || hash.includes('#privacy')) return 'privacy';
       if (path.includes('/terms') || hash.includes('#terms')) return 'terms';
@@ -156,6 +158,8 @@ export default function App() {
         setCurrentRoute('mehmed-fetihler-sultani');
       } else if (path.includes('/dramas')) {
         setCurrentRoute('dramas');
+      } else if (path.includes('/membership') || path.includes('/account') || hash.includes('#membership')) {
+        setCurrentRoute('membership');
       } else if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) {
         setCurrentRoute('turkish-drama');
       } else if (path.includes('/about') || hash.includes('#about')) {
@@ -208,6 +212,7 @@ export default function App() {
       'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',
       'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90 - FEVIQO',
       'dramas': 'Turkish Dramas Portal - Stream Premium Series & Movies | FEVIQO',
+      'membership': 'FEVIQO Premium Membership & Pricing | Watch Turkish Dramas in Urdu',
       'privacy': 'Privacy Policy & Cookie Disclosure | FEVIQO',
       'terms': 'Terms of Service & Usage Agreement | FEVIQO'
     };
@@ -632,6 +637,17 @@ export default function App() {
           </div>
         );
 
+      case 'membership':
+        return (
+          <MembershipPage
+            onNavigatePage={(route) => navigateTo(route)}
+            onBookCall={() => handleOpenBookCall()}
+            initialViewAccount={
+              typeof window !== 'undefined' && window.location.pathname.toLowerCase().startsWith('/account')
+            }
+          />
+        );
+
       case 'gunesin-dogdugu-yer':
         return (
           <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white text-slate-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col">
@@ -769,6 +785,7 @@ export default function App() {
         }
         return '/mehmed-fetihler-sultani';
       case 'dramas': return '/dramas';
+      case 'membership': return '/membership';
       case 'privacy': return '/privacy';
       case 'terms': return '/terms';
       case 'teskilat-urdu':

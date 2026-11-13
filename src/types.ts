@@ -198,6 +198,7 @@ export type AppRoute =
   | 'gunesin-dogdugu-yer'
   | 'mehmed-fetihler-sultani'
   | 'dramas'
+  | 'membership'
   | 'privacy'
   | 'terms';
 

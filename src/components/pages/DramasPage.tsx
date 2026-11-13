@@ -347,16 +347,31 @@ export const DramasPage: React.FC<DramasPageProps> = ({
       <section id="collection" className="w-full py-16 px-4 sm:px-8 lg:px-16 space-y-16 bg-white">
         
         {/* Header Block */}
-        <div className="max-w-7xl mx-auto text-left space-y-2">
-          <span className="text-xs font-black text-[#16a34a] tracking-widest uppercase block">
-            FEVIQO DRAMA COLLECTION
-          </span>
-          <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-            Featured Turkish Dramas
-          </h2>
-          <p className="text-sm sm:text-base text-slate-500 max-w-xl font-normal">
-            Choose your next story. Stream officially in high definition.
-          </p>
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="text-left space-y-2">
+            <span className="text-xs font-black text-[#16a34a] tracking-widest uppercase block">
+              FEVIQO DRAMA COLLECTION
+            </span>
+            <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+              Featured Turkish Dramas
+            </h2>
+            <p className="text-sm sm:text-base text-slate-500 max-w-xl font-normal">
+              Choose your next story. Stream officially in high definition.
+            </p>
+          </div>
+          <a
+            href="/membership"
+            onClick={(e) => {
+              if (!e.metaKey && !e.ctrlKey) {
+                e.preventDefault();
+                onNavigatePage('membership');
+              }
+            }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-bold transition shrink-0 self-start sm:self-auto"
+          >
+            <span>Explore Premium Membership</span>
+            <ChevronRight className="w-4 h-4" />
+          </a>
         </div>
 
         {/* Centralized Catalog Loop with ORIGINAL image color and exact aspect ratio */}

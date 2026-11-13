@@ -2,6 +2,7 @@ import express from 'express';
 import compression from 'compression';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { execFile } from 'child_process';
 import nodemailer from 'nodemailer';
 import { createServer as createViteServer } from 'vite';
@@ -46,6 +47,20 @@ import {
   triggerEpisodeReindexingPing,
   getSearchEnginePingHistory
 } from './src/seo/seoIndexingService';
+import { MEMBERSHIP_PLANS, MEMBERSHIP_DRAMAS } from './src/data/membershipCatalog';
+import {
+  registerMember,
+  loginMember,
+  verifyMemberSessionToken,
+  getMemberAccountState,
+  getPaymentGatewayStatus,
+  createMembershipCheckoutOrder,
+  confirmStripeCheckoutSession,
+  verifyStripeWebhookSignature,
+  activatePaidOrder,
+  cancelMemberSubscription,
+  authorizeEpisodePlayback,
+} from './server/membershipStore';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -144,8 +159,13 @@ app.use((req, res, next) => {
 // Enable Gzip/Brotli HTTP response compression for lightning-fast site loads
 app.use(compression());
 
-// High-capacity payload limits supporting 900MB+ / 2GB video uploads
-app.use(express.json({ limit: '2048mb' }));
+// High-capacity payload limits supporting 900MB+ / 2GB video uploads & rawBody capture for webhooks
+app.use(express.json({
+  limit: '2048mb',
+  verify: (req: any, _res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ limit: '2048mb', extended: true }));
 
 // Enable global CORS & cellular network compatibility headers
@@ -2564,6 +2584,262 @@ app.delete('/api/editors/:id', (req, res) => {
 });
 
 
+
+// 7. FEVIQO Premium Membership, Account Auth & Video Entitlement API
+const MEMBER_COOKIE_NAME = 'feviqo_member_session';
+
+function extractMemberToken(req: express.Request): string | undefined {
+  const authHeader = req.headers.authorization;
+  if (authHeader && /^Bearer\s+/i.test(authHeader)) {
+    return authHeader.replace(/^Bearer\s+/i, '').trim();
+  }
+  const cookieHeader = req.headers.cookie || '';
+  for (const part of cookieHeader.split(';')) {
+    const [k, ...rest] = part.trim().split('=');
+    if (k === MEMBER_COOKIE_NAME) {
+      return decodeURIComponent(rest.join('='));
+    }
+  }
+  return undefined;
+}
+
+function getAuthenticatedMemberId(req: express.Request): string | null {
+  const token = extractMemberToken(req);
+  const parsed = verifyMemberSessionToken(token);
+  return parsed?.memberId || null;
+}
+
+function setMemberSessionCookie(res: express.Response, token: string): void {
+  const isProd = process.env.NODE_ENV === 'production';
+  res.cookie(MEMBER_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProd,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: '/',
+  });
+}
+
+// Public catalogue metadata only (zero protected episode stream URLs exposed)
+app.get('/api/membership/catalog', (_req, res) => {
+  return res.json({
+    success: true,
+    plans: MEMBERSHIP_PLANS,
+    dramas: MEMBERSHIP_DRAMAS,
+    gatewayStatus: getPaymentGatewayStatus(),
+  });
+});
+
+app.post('/api/membership/register', (req, res) => {
+  try {
+    const { email, password, fullName } = req.body || {};
+    const result = registerMember({ email, password, fullName });
+    if ('error' in result) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    setMemberSessionCookie(res, result.token);
+    const account = getMemberAccountState(result.member.id);
+    return res.status(201).json({
+      success: true,
+      token: result.token,
+      ...account,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to create member account.' });
+  }
+});
+
+app.post('/api/membership/login', (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const result = loginMember({ email, password });
+    if ('error' in result) {
+      return res.status(401).json({ success: false, error: result.error });
+    }
+    setMemberSessionCookie(res, result.token);
+    const account = getMemberAccountState(result.member.id);
+    return res.json({
+      success: true,
+      token: result.token,
+      ...account,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to sign in.' });
+  }
+});
+
+app.post('/api/membership/logout', (_req, res) => {
+  res.clearCookie(MEMBER_COOKIE_NAME, { path: '/' });
+  return res.json({ success: true });
+});
+
+app.get('/api/membership/account', (req, res) => {
+  const memberId = getAuthenticatedMemberId(req);
+  if (!memberId) {
+    return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Not signed in.' });
+  }
+  const account = getMemberAccountState(memberId);
+  if (!account) {
+    return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Account not found.' });
+  }
+  return res.json({ success: true, ...account });
+});
+
+app.post('/api/membership/checkout', async (req, res) => {
+  try {
+    const memberId = getAuthenticatedMemberId(req);
+    if (!memberId) {
+      return res.status(401).json({
+        success: false,
+        code: 'UNAUTHENTICATED',
+        error: 'Please sign in or create an account before starting checkout.',
+      });
+    }
+    const { planId, selectedDramaIds } = req.body || {};
+    const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
+    const host = req.headers.host || 'localhost:3000';
+    const originUrl = `${proto}://${host}`;
+
+    const result = await createMembershipCheckoutOrder({
+      memberId,
+      planId,
+      selectedDramaIds,
+      originUrl,
+    });
+
+    if ('error' in result) {
+      return res.status(result.statusCode || 400).json({ success: false, error: result.error });
+    }
+
+    const account = getMemberAccountState(memberId);
+    return res.json({
+      success: true,
+      order: result.order,
+      gatewayConfigured: result.gatewayConfigured,
+      paymentSetupRequired: result.paymentSetupRequired,
+      checkoutUrl: result.checkoutUrl,
+      gatewayStatus: result.gatewayStatus,
+      account,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to initialize membership checkout.' });
+  }
+});
+
+app.post('/api/membership/confirm-stripe', async (req, res) => {
+  try {
+    const memberId = getAuthenticatedMemberId(req);
+    if (!memberId) {
+      return res.status(401).json({ success: false, error: 'Authentication required.' });
+    }
+    const { orderId, sessionId } = req.body || {};
+    if (!orderId || !sessionId) {
+      return res.status(400).json({ success: false, error: 'Order ID and Stripe session ID are required.' });
+    }
+    const result = await confirmStripeCheckoutSession({ memberId, orderId, sessionId });
+    if ('error' in result) {
+      return res.status(402).json({ success: false, error: result.error });
+    }
+    const account = getMemberAccountState(memberId);
+    return res.json({ success: true, ...account });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to verify Stripe payment.' });
+  }
+});
+
+app.post('/api/membership/webhook/stripe', (req: any, res) => {
+  try {
+    const sig = req.headers['stripe-signature'] as string;
+    if (!verifyStripeWebhookSignature(req.rawBody || '', sig || '')) {
+      return res.status(400).json({ success: false, error: 'Invalid Stripe webhook signature.' });
+    }
+    const event = req.body;
+    if (event?.type === 'checkout.session.completed') {
+      const session = event.data?.object;
+      const orderId = session?.metadata?.orderId;
+      if (orderId && session?.payment_status === 'paid') {
+        activatePaidOrder({
+          orderId,
+          paymentProvider: 'stripe',
+          paymentReference: session.payment_intent || session.id,
+        });
+      }
+    }
+    return res.json({ received: true });
+  } catch {
+    return res.status(400).json({ success: false, error: 'Webhook processing error.' });
+  }
+});
+
+app.post('/api/membership/webhook', (req: any, res) => {
+  try {
+    const secret = process.env.SAFEPAY_WEBHOOK_SECRET || process.env.PAYFAST_SECURED_KEY;
+    const signature = (req.headers['x-feviqo-signature'] || req.headers['x-sfpy-signature'] || '') as string;
+    if (!secret || !signature) {
+      return res.status(403).json({ success: false, error: 'Payment webhook secret or signature missing.' });
+    }
+    const raw = Buffer.isBuffer(req.rawBody) ? req.rawBody.toString('utf8') : JSON.stringify(req.body || {});
+    const expected = crypto.createHmac('sha256', secret).update(raw).digest('hex');
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expected);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+      return res.status(401).json({ success: false, error: 'Invalid webhook signature.' });
+    }
+    const { orderId, status, reference, provider } = req.body || {};
+    if (orderId && (status === 'paid' || status === 'PAID' || status === 'completed')) {
+      const activated = activatePaidOrder({
+        orderId,
+        paymentProvider: provider || 'verified_gateway',
+        paymentReference: reference || orderId,
+      });
+      if ('error' in activated) {
+        return res.status(404).json({ success: false, error: activated.error });
+      }
+    }
+    return res.json({ success: true });
+  } catch {
+    return res.status(400).json({ success: false, error: 'Invalid webhook payload.' });
+  }
+});
+
+app.post('/api/membership/cancel', (req, res) => {
+  try {
+    const memberId = getAuthenticatedMemberId(req);
+    if (!memberId) {
+      return res.status(401).json({ success: false, error: 'Authentication required.' });
+    }
+    const cancelled = cancelMemberSubscription(memberId);
+    if (!cancelled.success) {
+      return res.status(400).json({ success: false, error: cancelled.error });
+    }
+    const account = getMemberAccountState(memberId);
+    return res.json({ success: true, membership: cancelled.membership, ...account });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to cancel membership.' });
+  }
+});
+
+// Server-enforced protected episode access endpoint
+app.get('/api/membership/watch/:dramaId/:episodeSlug', (req, res) => {
+  const memberId = getAuthenticatedMemberId(req);
+  const { dramaId, episodeSlug } = req.params;
+  const auth = authorizeEpisodePlayback({ memberId, dramaId, episodeSlug });
+  if ('error' in auth) {
+    return res.status(auth.statusCode).json({
+      success: false,
+      code: auth.code,
+      error: auth.error,
+    });
+  }
+  return res.json({
+    success: true,
+    streamUrl: auth.streamUrl,
+    dramaTitle: auth.dramaTitle,
+    episodeTitle: auth.episodeTitle,
+    planName: auth.planName,
+    expiresAt: auth.expiresAt,
+  });
+});
 
 // Initial sitemap sync & search engine IndexNow ping on boot
 try {

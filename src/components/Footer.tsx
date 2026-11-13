@@ -266,6 +266,11 @@ export const Footer: React.FC<FooterProps> = ({
                   View All Drama Portals &rarr;
                 </a>
               </li>
+              <li>
+                <a href="/membership" onClick={(e) => { e.preventDefault(); nav('membership'); }} className="hover:text-white transition cursor-pointer text-[#22C55E] font-bold block">
+                  Premium Drama Membership &rarr;
+                </a>
+              </li>
             </ul>
           </div>
 

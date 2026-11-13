@@ -380,6 +380,34 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
   },
+  '/membership': {
+    path: '/membership',
+    pageName: 'FEVIQO Premium Membership',
+    seoTitle: 'FEVIQO Premium Membership & Pricing | Watch Turkish Dramas in Urdu',
+    metaDescription: 'Choose a FEVIQO Premium Membership plan starting at PKR 299 to stream Turkish dramas in Urdu including Teskilat, Mehmed: Fetihler Sultani, and Gunesin Dogdugu Yer.',
+    focusKeyword: 'FEVIQO Premium Membership',
+    secondaryKeywords: ['Turkish dramas in Urdu membership', 'Teskilat Urdu subscription', 'Mehmed Fetihler Sultani Urdu membership', 'FEVIQO pricing Pakistan'],
+    canonicalUrl: 'https://feviqo.com/membership',
+    ogTitle: 'FEVIQO Premium Membership — Your Favourite Turkish Dramas. In Urdu.',
+    ogDescription: 'Starter, Standard, Plus, and VIP memberships tailored for Turkish drama viewers in Pakistan.',
+    ogImage: 'https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'Service'
+  },
+  '/account': {
+    path: '/account',
+    pageName: 'FEVIQO Member Account',
+    seoTitle: 'My Account | FEVIQO Premium Membership',
+    metaDescription: 'Manage your active FEVIQO Premium Membership, selected dramas, billing history, and streaming access.',
+    focusKeyword: 'FEVIQO My Account',
+    secondaryKeywords: ['FEVIQO account', 'membership status'],
+    canonicalUrl: 'https://feviqo.com/membership',
+    ogTitle: 'My Account — FEVIQO Premium Membership',
+    ogDescription: 'Manage your FEVIQO Premium Membership and unlocked Turkish dramas.',
+    ogImage: 'https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2',
+    robots: 'noindex, follow',
+    schemaType: 'WebSite'
+  },
   '/pricing': {
     path: '/pricing',
     pageName: 'Pricing',

@@ -346,6 +346,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <Globe className="w-3.5 h-3.5 text-emerald-400" />
                     <span className="text-xs font-semibold">All Turkish Dramas Directory</span>
                   </a>
+
+                  <a 
+                    href="/membership"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onNavigatePage('membership');
+                      setDramasOpen(false);
+                    }}
+                    className="w-full text-left p-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/25 flex items-center justify-between transition group cursor-pointer text-emerald-300"
+                  >
+                    <span className="text-xs font-bold">FEVIQO Premium Membership</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-emerald-300" />
+                  </a>
                 </div>
               </div>
             )}
@@ -533,6 +546,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>All Turkish Dramas Directory</span>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
+
+                <a
+                  href="/membership"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onNavigatePage('membership');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-2.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 font-bold cursor-pointer text-emerald-300 flex items-center justify-between text-xs border border-emerald-500/25"
+                >
+                  <span>Premium Membership Plans</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-emerald-300" />
+                </a>
               </div>
 
               {/* Turkish TV Licensing placed in the end on phone */}
