@@ -306,7 +306,6 @@ export async function sendNotificationEmail(params: EmailNotificationParams): Pr
 
   const htmlContent = buildFeviqoEmailHtml(params);
 
-  // 1. Try secure server-side API endpoint first
   try {
     const res = await fetch('/api/notifications/send-email', {
       method: 'POST',
@@ -322,111 +321,17 @@ export async function sendNotificationEmail(params: EmailNotificationParams): Pr
       }),
     });
 
-    if (res.ok) {
-      const json = await res.json();
+    const json = await res.json().catch(() => ({}));
+    if (res.ok && json.success) {
       return { success: true, messageId: json.messageId || 'server-ok' };
     }
-  } catch (serverErr) {
-    console.warn('Server email route unreachable, proceeding to direct dispatch:', serverErr);
-  }
 
-  // 2. Direct Resend REST API fallback (works on static hosts like Netlify/Hostinger without backend)
-  const CLIENT_RESEND_KEY = 're_6TAbwf3D_AyPZMQv8eei5n4hKLiD1WaM9';
-  let resendSent = false;
-  try {
-    const resendRes = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${CLIENT_RESEND_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: 'FEVIQO Studio <partner@feviqo.com>',
-        to: [to],
-        subject,
-        html: htmlContent,
-      }),
-    });
-
-    if (resendRes.ok) {
-      const resendJson = await resendRes.json();
-      resendSent = true;
-
-      // Also mirror to studio admins if sending to a client
-      const targetAdmins = [PRIMARY_STUDIO_EMAIL, SECONDARY_STUDIO_EMAIL];
-      for (const adminEmail of targetAdmins) {
-        if (to.toLowerCase() !== adminEmail.toLowerCase()) {
-          fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${CLIENT_RESEND_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              from: 'FEVIQO Studio <partner@feviqo.com>',
-              to: [adminEmail],
-              subject: `[Studio Alert] ${subject}`,
-              html: `<div style="font-family:sans-serif; background:#0B0B0D; color:#FFF; padding:20px; border-radius:10px;"><p><strong>To:</strong> ${to}</p><hr/>${htmlContent}</div>`,
-            }),
-          }).catch(() => {});
-        }
-      }
-
-      return { success: true, messageId: resendJson.id || 'resend-client-ok' };
-    }
-  } catch (resendErr) {
-    console.warn('Direct Resend client dispatch error:', resendErr);
-  }
-
-  // 3. Backup delivery via FormSubmit HTTP provider
-  try {
-    const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({
-        _subject: subject,
-        _replyto: 'partner@feviqo.com',
-        notificationType: type,
-        recipient: to,
-        recipientName: data.recipientName || 'Client',
-        ...data,
-        message: `FEVIQO notification dispatched for ${type}`,
-        _template: 'table',
-        _captcha: 'false',
-      }),
-    });
-
-    // If recipient is a client, also deliver copy to Studio Owner (Rexan) & Partner inbox
-    const targetRecipients = [PRIMARY_STUDIO_EMAIL, SECONDARY_STUDIO_EMAIL];
-    for (const adminEmail of targetRecipients) {
-      if (to.toLowerCase() !== adminEmail.toLowerCase()) {
-        fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({
-            _subject: `[Studio Alert] ${subject}`,
-            _replyto: to,
-            notificationType: type,
-            clientRecipient: to,
-            ...data,
-            _template: 'table',
-            _captcha: 'false',
-          }),
-        }).catch((e) => console.warn(`Admin mirror dispatch to ${adminEmail} failed:`, e));
-      }
-    }
-
-    if (response.ok) {
-      return { success: true, messageId: 'fs-' + Date.now() };
-    } else {
-      const errText = await response.text();
-      return { success: false, error: `Email service rejected delivery: ${errText}` };
-    }
+    return {
+      success: false,
+      error: json?.error || json?.smtpError || json?.resendError || `Email service returned HTTP ${res.status}`,
+    };
   } catch (err: any) {
     console.error('Email dispatch network failure:', err);
-    return { success: false, error: err.message || 'Network error sending email' };
+    return { success: false, error: err?.message || 'Network error sending email' };
   }
 }

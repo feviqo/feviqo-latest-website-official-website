@@ -1,4 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import '@videojs/html/video/player';
+import '@videojs/html/video/skin';
+import '@videojs/html/media/mux-video';
+import '@videojs/html/extensions/mux-data';
 import {
   Play,
   LogOut,
@@ -19,7 +23,7 @@ import {
   requestProtectedEpisodeStream,
 } from '../../services/membershipService';
 import { getDramaById } from '../../data/membershipCatalog';
-import { attachHlsStream } from '../../utils/hlsPlayer';
+import { extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MEMBERSHIP_COPY } from '../../i18n/membershipTranslations';
 import { BankQrPaymentSection } from './BankQrPaymentSection';
@@ -48,22 +52,57 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
   // Server-authorized episode theater state
   const [loadingEpisodeSlug, setLoadingEpisodeSlug] = useState<string | null>(null);
   const [activeStream, setActiveStream] = useState<{
+    dramaId: string;
+    episodeSlug: string;
     streamUrl: string;
     dramaTitle: string;
     episodeTitle: string;
+    thumbnail: string;
+    fallbackThumbnail: string;
   } | null>(null);
+  const [showPosterOverlay, setShowPosterOverlay] = useState<boolean>(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const theaterRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (activeStream && videoRef.current) {
-      const cleanup = attachHlsStream(videoRef.current, activeStream.streamUrl, {
-        autoPlay: true,
-      });
-      return () => {
-        if (cleanup) cleanup();
-      };
-    }
+    if (!activeStream) return;
+    setShowPosterOverlay(true);
+    theaterRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    const el = videoRef.current as any;
+    if (!el) return;
+
+    const handlePlaying = () => setShowPosterOverlay(false);
+    el.addEventListener?.('play', handlePlaying);
+    el.addEventListener?.('playing', handlePlaying);
+
+    const timer = window.setTimeout(() => {
+      try {
+        const playResult = el.play?.();
+        if (playResult && typeof playResult.then === 'function') {
+          playResult
+            .then(() => setShowPosterOverlay(false))
+            .catch(() => {
+              // Keep poster overlay visible if browser blocks autoplay
+            });
+        }
+      } catch {}
+    }, 120);
+
+    return () => {
+      window.clearTimeout(timer);
+      el.removeEventListener?.('play', handlePlaying);
+      el.removeEventListener?.('playing', handlePlaying);
+    };
   }, [activeStream]);
+
+  const handleStartPosterPlayback = () => {
+    setShowPosterOverlay(false);
+    const el = videoRef.current as any;
+    if (el && typeof el.play === 'function') {
+      el.play().catch(() => {});
+    }
+  };
 
   const handleCancelMembership = async () => {
     setCancelling(true);
@@ -99,10 +138,16 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
         setActionError(res.error || 'You do not have active entitlement to watch this episode.');
         setActiveStream(null);
       } else {
+        const drama = getDramaById(dramaId);
+        const ep = drama?.episodes.find((e) => e.slug === episodeSlug);
         setActiveStream({
+          dramaId,
+          episodeSlug,
           streamUrl: res.streamUrl,
           dramaTitle: res.dramaTitle,
           episodeTitle: res.episodeTitle,
+          thumbnail: res.thumbnail || ep?.thumbnail || drama?.posterUrl || '',
+          fallbackThumbnail: res.fallbackThumbnail || drama?.fallbackPosterUrl || '',
         });
       }
     } catch {
@@ -544,25 +589,88 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
         </div>
       </div>
 
-      {/* Authorized Member Video Theater */}
+      {/* Authorized Member Video Theater (Matching FEVIQO Website Episode Player) */}
       {activeStream && (
-        <div className="rounded-2xl overflow-hidden bg-[#0B0B0D] text-white border border-zinc-800">
+        <div
+          ref={theaterRef}
+          className="rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0B0B0D] text-white border border-zinc-800 shadow-2xl"
+        >
           <div className="px-5 py-3.5 flex items-center justify-between border-b border-zinc-800">
-            <div>
-              <div className="text-xs text-[#22C55E] font-semibold">{activeStream.dramaTitle}</div>
-              <div className="text-sm font-semibold text-white">{activeStream.episodeTitle}</div>
+            <div className="min-w-0">
+              <div className="text-xs text-[#22C55E] font-semibold uppercase tracking-wider">
+                {activeStream.dramaTitle} · {t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)} · HD
+              </div>
+              <div className="text-sm sm:text-base font-semibold text-white truncate">
+                {activeStream.episodeTitle}
+              </div>
             </div>
             <button
               type="button"
               onClick={() => setActiveStream(null)}
-              className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer"
+              className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer shrink-0"
               aria-label="Close episode player"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="aspect-video w-full bg-black">
-            <video ref={videoRef} controls playsInline className="w-full h-full object-contain" />
+
+          <div
+            onContextMenu={(e) => e.preventDefault()}
+            className="w-full relative overflow-hidden bg-black flex items-center justify-center select-none aspect-video"
+          >
+            {showPosterOverlay && activeStream.thumbnail && (
+              <div
+                onClick={handleStartPosterPlayback}
+                className="absolute inset-0 z-30 bg-black flex items-center justify-center cursor-pointer group overflow-hidden"
+              >
+                <img
+                  src={activeStream.thumbnail}
+                  alt={activeStream.episodeTitle}
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (activeStream.fallbackThumbnail && img.src !== activeStream.fallbackThumbnail) {
+                      img.src = activeStream.fallbackThumbnail;
+                    }
+                  }}
+                  className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                    <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-slate-950 ml-1" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <style>{`
+              mux-video, video-skin, video-player { object-fit: contain !important; }
+              mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
+              media-error-dialog, .media-error-dialog, [class*="dialog-root"], media-dialog-backdrop, media-dialog-popup {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+              }
+            `}</style>
+
+            <video-player
+              key={`${activeStream.dramaId}:${activeStream.episodeSlug}`}
+              className="w-full h-full block bg-black overflow-hidden"
+            >
+              <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
+                <mux-video
+                  ref={videoRef as any}
+                  src={activeStream.streamUrl}
+                  playback-id={extractMuxPlaybackId(activeStream.streamUrl) || undefined}
+                  crossorigin="anonymous"
+                  playsinline
+                  poster={activeStream.thumbnail || undefined}
+                  onContextMenu={(e: any) => e.preventDefault()}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                ></mux-video>
+                <mux-data env-key="feviqo" metadata-video-title={activeStream.episodeTitle}></mux-data>
+              </video-skin>
+            </video-player>
           </div>
         </div>
       )}
@@ -601,21 +709,59 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
                   {drama.episodes.map((ep) => {
                     const key = `${drama.id}:${ep.slug}`;
                     const isLoading = loadingEpisodeSlug === key;
+                    const isActive =
+                      activeStream?.dramaId === drama.id && activeStream?.episodeSlug === ep.slug;
                     return (
-                      <div key={ep.slug} className="px-5 py-3.5 flex items-center justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold text-[#0B0B0D] truncate">
-                            {isUrdu ? `قسط ${ep.number}` : `Episode ${ep.number}`}
-                          </div>
-                          <div className="text-xs text-zinc-500 truncate">
-                            {ep.duration} · {ep.releaseDate}
+                      <div
+                        key={ep.slug}
+                        className={`px-5 py-3.5 flex items-center justify-between gap-3 transition-colors ${
+                          isActive ? 'bg-emerald-50/70' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => handleWatchEpisode(drama.id, ep.slug)}
+                            disabled={isLoading}
+                            className="relative w-20 sm:w-24 aspect-video rounded-lg overflow-hidden bg-zinc-900 shrink-0 group cursor-pointer border border-zinc-200"
+                            aria-label={`Play ${ep.title}`}
+                          >
+                            <img
+                              src={ep.thumbnail || drama.posterUrl}
+                              alt={ep.title}
+                              onError={(e) => {
+                                const img = e.currentTarget;
+                                if (drama.fallbackPosterUrl && img.src !== drama.fallbackPosterUrl) {
+                                  img.src = drama.fallbackPosterUrl;
+                                }
+                              }}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                            <span className="absolute inset-0 bg-black/25 group-hover:bg-black/10 flex items-center justify-center transition-colors">
+                              <span className="w-7 h-7 rounded-full bg-[#22C55E] text-[#0B0B0D] flex items-center justify-center shadow">
+                                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              </span>
+                            </span>
+                          </button>
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-[#0B0B0D] truncate">
+                              {isUrdu ? `قسط ${ep.number}` : `Episode ${ep.number}`}
+                            </div>
+                            <div className="text-xs text-zinc-500 truncate">
+                              {ep.duration} · {ep.releaseDate}
+                            </div>
                           </div>
                         </div>
                         <button
                           type="button"
                           disabled={isLoading}
                           onClick={() => handleWatchEpisode(drama.id, ep.slug)}
-                          className="px-3.5 py-2 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] hover:text-[#0B0B0D] text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                          className={`px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer shrink-0 ${
+                            isActive
+                              ? 'bg-[#22C55E] text-[#0B0B0D]'
+                              : 'bg-[#0B0B0D] hover:bg-[#22C55E] hover:text-[#0B0B0D] text-white'
+                          }`}
                         >
                           <Play className="w-3.5 h-3.5 fill-current" />
                           <span>

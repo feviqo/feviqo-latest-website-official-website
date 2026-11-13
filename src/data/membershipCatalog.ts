@@ -111,6 +111,16 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
     hubPath: '/teskilat',
     episodes: [
       {
+        slug: 'episode-192',
+        number: 192,
+        title: 'Teskilat Season 7 Episode 192 (Bolum 192)',
+        duration: '2h 25m',
+        releaseDate: '2026-11-08',
+        thumbnail: 'https://lh3.googleusercontent.com/d/1vvY9e1e-y0pddweoqJPPxSEEhHIXI6o2',
+        shortSummary:
+          'Teşkilat returns with Episode 192 in Urdu Dubbed HD as Altay and the agency confront a decisive new covert operation.',
+      },
+      {
         slug: 'episode-189',
         number: 189,
         title: 'Teskilat Season 7 Episode 189 (Bolum 189)',

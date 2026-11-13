@@ -461,63 +461,175 @@ function saveEditors(editors: any[]) {
   }
 }
 
-// --- SMTP EMAIL CONFIGURATION ---
+// --- SMTP & RESEND EMAIL CONFIGURATION ---
 const SMTP_CONFIG_FILE = path.join(DATA_DIR, 'smtp_config.json');
 
-// Get active SMTP configuration (from saved config file or process.env)
-function getActiveSmtpConfig(): { user: string; pass: string; host: string; port: number; from: string; source: 'file' | 'env' } | null {
+interface SmtpCandidate {
+  user: string;
+  pass: string;
+  host: string;
+  port: number;
+  from: string;
+  source: 'env' | 'file';
+  verifiedAt?: string;
+}
+
+interface ResendCandidate {
+  apiKey: string;
+  from: string;
+  source: 'env' | 'file';
+  verifiedAt?: string;
+}
+
+function stripEnvQuotes(value: string | undefined | null): string {
+  if (!value) return '';
+  let trimmed = String(value).trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    trimmed = trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
+
+function readSavedSmtpFile(): Record<string, any> {
   try {
     if (fs.existsSync(SMTP_CONFIG_FILE)) {
-      const saved = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
-      if (saved && saved.user && saved.pass) {
-        return {
-          user: saved.user.trim(),
-          pass: saved.pass.trim().replace(/\s+/g, ''),
-          host: saved.host ? saved.host.trim() : 'smtp.gmail.com',
-          port: Number(saved.port) || 465,
-          from: saved.from ? saved.from.trim() : `FEVIQO Studio <${saved.user.trim()}>`,
-          source: 'file',
-        };
-      }
+      const parsed = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
+      if (parsed && typeof parsed === 'object') return parsed;
     }
   } catch (err) {
     console.warn('Failed to read saved SMTP config file:', err);
   }
+  return {};
+}
 
-  const user = (process.env.SMTP_USER || '').trim();
-  const pass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
+function getEnvSmtpConfig(): SmtpCandidate | null {
+  const user = stripEnvQuotes(
+    process.env.SMTP_USER || process.env.GMAIL_USER || process.env.MAIL_USER || process.env.EMAIL_USER
+  );
+  const rawPass = stripEnvQuotes(
+    process.env.SMTP_PASS ||
+      process.env.SMTP_PASSWORD ||
+      process.env.GMAIL_APP_PASSWORD ||
+      process.env.MAIL_PASS ||
+      process.env.EMAIL_PASS
+  );
+  const pass = rawPass.replace(/\s+/g, '');
   if (!user || !pass) return null;
 
-  const host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
-  const port = parseInt(process.env.SMTP_PORT || '465', 10);
-  const from = process.env.SMTP_FROM || `FEVIQO Studio <${user}>`;
+  const host = stripEnvQuotes(process.env.SMTP_HOST || process.env.MAIL_HOST) || 'smtp.gmail.com';
+  const portRaw = stripEnvQuotes(process.env.SMTP_PORT || process.env.MAIL_PORT);
+  const port = parseInt(portRaw || '587', 10) || 587;
+  const from =
+    stripEnvQuotes(process.env.SMTP_FROM || process.env.MAIL_FROM || process.env.EMAIL_FROM) ||
+    `FEVIQO Studio <${user}>`;
 
   return { user, pass, host, port, from, source: 'env' };
 }
 
-function getActiveResendKey(): string | null {
-  try {
-    if (fs.existsSync(SMTP_CONFIG_FILE)) {
-      const saved = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
-      if (saved && saved.resendApiKey) return saved.resendApiKey.trim();
+function getFileSmtpConfig(): SmtpCandidate | null {
+  const saved = readSavedSmtpFile();
+  const user = stripEnvQuotes(saved.user);
+  const pass = stripEnvQuotes(saved.pass).replace(/\s+/g, '');
+  if (!user || !pass) return null;
+
+  return {
+    user,
+    pass,
+    host: stripEnvQuotes(saved.host) || 'smtp.gmail.com',
+    port: Number(saved.port) || 587,
+    from: stripEnvQuotes(saved.from) || `FEVIQO Studio <${user}>`,
+    source: 'file',
+    verifiedAt: saved.smtpVerifiedAt || saved.verifiedAt,
+  };
+}
+
+function getSmtpCandidates(): SmtpCandidate[] {
+  const envCfg = getEnvSmtpConfig();
+  const fileCfg = getFileSmtpConfig();
+  const list: SmtpCandidate[] = [];
+
+  // Prefer runtime-verified admin UI config if explicitly verified; otherwise prefer Render env vars first so stale repo JSON never shadows live env config.
+  if (fileCfg?.verifiedAt && envCfg) {
+    list.push(fileCfg);
+    if (fileCfg.user !== envCfg.user || fileCfg.pass !== envCfg.pass || fileCfg.host !== envCfg.host) {
+      list.push(envCfg);
     }
-  } catch (err) {}
-  return (process.env.RESEND_API_KEY || '').trim() || null;
+  } else {
+    if (envCfg) list.push(envCfg);
+    if (
+      fileCfg &&
+      (!envCfg || fileCfg.user !== envCfg.user || fileCfg.pass !== envCfg.pass || fileCfg.host !== envCfg.host)
+    ) {
+      list.push(fileCfg);
+    }
+  }
+  return list;
+}
+
+function getResendCandidates(): ResendCandidate[] {
+  const envKey = stripEnvQuotes(process.env.RESEND_API_KEY);
+  const envFrom =
+    stripEnvQuotes(process.env.RESEND_FROM || process.env.RESEND_FROM_EMAIL || process.env.EMAIL_FROM) ||
+    'FEVIQO Studio <onboarding@resend.dev>';
+
+  const saved = readSavedSmtpFile();
+  const fileKey = stripEnvQuotes(saved.resendApiKey);
+  const fileFrom = stripEnvQuotes(saved.resendFrom) || 'FEVIQO Studio <onboarding@resend.dev>';
+  const fileVerifiedAt = saved.resendVerifiedAt || saved.verifiedAt;
+
+  const envCandidate: ResendCandidate | null = envKey
+    ? { apiKey: envKey, from: envFrom, source: 'env' }
+    : null;
+  const fileCandidate: ResendCandidate | null = fileKey
+    ? { apiKey: fileKey, from: fileFrom, source: 'file', verifiedAt: fileVerifiedAt }
+    : null;
+
+  const list: ResendCandidate[] = [];
+  if (fileCandidate?.verifiedAt && envCandidate) {
+    list.push(fileCandidate);
+    if (fileCandidate.apiKey !== envCandidate.apiKey) list.push(envCandidate);
+  } else {
+    if (envCandidate) list.push(envCandidate);
+    if (fileCandidate && (!envCandidate || fileCandidate.apiKey !== envCandidate.apiKey)) {
+      list.push(fileCandidate);
+    }
+  }
+  return list;
+}
+
+// Get active SMTP configuration (prioritizes Render env unless runtime-verified file config is saved)
+function getActiveSmtpConfig(): SmtpCandidate | null {
+  return getSmtpCandidates()[0] || null;
+}
+
+function getActiveResendKey(): string | null {
+  return getResendCandidates()[0]?.apiKey || null;
 }
 
 function getActiveResendFrom(): string {
-  try {
-    if (fs.existsSync(SMTP_CONFIG_FILE)) {
-      const saved = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
-      if (saved && saved.resendFrom) return saved.resendFrom.trim();
-    }
-  } catch (err) {}
-  return process.env.RESEND_FROM || 'FEVIQO Studio <onboarding@resend.dev>';
+  return getResendCandidates()[0]?.from || 'FEVIQO Studio <onboarding@resend.dev>';
+}
+
+function getStudioNotificationRecipients(): string[] {
+  const cfg = getMembershipConfig();
+  const candidates = [
+    cfg.adminEmail,
+    stripEnvQuotes(process.env.FEVIQO_ADMIN_EMAIL),
+    stripEnvQuotes(process.env.NOTIFICATION_EMAIL),
+    stripEnvQuotes(process.env.ADMIN_EMAIL),
+    'partner@feviqo.com',
+  ]
+    .map((e) => (e || '').trim().toLowerCase())
+    .filter((e) => e.includes('@'));
+  return Array.from(new Set(candidates));
 }
 
 function createNodemailerTransporter(config: { user: string; pass: string; host?: string; port?: number }) {
   const host = (config.host || 'smtp.gmail.com').trim();
-  const port = Number(config.port) || 465;
+  const port = Number(config.port) || 587;
   const secure = port === 465;
   const user = config.user.trim();
   const pass = config.pass.trim().replace(/\s+/g, '');
@@ -526,10 +638,11 @@ function createNodemailerTransporter(config: { user: string; pass: string; host?
     host,
     port,
     secure,
+    requireTLS: port === 587,
     auth: { user, pass },
     connectionTimeout: 12000,
     greetingTimeout: 12000,
-    socketTimeout: 12000,
+    socketTimeout: 15000,
     tls: {
       rejectUnauthorized: false,
     },
@@ -557,6 +670,57 @@ function logDispatchedEmail(record: any) {
   }
 }
 
+async function sendViaResendCandidate(
+  candidate: ResendCandidate,
+  params: { to: string; subject: string; html: string }
+): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const sendOnce = async (fromAddress: string) => {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${candidate.apiKey}`,
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [params.to],
+        subject: params.subject,
+        html: params.html,
+      }),
+    });
+    const payload: any = await res.json().catch(() => ({}));
+    return { status: res.status, ok: res.ok, payload };
+  };
+
+  let attempt = await sendOnce(candidate.from);
+
+  // Handle Resend 2 req/s rate limit cleanly with one short backoff retry
+  if (attempt.status === 429) {
+    await new Promise((resolve) => setTimeout(resolve, 650));
+    attempt = await sendOnce(candidate.from);
+  }
+
+  // If custom sender domain isn't verified in Resend yet, retry once with onboarding@resend.dev
+  if (
+    !attempt.ok &&
+    attempt.status === 403 &&
+    !/onboarding@resend\.dev/i.test(candidate.from)
+  ) {
+    const fallbackAttempt = await sendOnce('FEVIQO Studio <onboarding@resend.dev>');
+    if (fallbackAttempt.ok) {
+      attempt = fallbackAttempt;
+    }
+  }
+
+  if (attempt.ok) {
+    return { ok: true, id: attempt.payload?.id };
+  }
+  return {
+    ok: false,
+    error: attempt.payload?.message || `Resend HTTP ${attempt.status}`,
+  };
+}
+
 // Helper to send email across all providers
 async function sendServerEmail(params: {
   to: string;
@@ -564,82 +728,115 @@ async function sendServerEmail(params: {
   html: string;
   type?: string;
   data?: any;
-}): Promise<{ success: boolean; messageId?: string; provider?: string; error?: string; smtpError?: string }> {
+}): Promise<{
+  success: boolean;
+  messageId?: string;
+  provider?: string;
+  source?: string;
+  error?: string;
+  smtpError?: string;
+  resendError?: string;
+}> {
   const { to, subject, html, type = 'general', data = {} } = params;
   let resendErrorDetails: string | null = null;
   let smtpErrorDetails: string | null = null;
 
-  // 1. Try Resend HTTP API FIRST (Fastest, instant REST delivery)
-  const resendCandidates = Array.from(
-    new Set(
-      [getActiveResendKey(), (process.env.RESEND_API_KEY || '').trim()].filter(
-        (v): v is string => Boolean(v)
-      )
-    )
-  );
-  for (const resendApiKey of resendCandidates) {
+  // 1. Try Resend HTTP API candidates (each strictly paired with its own sender address)
+  const resendCandidates = getResendCandidates();
+  for (const candidate of resendCandidates) {
     try {
-      const resendFrom = getActiveResendFrom();
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${resendApiKey}`,
-        },
-        body: JSON.stringify({
-          from: resendFrom,
-          to: [to],
+      const attempt = await sendViaResendCandidate(candidate, { to, subject, html });
+      if (attempt.ok) {
+        const msgId = attempt.id || `resend-${Date.now()}`;
+        console.log(`[Resend Sent (${candidate.source})] id: ${msgId} to ${to}`);
+        logDispatchedEmail({
+          id: msgId,
+          to,
           subject,
-          html,
-        }),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        console.log(`[Resend Sent] id: ${json.id} to ${to}`);
-        logDispatchedEmail({ id: json.id, to, subject, type, provider: 'resend', sentAt: new Date().toISOString() });
-        return { success: true, messageId: json.id, provider: 'resend' };
-      } else {
-        const resendErr: any = await res.json().catch(() => ({}));
-        resendErrorDetails = resendErr?.message || `Resend HTTP ${res.status}`;
-        console.warn('[Resend Rejected Dispatch, falling back]:', resendErr);
+          type,
+          provider: 'resend',
+          source: candidate.source,
+          status: 'sent',
+          sentAt: new Date().toISOString(),
+        });
+        return { success: true, messageId: msgId, provider: 'resend', source: candidate.source };
       }
+      resendErrorDetails = attempt.error || 'Resend rejected dispatch';
+      console.warn(`[Resend (${candidate.source}) Rejected Dispatch]:`, resendErrorDetails);
     } catch (err: any) {
       resendErrorDetails = err?.message || 'Resend network error';
-      console.warn('[Resend Dispatch Exception, falling back]:', err);
+      console.warn(`[Resend (${candidate.source}) Exception]:`, resendErrorDetails);
     }
   }
 
-  // 2. Try Nodemailer SMTP (Gmail App Password or custom SMTP; file config then env fallback)
-  const smtpCandidates: Array<{ user: string; pass: string; host: string; port: number; from: string }> = [];
-  const fileSmtp = getActiveSmtpConfig();
-  if (fileSmtp && fileSmtp.pass) smtpCandidates.push(fileSmtp);
-  const envUser = (process.env.SMTP_USER || '').trim();
-  const envPass = (process.env.SMTP_PASS || '').trim().replace(/\s+/g, '');
-  if (envUser && envPass && (!fileSmtp || fileSmtp.user !== envUser || fileSmtp.pass !== envPass)) {
-    smtpCandidates.push({
-      user: envUser,
-      pass: envPass,
-      host: (process.env.SMTP_HOST || 'smtp.gmail.com').trim(),
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      from: process.env.SMTP_FROM || `FEVIQO Studio <${envUser}>`,
-    });
-  }
-
+  // 2. Try Nodemailer SMTP candidates (prioritizes Render env; retries alternate port on connection timeout or fallback sender on 550/553)
+  const smtpCandidates = getSmtpCandidates();
   for (const smtpConfig of smtpCandidates) {
-    try {
-      const transporter = createNodemailerTransporter(smtpConfig);
-      const info = await transporter.sendMail({
-        from: smtpConfig.from,
-        to,
-        subject,
-        html,
-      });
-      console.log(`[SMTP Sent] messageId: ${info.messageId} to ${to}`);
-      logDispatchedEmail({ id: info.messageId, to, subject, type, provider: 'smtp', sentAt: new Date().toISOString() });
-      return { success: true, messageId: info.messageId, provider: 'smtp' };
-    } catch (err: any) {
-      smtpErrorDetails = err?.message || String(err);
-      console.warn('[SMTP Dispatch Error, falling back]:', smtpErrorDetails);
+    const portsToTry = [smtpConfig.port];
+    const altPort = smtpConfig.port === 465 ? 587 : 465;
+    if (!portsToTry.includes(altPort)) portsToTry.push(altPort);
+
+    for (const port of portsToTry) {
+      try {
+        const transporter = createNodemailerTransporter({ ...smtpConfig, port });
+        const info = await transporter.sendMail({
+          from: smtpConfig.from,
+          to,
+          subject,
+          html,
+        });
+        console.log(`[SMTP Sent (${smtpConfig.source}:${port})] messageId: ${info.messageId} to ${to}`);
+        logDispatchedEmail({
+          id: info.messageId,
+          to,
+          subject,
+          type,
+          provider: 'smtp',
+          source: smtpConfig.source,
+          status: 'sent',
+          sentAt: new Date().toISOString(),
+        });
+        return { success: true, messageId: info.messageId, provider: 'smtp', source: smtpConfig.source };
+      } catch (err: any) {
+        const msg = err?.message || String(err);
+        smtpErrorDetails = msg;
+        console.warn(`[SMTP (${smtpConfig.source}:${port}) Error]:`, msg);
+
+        // If sender From address wasn't permitted (550/553/554) and differs from SMTP user, retry once with authenticated SMTP user
+        if (
+          /(550|553|554|sender|From address|owned by)/i.test(msg) &&
+          !smtpConfig.from.toLowerCase().includes(smtpConfig.user.toLowerCase())
+        ) {
+          try {
+            const retryTransporter = createNodemailerTransporter({ ...smtpConfig, port });
+            const retryInfo = await retryTransporter.sendMail({
+              from: `FEVIQO Studio <${smtpConfig.user}>`,
+              to,
+              subject,
+              html,
+            });
+            console.log(`[SMTP Sent (${smtpConfig.source}:${port} fallback-from)] messageId: ${retryInfo.messageId} to ${to}`);
+            logDispatchedEmail({
+              id: retryInfo.messageId,
+              to,
+              subject,
+              type,
+              provider: 'smtp',
+              source: smtpConfig.source,
+              status: 'sent',
+              sentAt: new Date().toISOString(),
+            });
+            return { success: true, messageId: retryInfo.messageId, provider: 'smtp', source: smtpConfig.source };
+          } catch (retryErr: any) {
+            smtpErrorDetails = retryErr?.message || msg;
+          }
+        }
+
+        // Only try alternate port for network/connection/TLS timeouts, NOT invalid credentials (535/EAUTH)
+        if (/535|EAUTH|Username and Password not accepted|Invalid login/i.test(msg)) {
+          break;
+        }
+      }
     }
   }
 
@@ -668,7 +865,15 @@ async function sendServerEmail(params: {
     if (res.ok && (fsJson.success === true || fsJson.success === 'true')) {
       const msgId = 'fs-' + Date.now();
       console.log(`[FormSubmit Sent] to ${to}`);
-      logDispatchedEmail({ id: msgId, to, subject, type, provider: 'formsubmit', sentAt: new Date().toISOString() });
+      logDispatchedEmail({
+        id: msgId,
+        to,
+        subject,
+        type,
+        provider: 'formsubmit',
+        status: 'sent',
+        sentAt: new Date().toISOString(),
+      });
       return { success: true, messageId: msgId, provider: 'formsubmit', smtpError: smtpErrorDetails || undefined };
     }
     formSubmitError = fsJson?.message || `FormSubmit returned HTTP ${res.status}`;
@@ -678,17 +883,30 @@ async function sendServerEmail(params: {
   }
 
   const combinedError = [
-    smtpErrorDetails ? `SMTP: ${smtpErrorDetails}` : null,
     resendErrorDetails ? `Resend: ${resendErrorDetails}` : null,
+    smtpErrorDetails ? `SMTP: ${smtpErrorDetails}` : null,
     formSubmitError ? `Fallback: ${formSubmitError}` : null,
   ]
     .filter(Boolean)
     .join(' | ');
 
+  console.error(`[Email Failed] to ${to} (${subject}): ${combinedError}`);
+  logDispatchedEmail({
+    id: `failed-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    to,
+    subject,
+    type,
+    provider: 'none',
+    status: 'failed',
+    error: combinedError,
+    sentAt: new Date().toISOString(),
+  });
+
   return {
     success: false,
-    error: combinedError || 'All email delivery channels failed. Configure a valid Gmail App Password or Resend API key.',
+    error: combinedError || 'All email delivery channels failed. Configure valid SMTP credentials or a Resend API key.',
     smtpError: smtpErrorDetails || undefined,
+    resendError: resendErrorDetails || undefined,
   };
 }
 
@@ -788,7 +1006,8 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    smtpConfigured: !!process.env.SMTP_HOST,
+    smtpConfigured: Boolean(getActiveSmtpConfig()),
+    resendConfigured: Boolean(getActiveResendKey()),
   });
 });
 
@@ -1505,7 +1724,7 @@ app.get('/api/clients/:id', (req, res) => {
   }
 });
 
-app.post('/api/clients', (req, res) => {
+app.post('/api/clients', async (req, res) => {
   try {
     const clientData = req.body;
     if (!clientData.email || !clientData.name) {
@@ -1516,23 +1735,77 @@ app.post('/api/clients', (req, res) => {
       ...clientData,
       createdAt: new Date().toISOString(),
     });
+
+    const recipients = getStudioNotificationRecipients();
+    const clientCreatedHtml = `
+      <div style="font-family:sans-serif; background:#0B0B0D; color:#FFFFFF; padding:24px; border-radius:12px; border:1px solid #27272A; max-width:600px;">
+        <h2 style="color:#22C55E; margin-top:0;">New Editing Client Created</h2>
+        <p style="color:#CBD5E1;">A new editing client profile was added to FEVIQO Flow:</p>
+        <table style="width:100%; border-collapse:collapse; color:#F1F5F9; font-size:14px;">
+          <tr><td style="padding:6px 0; color:#94A3B8; width:140px;">Client Name:</td><td><strong>${escapeHtml(client.name)}</strong></td></tr>
+          <tr><td style="padding:6px 0; color:#94A3B8;">Email:</td><td><a href="mailto:${escapeHtml(client.email)}" style="color:#22C55E;">${escapeHtml(client.email)}</a></td></tr>
+          <tr><td style="padding:6px 0; color:#94A3B8;">Company:</td><td>${escapeHtml(client.company || 'N/A')}</td></tr>
+          <tr><td style="padding:6px 0; color:#94A3B8;">Plan:</td><td>${escapeHtml(client.plan || 'Active')}</td></tr>
+          <tr><td style="padding:6px 0; color:#94A3B8;">Assigned Editor:</td><td>${escapeHtml(client.assignedEditor || 'Studio Lead Editor')}</td></tr>
+        </table>
+      </div>
+    `;
+    for (const recipient of recipients) {
+      await sendServerEmail({
+        to: recipient,
+        subject: `🎬 [Editing Client Added] ${client.name} (${client.plan || 'FEVIQO Flow'})`,
+        html: clientCreatedHtml,
+        type: 'client_created',
+        data: { clientId: client.id, clientEmail: client.email, clientName: client.name },
+      });
+    }
+
     return res.json({ success: true, client, oneTimePassword });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to create client' });
   }
 });
 
-app.put('/api/clients/:id', (req, res) => {
+app.put('/api/clients/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { client } = saveClient({ ...req.body, id });
+
+    if (client) {
+      const recipients = getStudioNotificationRecipients();
+      const updatedFields = Object.keys(req.body || {}).filter((k) => k !== 'password').join(', ') || 'profile details';
+      const clientUpdatedHtml = `
+        <div style="font-family:sans-serif; background:#0B0B0D; color:#FFFFFF; padding:24px; border-radius:12px; border:1px solid #27272A; max-width:600px;">
+          <h2 style="color:#22C55E; margin-top:0;">Editing Client Profile Updated</h2>
+          <p style="color:#CBD5E1;">Client profile changes were saved in FEVIQO Flow:</p>
+          <table style="width:100%; border-collapse:collapse; color:#F1F5F9; font-size:14px;">
+            <tr><td style="padding:6px 0; color:#94A3B8; width:140px;">Client Name:</td><td><strong>${escapeHtml(client.name)}</strong></td></tr>
+            <tr><td style="padding:6px 0; color:#94A3B8;">Email:</td><td>${escapeHtml(client.email)}</td></tr>
+            <tr><td style="padding:6px 0; color:#94A3B8;">Status:</td><td><strong>${escapeHtml(client.status || 'Active')}</strong></td></tr>
+            <tr><td style="padding:6px 0; color:#94A3B8;">Plan:</td><td>${escapeHtml(client.plan || 'Active')}</td></tr>
+            <tr><td style="padding:6px 0; color:#94A3B8;">Assigned Editor:</td><td>${escapeHtml(client.assignedEditor || 'Studio Lead Editor')}</td></tr>
+            <tr><td style="padding:6px 0; color:#94A3B8;">Updated Fields:</td><td>${escapeHtml(updatedFields)}</td></tr>
+          </table>
+        </div>
+      `;
+      for (const recipient of recipients) {
+        await sendServerEmail({
+          to: recipient,
+          subject: `✏️ [Editing Client Updated] ${client.name} (${client.assignedEditor || client.status})`,
+          html: clientUpdatedHtml,
+          type: 'client_updated',
+          data: { clientId: client.id, clientEmail: client.email, updatedFields },
+        });
+      }
+    }
+
     return res.json({ success: true, client });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to update client' });
   }
 });
 
-app.put('/api/clients/:id/status', (req, res) => {
+app.put('/api/clients/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -1543,6 +1816,18 @@ app.put('/api/clients/:id/status', (req, res) => {
     if (!updated) {
       return res.status(404).json({ success: false, error: 'Client not found' });
     }
+
+    const recipients = getStudioNotificationRecipients();
+    for (const recipient of recipients) {
+      await sendServerEmail({
+        to: recipient,
+        subject: `⚡ [Editing Client Status: ${status}] ${updated.name} (${updated.email})`,
+        html: `<div style="font-family:sans-serif;background:#0B0B0D;color:#FFF;padding:24px;border-radius:12px;"><h2 style="color:#22C55E;margin-top:0;">Client Status Updated</h2><p><strong>${escapeHtml(updated.name)}</strong> (${escapeHtml(updated.email)}) status changed to <strong>${escapeHtml(status)}</strong>.</p></div>`,
+        type: 'client_status_changed',
+        data: { clientId: updated.id, status },
+      });
+    }
+
     return res.json({ success: true, client: updated });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to update client status' });
@@ -1569,11 +1854,10 @@ app.post('/api/clients/subscription', async (req, res) => {
       saveClient(client);
     }
 
-    // 2. Dispatch real notification email to partner@feviqo.com
-    const PRIMARY_STUDIO_EMAIL = 'partner@feviqo.com';
+    // 2. Dispatch real notification email to studio recipients (partner@feviqo.com + env recipients)
+    const recipients = getStudioNotificationRecipients();
     const isPause = action === 'pause';
     const isResume = action === 'resume';
-    const isUpgrade = action === 'upgrade';
 
     const subject = isPause 
       ? `⏸️ [Plan Update: PAUSED] ${clientName || clientEmail} (${company || 'Client'}) paused their subscription`
@@ -1585,19 +1869,19 @@ app.post('/api/clients/subscription', async (req, res) => {
       <div style="font-family:sans-serif; background:#0B0B0D; color:#FFFFFF; padding:28px; border-radius:16px; border:1px solid #27272A; max-width:600px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
           <h2 style="color:#22C55E; margin:0; font-size:22px;">FEVIQO Flow Plan Management</h2>
-          <span style="background:rgba(34,197,94,0.15); color:#22C55E; border:1px solid rgba(34,197,94,0.3); padding:4px 10px; border-radius:999px; font-size:12px; font-weight:bold; text-transform:uppercase;">${action}</span>
+          <span style="background:rgba(34,197,94,0.15); color:#22C55E; border:1px solid rgba(34,197,94,0.3); padding:4px 10px; border-radius:999px; font-size:12px; font-weight:bold; text-transform:uppercase;">${escapeHtml(action)}</span>
         </div>
         <p style="color:#E2E8F0; font-size:15px; line-height:1.5;">
-          A client has triggered a plan change directly through their FEVIQO Flow workspace with a single click:
+          A client has triggered a plan change directly through their FEVIQO Flow workspace:
         </p>
         <table style="width:100%; border-collapse:collapse; color:#F1F5F9; font-size:14px; margin:20px 0; background:#18181B; border-radius:12px; overflow:hidden;">
-          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Client:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A; font-weight:bold;">${clientName || 'Client'}</td></tr>
-          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Company:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A;">${company || 'N/A'}</td></tr>
-          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Email:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A;"><a href="mailto:${clientEmail}" style="color:#22C55E;">${clientEmail}</a></td></tr>
-          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Action:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A; font-weight:bold; color:${isPause ? '#F59E0B' : '#22C55E'};">${action.toUpperCase()}</td></tr>
-          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Current Plan:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A;">${currentPlan || 'Active'}</td></tr>
-          ${targetPlan ? `<tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Requested Tier:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A; font-weight:bold; color:#22C55E;">${targetPlan}</td></tr>` : ''}
-          ${notes ? `<tr><td style="padding:10px 14px; color:#94A3B8;">Client Note:</td><td style="padding:10px 14px;">${notes}</td></tr>` : ''}
+          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Client:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A; font-weight:bold;">${escapeHtml(clientName || 'Client')}</td></tr>
+          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Company:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A;">${escapeHtml(company || 'N/A')}</td></tr>
+          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Email:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A;"><a href="mailto:${escapeHtml(clientEmail || '')}" style="color:#22C55E;">${escapeHtml(clientEmail || '')}</a></td></tr>
+          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Action:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A; font-weight:bold; color:${isPause ? '#F59E0B' : '#22C55E'};">${escapeHtml(String(action || '').toUpperCase())}</td></tr>
+          <tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Current Plan:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A;">${escapeHtml(currentPlan || 'Active')}</td></tr>
+          ${targetPlan ? `<tr><td style="padding:10px 14px; color:#94A3B8; border-bottom:1px solid #27272A;">Requested Tier:</td><td style="padding:10px 14px; border-bottom:1px solid #27272A; font-weight:bold; color:#22C55E;">${escapeHtml(targetPlan)}</td></tr>` : ''}
+          ${notes ? `<tr><td style="padding:10px 14px; color:#94A3B8;">Client Note:</td><td style="padding:10px 14px;">${escapeHtml(notes)}</td></tr>` : ''}
         </table>
         <p style="margin-top:24px;">
           <a href="https://feviqo.com/flow?tab=admin" style="display:inline-block; padding:12px 24px; background:#22C55E; color:#052E16; text-decoration:none; font-weight:bold; border-radius:8px;">Open Client in Admin Portal</a>
@@ -1605,15 +1889,19 @@ app.post('/api/clients/subscription', async (req, res) => {
       </div>
     `;
 
-    sendServerEmail({
-      to: PRIMARY_STUDIO_EMAIL,
-      subject,
-      html: emailHtml,
-      type: isPause ? 'plan_paused' : (isResume ? 'plan_resumed' : 'plan_upgraded'),
-      data: { clientEmail, clientName, company, action, targetPlan, currentPlan, notes }
-    }).catch((e) => console.warn('Failed to send partner notification:', e));
+    let emailDelivered = false;
+    for (const recipient of recipients) {
+      const dispatch = await sendServerEmail({
+        to: recipient,
+        subject,
+        html: emailHtml,
+        type: isPause ? 'plan_paused' : (isResume ? 'plan_resumed' : 'plan_upgraded'),
+        data: { clientEmail, clientName, company, action, targetPlan, currentPlan, notes },
+      });
+      if (dispatch.success) emailDelivered = true;
+    }
 
-    return res.json({ success: true, client, message: 'Subscription action recorded and notified to partner@feviqo.com' });
+    return res.json({ success: true, client, emailDelivered, message: `Subscription action recorded and notified to ${recipients.join(', ')}` });
   } catch (err) {
     console.error('Failed to process subscription action:', err);
     return res.status(500).json({ success: false, error: 'Failed to process subscription update' });
@@ -1680,12 +1968,13 @@ app.get('/api/projects/:id', (req, res) => {
   }
 });
 
-app.post('/api/projects', (req, res) => {
+app.post('/api/projects', async (req, res) => {
   try {
     const projectData = req.body;
-    if (!projectData.title) {
+    if (!projectData || Array.isArray(projectData) || !projectData.title) {
       return res.status(400).json({ success: false, error: 'Project title is required' });
     }
+    const existing = getProjects().find((p) => p.id === projectData.id);
     const saved = saveProject({
       id: projectData.id || `proj-${Date.now()}`,
       status: 'Queueing',
@@ -1693,6 +1982,20 @@ app.post('/api/projects', (req, res) => {
       revisionNotes: [],
       ...projectData,
     });
+
+    if (!existing) {
+      const recipients = getStudioNotificationRecipients();
+      for (const recipient of recipients) {
+        await sendServerEmail({
+          to: recipient,
+          subject: `🎬 [New Client Request] "${saved.title}" by ${saved.clientName || saved.clientEmail || 'Client'}`,
+          html: `<div style="font-family:sans-serif;background:#0B0B0D;color:#FFF;padding:24px;border-radius:12px;"><h2 style="color:#22C55E;margin-top:0;">New Video Project Submitted</h2><p><strong>Title:</strong> ${escapeHtml(saved.title)}</p><p><strong>Client:</strong> ${escapeHtml(saved.clientName || 'Client')} (${escapeHtml(saved.clientEmail || 'N/A')})</p><p><strong>Editor:</strong> ${escapeHtml(saved.editorName || 'Studio Lead')}</p><p><strong>Notes:</strong> ${escapeHtml(saved.creativeInstructions || 'None')}</p></div>`,
+          type: 'project_submitted',
+          data: { projectId: saved.id, clientEmail: saved.clientEmail, projectName: saved.title },
+        });
+      }
+    }
+
     return res.json({ success: true, project: saved });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to create project' });
@@ -1709,7 +2012,7 @@ app.put('/api/projects/:id', (req, res) => {
     if (existing && userRole === 'client' && userEmail && existing.clientEmail?.toLowerCase() !== userEmail.toLowerCase()) {
       return res.status(403).json({ success: false, error: 'Access denied: Project does not belong to your account' });
     }
-    const saved = saveProject({ ...req.body, id });
+    const saved = saveProject({ ...(existing || {}), ...req.body, id });
     return res.json({ success: true, project: saved });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to update project' });
@@ -1757,7 +2060,7 @@ app.post('/api/projects/:id/files', (req, res) => {
   }
 });
 
-app.post('/api/projects/:id/revisions', (req, res) => {
+app.post('/api/projects/:id/revisions', async (req, res) => {
   try {
     const { id } = req.params;
     const userRole = (req.headers['x-user-role'] as string) || (req.body.userRole as string);
@@ -1776,6 +2079,18 @@ app.post('/api/projects/:id/revisions', (req, res) => {
     if (!updated) {
       return res.status(404).json({ success: false, error: 'Project not found' });
     }
+
+    const recipients = getStudioNotificationRecipients();
+    for (const recipient of recipients) {
+      await sendServerEmail({
+        to: recipient,
+        subject: `📝 [Revision Feedback] ${updated.title}`,
+        html: `<div style="font-family:sans-serif;background:#0B0B0D;color:#FFF;padding:24px;border-radius:12px;"><h2 style="color:#22C55E;margin-top:0;">New Client Revision Feedback</h2><p><strong>Project:</strong> ${escapeHtml(updated.title)}</p><p><strong>Author:</strong> ${escapeHtml(revision.author || updated.clientName || 'Client')}</p><p><strong>Timestamp:</strong> ${escapeHtml(revision.timestamp || '0:00')}</p><p><strong>Note:</strong> ${escapeHtml(revision.note || '')}</p></div>`,
+        type: 'project_revision_added',
+        data: { projectId: id },
+      });
+    }
+
     return res.json({ success: true, project: updated, revision });
   } catch (err) {
     return res.status(500).json({ success: false, error: 'Failed to add revision' });
@@ -2015,35 +2330,43 @@ app.get('/api/notifications/dispatched', (req, res) => {
 
 app.get('/api/notifications/smtp-config', (req, res) => {
   const config = getActiveSmtpConfig();
-  const resendKey = getActiveResendKey();
-  const resendFrom = getActiveResendFrom();
+  const resendCandidates = getResendCandidates();
+  const resendCfg = resendCandidates[0] || null;
+  const notificationRecipients = getStudioNotificationRecipients();
 
-  if (!config && !resendKey) {
-    return res.json({ isConfigured: false });
+  if (!config && !resendCfg) {
+    return res.json({
+      isConfigured: false,
+      source: 'none',
+      notificationRecipients,
+    });
   }
   return res.json({
     isConfigured: true,
     user: config?.user || '',
     host: config?.host || 'smtp.gmail.com',
-    port: config?.port || 465,
+    port: config?.port || 587,
     from: config?.from || 'FEVIQO Studio <partner@feviqo.com>',
-    source: config?.source || 'json',
-    resendApiKey: resendKey ? `${resendKey.substring(0, 7)}...` : '',
-    resendFrom,
+    source: resendCfg?.source || config?.source || 'none',
+    smtpSource: config?.source || 'none',
+    resendSource: resendCfg?.source || 'none',
+    resendApiKey: resendCfg?.apiKey ? `${resendCfg.apiKey.substring(0, 7)}...` : '',
+    resendFrom: resendCfg?.from || 'FEVIQO Studio <onboarding@resend.dev>',
+    notificationRecipients,
   });
 });
 
 app.post('/api/notifications/save-smtp-config', async (req, res) => {
-  const { user, pass, host = 'smtp.gmail.com', port = 465, from, resendApiKey, resendFrom, testRecipient } = req.body;
+  const { user, pass, host = 'smtp.gmail.com', port = 587, from, resendApiKey, resendFrom, testRecipient } = req.body;
 
-  const cleanUser = user ? user.trim() : '';
-  const cleanPass = pass ? pass.trim().replace(/\s+/g, '') : '';
-  const cleanHost = (host || 'smtp.gmail.com').trim();
-  const numPort = Number(port) || 465;
-  const cleanFrom = from ? from.trim() : `FEVIQO Studio <${cleanUser || 'partner@feviqo.com'}>`;
-  const cleanResendKey = resendApiKey ? resendApiKey.trim() : '';
-  const cleanResendFrom = resendFrom ? resendFrom.trim() : 'FEVIQO Studio <onboarding@resend.dev>';
-  const recipient = testRecipient ? testRecipient.trim() : (cleanUser || 'partner@feviqo.com');
+  const cleanUser = stripEnvQuotes(user);
+  const cleanPass = stripEnvQuotes(pass).replace(/\s+/g, '');
+  const cleanHost = stripEnvQuotes(host) || 'smtp.gmail.com';
+  const numPort = Number(port) || 587;
+  const cleanFrom = stripEnvQuotes(from) || `FEVIQO Studio <${cleanUser || 'partner@feviqo.com'}>`;
+  const cleanResendKey = stripEnvQuotes(resendApiKey);
+  const cleanResendFrom = stripEnvQuotes(resendFrom) || 'FEVIQO Studio <onboarding@resend.dev>';
+  const recipient = stripEnvQuotes(testRecipient) || getStudioNotificationRecipients()[0] || 'partner@feviqo.com';
 
   if (!cleanUser && !cleanPass && !cleanResendKey) {
     return res.status(400).json({ success: false, error: 'Please enter SMTP details or Resend API Key.' });
@@ -2069,14 +2392,22 @@ app.post('/api/notifications/save-smtp-config', async (req, res) => {
         from: cleanFrom,
         to: recipient,
         subject: `✅ FEVIQO SMTP Connected: Test Email`,
-        html: `<p>SMTP connected for ${cleanUser}!</p>`,
+        html: `<p>SMTP connected for ${escapeHtml(cleanUser)}!</p>`,
       });
       smtpSuccess = true;
-      logDispatchedEmail({ id: info.messageId, to: recipient, subject: 'SMTP Config Verified', type: 'smtp_verification', provider: 'smtp', sentAt: new Date().toISOString() });
+      logDispatchedEmail({
+        id: info.messageId,
+        to: recipient,
+        subject: 'SMTP Config Verified',
+        type: 'smtp_verification',
+        provider: 'smtp',
+        status: 'sent',
+        sentAt: new Date().toISOString(),
+      });
     } catch (verifyErr: any) {
       smtpErrorDetails = verifyErr.message;
       if (verifyErr.message?.includes('535') || verifyErr.code === 'EAUTH') {
-        smtpErrorDetails = 'Gmail auth failed (535 Bad Credentials). You MUST generate a 16-character App Password at https://myaccount.google.com/apppasswords.';
+        smtpErrorDetails = 'SMTP authentication failed (535 Bad Credentials). Generate a 16-character App Password or verify your mailbox password.';
       }
     }
   }
@@ -2084,27 +2415,28 @@ app.post('/api/notifications/save-smtp-config', async (req, res) => {
   // 2. Try Resend if key provided
   if (cleanResendKey) {
     try {
-      const resendRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${cleanResendKey}`,
-        },
-        body: JSON.stringify({
-          from: cleanResendFrom,
-          to: [recipient],
+      const resendAttempt = await sendViaResendCandidate(
+        { apiKey: cleanResendKey, from: cleanResendFrom, source: 'file' },
+        {
+          to: recipient,
           subject: `✅ FEVIQO Resend Connected: Test Email`,
-          html: `<p>Resend API Key verified!</p>`,
-        }),
-      });
+          html: `<p>Resend API Key verified for ${escapeHtml(recipient)}!</p>`,
+        }
+      );
 
-      if (resendRes.ok) {
-        const json = await resendRes.json();
+      if (resendAttempt.ok) {
         resendSuccess = true;
-        logDispatchedEmail({ id: json.id, to: recipient, subject: 'Resend Config Verified', type: 'resend_verification', provider: 'resend', sentAt: new Date().toISOString() });
+        logDispatchedEmail({
+          id: resendAttempt.id || `resend-${Date.now()}`,
+          to: recipient,
+          subject: 'Resend Config Verified',
+          type: 'resend_verification',
+          provider: 'resend',
+          status: 'sent',
+          sentAt: new Date().toISOString(),
+        });
       } else {
-        const errJson = await resendRes.json().catch(() => ({}));
-        resendErrorDetails = errJson.message || `Resend error status ${resendRes.status}`;
+        resendErrorDetails = resendAttempt.error || 'Resend rejected key';
       }
     } catch (err: any) {
       resendErrorDetails = err.message || 'Resend API fetch failed';
@@ -2120,19 +2452,14 @@ app.post('/api/notifications/save-smtp-config', async (req, res) => {
     });
   }
 
-  // Preserve existing config
-  let existing: any = {};
-  try {
-    if (fs.existsSync(SMTP_CONFIG_FILE)) {
-      existing = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
-    }
-  } catch (e) {}
-
+  const existing = readSavedSmtpFile();
+  const nowIso = new Date().toISOString();
   const updatedConfig = {
     ...existing,
-    ...(cleanUser && cleanPass ? { user: cleanUser, pass: cleanPass, host: cleanHost, port: numPort, from: cleanFrom } : {}),
-    ...(cleanResendKey ? { resendApiKey: cleanResendKey, resendFrom: cleanResendFrom } : {}),
-    updatedAt: new Date().toISOString(),
+    ...(smtpSuccess ? { user: cleanUser, pass: cleanPass, host: cleanHost, port: numPort, from: cleanFrom, smtpVerifiedAt: nowIso } : {}),
+    ...(resendSuccess ? { resendApiKey: cleanResendKey, resendFrom: cleanResendFrom, resendVerifiedAt: nowIso } : {}),
+    verifiedAt: nowIso,
+    updatedAt: nowIso,
   };
 
   fs.writeFileSync(SMTP_CONFIG_FILE, JSON.stringify(updatedConfig, null, 2), 'utf-8');
@@ -2142,7 +2469,6 @@ app.post('/api/notifications/save-smtp-config', async (req, res) => {
     message: `Email configuration saved! Test email sent to ${recipient}.`,
     smtpSuccess,
     resendSuccess,
-    config: updatedConfig,
   });
 });
 
@@ -2156,45 +2482,48 @@ app.post('/api/notifications/send-email', async (req, res) => {
   console.log(`[FEVIQO Email Dispatch] Sending ${type} email to ${to}: "${subject}"`);
   const result = await sendServerEmail({ to, subject, html: html || `<p>${subject}</p>`, type, data });
 
-  // Automatically mirror all notifications to Studio Owner & Partner inbox
-  const STUDIO_EMAILS = Array.from(new Set([
-    process.env.NOTIFICATION_EMAIL || 'rexanmedia01@gmail.com',
-    'rexanmedia01@gmail.com',
-    'partner@feviqo.com',
-  ].map(e => e.toLowerCase())));
-
-  for (const studioEmail of STUDIO_EMAILS) {
-    if (to.toLowerCase() !== studioEmail) {
-      sendServerEmail({
+  // Mirror client-bound notifications to studio notification recipients sequentially
+  const studioRecipients = getStudioNotificationRecipients();
+  let mirrorDelivered = false;
+  if (!studioRecipients.includes(to.trim().toLowerCase())) {
+    for (const studioEmail of studioRecipients) {
+      const mirrorRes = await sendServerEmail({
         to: studioEmail,
         subject: `[FEVIQO Alert] ${subject}`,
         html: `
           <div style="font-family:sans-serif; background:#0B0B0D; color:#FFFFFF; padding:24px; border-radius:12px;">
             <h3 style="color:#22C55E; margin-top:0;">Notification Dispatch Record</h3>
-            <p><strong>To:</strong> ${to}</p>
-            <p><strong>Event:</strong> ${type}</p>
-            <p><strong>Subject:</strong> ${subject}</p>
+            <p><strong>To:</strong> ${escapeHtml(to)}</p>
+            <p><strong>Event:</strong> ${escapeHtml(type || 'general')}</p>
+            <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
             <hr style="border-color:#27272A; margin:16px 0;" />
-            ${html || `<p>${subject}</p>`}
+            ${html || `<p>${escapeHtml(subject)}</p>`}
           </div>
         `,
         type,
         data,
-      }).catch((e) => console.warn(`[Studio Mirror Email Warning to ${studioEmail}]:`, e));
+      });
+      if (mirrorRes.success) mirrorDelivered = true;
     }
   }
 
-  return res.json(result);
+  return res.status(result.success ? 200 : 502).json({
+    ...result,
+    mirrorDelivered,
+  });
 });
 
 // Diagnostic endpoint to verify email delivery setup
 app.post('/api/notifications/test-email', async (req, res) => {
-  const targetEmail = req.body.to || process.env.NOTIFICATION_EMAIL || 'partner@feviqo.com';
+  const recipients = getStudioNotificationRecipients();
+  const targetEmail = stripEnvQuotes(req.body?.to) || recipients[0] || 'partner@feviqo.com';
   console.log(`[Diagnostic] Testing email dispatch to ${targetEmail}...`);
 
-  const transporter = getSmtpTransporter();
-  const hasSmtp = !!transporter;
-  const hasResend = !!getActiveResendKey();
+  const activeSmtp = getActiveSmtpConfig();
+  const resendCandidates = getResendCandidates();
+  const activeResend = resendCandidates[0] || null;
+  const hasSmtp = Boolean(activeSmtp);
+  const hasResend = Boolean(activeResend);
 
   const result = await sendServerEmail({
     to: targetEmail,
@@ -2202,12 +2531,11 @@ app.post('/api/notifications/test-email', async (req, res) => {
     html: `
       <div style="font-family:sans-serif; background:#04150D; color:#FFFFFF; padding:24px; border-radius:12px; border:1px solid #22C55E;">
         <h2 style="color:#22C55E; margin-top:0;">FEVIQO Email System Verified!</h2>
-        <p>This is a test notification confirming that email sending and receiving is fully operational.</p>
-        <p><strong>Configured Transporters:</strong></p>
+        <p>This is a test notification confirming that email sending and receiving is operational for <strong>${escapeHtml(targetEmail)}</strong>.</p>
+        <p><strong>Active Transporters:</strong></p>
         <ul>
-          <li>SMTP Configured: ${hasSmtp ? 'YES (Active)' : 'NO (Set SMTP_USER & SMTP_PASS)'}</li>
-          <li>Resend Configured: ${hasResend ? 'YES' : 'NO'}</li>
-          <li>Fallback HTTP Webhook: Active</li>
+          <li>SMTP Configured: ${hasSmtp ? `YES (${activeSmtp?.source} • ${activeSmtp?.host}:${activeSmtp?.port})` : 'NO'}</li>
+          <li>Resend Configured: ${hasResend ? `YES (${activeResend?.source} • From: ${escapeHtml(activeResend?.from || '')})` : 'NO'}</li>
         </ul>
         <p style="color:#A7F3D0; font-size:12px;">Dispatched at: ${new Date().toISOString()}</p>
       </div>
@@ -2216,13 +2544,19 @@ app.post('/api/notifications/test-email', async (req, res) => {
     data: { testTime: new Date().toISOString() },
   });
 
-  return res.json({
+  return res.status(result.success ? 200 : 502).json({
     ...result,
     diagnostics: {
       targetEmail,
+      notificationRecipients: recipients,
       smtpConfigured: hasSmtp,
+      smtpSource: activeSmtp?.source || 'none',
+      smtpHost: activeSmtp?.host || 'not-set',
+      smtpPort: activeSmtp?.port || null,
+      smtpUser: activeSmtp?.user ? `${activeSmtp.user.substring(0, 4)}***` : 'Not Set',
       resendConfigured: hasResend,
-      smtpUser: process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 4)}***` : 'Not Set',
+      resendSource: activeResend?.source || 'none',
+      resendFrom: activeResend?.from || 'Not Set',
     },
   });
 });
@@ -2363,35 +2697,34 @@ app.post('/api/strategy-calls', async (req, res) => {
       </div>
     `;
 
-    // 3. Dispatch to Studio Owner (Rexan) and Partner Inboxes
-    const ADMIN_RECIPIENTS = Array.from(new Set([
-      'partner@feviqo.com',
-      'rexanmedia01@gmail.com',
-      process.env.NOTIFICATION_EMAIL || 'rexanmedia01@gmail.com',
-    ].map(e => e.toLowerCase())));
-
+    // 3. Dispatch to Studio Partner & configured notification inboxes sequentially (respecting API rate limits)
+    const ADMIN_RECIPIENTS = getStudioNotificationRecipients();
+    let adminEmailDelivered = false;
     for (const adminEmail of ADMIN_RECIPIENTS) {
-      sendServerEmail({
+      const dispatch = await sendServerEmail({
         to: adminEmail,
         subject: `🔥 [FEVIQO Strategy Call] ${clientFullName} (${newLead.industry || 'Lead'}) - ${selectedPlan}`,
         html: agencyHtml,
         type: 'strategy_call_booked',
         data: newLead,
-      }).catch((e) => console.warn(`Failed to send partner notification to ${adminEmail}:`, e));
+      });
+      if (dispatch.success) adminEmailDelivered = true;
     }
 
     // 4. Dispatch Confirmation to the Client
+    let clientEmailDelivered = false;
     if (newLead.email && newLead.email.includes('@')) {
-      sendServerEmail({
+      const clientDispatch = await sendServerEmail({
         to: newLead.email,
         subject: `Your FEVIQO 1-on-1 Strategy Call is Confirmed 🎬`,
         html: clientConfirmationHtml,
         type: 'client_booking_confirmation',
         data: newLead,
-      }).catch((e) => console.warn('Failed to send client confirmation email:', e));
+      });
+      clientEmailDelivered = Boolean(clientDispatch.success);
     }
 
-    return res.json({ success: true, lead: newLead });
+    return res.json({ success: true, lead: newLead, adminEmailDelivered, clientEmailDelivered });
   } catch (err) {
     console.error('Failed to save strategy call:', err);
     return res.status(500).json({ success: false, error: 'Failed to record strategy call' });
@@ -2449,7 +2782,7 @@ app.get('/api/annotations/:projectId', (req, res) => {
   res.json([]);
 });
 
-app.post('/api/annotations/:projectId', (req, res) => {
+app.post('/api/annotations/:projectId', async (req, res) => {
   try {
     const { projectId } = req.params;
     const annotation = {
@@ -2481,6 +2814,21 @@ app.post('/api/annotations/:projectId', (req, res) => {
     }
 
     fs.writeFileSync(ANNOTATIONS_FILE, JSON.stringify(allAnnotations, null, 2), 'utf-8');
+
+    if (existingIndex < 0 && annotation.authorRole === 'client' && annotation.note) {
+      const proj = getProjects().find((p) => p.id === projectId);
+      const recipients = getStudioNotificationRecipients();
+      for (const recipient of recipients) {
+        await sendServerEmail({
+          to: recipient,
+          subject: `📝 [Client Revision Note] ${proj?.title || projectId} @ ${annotation.timestamp}`,
+          html: `<div style="font-family:sans-serif;background:#0B0B0D;color:#FFF;padding:24px;border-radius:12px;"><h2 style="color:#22C55E;margin-top:0;">Client Posted a Revision Note</h2><p><strong>Project:</strong> ${escapeHtml(proj?.title || projectId)}</p><p><strong>Client:</strong> ${escapeHtml(annotation.author)}</p><p><strong>Timestamp:</strong> ${escapeHtml(annotation.timestamp)}</p><p><strong>Note:</strong> ${escapeHtml(annotation.note)}</p></div>`,
+          type: 'client_annotation_added',
+          data: { projectId, timestamp: annotation.timestamp },
+        });
+      }
+    }
+
     return res.json({ success: true, annotation });
   } catch (err) {
     console.error('Error saving annotation:', err);
@@ -3002,19 +3350,24 @@ app.post(
         </div>
       `;
 
-      const emailDispatch = await dispatchTrackedEmail({
-        orderId: order.id,
-        to: cfg.adminEmail,
-        subject: 'New FEVIQO Membership Payment — Verification Required',
-        html: adminEmailHtml,
-        type: 'admin_payment_verification',
-      });
+      const recipients = Array.from(new Set([cfg.adminEmail, ...getStudioNotificationRecipients()].map((e) => e.trim().toLowerCase()).filter((e) => e.includes('@'))));
+      let anySent = false;
+      for (const recipient of recipients) {
+        const emailDispatch = await dispatchTrackedEmail({
+          orderId: order.id,
+          to: recipient,
+          subject: 'New FEVIQO Membership Payment — Verification Required',
+          html: adminEmailHtml,
+          type: 'admin_payment_verification',
+        });
+        if (emailDispatch.success) anySent = true;
+      }
 
       const account = getMemberAccountState(memberId);
       return res.json({
         success: true,
         order,
-        adminNotificationSent: Boolean(emailDispatch.success),
+        adminNotificationSent: anySent,
         account,
       });
     } catch {
@@ -3079,6 +3432,8 @@ app.get('/api/membership/watch/:dramaId/:episodeSlug', (req, res) => {
     streamUrl: auth.streamUrl,
     dramaTitle: auth.dramaTitle,
     episodeTitle: auth.episodeTitle,
+    thumbnail: auth.thumbnail,
+    fallbackThumbnail: auth.fallbackThumbnail,
     planName: auth.planName,
     expiresAt: auth.expiresAt,
   });
@@ -3359,44 +3714,107 @@ app.post('/api/admin/memberships/emails/:notifId/retry', requireAdmin, async (re
 
 app.get('/api/admin/memberships/email-transport', requireAdmin, (_req: any, res) => {
   const smtp = getActiveSmtpConfig();
-  const resendKey = getActiveResendKey();
+  const resendCandidates = getResendCandidates();
+  const resendCfg = resendCandidates[0] || null;
+  const recipients = getStudioNotificationRecipients();
   return res.json({
     success: true,
     transport: {
       smtpConfigured: Boolean(smtp?.user && smtp?.pass),
+      smtpSource: smtp?.source || 'none',
       smtpHost: smtp?.host || 'smtp.gmail.com',
       smtpPort: smtp?.port || 587,
       smtpUser: smtp?.user || '',
       smtpFrom: smtp?.from || 'FEVIQO Studio <partner@feviqo.com>',
-      resendConfigured: Boolean(resendKey),
-      resendFrom: getActiveResendFrom(),
+      resendConfigured: Boolean(resendCfg?.apiKey),
+      resendSource: resendCfg?.source || 'none',
+      resendFrom: resendCfg?.from || 'FEVIQO Studio <onboarding@resend.dev>',
+      notificationRecipients: recipients,
     },
   });
 });
 
 app.post('/api/admin/memberships/email-transport', requireAdmin, async (req: any, res) => {
   try {
-    const { smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, resendApiKey, resendFrom, sendTestEmail } = req.body || {};
-    let existing: Record<string, any> = {};
-    if (fs.existsSync(SMTP_CONFIG_FILE)) {
-      try {
-        existing = JSON.parse(fs.readFileSync(SMTP_CONFIG_FILE, 'utf-8'));
-      } catch {}
+    const { smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom, resendApiKey, resendFrom, sendTestEmail, testOnly } = req.body || {};
+    const cfg = getMembershipConfig();
+    const targetAdminEmail = cfg.adminEmail || getStudioNotificationRecipients()[0] || 'partner@feviqo.com';
+
+    if (testOnly) {
+      const dispatched = await sendServerEmail({
+        to: targetAdminEmail,
+        subject: 'FEVIQO Admin Email Delivery Verified',
+        html: `<p>Your FEVIQO email notification setup is verified for <strong>${escapeHtml(targetAdminEmail)}</strong>. Alerts will be delivered for memberships and editing clients.</p>`,
+        type: 'admin_email_test',
+      });
+      const smtp = getActiveSmtpConfig();
+      const resendCfg = getResendCandidates()[0] || null;
+      return res.json({
+        success: Boolean(dispatched.success),
+        testResult: {
+          success: Boolean(dispatched.success),
+          provider: dispatched.provider,
+          source: dispatched.source,
+          error: dispatched.error || dispatched.smtpError || dispatched.resendError,
+        },
+        transport: {
+          smtpConfigured: Boolean(smtp?.user && smtp?.pass),
+          smtpSource: smtp?.source || 'none',
+          smtpHost: smtp?.host || 'smtp.gmail.com',
+          smtpPort: smtp?.port || 587,
+          smtpUser: smtp?.user || '',
+          smtpFrom: smtp?.from || 'FEVIQO Studio <partner@feviqo.com>',
+          resendConfigured: Boolean(resendCfg?.apiKey),
+          resendSource: resendCfg?.source || 'none',
+          resendFrom: resendCfg?.from || 'FEVIQO Studio <onboarding@resend.dev>',
+          notificationRecipients: getStudioNotificationRecipients(),
+        },
+        overview: getAdminMembershipsOverview(),
+      });
     }
+
+    const existing = readSavedSmtpFile();
+    const nowIso = new Date().toISOString();
+    const cleanSmtpUser = stripEnvQuotes(smtpUser) || stripEnvQuotes(existing.user);
+    const cleanSmtpPass = stripEnvQuotes(smtpPass).replace(/\s+/g, '') || stripEnvQuotes(existing.pass);
+    const cleanResendKey = resendApiKey !== undefined ? stripEnvQuotes(resendApiKey) : stripEnvQuotes(existing.resendApiKey);
 
     const updated = {
       ...existing,
-      host: smtpHost?.trim() || existing.host || 'smtp.gmail.com',
+      host: stripEnvQuotes(smtpHost) || stripEnvQuotes(existing.host) || 'smtp.gmail.com',
       port: Number(smtpPort) || Number(existing.port) || 587,
-      user: smtpUser?.trim() || existing.user || '',
-      pass: smtpPass && smtpPass.trim() ? smtpPass.trim().replace(/\s+/g, '') : existing.pass || '',
-      from: smtpFrom?.trim() || existing.from || `FEVIQO Studio <${smtpUser?.trim() || existing.user || 'partner@feviqo.com'}>`,
-      resendApiKey: resendApiKey !== undefined ? (resendApiKey.trim() || '') : (existing.resendApiKey || ''),
-      resendFrom: resendFrom?.trim() || existing.resendFrom || 'FEVIQO Studio <partner@feviqo.com>',
-      updatedAt: new Date().toISOString(),
+      user: cleanSmtpUser,
+      pass: cleanSmtpPass,
+      from: stripEnvQuotes(smtpFrom) || stripEnvQuotes(existing.from) || (cleanSmtpUser ? `FEVIQO Studio <${cleanSmtpUser}>` : 'FEVIQO Studio <partner@feviqo.com>'),
+      resendApiKey: cleanResendKey,
+      resendFrom: stripEnvQuotes(resendFrom) || stripEnvQuotes(existing.resendFrom) || 'FEVIQO Studio <onboarding@resend.dev>',
+      updatedAt: nowIso,
     };
 
-    fs.writeFileSync(SMTP_CONFIG_FILE, JSON.stringify(updated, null, 2), 'utf-8');
+    let testResult: { success: boolean; provider?: string; source?: string; error?: string } | null = null;
+    if (sendTestEmail) {
+      // Write temporarily only if new credentials provided, verify live, and stamp verifiedAt on success
+      fs.writeFileSync(SMTP_CONFIG_FILE, JSON.stringify({ ...updated, verifiedAt: nowIso }, null, 2), 'utf-8');
+      const dispatched = await sendServerEmail({
+        to: targetAdminEmail,
+        subject: 'FEVIQO Admin Email Delivery Verified',
+        html: `<p>Your FEVIQO email notification setup is verified for <strong>${escapeHtml(targetAdminEmail)}</strong>. You will receive verification alerts when customers submit Bank QR payment screenshots or editing client updates occur.</p>`,
+        type: 'admin_email_test',
+      });
+      testResult = {
+        success: Boolean(dispatched.success),
+        provider: dispatched.provider,
+        source: dispatched.source,
+        error: dispatched.error || dispatched.smtpError || dispatched.resendError,
+      };
+      if (!dispatched.success) {
+        // Keep previously saved file or remove failed override so Render env vars are not shadowed by bad credentials
+        fs.writeFileSync(SMTP_CONFIG_FILE, JSON.stringify(existing, null, 2), 'utf-8');
+      }
+    } else {
+      fs.writeFileSync(SMTP_CONFIG_FILE, JSON.stringify({ ...updated, verifiedAt: nowIso }, null, 2), 'utf-8');
+    }
+
     appendAdminAudit({
       adminId: req.admin.id,
       adminEmail: req.admin.email,
@@ -3404,33 +3822,22 @@ app.post('/api/admin/memberships/email-transport', requireAdmin, async (req: any
       details: `Updated server email delivery credentials (SMTP user: ${updated.user || 'none'}, Resend: ${updated.resendApiKey ? 'set' : 'unset'}).`,
     });
 
-    let testResult: { success: boolean; provider?: string; error?: string } | null = null;
-    if (sendTestEmail) {
-      const cfg = getMembershipConfig();
-      const dispatched = await sendServerEmail({
-        to: cfg.adminEmail,
-        subject: 'FEVIQO Admin Email Delivery Verified',
-        html: `<p>Your FEVIQO email notification setup is verified for <strong>${escapeHtml(cfg.adminEmail)}</strong>. You will receive verification alerts when customers submit Bank QR payment screenshots.</p>`,
-        type: 'admin_email_test',
-      });
-      testResult = {
-        success: Boolean(dispatched.success),
-        provider: dispatched.provider,
-        error: dispatched.error || dispatched.smtpError,
-      };
-    }
-
+    const smtp = getActiveSmtpConfig();
+    const resendCfg = getResendCandidates()[0] || null;
     return res.json({
       success: true,
       testResult,
       transport: {
-        smtpConfigured: Boolean(updated.user && updated.pass),
-        smtpHost: updated.host,
-        smtpPort: updated.port,
-        smtpUser: updated.user,
-        smtpFrom: updated.from,
-        resendConfigured: Boolean(updated.resendApiKey),
-        resendFrom: updated.resendFrom,
+        smtpConfigured: Boolean(smtp?.user && smtp?.pass),
+        smtpSource: smtp?.source || 'none',
+        smtpHost: smtp?.host || 'smtp.gmail.com',
+        smtpPort: smtp?.port || 587,
+        smtpUser: smtp?.user || '',
+        smtpFrom: smtp?.from || 'FEVIQO Studio <partner@feviqo.com>',
+        resendConfigured: Boolean(resendCfg?.apiKey),
+        resendSource: resendCfg?.source || 'none',
+        resendFrom: resendCfg?.from || 'FEVIQO Studio <onboarding@resend.dev>',
+        notificationRecipients: getStudioNotificationRecipients(),
       },
       overview: getAdminMembershipsOverview(),
     });

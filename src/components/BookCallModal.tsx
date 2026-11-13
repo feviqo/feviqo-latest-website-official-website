@@ -184,55 +184,35 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
       status: 'New',
     };
 
-    // 1. Dispatch real email notification to both client and production team
+    // Persist lead and dispatch sequential studio + client notifications
     try {
-      // Send real confirmation to client's email
-      await sendNotificationEmail({
-        to: formData.email,
-        type: 'strategy_call_booked',
-        subject: `Confirmed: Your FEVIQO Strategy Call for ${formData.selectedPackage} on ${formData.preferredDate}`,
-        data: {
-          recipientName: `${formData.firstName} ${formData.lastName}`,
-          date: formData.preferredDate,
-          time: formData.preferredTime,
-          industry: formData.industry,
-          phone: `${formData.countryCode} ${formData.phoneNumber}`,
-          package: formData.selectedPackage,
-          billingMethod: 'Payoneer',
-        },
-      });
-
-      // Send alert to studio inbox at partner@feviqo.com
-      await sendNotificationEmail({
-        to: 'partner@feviqo.com',
-        type: 'strategy_call_booked',
-        subject: `🔥 [Strategy Call] ${formData.firstName} ${formData.lastName} (${formData.selectedPackage})`,
-        data: {
-          recipientName: 'FEVIQO Production Partner',
-          clientName: `${formData.firstName} ${formData.lastName}`,
-          clientEmail: formData.email,
-          phone: `${formData.countryCode} ${formData.phoneNumber}`,
-          package: formData.selectedPackage,
-          industry: formData.industry,
-          format: formData.videoType,
-          volume: `${formData.monthlyVolume} videos/mo`,
-          date: formData.preferredDate,
-          time: formData.preferredTime,
-          billingMethod: 'Payoneer',
-        },
-      });
-      setSendSuccess(true);
-    } catch (err) {
-      console.error('Email dispatch error:', err);
-    }
-
-    // 2. Persist to server API and local state
-    try {
-      await fetch('/api/strategy-calls', {
+      const apiRes = await fetch('/api/strategy-calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newLead),
-      }).catch(() => {});
+      });
+      if (apiRes.ok) {
+        setSendSuccess(true);
+      } else {
+        await sendNotificationEmail({
+          to: 'partner@feviqo.com',
+          type: 'strategy_call_booked',
+          subject: `🔥 [Strategy Call] ${formData.firstName} ${formData.lastName} (${formData.selectedPackage})`,
+          data: {
+            recipientName: 'FEVIQO Production Partner',
+            clientName: `${formData.firstName} ${formData.lastName}`,
+            clientEmail: formData.email,
+            phone: `${formData.countryCode} ${formData.phoneNumber}`,
+            package: formData.selectedPackage,
+            industry: formData.industry,
+            format: formData.videoType,
+            volume: `${formData.monthlyVolume} videos/mo`,
+            date: formData.preferredDate,
+            time: formData.preferredTime,
+            billingMethod: 'Payoneer',
+          },
+        }).catch(() => {});
+      }
 
       const existingRaw = localStorage.getItem('feviqo_leads_v6') || localStorage.getItem('feviqo_leads');
       const leads: LeadBooking[] = existingRaw ? JSON.parse(existingRaw) : [];

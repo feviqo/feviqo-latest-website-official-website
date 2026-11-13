@@ -159,54 +159,35 @@ export const BookingPage: React.FC<BookingPageProps> = ({
       status: 'New',
     };
 
-    // 1. Dispatch real email notification to client and studio team
+    // Persist booking and dispatch sequential confirmation + partner@feviqo.com notifications on server
     try {
-      await sendNotificationEmail({
-        to: formData.email,
-        type: 'strategy_call_booked',
-        subject: `Confirmed: Your FEVIQO Strategy Call for ${fullPackageName} on ${formData.preferredDate}`,
-        data: {
-          recipientName: `${formData.firstName} ${formData.lastName}`,
-          date: formData.preferredDate,
-          time: formData.preferredTime,
-          industry: formData.industry,
-          phone: `${formData.countryCode} ${formData.phoneNumber}`,
-          package: fullPackageName,
-          billingMethod: 'Payoneer',
-        },
-      });
-
-      await sendNotificationEmail({
-        to: 'partner@feviqo.com',
-        type: 'strategy_call_booked',
-        subject: `🔥 [Strategy Call] ${formData.firstName} ${formData.lastName} (${fullPackageName})`,
-        data: {
-          recipientName: 'FEVIQO Production Partner',
-          clientName: `${formData.firstName} ${formData.lastName}`,
-          clientEmail: formData.email,
-          phone: `${formData.countryCode} ${formData.phoneNumber}`,
-          company: formData.company,
-          website: formData.website,
-          package: fullPackageName,
-          industry: formData.industry,
-          format: formData.videoType,
-          volume: `${formData.monthlyVolume} videos/mo`,
-          date: formData.preferredDate,
-          time: formData.preferredTime,
-          billingMethod: 'Payoneer',
-        },
-      });
-    } catch (err) {
-      console.warn('Email dispatch notice:', err);
-    }
-
-    // 2. Persist to API, LocalStorage, and fire event
-    try {
-      await fetch('/api/strategy-calls', {
+      const apiRes = await fetch('/api/strategy-calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      if (!apiRes.ok) {
+        await sendNotificationEmail({
+          to: 'partner@feviqo.com',
+          type: 'strategy_call_booked',
+          subject: `🔥 [Strategy Call] ${formData.firstName} ${formData.lastName} (${fullPackageName})`,
+          data: {
+            recipientName: 'FEVIQO Production Partner',
+            clientName: `${formData.firstName} ${formData.lastName}`,
+            clientEmail: formData.email,
+            phone: `${formData.countryCode} ${formData.phoneNumber}`,
+            company: formData.company,
+            website: formData.website,
+            package: fullPackageName,
+            industry: formData.industry,
+            format: formData.videoType,
+            volume: `${formData.monthlyVolume} videos/mo`,
+            date: formData.preferredDate,
+            time: formData.preferredTime,
+            billingMethod: 'Payoneer',
+          },
+        }).catch(() => {});
+      }
 
       const existingRaw = localStorage.getItem('feviqo_leads_v6') || localStorage.getItem('feviqo_leads');
       const leads: LeadBooking[] = existingRaw ? JSON.parse(existingRaw) : [];

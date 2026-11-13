@@ -330,6 +330,8 @@ export async function requestProtectedEpisodeStream(
       streamUrl: string;
       dramaTitle: string;
       episodeTitle: string;
+      thumbnail?: string;
+      fallbackThumbnail?: string;
       planName: string;
       expiresAt: string;
     }
@@ -507,12 +509,15 @@ export async function updateAdminRoleStatus(
 
 export interface AdminEmailTransportStatus {
   smtpConfigured: boolean;
+  smtpSource?: string;
   smtpHost: string;
   smtpPort: number;
   smtpUser: string;
   smtpFrom: string;
   resendConfigured: boolean;
+  resendSource?: string;
   resendFrom: string;
+  notificationRecipients?: string[];
 }
 
 export async function fetchAdminEmailTransport(): Promise<
@@ -531,11 +536,12 @@ export async function saveAdminEmailTransport(payload: {
   resendApiKey?: string;
   resendFrom?: string;
   sendTestEmail?: boolean;
+  testOnly?: boolean;
 }): Promise<
   | {
       success: true;
       transport: AdminEmailTransportStatus;
-      testResult?: { success: boolean; provider?: string; error?: string } | null;
+      testResult?: { success: boolean; provider?: string; source?: string; error?: string } | null;
       overview: AdminMembershipsOverview;
     }
   | { success: false; error: string }

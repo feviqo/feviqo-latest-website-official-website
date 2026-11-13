@@ -115,6 +115,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const [smtpPassInput, setSmtpPassInput] = useState('');
   const [resendKeyInput, setResendKeyInput] = useState('');
   const [savingTransport, setSavingTransport] = useState(false);
+  const [testingTransport, setTestingTransport] = useState(false);
+  const [transportStatus, setTransportStatus] = useState<{
+    smtpConfigured: boolean;
+    smtpSource?: string;
+    resendConfigured: boolean;
+    resendSource?: string;
+    notificationRecipients?: string[];
+  } | null>(null);
 
   const syncSettingsFromOverview = (ov: AdminMembershipsOverview) => {
     setWhatsappInput(ov.config.whatsappNumber || '');
@@ -144,6 +152,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setSmtpHostInput(trRes.transport.smtpHost || 'smtp.gmail.com');
         setSmtpPortInput(String(trRes.transport.smtpPort || 587));
         setSmtpUserInput(trRes.transport.smtpUser || '');
+        setTransportStatus({
+          smtpConfigured: trRes.transport.smtpConfigured,
+          smtpSource: trRes.transport.smtpSource,
+          resendConfigured: trRes.transport.resendConfigured,
+          resendSource: trRes.transport.resendSource,
+          notificationRecipients: trRes.transport.notificationRecipients,
+        });
       }
     } catch {
       setFeedbackBanner({ type: 'error', text: 'Could not load admin dashboard overview.' });
@@ -1099,6 +1114,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         setOverview(res.overview);
                         setSmtpPassInput('');
                         setResendKeyInput('');
+                        if (res.transport) {
+                          setTransportStatus({
+                            smtpConfigured: res.transport.smtpConfigured,
+                            smtpSource: res.transport.smtpSource,
+                            resendConfigured: res.transport.resendConfigured,
+                            resendSource: res.transport.resendSource,
+                            notificationRecipients: res.transport.notificationRecipients,
+                          });
+                        }
                         if (res.testResult?.success) {
                           setFeedbackBanner({
                             type: 'success',
@@ -1107,7 +1131,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         } else {
                           setFeedbackBanner({
                             type: 'error',
-                            text: `Saved settings, but test email failed: ${res.testResult?.error || 'Verify Gmail App Password or Resend key.'}`,
+                            text: `Test email failed: ${res.testResult?.error || 'Verify Gmail App Password or Resend key.'}`,
                           });
                         }
                       }
@@ -1119,13 +1143,74 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   }}
                   className="lg:col-span-12 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4"
                 >
-                  <div>
-                    <h2 className="text-lg font-bold text-[#0B0B0D]">
-                      Email Delivery Credentials (Gmail SMTP App Password or Resend)
-                    </h2>
-                    <p className="text-xs text-zinc-600 mt-0.5 leading-relaxed">
-                      Required for automatic admin verification alerts when a customer uploads a screenshot. For Gmail, enable 2-Step Verification and generate a 16-character App Password under Google Account → Security → App passwords.
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-bold text-[#0B0B0D]">
+                        Email Delivery Credentials (Gmail SMTP App Password or Resend)
+                      </h2>
+                      <p className="text-xs text-zinc-600 mt-0.5 leading-relaxed">
+                        Used for automatic admin alerts on Bank QR screenshots and editing client updates. Set via Render environment variables or save below.
+                      </p>
+                      {transportStatus && (
+                        <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                          <span
+                            className={`px-2.5 py-1 rounded-md font-semibold ${
+                              transportStatus.smtpConfigured
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-zinc-100 text-zinc-600'
+                            }`}
+                          >
+                            SMTP: {transportStatus.smtpConfigured ? `Configured (${transportStatus.smtpSource || 'active'})` : 'Not configured'}
+                          </span>
+                          <span
+                            className={`px-2.5 py-1 rounded-md font-semibold ${
+                              transportStatus.resendConfigured
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-zinc-100 text-zinc-600'
+                            }`}
+                          >
+                            Resend: {transportStatus.resendConfigured ? `Configured (${transportStatus.resendSource || 'active'})` : 'Not configured'}
+                          </span>
+                          {transportStatus.notificationRecipients?.length ? (
+                            <span className="px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-700 font-medium">
+                              Alerts to: {transportStatus.notificationRecipients.join(', ')}
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={testingTransport}
+                      onClick={async () => {
+                        setTestingTransport(true);
+                        setFeedbackBanner(null);
+                        try {
+                          const res = await saveAdminEmailTransport({ testOnly: true });
+                          if ('error' in res) {
+                            setFeedbackBanner({ type: 'error', text: res.error });
+                          } else if (res.testResult?.success) {
+                            setOverview(res.overview);
+                            setFeedbackBanner({
+                              type: 'success',
+                              text: `Active email setup verified via ${res.testResult.provider?.toUpperCase()} (${res.testResult.source || 'server'})! Test email dispatched.`,
+                            });
+                          } else {
+                            setFeedbackBanner({
+                              type: 'error',
+                              text: `Active email delivery test failed: ${res.testResult?.error || 'Check Render SMTP/Resend env vars or credentials below.'}`,
+                            });
+                          }
+                        } catch {
+                          setFeedbackBanner({ type: 'error', text: 'Could not run email delivery test.' });
+                        } finally {
+                          setTestingTransport(false);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-60"
+                    >
+                      {testingTransport ? 'Testing...' : 'Test Current Email Setup'}
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

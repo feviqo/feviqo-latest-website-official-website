@@ -33,6 +33,7 @@ for (const dir of [DATA_DIR, PRIVATE_PROOFS_DIR, PUBLIC_QR_DIR]) {
 // Never export or serialize these into public catalog endpoints.
 const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
   teskilat: {
+    'episode-192': 'https://stream.mux.com/9KzAsaCfqKFh5hi4k5o5NCUuYWa3TbQsbCrVgsih8WU.m3u8',
     'episode-189': 'https://stream.mux.com/toXOVmLVaJSsRkVRJUxYiColdHPoHLSI8qBM00KBHyuA.m3u8',
     'episode-188': 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8',
     'episode-187': 'https://stream.mux.com/vPkzwE9vrAHq4uz4hPyjFu4ZVQOzsORSqxYDzUnYm4o.m3u8',
@@ -1654,6 +1655,8 @@ export function authorizeEpisodePlayback(params: {
       streamUrl: string;
       dramaTitle: string;
       episodeTitle: string;
+      thumbnail: string;
+      fallbackThumbnail: string;
       planName: string;
       expiresAt: string;
     }
@@ -1738,6 +1741,8 @@ export function authorizeEpisodePlayback(params: {
     streamUrl: serverStreamUrl,
     dramaTitle: drama.title,
     episodeTitle: episode.title,
+    thumbnail: episode.thumbnail,
+    fallbackThumbnail: drama.fallbackPosterUrl,
     planName: active.planName,
     expiresAt: active.expiresAt,
   };

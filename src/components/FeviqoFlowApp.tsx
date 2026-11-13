@@ -132,11 +132,6 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
   useEffect(() => {
     try {
       localStorage.setItem('feviqo_projects_v6', JSON.stringify(projects));
-      fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(projects),
-      }).catch(() => {});
     } catch {}
   }, [projects]);
 
@@ -326,7 +321,7 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
 
     setEmails((prev) => [emailItem, ...prev]);
 
-    // Dispatch real email over the network to recipient
+    // Dispatch real email over the network to recipient (server automatically mirrors to studio recipients)
     sendNotificationEmail({
       to: targetEmail,
       type: newStatus === 'Review Ready' 
@@ -343,21 +338,6 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
         previewUrl: previewUrl || project.deliveredVideoUrl,
       },
     }).catch((err) => console.warn('Real email dispatch failed:', err));
-
-    // Also dispatch direct status update alert to partner@feviqo.com
-    sendNotificationEmail({
-      to: 'partner@feviqo.com',
-      type: 'project_status_changed',
-      subject: `⚡ [FEVIQO Status Update] ${project.title} is now ${newStatus}`,
-      data: {
-        recipientName: 'Studio Partner',
-        clientName: recipientName,
-        projectName: project.title,
-        newStatus,
-        editorName: project.editorName,
-        previewUrl: previewUrl || project.deliveredVideoUrl,
-      },
-    }).catch(() => {});
   };
 
   // Handler: Delete Project Task
@@ -403,6 +383,13 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
     setProjects((prev) => [newProject, ...prev]);
     setActiveProjectId(newProject.id);
 
+    // Persist project to server API (server notifies studio partner email cleanly)
+    fetch('/api/projects', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newProject),
+    }).catch((err) => console.warn('Project server persistence failed:', err));
+
     // Trigger automated email dispatch
     const emailItem: SimulatedEmail = {
       id: 'em-' + Date.now(),
@@ -418,7 +405,7 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
     };
     setEmails((prev) => [emailItem, ...prev]);
 
-    // Dispatch real email to client
+    // Dispatch real confirmation email to client
     sendNotificationEmail({
       to: newProject.clientEmail,
       type: 'project_submitted',
@@ -429,21 +416,6 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
         editorName: newProject.editorName,
       },
     }).catch((err) => console.warn('Real email dispatch failed:', err));
-
-    // Also dispatch direct new project alert to partner@feviqo.com
-    sendNotificationEmail({
-      to: 'partner@feviqo.com',
-      type: 'project_submitted',
-      subject: `🎬 [New Client Request] "${newProject.title}" by ${newProject.clientName || 'Client'}`,
-      data: {
-        recipientName: 'Studio Partner',
-        clientName: newProject.clientName || 'Client',
-        clientEmail: newProject.clientEmail,
-        projectName: newProject.title,
-        editorName: newProject.editorName,
-        notes: newProject.creativeInstructions,
-      },
-    }).catch(() => {});
   };
 
   // Handler: Update Status from Editor
@@ -461,6 +433,14 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
             lastUpdated: 'Just now',
             deliveredVideoUrl: previewUrl || p.deliveredVideoUrl,
           };
+          fetch(`/api/projects/${projectId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: newStatus,
+              deliveredVideoUrl: updated.deliveredVideoUrl,
+            }),
+          }).catch(() => {});
           triggerAutomatedEmail(updated, newStatus, previewUrl);
           return updated;
         }
@@ -781,7 +761,7 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
       localStorage.setItem('feviqo_clients_v4', JSON.stringify(newClients));
     } catch {}
 
-    // Dispatch to server API
+    // Dispatch to server API (server handles studio notification sequentially)
     fetch('/api/clients/subscription', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -796,7 +776,6 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
       }),
     }).catch((err) => console.warn('Subscription server call warning:', err));
 
-    // Direct email notification to partner@feviqo.com
     const emailType = action === 'pause' ? 'plan_paused' : action === 'resume' ? 'plan_resumed' : 'plan_upgraded';
     const emailSubject = action === 'pause'
       ? `⏸️ [Plan Update: PAUSED] ${session.name} (${session.company || 'Client'}) paused subscription`
@@ -804,38 +783,24 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
       ? `▶️ [Plan Update: RESUMED] ${session.name} (${session.company || 'Client'}) resumed subscription`
       : `🚀 [Plan Upgrade Request] ${session.name} (${session.company || 'Client'}) upgraded to ${targetPlan}`;
 
-    sendNotificationEmail({
-      to: 'partner@feviqo.com',
-      type: emailType,
-      subject: emailSubject,
-      data: {
-        recipientName: 'Studio Partner',
-        clientName: session.name,
-        clientEmail: session.email,
-        company: session.company,
-        currentPlan: currentClient.plan,
-        targetPlan,
-        action,
-        notes,
-      },
-    }).catch(() => {});
-
-    // Also notify client copy
-    sendNotificationEmail({
-      to: session.email,
-      type: emailType,
-      subject: emailSubject,
-      data: {
-        recipientName: session.name,
-        clientName: session.name,
-        clientEmail: session.email,
-        company: session.company,
-        currentPlan: currentClient.plan,
-        targetPlan,
-        action,
-        notes,
-      },
-    }).catch(() => {});
+    // Notify client copy cleanly
+    if (session.email && session.email.toLowerCase() !== 'partner@feviqo.com') {
+      sendNotificationEmail({
+        to: session.email,
+        type: emailType,
+        subject: emailSubject,
+        data: {
+          recipientName: session.name,
+          clientName: session.name,
+          clientEmail: session.email,
+          company: session.company,
+          currentPlan: currentClient.plan,
+          targetPlan,
+          action,
+          notes,
+        },
+      }).catch(() => {});
+    }
 
     // Push simulated email into studio inbox
     const simEmail: SimulatedEmail = {
