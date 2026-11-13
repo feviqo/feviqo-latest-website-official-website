@@ -27,7 +27,8 @@ import {
   CheckCircle2,
   Subtitles,
   Sliders,
-  PictureInPicture2
+  PictureInPicture2,
+  Lock
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { NativeVideoPlayer } from '../NativeVideoPlayer';
@@ -57,6 +58,7 @@ interface TeskilatEpisode {
   storyRecapEnglish: string;
   views: string;
   isLatest?: boolean;
+  isLockedPremium?: boolean;
 }
 
 const FEATURED_SEASON7_EPISODE: TeskilatEpisode = {
@@ -286,7 +288,25 @@ Target Search Keywords: Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Tes
   isLatest: false
 };
 
-const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_189, EPISODE_188, EPISODE_187, FEATURED_SEASON7_EPISODE];
+const EPISODE_192: TeskilatEpisode = {
+  id: 'ep-192-s7',
+  episodeNumber: 192,
+  seasonNumber: 7,
+  titleUrdu: 'تشکیلات سیزن 7 قسط 192 اردو ڈبنگ — صرف پریمیم ممبرز کے لیے',
+  titleEnglish: 'Teskilat Season 7 Episode 192 (Bolum 192) — Premium Subscriptions Only',
+  releaseDate: 'November 2026',
+  duration: '2h 25m',
+  thumbnailUrl: 'https://lh3.googleusercontent.com/d/1vvY9e1e-y0pddweoqJPPxSEEhHIXI6o2',
+  directoryThumbnailUrl: 'https://lh3.googleusercontent.com/d/1vvY9e1e-y0pddweoqJPPxSEEhHIXI6o2',
+  videoUrl: '',
+  storyRecapUrdu: `تشکیلات سیزن 7 قسط 192 مکمل اردو ڈبنگ میں صرف FEVIQO پریمیم ممبرشپ کے ساتھ دستیاب ہے۔ مکمل قسط دیکھنے کے لیے پریمیم سبسکرپشن حاصل کریں یا اپنے ممبر اکاؤنٹ میں سائن ان کریں۔`,
+  storyRecapEnglish: `Teskilat Season 7 Episode 192 (Bolum 192) in Urdu Dubbed HD is exclusively unlocked for active FEVIQO Premium Membership subscribers. Subscribe to a Starter, Standard, Plus, or VIP plan to watch Episode 192 inside your My Account library.`,
+  views: 'Premium Members',
+  isLatest: false,
+  isLockedPremium: true,
+};
+
+const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_192, EPISODE_189, EPISODE_188, EPISODE_187, FEATURED_SEASON7_EPISODE];
 
 interface TeskilatDramaPageProps {
   onBackToHome: () => void;
@@ -308,7 +328,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192')) {
         return 'episode-detail';
       }
     }
@@ -317,6 +337,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   const [selectedEpisode, setSelectedEpisode] = useState<TeskilatEpisode>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
+      if (path.includes('192')) return EPISODE_192;
       if (path.includes('186')) return FEATURED_SEASON7_EPISODE;
       if (path.includes('187')) return EPISODE_187;
       if (path.includes('188')) return EPISODE_188;
@@ -353,9 +374,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('/episode')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192') || path.includes('/episode')) {
         setActiveView('episode-detail');
-        if (path.includes('186') || hash.includes('186')) {
+        if (path.includes('192') || hash.includes('192')) {
+          setSelectedEpisode(EPISODE_192);
+        } else if (path.includes('186') || hash.includes('186')) {
           setSelectedEpisode(FEATURED_SEASON7_EPISODE);
         } else if (path.includes('187') || hash.includes('187')) {
           setSelectedEpisode(EPISODE_187);
@@ -951,63 +974,143 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
               {/* Grid of Small Episode Boxes */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {ALL_EPISODES.map((ep) => (
-                  <a 
-                    href={`/teskilat/episode-${ep.episodeNumber}`}
-                    key={ep.id}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleOpenEpisode(ep);
-                    }}
-                    className="group bg-slate-50/20 hover:bg-slate-50/50 border border-slate-200 hover:border-[#22C55E]/80 rounded-2xl overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition duration-200 text-left select-none cursor-pointer flex flex-col h-full shadow-sm"
-                  >
-                    {/* 16:9 Thumbnail Box */}
-                    <div className="relative aspect-video bg-slate-100 border-b border-slate-100 overflow-hidden">
-                      {ep.thumbnailUrl ? (
-                        <img 
-                          src={ep.directoryThumbnailUrl || ep.thumbnailUrl} 
-                          alt={ep.episodeNumber === 188 ? "Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Urdu Episode ${ep.episodeNumber} Subtitles Thumbnail - Season 7`} 
-                          title={ep.episodeNumber === 188 ? "Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Urdu Episode ${ep.episodeNumber} Subtitles`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[#09090c] via-[#111116] to-[#021d12] flex flex-col items-center justify-center p-2 border border-white/5">
-                          <span className="text-[10px] font-mono font-bold tracking-widest text-[#22C55E] uppercase animate-pulse text-center">EPISODE {ep.episodeNumber}</span>
-                          <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5 text-center">COVER ART UPLOADING</span>
-                        </div>
-                      )}
-                      {ep.isLatest && (
-                        <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
-                          LATEST
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
-                        <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                          <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
-                        </div>
-                      </div>
-                    </div>
+                {ALL_EPISODES.map((ep) => {
+                  const isLocked = Boolean(ep.isLockedPremium);
+                  return (
+                    <a
+                      href={isLocked ? '/membership' : `/teskilat/episode-${ep.episodeNumber}`}
+                      key={ep.id}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (isLocked) {
+                          onNavigatePage('membership');
+                        } else {
+                          handleOpenEpisode(ep);
+                        }
+                      }}
+                      className={`group rounded-2xl overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition duration-200 text-left select-none cursor-pointer flex flex-col h-full shadow-sm border ${
+                        isLocked
+                          ? 'bg-[#0B0B0D] text-white border-zinc-800 hover:border-[#22C55E]'
+                          : 'bg-slate-50/20 hover:bg-slate-50/50 border-slate-200 hover:border-[#22C55E]/80'
+                      }`}
+                    >
+                      {/* 16:9 Thumbnail Box */}
+                      <div className="relative aspect-video bg-slate-950 border-b border-slate-100/10 overflow-hidden">
+                        {ep.thumbnailUrl ? (
+                          <img
+                            src={ep.directoryThumbnailUrl || ep.thumbnailUrl}
+                            alt={
+                              isLocked
+                                ? `Teskilat Episode ${ep.episodeNumber} Urdu Dubbed - Premium Subscriptions Only`
+                                : ep.episodeNumber === 188
+                                ? 'Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu'
+                                : `Teskilat Urdu Episode ${ep.episodeNumber} Subtitles Thumbnail - Season 7`
+                            }
+                            title={
+                              isLocked
+                                ? `Teskilat Episode ${ep.episodeNumber} - Premium Subscriptions Only`
+                                : ep.episodeNumber === 188
+                                ? 'Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu'
+                                : `Teskilat Urdu Episode ${ep.episodeNumber} Subtitles`
+                            }
+                            className={`w-full h-full object-cover transition duration-300 ${
+                              isLocked
+                                ? 'brightness-50 group-hover:brightness-40 group-hover:scale-105'
+                                : 'group-hover:scale-105'
+                            }`}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-[#09090c] via-[#111116] to-[#021d12] flex flex-col items-center justify-center p-2 border border-white/5">
+                            <span className="text-[10px] font-mono font-bold tracking-widest text-[#22C55E] uppercase animate-pulse text-center">
+                              EPISODE {ep.episodeNumber}
+                            </span>
+                            <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5 text-center">
+                              COVER ART UPLOADING
+                            </span>
+                          </div>
+                        )}
 
-                    {/* Details Box */}
-                    <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          <span>EPISODE {ep.episodeNumber}</span>
-                          <span>·</span>
-                          <span>{ep.duration}</span>
+                        {isLocked ? (
+                          <>
+                            <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded bg-[#0B0B0D]/90 border border-[#22C55E]/40 text-[#22C55E] text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1">
+                              <Lock className="w-2.5 h-2.5" />
+                              <span>LOCKED · PREMIUM ONLY</span>
+                            </div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/30 flex flex-col items-center justify-center p-3 text-center">
+                              <div className="w-11 h-11 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/60 text-[#22C55E] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform mb-2">
+                                <Lock className="w-5 h-5" />
+                              </div>
+                              <span className="text-[11px] font-black uppercase tracking-wider text-white">
+                                Premium Subscriptions Only
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            {ep.isLatest && (
+                              <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
+                                LATEST
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
+                              <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
+                                <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Details Box */}
+                      <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                        <div className="space-y-1">
+                          <div
+                            className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider ${
+                              isLocked ? 'text-emerald-400' : 'text-slate-400'
+                            }`}
+                          >
+                            <span>EPISODE {ep.episodeNumber}</span>
+                            <span>·</span>
+                            <span>{isLocked ? 'Urdu Dubbed' : ep.duration}</span>
+                          </div>
+                          <h3
+                            className={`text-sm sm:text-base font-black transition line-clamp-2 ${
+                              isLocked
+                                ? 'text-white group-hover:text-[#22C55E]'
+                                : 'text-[#0B0B0D] group-hover:text-[#22C55E]'
+                            }`}
+                          >
+                            {ep.episodeNumber === 192
+                              ? 'Teskilat Season 7 Episode 192 (Bolum 192)'
+                              : `Teskilat Season 7 Episode ${
+                                  ep.episodeNumber === 189
+                                    ? '5'
+                                    : ep.episodeNumber === 188
+                                    ? '4'
+                                    : ep.episodeNumber === 187
+                                    ? '3'
+                                    : '2'
+                                } (Bolum ${ep.episodeNumber})`}
+                          </h3>
                         </div>
-                        <h3 className="text-sm sm:text-base font-black text-[#0B0B0D] group-hover:text-[#22C55E] transition line-clamp-2">
-                          Teskilat Season 7 Episode {ep.episodeNumber === 189 ? '5' : ep.episodeNumber === 188 ? '4' : ep.episodeNumber === 187 ? '3' : '2'} (Bolum {ep.episodeNumber})
-                        </h3>
+
+                        <div
+                          className={`pt-2 flex items-center justify-between text-xs font-bold border-t ${
+                            isLocked
+                              ? 'text-[#22C55E] border-zinc-800'
+                              : 'text-[#22C55E] border-slate-100/80'
+                          }`}
+                        >
+                          <span className="inline-flex items-center gap-1.5">
+                            {isLocked && <Lock className="w-3.5 h-3.5" />}
+                            <span>{isLocked ? 'Premium Subscriptions Only' : 'Watch Online'}</span>
+                          </span>
+                          <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                        </div>
                       </div>
-                      
-                      <div className="pt-2 flex items-center justify-between text-xs text-[#22C55E] font-bold border-t border-slate-100/80">
-                        <span>Watch Online</span>
-                        <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  </a>
-                ))}
+                    </a>
+                  );
+                })}
               </div>
 
               {/* CROSS-DISCOVERY: Mehmed Fetihler Sultanı Episode 89 Power Card */}
@@ -1068,7 +1171,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
 
                 <h1 className="text-xl sm:text-4xl font-black text-[#0B0B0D] tracking-tight">
-                  {selectedEpisode.episodeNumber === 189 ? (
+                  {selectedEpisode.episodeNumber === 192 ? (
+                    "Teskilat Season 7 Episode 192 Urdu Dubbed (Locked — Premium Subscriptions Only)"
+                  ) : selectedEpisode.episodeNumber === 189 ? (
                     "Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu"
                   ) : (
                     `Teskilat Season 7 Episode ${selectedEpisode.episodeNumber === 188 ? "4" : selectedEpisode.episodeNumber === 187 ? "3" : "2"} Urdu Subtitles - Bolum ${selectedEpisode.episodeNumber} ${selectedEpisode.episodeNumber === 188 ? "Ender Rescue" : selectedEpisode.episodeNumber === 187 ? "Azra Betrayal" : "The Wolf Awakens"}`
@@ -1076,7 +1181,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </h1>
 
                 <p className="text-xs font-bold text-slate-500 pt-0.5">
-                  Urdu & English Subtitles &bull; 1080p HD &bull; FEVIQO.com
+                  {selectedEpisode.isLockedPremium
+                    ? 'Urdu Dubbed • Premium Subscriptions Only • FEVIQO.com'
+                    : 'Urdu & English Subtitles • 1080p HD • FEVIQO.com'}
                 </p>
 
                 <p className="text-base sm:text-xl font-urdu-slim font-normal text-slate-900 dir-rtl text-right pt-1 leading-relaxed">
@@ -1088,87 +1195,128 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <span>&bull;</span>
                   <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">HD</span>
                   <span>&bull;</span>
-                  <span>Urdu Subtitles</span>
+                  <span>{selectedEpisode.isLockedPremium ? 'Premium Subscriptions Only' : 'Urdu Subtitles'}</span>
                 </div>
               </div>
 
-              {/* 5 & 6. Secure Anti-Download Main Video Player */}
-              <div 
-                onContextMenu={(e) => e.preventDefault()}
-                className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center select-none aspect-video border border-slate-200/80 mx-auto"
-              >
-                
-                {/* 100% Machine-Readable Hidden Video Elements to Guarantee Google Search Console Video Indexing Approval */}
-                <div style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: '0' }} aria-hidden="true">
-                  <video 
-                    id="google-video-crawler-target"
-                    controls
-                    preload="metadata"
-                    poster="https://feviqo.com/images/teskialt186thumbnIL.png"
-                    style={{ width: '100%', height: '100%' }}
-                  >
-                    <source src="https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8" type="application/x-mpegURL" />
-                    <p>Stream Teskilat Season 7 Episode {selectedEpisode.episodeNumber} in HD Urdu Subtitles with FEVIQO's dedicated video player.</p>
-                  </video>
-                  <a href={`https://feviqo.com/teskilat/episode-${selectedEpisode.episodeNumber}`}>
-                    Watch Teskilat Season 7 Episode {selectedEpisode.episodeNumber} Online HD
-                  </a>
-                </div>
-
-                {showPosterOverlay && (
-                  <div 
-                    onClick={handleStartPlayback}
-                    className="absolute inset-0 z-30 bg-black flex items-center justify-center cursor-pointer group overflow-hidden rounded-2xl sm:rounded-3xl"
-                  >
-                    <img 
-                      src={selectedEpisode.thumbnailUrl} 
-                      alt={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Urdu Episode ${selectedEpisode.episodeNumber} Subtitles - Watch Season 7 Episode ${selectedEpisode.episodeNumber}`} 
-                      title={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Episode ${selectedEpisode.episodeNumber}`}
-                      className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition-transform duration-500 rounded-2xl sm:rounded-3xl"
-                    />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
-                        <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-slate-950 ml-1" />
-                      </div>
+              {/* 5 & 6. Secure Anti-Download Main Video Player OR Locked Premium Gate */}
+              {selectedEpisode.isLockedPremium ? (
+                <div className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0B0B0D] shadow-2xl flex items-center justify-center select-none aspect-video border border-zinc-800 mx-auto">
+                  <img
+                    src={selectedEpisode.thumbnailUrl}
+                    alt={selectedEpisode.titleEnglish}
+                    className="absolute inset-0 w-full h-full object-cover opacity-30 blur-[2px] scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/75 to-black/60" />
+                  <div className="relative z-10 max-w-xl mx-auto px-6 py-8 text-center space-y-4">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/60 text-[#22C55E] flex items-center justify-center mx-auto shadow-xl">
+                      <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
+                    </div>
+                    <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#22C55E]">
+                      LOCKED · PREMIUM SUBSCRIPTIONS ONLY
+                    </div>
+                    <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight">
+                      Unlock Teskilat Episode 192 in Urdu Dubbed HD
+                    </h2>
+                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-md mx-auto">
+                      Episode 192 is reserved exclusively for active FEVIQO Premium Members. Choose a membership plan or sign in to your account to watch immediately.
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => onNavigatePage('membership')}
+                        className="px-6 py-3 rounded-xl bg-[#22C55E] hover:bg-emerald-500 text-[#0B0B0D] font-black text-xs sm:text-sm transition cursor-pointer shadow-lg"
+                      >
+                        View Premium Subscriptions
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onNavigatePage('account')}
+                        className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs sm:text-sm transition cursor-pointer"
+                      >
+                        Member Sign In
+                      </button>
                     </div>
                   </div>
-                )}
+                </div>
+              ) : (
+                <div 
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center select-none aspect-video border border-slate-200/80 mx-auto"
+                >
+                  
+                  {/* 100% Machine-Readable Hidden Video Elements to Guarantee Google Search Console Video Indexing Approval */}
+                  <div style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: '0' }} aria-hidden="true">
+                    <video 
+                      id="google-video-crawler-target"
+                      controls
+                      preload="metadata"
+                      poster="https://feviqo.com/images/teskialt186thumbnIL.png"
+                      style={{ width: '100%', height: '100%' }}
+                    >
+                      <source src="https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8" type="application/x-mpegURL" />
+                      <p>Stream Teskilat Season 7 Episode {selectedEpisode.episodeNumber} in HD Urdu Subtitles with FEVIQO's dedicated video player.</p>
+                    </video>
+                    <a href={`https://feviqo.com/teskilat/episode-${selectedEpisode.episodeNumber}`}>
+                      Watch Teskilat Season 7 Episode {selectedEpisode.episodeNumber} Online HD
+                    </a>
+                  </div>
 
-                {/* VAST Pre-Roll Video Ad Layer for Drama Pages */}
-                {showPreRollAd && (
-                  <VastPreRollAdOverlay
-                    onAdComplete={handleAdComplete}
-                  />
-                )}
+                  {showPosterOverlay && (
+                    <div 
+                      onClick={handleStartPlayback}
+                      className="absolute inset-0 z-30 bg-black flex items-center justify-center cursor-pointer group overflow-hidden rounded-2xl sm:rounded-3xl"
+                    >
+                      <img 
+                        src={selectedEpisode.thumbnailUrl} 
+                        alt={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Urdu Episode ${selectedEpisode.episodeNumber} Subtitles - Watch Season 7 Episode ${selectedEpisode.episodeNumber}`} 
+                        title={selectedEpisode.episodeNumber === 188 ? "Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu" : `Teskilat Episode ${selectedEpisode.episodeNumber}`}
+                        className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition-transform duration-500 rounded-2xl sm:rounded-3xl"
+                      />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                          <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-slate-950 ml-1" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                <style>{`
-                  mux-video, video-skin, video-player { object-fit: contain !important; }
-                  mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
-                  media-error-dialog, .media-error-dialog, [class*="dialog-root"], media-dialog-backdrop, media-dialog-popup {
-                    display: none !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
-                    pointer-events: none !important;
-                  }
-                `}</style>
+                  {/* VAST Pre-Roll Video Ad Layer for Drama Pages */}
+                  {showPreRollAd && (
+                    <VastPreRollAdOverlay
+                      onAdComplete={handleAdComplete}
+                    />
+                  )}
 
-                {/* Official VideoJS / Mux Video Player Web Components */}
-                <video-player className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden">
-                  <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
-                    <mux-video
-                      ref={videoRef as any}
-                      src={selectedEpisode.videoUrl}
-                      playback-id={extractMuxPlaybackId(selectedEpisode.videoUrl) || undefined}
-                      crossorigin="anonymous"
-                      playsinline
-                      poster={selectedEpisode.thumbnailUrl}
-                      onContextMenu={(e: any) => e.preventDefault()}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                    ></mux-video>
-                    <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.titleEnglish}></mux-data>
-                  </video-skin>
-                </video-player>
-              </div>
+                  <style>{`
+                    mux-video, video-skin, video-player { object-fit: contain !important; }
+                    mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
+                    media-error-dialog, .media-error-dialog, [class*="dialog-root"], media-dialog-backdrop, media-dialog-popup {
+                      display: none !important;
+                      visibility: hidden !important;
+                      opacity: 0 !important;
+                      pointer-events: none !important;
+                    }
+                  `}</style>
+
+                  {/* Official VideoJS / Mux Video Player Web Components */}
+                  <video-player className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden">
+                    <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
+                      <mux-video
+                        ref={videoRef as any}
+                        src={selectedEpisode.videoUrl}
+                        playback-id={extractMuxPlaybackId(selectedEpisode.videoUrl) || undefined}
+                        crossorigin="anonymous"
+                        playsinline
+                        poster={selectedEpisode.thumbnailUrl}
+                        onContextMenu={(e: any) => e.preventDefault()}
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      ></mux-video>
+                      <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.titleEnglish}></mux-data>
+                    </video-skin>
+                  </video-player>
+                </div>
+              )}
 
               {/* High-Converting Ads & Smartlink Row */}
               <div className="space-y-4 my-6">
@@ -1327,7 +1475,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 <div className="grid grid-cols-3 items-center text-xs font-bold">
                   <button 
                     onClick={() => {
-                      if (selectedEpisode.episodeNumber === 189) {
+                      if (selectedEpisode.episodeNumber === 192) {
+                        handleOpenEpisode(EPISODE_189);
+                      } else if (selectedEpisode.episodeNumber === 189) {
                         handleOpenEpisode(EPISODE_188);
                       } else if (selectedEpisode.episodeNumber === 188) {
                         handleOpenEpisode(EPISODE_187);
@@ -1341,7 +1491,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   >
                     <div className="text-slate-400 text-[10px] uppercase font-bold">&larr; Previous</div>
                     <div className="text-[#0B0B0D] font-extrabold text-sm mt-0.5 group-hover:text-[#22C55E] transition">
-                      Episode {selectedEpisode.episodeNumber === 189 ? 188 : selectedEpisode.episodeNumber === 188 ? 187 : selectedEpisode.episodeNumber === 187 ? 186 : 185}
+                      Episode {selectedEpisode.episodeNumber === 192 ? 189 : selectedEpisode.episodeNumber === 189 ? 188 : selectedEpisode.episodeNumber === 188 ? 187 : selectedEpisode.episodeNumber === 187 ? 186 : 185}
                     </div>
                   </button>
 
@@ -1361,14 +1511,25 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       } else if (selectedEpisode.episodeNumber === 188) {
                         handleOpenEpisode(EPISODE_189);
                       } else {
-                        showToast('You are watching the latest episode (Episode 189)!');
+                        onNavigatePage('membership');
                       }
                     }}
                     className="p-4 rounded-2xl border border-slate-200/80 hover:border-slate-400 text-right transition group cursor-pointer"
                   >
-                    <div className="text-slate-400 text-[10px] uppercase font-bold">Next &rarr;</div>
-                    <div className="text-[#0B0B0D] font-extrabold text-sm mt-0.5 group-hover:text-[#22C55E] transition">
-                      Episode {selectedEpisode.episodeNumber === 186 ? 187 : selectedEpisode.episodeNumber === 187 ? 188 : selectedEpisode.episodeNumber === 188 ? 189 : 189}
+                    <div className="text-slate-400 text-[10px] uppercase font-bold">
+                      {selectedEpisode.episodeNumber >= 189 ? 'Premium Only' : 'Next →'}
+                    </div>
+                    <div className="text-[#0B0B0D] font-extrabold text-sm mt-0.5 group-hover:text-[#22C55E] transition inline-flex items-center gap-1.5 justify-end">
+                      {selectedEpisode.episodeNumber >= 189 && <Lock className="w-3.5 h-3.5 text-[#22C55E]" />}
+                      <span>
+                        {selectedEpisode.episodeNumber === 186
+                          ? 'Episode 187'
+                          : selectedEpisode.episodeNumber === 187
+                          ? 'Episode 188'
+                          : selectedEpisode.episodeNumber === 188
+                          ? 'Episode 189'
+                          : 'Episode 192 (Members Only)'}
+                      </span>
                     </div>
                   </button>
                 </div>
