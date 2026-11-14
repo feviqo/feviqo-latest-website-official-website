@@ -1,0 +1,415 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HARDENED PRIMITIVES ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'rexanmedia01@gmail.com' ||
+        request.auth.token.email == 'partner@feviqo.com'
+      );
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        isBootstrappedAdmin() ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isBoundedString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidDramaIdList(listVal) {
+      return listVal is list && listVal.size() >= 1 && listVal.size() <= 10 && listVal[0] is string && listVal[0].size() <= 64;
+    }
+
+    // --- ENTITY VALIDATION BLUEPRINTS ---
+    function isValidAdminProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'name', 'role', 'isActive', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'name', 'role', 'isActive', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && isBoundedString(data.email, 5, 200)
+        && isBoundedString(data.name, 1, 120)
+        && data.role == 'admin'
+        && data.isActive is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMemberAccount(data) {
+      return data.keys().hasAll(['id', 'ownerUid', 'email', 'fullName', 'phone', 'createdAtIso', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'ownerUid', 'email', 'fullName', 'phone', 'passwordHash', 'createdAtIso', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.ownerUid)
+        && isBoundedString(data.email, 5, 200)
+        && isBoundedString(data.fullName, 2, 120)
+        && isBoundedString(data.phone, 0, 32)
+        && (!('passwordHash' in data) || isBoundedString(data.passwordHash, 0, 300))
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMembershipOrder(data) {
+      return data.keys().hasAll([
+          'id', 'memberId', 'ownerUid', 'customerName', 'customerEmail',
+          'planId', 'planName', 'amountPkr', 'durationDays', 'selectedDramaIds',
+          'status', 'provider', 'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'memberId', 'ownerUid', 'customerName', 'customerEmail', 'customerPhone',
+          'planId', 'planName', 'amountPkr', 'durationDays', 'selectedDramaIds',
+          'status', 'provider', 'qrImageUrl', 'proofFileName', 'proofOriginalName',
+          'proofMimeType', 'proofDataUrl', 'proofSubmittedAt', 'paymentNote',
+          'rejectionReason', 'reviewedByAdminId', 'reviewedByAdminEmail', 'reviewedAt',
+          'paidAt', 'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.memberId)
+        && isValidId(data.ownerUid)
+        && isBoundedString(data.customerName, 1, 120)
+        && isBoundedString(data.customerEmail, 5, 200)
+        && (!('customerPhone' in data) || isBoundedString(data.customerPhone, 0, 32))
+        && (data.planId in ['starter', 'standard', 'plus', 'vip'])
+        && isBoundedString(data.planName, 1, 64)
+        && data.amountPkr is number && data.amountPkr >= 0 && data.amountPkr <= 1000000
+        && data.durationDays is number && data.durationDays >= 1 && data.durationDays <= 3650
+        && isValidDramaIdList(data.selectedDramaIds)
+        && (data.status in ['awaiting_payment', 'pending_verification', 'approved', 'rejected', 'expired'])
+        && isBoundedString(data.provider, 1, 40)
+        && (!('qrImageUrl' in data) || isBoundedString(data.qrImageUrl, 0, 512))
+        && (!('proofFileName' in data) || isBoundedString(data.proofFileName, 0, 256))
+        && (!('proofOriginalName' in data) || isBoundedString(data.proofOriginalName, 0, 256))
+        && (!('proofMimeType' in data) || isBoundedString(data.proofMimeType, 0, 64))
+        && (!('proofDataUrl' in data) || isBoundedString(data.proofDataUrl, 0, 800000))
+        && (!('proofSubmittedAt' in data) || isBoundedString(data.proofSubmittedAt, 0, 64))
+        && (!('paymentNote' in data) || isBoundedString(data.paymentNote, 0, 500))
+        && (!('rejectionReason' in data) || isBoundedString(data.rejectionReason, 0, 500))
+        && (!('reviewedByAdminId' in data) || isBoundedString(data.reviewedByAdminId, 0, 128))
+        && (!('reviewedByAdminEmail' in data) || isBoundedString(data.reviewedByAdminEmail, 0, 200))
+        && (!('reviewedAt' in data) || isBoundedString(data.reviewedAt, 0, 64))
+        && (!('paidAt' in data) || isBoundedString(data.paidAt, 0, 64))
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && isBoundedString(data.updatedAtIso, 10, 64)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCustomerMembership(data) {
+      return data.keys().hasAll([
+          'id', 'memberId', 'ownerUid', 'orderId', 'customerName', 'customerEmail',
+          'planId', 'planName', 'pricePkr', 'durationDays', 'selectedDramaIds',
+          'status', 'activatedAt', 'expiresAt', 'paymentProvider',
+          'createdAtIso', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'memberId', 'ownerUid', 'orderId', 'customerName', 'customerEmail', 'customerPhone',
+          'planId', 'planName', 'pricePkr', 'durationDays', 'selectedDramaIds',
+          'status', 'activatedAt', 'expiresAt', 'cancelledAt', 'revokedByAdminEmail',
+          'revokedReason', 'approvedByAdminEmail', 'paymentProvider', 'paymentReference',
+          'createdAtIso', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.memberId)
+        && isValidId(data.ownerUid)
+        && isValidId(data.orderId)
+        && isBoundedString(data.customerName, 1, 120)
+        && isBoundedString(data.customerEmail, 5, 200)
+        && (!('customerPhone' in data) || isBoundedString(data.customerPhone, 0, 32))
+        && (data.planId in ['starter', 'standard', 'plus', 'vip'])
+        && isBoundedString(data.planName, 1, 64)
+        && data.pricePkr is number && data.pricePkr >= 0 && data.pricePkr <= 1000000
+        && data.durationDays is number && data.durationDays >= 1 && data.durationDays <= 3650
+        && isValidDramaIdList(data.selectedDramaIds)
+        && (data.status in ['active', 'cancelled', 'expired'])
+        && isBoundedString(data.activatedAt, 10, 64)
+        && isBoundedString(data.expiresAt, 10, 64)
+        && (!('cancelledAt' in data) || isBoundedString(data.cancelledAt, 0, 64))
+        && (!('revokedByAdminEmail' in data) || isBoundedString(data.revokedByAdminEmail, 0, 200))
+        && (!('revokedReason' in data) || isBoundedString(data.revokedReason, 0, 500))
+        && (!('approvedByAdminEmail' in data) || isBoundedString(data.approvedByAdminEmail, 0, 200))
+        && isBoundedString(data.paymentProvider, 1, 40)
+        && (!('paymentReference' in data) || isBoundedString(data.paymentReference, 0, 400))
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMembershipHistoryItem(data) {
+      return data.keys().hasAll(['id', 'memberId', 'ownerUid', 'event', 'details', 'createdAtIso', 'createdAt'])
+        && data.keys().hasOnly([
+          'id', 'memberId', 'ownerUid', 'membershipId', 'orderId', 'event',
+          'planId', 'planName', 'amountPkr', 'selectedDramaIds', 'details',
+          'createdAtIso', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.memberId)
+        && isValidId(data.ownerUid)
+        && (!('membershipId' in data) || isBoundedString(data.membershipId, 0, 128))
+        && (!('orderId' in data) || isBoundedString(data.orderId, 0, 128))
+        && isBoundedString(data.event, 1, 64)
+        && (!('planId' in data) || isBoundedString(data.planId, 0, 32))
+        && (!('planName' in data) || isBoundedString(data.planName, 0, 64))
+        && (!('amountPkr' in data) || (data.amountPkr is number && data.amountPkr >= 0 && data.amountPkr <= 1000000))
+        && (!('selectedDramaIds' in data) || isValidDramaIdList(data.selectedDramaIds))
+        && isBoundedString(data.details, 1, 1000)
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidMembershipSettings(data) {
+      return data.keys().hasAll([
+          'starterQrImage', 'standardQrImage', 'plusQrImage', 'vipQrImage',
+          'adminEmail', 'supportEmail', 'updatedAtIso', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'starterQrImage', 'standardQrImage', 'plusQrImage', 'vipQrImage',
+          'whatsappNumber', 'adminEmail', 'supportEmail', 'supportNoteEn',
+          'supportNoteUr', 'updatedAtIso', 'updatedAt'
+        ])
+        && isBoundedString(data.starterQrImage, 1, 512)
+        && isBoundedString(data.standardQrImage, 1, 512)
+        && isBoundedString(data.plusQrImage, 1, 512)
+        && isBoundedString(data.vipQrImage, 1, 512)
+        && (!('whatsappNumber' in data) || isBoundedString(data.whatsappNumber, 0, 40))
+        && isBoundedString(data.adminEmail, 5, 200)
+        && isBoundedString(data.supportEmail, 5, 200)
+        && (!('supportNoteEn' in data) || isBoundedString(data.supportNoteEn, 0, 1000))
+        && (!('supportNoteUr' in data) || isBoundedString(data.supportNoteUr, 0, 1000))
+        && isBoundedString(data.updatedAtIso, 10, 64)
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminAuditItem(data) {
+      return data.keys().hasAll(['id', 'adminId', 'adminEmail', 'action', 'details', 'createdAtIso', 'createdAt'])
+        && data.keys().hasOnly(['id', 'adminId', 'adminEmail', 'action', 'targetId', 'details', 'createdAtIso', 'createdAt'])
+        && isValidId(data.id)
+        && isBoundedString(data.adminId, 1, 128)
+        && isBoundedString(data.adminEmail, 5, 200)
+        && isBoundedString(data.action, 1, 64)
+        && (!('targetId' in data) || isBoundedString(data.targetId, 0, 128))
+        && isBoundedString(data.details, 1, 1000)
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidEmailNotificationItem(data) {
+      return data.keys().hasAll(['id', 'to', 'subject', 'type', 'status', 'attempts', 'createdAtIso', 'lastAttemptAt', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'orderId', 'to', 'subject', 'type', 'status', 'provider',
+          'error', 'attempts', 'createdAtIso', 'lastAttemptAt', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && (!('orderId' in data) || isBoundedString(data.orderId, 0, 128))
+        && isBoundedString(data.to, 5, 200)
+        && isBoundedString(data.subject, 1, 300)
+        && isBoundedString(data.type, 1, 64)
+        && (data.status in ['sent', 'failed'])
+        && (!('provider' in data) || isBoundedString(data.provider, 0, 64))
+        && (!('error' in data) || isBoundedString(data.error, 0, 1000))
+        && data.attempts is number && data.attempts >= 1 && data.attempts <= 100
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && isBoundedString(data.lastAttemptAt, 10, 64)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // --- COLLECTION MATCH BLOCKS ---
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && isVerifiedUser() && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(adminUid) && isAdmin()
+        && isValidAdminProfile(incoming())
+        && incoming().uid == adminUid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(adminUid) && isAdmin()
+        && isValidAdminProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'isActive', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /members/{memberId} {
+      allow get: if isValidId(memberId) && isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isVerifiedUser() && (resource.data.ownerUid == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(memberId) && isVerifiedUser()
+        && isValidMemberAccount(incoming())
+        && incoming().id == memberId
+        && (incoming().ownerUid == request.auth.uid || isAdmin())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(memberId) && isVerifiedUser()
+        && isValidMemberAccount(incoming())
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().createdAtIso == existing().createdAtIso
+        && incoming().updatedAt == request.time
+        && (
+          (existing().ownerUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'updatedAt']))
+          || (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'email', 'passwordHash', 'updatedAt']))
+        );
+      allow delete: if false;
+    }
+
+    match /membershipOrders/{orderId} {
+      allow get: if isValidId(orderId) && isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isVerifiedUser() && (resource.data.ownerUid == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(orderId) && isVerifiedUser()
+        && isValidMembershipOrder(incoming())
+        && incoming().id == orderId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            incoming().ownerUid == request.auth.uid
+            && incoming().status == 'awaiting_payment'
+            && exists(/databases/$(database)/documents/members/$(incoming().memberId))
+            && get(/databases/$(database)/documents/members/$(incoming().memberId)).data.ownerUid == request.auth.uid
+          )
+        );
+      allow update: if isValidId(orderId) && isVerifiedUser()
+        && isValidMembershipOrder(incoming())
+        && incoming().id == existing().id
+        && incoming().memberId == existing().memberId
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().createdAtIso == existing().createdAtIso
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            existing().ownerUid == request.auth.uid
+            && existing().status != 'approved'
+            && existing().status != 'expired'
+            && incoming().status == 'pending_verification'
+            && incoming().diff(existing()).affectedKeys().hasOnly([
+              'status', 'proofFileName', 'proofOriginalName', 'proofMimeType',
+              'proofDataUrl', 'proofSubmittedAt', 'paymentNote', 'rejectionReason',
+              'updatedAtIso', 'updatedAt'
+            ])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /memberships/{membershipId} {
+      allow get: if isValidId(membershipId) && isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isVerifiedUser() && (resource.data.ownerUid == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(membershipId) && isAdmin()
+        && isValidCustomerMembership(incoming())
+        && incoming().id == membershipId
+        && exists(/databases/$(database)/documents/members/$(incoming().memberId))
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(membershipId) && isVerifiedUser()
+        && isValidCustomerMembership(incoming())
+        && incoming().id == existing().id
+        && incoming().memberId == existing().memberId
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().orderId == existing().orderId
+        && incoming().createdAt == existing().createdAt
+        && incoming().createdAtIso == existing().createdAtIso
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            existing().ownerUid == request.auth.uid
+            && existing().status == 'active'
+            && incoming().status == 'cancelled'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'cancelledAt', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /membershipHistory/{historyId} {
+      allow get: if isValidId(historyId) && isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isVerifiedUser() && (resource.data.ownerUid == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(historyId) && isVerifiedUser()
+        && isValidMembershipHistoryItem(incoming())
+        && incoming().id == historyId
+        && (incoming().ownerUid == request.auth.uid || isAdmin())
+        && exists(/databases/$(database)/documents/members/$(incoming().memberId))
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /membershipConfig/{configId} {
+      allow get: if isValidId(configId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(configId) && isAdmin()
+        && isValidMembershipSettings(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(configId) && isAdmin()
+        && isValidMembershipSettings(incoming())
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'starterQrImage', 'standardQrImage', 'plusQrImage', 'vipQrImage',
+          'whatsappNumber', 'adminEmail', 'supportEmail', 'supportNoteEn',
+          'supportNoteUr', 'updatedAtIso', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    match /adminAuditLogs/{logId} {
+      allow get: if isValidId(logId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(logId) && isAdmin()
+        && isValidAdminAuditItem(incoming())
+        && incoming().id == logId
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /emailNotifications/{notifId} {
+      allow get: if isValidId(notifId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(notifId) && isAdmin()
+        && isValidEmailNotificationItem(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(notifId) && isAdmin()
+        && isValidEmailNotificationItem(incoming())
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'provider', 'error', 'attempts', 'lastAttemptAt', 'updatedAt']);
+      allow delete: if false;
+    }
+  }
+}

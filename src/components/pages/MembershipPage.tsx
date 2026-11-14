@@ -5,7 +5,9 @@ import {
   ArrowRight,
   AlertCircle,
   User,
+  Clock,
 } from 'lucide-react';
+import { signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
@@ -25,6 +27,14 @@ import {
   MembershipOrder,
   PublicMembershipConfig,
 } from '../../services/membershipService';
+import { auth } from '../../firebase';
+import {
+  isFirebaseSignedInVerified,
+  syncMemberAccountToFirestore,
+  syncOrderToFirestore,
+  syncHistoryEntryToFirestore,
+  fetchMemberCloudOrders,
+} from '../../services/firestoreMembershipSync';
 import { MembershipAuthModal } from '../membership/MembershipAuthModal';
 import { MembershipAccountPanel } from '../membership/MembershipAccountPanel';
 import { BankQrPaymentSection } from '../membership/BankQrPaymentSection';
@@ -188,6 +198,14 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
       }
       setActivePaymentOrder(res.order);
 
+      if (isFirebaseSignedInVerified() && res.account) {
+        await syncOrderToFirestore(res.order, { member: res.account.member }).catch(() => {});
+        const latestHistory = res.account.history?.[0];
+        if (latestHistory && latestHistory.orderId === res.order.id) {
+          await syncHistoryEntryToFirestore(latestHistory).catch(() => {});
+        }
+      }
+
       setTimeout(() => {
         scrollToSection(paymentSectionRef.current);
       }, 80);
@@ -246,9 +264,28 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
   };
 
   const handleAuthenticated = async (loggedAccount: MemberAccountState) => {
-    setAccount(loggedAccount);
-    if (loggedAccount.publicConfig) {
-      setPublicConfig(loggedAccount.publicConfig);
+    let enrichedAccount = loggedAccount;
+    if (isFirebaseSignedInVerified()) {
+      syncMemberAccountToFirestore(loggedAccount.member).catch(() => {});
+      const cloudOrders = await fetchMemberCloudOrders(loggedAccount.member.id).catch(() => []);
+      if (cloudOrders.length > 0) {
+        const byId = new Map(loggedAccount.orders.map((o) => [o.id, o]));
+        for (const cOrd of cloudOrders) {
+          if (!byId.has(cOrd.id)) {
+            byId.set(cOrd.id, cOrd);
+          }
+        }
+        enrichedAccount = {
+          ...loggedAccount,
+          orders: Array.from(byId.values()).sort(
+            (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)
+          ),
+        };
+      }
+    }
+    setAccount(enrichedAccount);
+    if (enrichedAccount.publicConfig) {
+      setPublicConfig(enrichedAccount.publicConfig);
     }
     setAuthModalOpen(false);
 
@@ -266,6 +303,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
 
   const handleSignOut = async () => {
     await logoutMemberAccount();
+    await signOut(auth).catch(() => {});
     setAccount(null);
     setShowAccountSection(false);
     setActivePaymentOrder(null);
@@ -356,6 +394,52 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Concise Pending / Awaiting Payment Status Banner for Signed-In Members */}
+      {account &&
+        !showAccountSection &&
+        !activePaymentOrder &&
+        (() => {
+          const pendingOrd = account.orders.find(
+            (o) => o.status === 'pending_verification' || o.status === 'awaiting_payment'
+          );
+          if (!pendingOrd) return null;
+          const isPending = pendingOrd.status === 'pending_verification';
+          return (
+            <div
+              dir={dir}
+              className={`border-b ${
+                isPending ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'
+              }`}
+            >
+              <div
+                className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+                  isUrdu ? 'font-urdu-slim' : ''
+                }`}
+              >
+                <div className="flex items-center gap-2 font-semibold text-[#0B0B0D]">
+                  <Clock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                  <span>
+                    {isPending
+                      ? isUrdu
+                        ? `آپ کی ${pendingOrd.planName} ادائیگی کی تصدیق جاری ہے (${pendingOrd.id})۔`
+                        : `Your ${pendingOrd.planName} payment screenshot is pending verification (${pendingOrd.id}).`
+                      : isUrdu
+                      ? `آپ کا ${pendingOrd.planName} آرڈر ادائیگی کے اسکرین شاٹ کا منتظر ہے۔`
+                      : `You have an unpaid ${pendingOrd.planName} order awaiting screenshot upload.`}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenMyAccount}
+                  className="px-3 py-1 rounded-lg bg-[#0B0B0D] hover:bg-zinc-800 text-white text-xs font-semibold self-start sm:self-auto cursor-pointer"
+                >
+                  {isPending ? t(MEMBERSHIP_COPY.subbar.myAccountTab) : t(MEMBERSHIP_COPY.payment.proofHeading)}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
       {/* Optional My Account Panel */}
       {account && showAccountSection && (

@@ -16,6 +16,12 @@ import {
   MemberAccountState,
   submitOrderPaymentProofFile,
 } from '../../services/membershipService';
+import {
+  compressProofImageToDataUrl,
+  isFirebaseSignedInVerified,
+  syncOrderToFirestore,
+  syncHistoryEntryToFirestore,
+} from '../../services/firestoreMembershipSync';
 import { getDramaById } from '../../data/membershipCatalog';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MEMBERSHIP_COPY } from '../../i18n/membershipTranslations';
@@ -107,16 +113,29 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
     setUploading(true);
     setUploadError(null);
     try {
+      const proofDataUrl = await compressProofImageToDataUrl(selectedFile).catch(() => '');
       const res = await submitOrderPaymentProofFile({
         orderId: order.id,
         file: selectedFile,
         paymentNote,
+        proofDataUrl: proofDataUrl || undefined,
       });
 
       if ('error' in res) {
         setUploadError(res.error || 'Failed to upload payment proof.');
         setUploading(false);
         return;
+      }
+
+      if (isFirebaseSignedInVerified()) {
+        await syncOrderToFirestore(res.order, {
+          member: res.account.member,
+          proofDataUrl: proofDataUrl || res.order.proofDataUrl,
+        }).catch(() => {});
+        const latestHistory = res.account.history?.[0];
+        if (latestHistory && latestHistory.orderId === res.order.id) {
+          await syncHistoryEntryToFirestore(latestHistory).catch(() => {});
+        }
       }
 
       if (previewUrl) URL.revokeObjectURL(previewUrl);

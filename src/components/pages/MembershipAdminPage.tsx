@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -16,11 +16,14 @@ import {
   X,
   Lock,
   UserPlus,
+  Plus,
+  Cloud,
 } from 'lucide-react';
+import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
-import { MEMBERSHIP_PLANS, MembershipPlanId, getDramaById } from '../../data/membershipCatalog';
+import { MEMBERSHIP_PLANS, MEMBERSHIP_DRAMAS, MembershipPlanId, getDramaById } from '../../data/membershipCatalog';
 import {
   AdminMembershipsOverview,
   MembershipOrder,
@@ -28,10 +31,13 @@ import {
   fetchAdminAuthStatus,
   bootstrapAdminAccount,
   loginAdminAccount,
+  authenticateAdminWithGoogle,
   logoutAdminAccount,
   fetchAdminMembershipsOverview,
   approvePaymentOrder,
   rejectPaymentOrder,
+  assignCustomerMembership,
+  syncAdminCloudState,
   revokeMembershipAccess,
   updateMembershipSettings,
   uploadPlanQrImage,
@@ -40,7 +46,14 @@ import {
   updateAdminRoleStatus,
   fetchAdminEmailTransport,
   saveAdminEmailTransport,
+  fetchAuthenticatedProofObjectUrl,
 } from '../../services/membershipService';
+import { auth, googleProvider } from '../../firebase';
+import {
+  isFirebaseAdminUser,
+  pullAllCloudDataFromFirestore,
+  pushAdminSnapshotToFirestore,
+} from '../../services/firestoreMembershipSync';
 
 interface MembershipAdminPageProps {
   onBookCall: () => void;
@@ -108,6 +121,31 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [creatingAdmin, setCreatingAdmin] = useState(false);
 
+  // Cloud sync & Firebase Google admin status
+  const [firebaseAdminConnected, setFirebaseAdminConnected] = useState(false);
+  const [cloudSyncing, setCloudSyncing] = useState(false);
+  const [cloudSyncedAt, setCloudSyncedAt] = useState<string | null>(null);
+  const [googleAuthLoading, setGoogleAuthLoading] = useState(false);
+
+  // Proof image viewer state (supports Bearer header fallback when third-party cookies are blocked)
+  const [proofModalSrc, setProofModalSrc] = useState<string | null>(null);
+  const [proofModalLoading, setProofModalLoading] = useState(false);
+
+  // Assign Membership modal state
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignExistingMemberId, setAssignExistingMemberId] = useState<string>('');
+  const [assignFullName, setAssignFullName] = useState('');
+  const [assignEmail, setAssignEmail] = useState('');
+  const [assignPhone, setAssignPhone] = useState('');
+  const [assignPassword, setAssignPassword] = useState('');
+  const [assignPlanId, setAssignPlanId] = useState<MembershipPlanId>('vip');
+  const [assignDurationDays, setAssignDurationDays] = useState('30');
+  const [assignDramaIds, setAssignDramaIds] = useState<string[]>(
+    MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id)
+  );
+  const [assignNote, setAssignNote] = useState('');
+  const [assignSubmitting, setAssignSubmitting] = useState(false);
+
   // Email transport (SMTP / Resend) form state
   const [smtpHostInput, setSmtpHostInput] = useState('smtp.gmail.com');
   const [smtpPortInput, setSmtpPortInput] = useState('587');
@@ -132,7 +170,50 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     setSupportNoteUrInput(ov.config.supportNoteUr || '');
   };
 
-  const loadOverview = async () => {
+  const runBidirectionalCloudSync = useCallback(
+    async (opts?: { interactive?: boolean; seedOverview?: AdminMembershipsOverview | null }) => {
+      if (!isFirebaseAdminUser()) {
+        if (!opts?.interactive) return null;
+        await signInWithPopup(auth, googleProvider);
+      }
+      if (!isFirebaseAdminUser()) {
+        throw new Error(
+          'Signed-in Google account is not in the authorized Firestore admin list.'
+        );
+      }
+      setCloudSyncing(true);
+      try {
+        const cloudSnap = await pullAllCloudDataFromFirestore();
+        const mergeRes = await syncAdminCloudState({
+          members: cloudSnap.members,
+          orders: cloudSnap.orders,
+          memberships: cloudSnap.memberships,
+          history: cloudSnap.history,
+          config: cloudSnap.config,
+        });
+        let latestOverview = 'overview' in mergeRes ? mergeRes.overview : opts?.seedOverview || null;
+        if (latestOverview) {
+          await pushAdminSnapshotToFirestore({
+            members: latestOverview.members,
+            orders: latestOverview.requests,
+            memberships: latestOverview.memberships,
+            history: latestOverview.history,
+            config: latestOverview.config,
+          });
+          setOverview(latestOverview);
+          syncSettingsFromOverview(latestOverview);
+          setCloudSyncedAt(new Date().toISOString());
+        }
+        setFirebaseAdminConnected(isFirebaseAdminUser());
+        return latestOverview;
+      } finally {
+        setCloudSyncing(false);
+      }
+    },
+    []
+  );
+
+  const loadOverview = async (triggerCloudSync = false) => {
     setLoadingOverview(true);
     try {
       const [res, trRes] = await Promise.all([
@@ -141,12 +222,20 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       ]);
       if ('error' in res) {
         setFeedbackBanner({ type: 'error', text: res.error });
-        if (res.code === 'ADMIN_AUTH_REQUIRED' || res.code === 'ADMIN_FORBIDDEN') {
+        if (
+          res.code === 'ADMIN_UNAUTHENTICATED' ||
+          res.code === 'FORBIDDEN_NOT_ADMIN' ||
+          res.code === 'ADMIN_AUTH_REQUIRED' ||
+          res.code === 'ADMIN_FORBIDDEN'
+        ) {
           setAuthenticatedAdmin(null);
         }
       } else {
         setOverview(res);
         syncSettingsFromOverview(res);
+        if (triggerCloudSync && isFirebaseAdminUser()) {
+          runBidirectionalCloudSync({ seedOverview: res }).catch(() => {});
+        }
       }
       if (trRes && trRes.success && trRes.transport) {
         setSmtpHostInput(trRes.transport.smtpHost || 'smtp.gmail.com');
@@ -168,6 +257,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   };
 
   useEffect(() => {
+    const unsub = onAuthStateChanged(auth, () => {
+      setFirebaseAdminConnected(isFirebaseAdminUser());
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
     let active = true;
     const init = async () => {
       try {
@@ -179,7 +275,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         }
         if (status.authenticated && status.admin) {
           setAuthenticatedAdmin(status.admin);
-          await loadOverview();
+          await loadOverview(true);
         }
       } catch {
         // ignore
@@ -228,7 +324,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setHasConfiguredAdmins(true);
         setAuthPassword('');
         setAuthConfirmPassword('');
-        await loadOverview();
+        await loadOverview(true);
       }
     } catch {
       setAuthError('Network error initializing owner admin.');
@@ -251,7 +347,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       } else {
         setAuthenticatedAdmin(res.admin);
         setAuthPassword('');
-        await loadOverview();
+        await loadOverview(true);
       }
     } catch {
       setAuthError('Network error signing into FEVIQO Admin.');
@@ -260,11 +356,68 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     }
   };
 
+  const handleGoogleAdminSignIn = async () => {
+    setAuthError(null);
+    setGoogleAuthLoading(true);
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      const idToken = await cred.user.getIdToken();
+      const res = await authenticateAdminWithGoogle(idToken);
+      if ('error' in res) {
+        setAuthError(res.error);
+      } else {
+        setAuthenticatedAdmin(res.admin);
+        setFirebaseAdminConnected(isFirebaseAdminUser());
+        await loadOverview(true);
+      }
+    } catch (err: any) {
+      if (err?.code === 'auth/popup-closed-by-user') {
+        setAuthError('Google sign-in popup was closed before finishing.');
+      } else {
+        setAuthError(err?.message || 'Google administrator sign-in failed.');
+      }
+    } finally {
+      setGoogleAuthLoading(false);
+    }
+  };
+
+  const handleManualCloudSync = async () => {
+    setFeedbackBanner(null);
+    try {
+      await runBidirectionalCloudSync({ interactive: true, seedOverview: overview });
+      setFeedbackBanner({
+        type: 'success',
+        text: 'Cloud Firestore database synchronized successfully.',
+      });
+    } catch (err: any) {
+      setFeedbackBanner({
+        type: 'error',
+        text: err?.message || 'Could not sync with Cloud Firestore.',
+      });
+    }
+  };
+
   const handleLogout = async () => {
     await logoutAdminAccount();
+    await signOut(auth).catch(() => {});
     setAuthenticatedAdmin(null);
+    setFirebaseAdminConnected(false);
     setOverview(null);
     setSelectedRequestId(null);
+  };
+
+  const mirrorToCloudQuietly = (ov: AdminMembershipsOverview) => {
+    if (isFirebaseAdminUser()) {
+      pushAdminSnapshotToFirestore({
+        members: ov.members,
+        orders: ov.requests,
+        memberships: ov.memberships,
+        history: ov.history,
+        config: ov.config,
+      })
+        .then(() => setCloudSyncedAt(new Date().toISOString()))
+        .catch(() => {});
+    }
   };
 
   const handleApproveRequest = async (orderId: string) => {
@@ -277,6 +430,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       } else {
         setOverview(res.overview);
         setConfirmApproveId(null);
+        mirrorToCloudQuietly(res.overview);
         setFeedbackBanner({
           type: 'success',
           text: `Payment request ${orderId} approved and customer membership activated immediately.`,
@@ -303,6 +457,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       } else {
         setOverview(res.overview);
         setRejectReasonInput('');
+        mirrorToCloudQuietly(res.overview);
         setFeedbackBanner({
           type: 'success',
           text: `Payment request ${orderId} rejected cleanly.`,
@@ -330,12 +485,77 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setOverview(res.overview);
         setRevokingMembershipId(null);
         setRevokeReasonInput('');
+        mirrorToCloudQuietly(res.overview);
         setFeedbackBanner({ type: 'success', text: `Membership ${membershipId} revoked.` });
       }
     } catch {
       setFeedbackBanner({ type: 'error', text: 'Failed to revoke membership.' });
     } finally {
       setActionBusy(false);
+    }
+  };
+
+  const handleOpenAssignModal = () => {
+    const defaultPlan = MEMBERSHIP_PLANS.find((p) => p.id === 'vip') || MEMBERSHIP_PLANS[0];
+    setAssignExistingMemberId('');
+    setAssignFullName('');
+    setAssignEmail('');
+    setAssignPhone('');
+    setAssignPassword('');
+    setAssignPlanId(defaultPlan.id);
+    setAssignDurationDays(String(defaultPlan.durationDays));
+    setAssignDramaIds(MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id));
+    setAssignNote('');
+    setAssignModalOpen(true);
+  };
+
+  const handleAssignPlanChange = (nextPlanId: MembershipPlanId) => {
+    setAssignPlanId(nextPlanId);
+    const plan = MEMBERSHIP_PLANS.find((p) => p.id === nextPlanId);
+    if (!plan) return;
+    setAssignDurationDays(String(plan.durationDays));
+    if (plan.dramaLimit === 'all') {
+      setAssignDramaIds(MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id));
+    } else {
+      setAssignDramaIds((prev) => {
+        const sliced = prev.slice(0, plan.dramaLimit as number);
+        if (sliced.length === plan.dramaLimit) return sliced;
+        const fill = MEMBERSHIP_DRAMAS.map((d) => d.id).filter((id) => !sliced.includes(id));
+        return [...sliced, ...fill].slice(0, plan.dramaLimit as number);
+      });
+    }
+  };
+
+  const handleAssignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAssignSubmitting(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await assignCustomerMembership({
+        fullName: assignFullName.trim(),
+        email: assignEmail.trim(),
+        phone: assignPhone.trim(),
+        password: assignPassword.trim() || undefined,
+        planId: assignPlanId,
+        selectedDramaIds: assignDramaIds,
+        durationDays: Number(assignDurationDays) || undefined,
+        paymentNote: assignNote.trim() || undefined,
+      });
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setAssignModalOpen(false);
+        mirrorToCloudQuietly(res.overview);
+        setFeedbackBanner({
+          type: 'success',
+          text: `${res.membership.planName} membership assigned and activated for ${res.member.fullName} (${res.member.email}).`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to assign customer membership.' });
+    } finally {
+      setAssignSubmitting(false);
     }
   };
 
@@ -356,6 +576,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       } else {
         setOverview(res.overview);
         syncSettingsFromOverview(res.overview);
+        mirrorToCloudQuietly(res.overview);
         setFeedbackBanner({ type: 'success', text: 'FEVIQO membership & payment settings saved.' });
       }
     } catch {
@@ -447,6 +668,35 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const selectedRequest: MembershipOrder | undefined = selectedRequestId
     ? overview?.requests.find((r) => r.id === selectedRequestId)
     : undefined;
+
+  useEffect(() => {
+    if (!selectedRequest || !selectedRequest.hasProof) {
+      setProofModalSrc(null);
+      setProofModalLoading(false);
+      return;
+    }
+    if (selectedRequest.proofDataUrl) {
+      setProofModalSrc(selectedRequest.proofDataUrl);
+      setProofModalLoading(false);
+      return;
+    }
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setProofModalLoading(true);
+    fetchAuthenticatedProofObjectUrl(selectedRequest.id, true).then((url) => {
+      if (cancelled) {
+        if (url) URL.revokeObjectURL(url);
+        return;
+      }
+      objectUrl = url;
+      setProofModalSrc(url);
+      setProofModalLoading(false);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedRequest?.id, selectedRequest?.proofDataUrl, selectedRequest?.hasProof, selectedRequest?.updatedAt]);
 
   const filteredRequests = (overview?.requests || []).filter((req) => {
     if (requestStatusFilter !== 'all' && req.status !== requestStatusFilter) return false;
@@ -583,7 +833,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
               <button
                 type="submit"
-                disabled={authSubmitting}
+                disabled={authSubmitting || googleAuthLoading}
                 className="w-full py-3 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-sm font-semibold transition cursor-pointer disabled:opacity-60"
               >
                 {authSubmitting
@@ -593,6 +843,30 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   : 'Create Primary Owner Admin'}
               </button>
             </form>
+
+            {hasConfiguredAdmins && (
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-zinc-400">
+                  <div className="flex-1 h-px bg-zinc-200" />
+                  <span>or</span>
+                  <div className="flex-1 h-px bg-zinc-200" />
+                </div>
+                <button
+                  type="button"
+                  disabled={googleAuthLoading || authSubmitting}
+                  onClick={handleGoogleAdminSignIn}
+                  className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 disabled:opacity-60 text-[#0B0B0D] text-xs font-semibold flex items-center justify-center gap-2.5 transition cursor-pointer"
+                >
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z" />
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z" />
+                    <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z" />
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z" />
+                  </svg>
+                  <span>{googleAuthLoading ? 'Signing in...' : 'Sign In with Authorized Google'}</span>
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -606,15 +880,49 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 <h1 className="text-2xl sm:text-3xl font-bold text-[#0B0B0D] mt-1">
                   Payment Verification &amp; Subscriptions
                 </h1>
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  Signed in as <strong>{authenticatedAdmin.name}</strong> ({authenticatedAdmin.email})
-                </p>
+                <div className="flex flex-wrap items-center gap-3 mt-1">
+                  <p className="text-xs text-zinc-500">
+                    Signed in as <strong>{authenticatedAdmin.name}</strong> ({authenticatedAdmin.email})
+                  </p>
+                  {firebaseAdminConnected ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                      <Cloud className="w-3 h-3" />
+                      <span>
+                        Cloud DB Connected{cloudSyncedAt ? ` · Synced ${new Date(cloudSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                      <Cloud className="w-3 h-3" />
+                      <span>Connect Google Cloud Sync for permanent persistence</span>
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  onClick={loadOverview}
+                  onClick={handleManualCloudSync}
+                  disabled={cloudSyncing}
+                  className={`px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition ${
+                    firebaseAdminConnected
+                      ? 'border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900'
+                      : 'bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white'
+                  }`}
+                >
+                  <Cloud className={`w-3.5 h-3.5 ${cloudSyncing ? 'animate-pulse' : ''}`} />
+                  <span>
+                    {cloudSyncing
+                      ? 'Syncing Cloud...'
+                      : firebaseAdminConnected
+                      ? 'Sync Cloud DB'
+                      : 'Connect Cloud Sync'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => loadOverview(true)}
                   disabled={loadingOverview}
                   className="px-4 py-2 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
                 >
@@ -846,15 +1154,25 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       </button>
                     ))}
                   </div>
-                  <div className="relative w-full sm:w-72">
-                    <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={membershipSearch}
-                      onChange={(e) => setMembershipSearch(e.target.value)}
-                      placeholder="Search member name, email, phone"
-                      className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
-                    />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative w-full sm:w-64">
+                      <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={membershipSearch}
+                        onChange={(e) => setMembershipSearch(e.target.value)}
+                        placeholder="Search member name, email, phone"
+                        className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenAssignModal}
+                      className="px-4 py-2 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Assign Membership</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1482,11 +1800,19 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 </div>
                 {selectedRequest.hasProof ? (
                   <div className="bg-white rounded-xl border border-zinc-200 p-2 flex items-center justify-center min-h-[320px]">
-                    <img
-                      src={`/api/membership/orders/${encodeURIComponent(selectedRequest.id)}/proof?t=${encodeURIComponent(selectedRequest.updatedAt)}`}
-                      alt={`Payment proof for ${selectedRequest.id}`}
-                      className="max-w-full max-h-[520px] object-contain rounded-lg"
-                    />
+                    {proofModalLoading ? (
+                      <div className="text-xs text-zinc-500">Loading payment screenshot...</div>
+                    ) : proofModalSrc ? (
+                      <img
+                        src={proofModalSrc}
+                        alt={`Payment proof for ${selectedRequest.id}`}
+                        className="max-w-full max-h-[520px] object-contain rounded-lg"
+                      />
+                    ) : (
+                      <div className="text-xs text-zinc-500 text-center px-4">
+                        Payment proof file could not be loaded cleanly. Try refreshing or syncing Cloud DB.
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="h-60 flex items-center justify-center text-xs text-zinc-500 bg-white rounded-xl border border-dashed border-zinc-300">
@@ -1609,6 +1935,223 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Assign Membership Modal */}
+      {assignModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          onClick={() => setAssignModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-8 space-y-5 my-8 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 pb-4">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#16A34A]">
+                  Direct Admin Provisioning
+                </div>
+                <h3 className="text-xl font-bold text-[#0B0B0D] mt-0.5">
+                  Assign Customer Membership
+                </h3>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Activate a Starter, Standard, Plus, or VIP plan for a new or existing customer immediately.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAssignModalOpen(false)}
+                className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAssignSubmit} className="space-y-4">
+              {overview && overview.members.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    Select Existing Customer (Optional)
+                  </label>
+                  <select
+                    value={assignExistingMemberId}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAssignExistingMemberId(val);
+                      const found = overview.members.find((m) => m.id === val);
+                      if (found) {
+                        setAssignFullName(found.fullName);
+                        setAssignEmail(found.email);
+                        setAssignPhone(found.phone || '');
+                      }
+                    }}
+                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl bg-white"
+                  >
+                    <option value="">+ Create / Match by Email Below</option>
+                    {overview.members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.fullName} ({m.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Customer Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={assignFullName}
+                    onChange={(e) => setAssignFullName(e.target.value)}
+                    placeholder="e.g. Bilal Ahmed"
+                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Customer Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={assignEmail}
+                    onChange={(e) => setAssignEmail(e.target.value)}
+                    placeholder="customer@example.com"
+                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Phone / WhatsApp</label>
+                  <input
+                    type="text"
+                    value={assignPhone}
+                    onChange={(e) => setAssignPhone(e.target.value)}
+                    placeholder="0300 1234567"
+                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    Account Password (Optional for New Member)
+                  </label>
+                  <input
+                    type="text"
+                    value={assignPassword}
+                    onChange={(e) => setAssignPassword(e.target.value)}
+                    placeholder="Min 6 chars (optional)"
+                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Membership Plan</label>
+                  <select
+                    value={assignPlanId}
+                    onChange={(e) => handleAssignPlanChange(e.target.value as MembershipPlanId)}
+                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl bg-white"
+                  >
+                    {MEMBERSHIP_PLANS.map((plan) => (
+                      <option key={plan.id} value={plan.id}>
+                        {plan.name} — {plan.priceDisplay} ({plan.durationLabel})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Duration (Days)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={3650}
+                    required
+                    value={assignDurationDays}
+                    onChange={(e) => setAssignDurationDays(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-zinc-700">
+                    Included Dramas
+                  </label>
+                  <span className="text-[11px] text-zinc-500">
+                    {assignPlanId === 'vip'
+                      ? 'All VIP Dramas'
+                      : `Select ${MEMBERSHIP_PLANS.find((p) => p.id === assignPlanId)?.dramaLimit || 1}`}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {MEMBERSHIP_DRAMAS.map((drama) => {
+                    const selected = assignDramaIds.includes(drama.id);
+                    const isVip = assignPlanId === 'vip';
+                    const limit = MEMBERSHIP_PLANS.find((p) => p.id === assignPlanId)?.dramaLimit;
+                    return (
+                      <button
+                        key={drama.id}
+                        type="button"
+                        disabled={isVip}
+                        onClick={() => {
+                          if (isVip) return;
+                          if (selected) {
+                            setAssignDramaIds((prev) => prev.filter((id) => id !== drama.id));
+                          } else {
+                            setAssignDramaIds((prev) => {
+                              const next = [...prev, drama.id];
+                              if (typeof limit === 'number' && next.length > limit) {
+                                return next.slice(next.length - limit);
+                              }
+                              return next;
+                            });
+                          }
+                        }}
+                        className={`px-3 py-2 rounded-xl border text-left text-xs font-semibold transition cursor-pointer ${
+                          selected
+                            ? 'bg-emerald-50 border-[#22C55E] text-[#0B0B0D]'
+                            : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <div className="truncate">{drama.title}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 mb-1">Admin Note (Optional)</label>
+                <input
+                  type="text"
+                  value={assignNote}
+                  onChange={(e) => setAssignNote(e.target.value)}
+                  placeholder="e.g. Verified via WhatsApp transfer"
+                  className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-zinc-200">
+                <button
+                  type="button"
+                  onClick={() => setAssignModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-zinc-300 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={assignSubmitting}
+                  className="px-5 py-2 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold transition cursor-pointer disabled:opacity-60"
+                >
+                  {assignSubmitting ? 'Activating...' : 'Assign & Activate Membership'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -21,7 +21,12 @@ import {
   MembershipOrder,
   cancelActiveMembership,
   requestProtectedEpisodeStream,
+  fetchAuthenticatedProofObjectUrl,
 } from '../../services/membershipService';
+import {
+  isFirebaseSignedInVerified,
+  cancelMembershipInFirestore,
+} from '../../services/firestoreMembershipSync';
 import { getDramaById } from '../../data/membershipCatalog';
 import { extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -48,6 +53,8 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
   const [actionError, setActionError] = useState<string | null>(null);
   const [activePaymentOrder, setActivePaymentOrder] = useState<MembershipOrder | null>(null);
   const [proofViewerOrderId, setProofViewerOrderId] = useState<string | null>(null);
+  const [proofViewerSrc, setProofViewerSrc] = useState<string | null>(null);
+  const [proofViewerLoading, setProofViewerLoading] = useState(false);
 
   // Server-authorized episode theater state
   const [loadingEpisodeSlug, setLoadingEpisodeSlug] = useState<string | null>(null);
@@ -96,6 +103,34 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
     };
   }, [activeStream]);
 
+  useEffect(() => {
+    if (!proofViewerOrderId) {
+      setProofViewerSrc(null);
+      return;
+    }
+    const matchedOrder = account.orders.find((o) => o.id === proofViewerOrderId);
+    if (matchedOrder?.proofDataUrl) {
+      setProofViewerSrc(matchedOrder.proofDataUrl);
+      return;
+    }
+    let cancelled = false;
+    let objectUrlToRevoke: string | null = null;
+    setProofViewerLoading(true);
+    fetchAuthenticatedProofObjectUrl(proofViewerOrderId, false).then((url) => {
+      if (cancelled) {
+        if (url) URL.revokeObjectURL(url);
+        return;
+      }
+      objectUrlToRevoke = url;
+      setProofViewerSrc(url);
+      setProofViewerLoading(false);
+    });
+    return () => {
+      cancelled = true;
+      if (objectUrlToRevoke) URL.revokeObjectURL(objectUrlToRevoke);
+    };
+  }, [proofViewerOrderId, account.orders]);
+
   const handleStartPosterPlayback = () => {
     setShowPosterOverlay(false);
     const el = videoRef.current as any;
@@ -109,10 +144,17 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
     setActionError(null);
     setActionMessage(null);
     try {
+      const priorActiveId = account.activeMembership?.id;
       const res = await cancelActiveMembership();
       if ('error' in res) {
         setActionError(res.error || 'Could not cancel membership.');
       } else {
+        if (priorActiveId && isFirebaseSignedInVerified()) {
+          await cancelMembershipInFirestore(
+            priorActiveId,
+            res.latestMembership?.cancelledAt || new Date().toISOString()
+          ).catch(() => {});
+        }
         setConfirmCancel(false);
         setActiveStream(null);
         setActionMessage(
@@ -845,12 +887,20 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="max-h-[75vh] overflow-auto flex items-center justify-center bg-zinc-50 rounded-xl p-2">
-              <img
-                src={`/api/membership/orders/${encodeURIComponent(proofViewerOrderId)}/proof`}
-                alt="Submitted payment screenshot"
-                className="max-w-full max-h-[70vh] object-contain rounded-lg"
-              />
+            <div className="max-h-[75vh] overflow-auto flex items-center justify-center bg-zinc-50 rounded-xl p-2 min-h-[240px]">
+              {proofViewerLoading ? (
+                <div className="text-xs text-zinc-500 py-10">Loading payment proof...</div>
+              ) : proofViewerSrc ? (
+                <img
+                  src={proofViewerSrc}
+                  alt="Submitted payment screenshot"
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                />
+              ) : (
+                <div className="text-xs text-zinc-500 py-10">
+                  Could not load proof image preview.
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -6,6 +6,7 @@ import {
 
 export interface SafeMember {
   id: string;
+  ownerUid?: string;
   email: string;
   fullName: string;
   phone: string;
@@ -15,6 +16,7 @@ export interface SafeMember {
 export interface MembershipRecord {
   id: string;
   memberId: string;
+  ownerUid?: string;
   orderId: string;
   planId: MembershipPlanId;
   planName: string;
@@ -43,6 +45,7 @@ export type OrderStatus =
 export interface MembershipOrder {
   id: string;
   memberId: string;
+  ownerUid?: string;
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
@@ -57,6 +60,7 @@ export interface MembershipOrder {
   proofFileName?: string;
   proofOriginalName?: string;
   proofMimeType?: string;
+  proofDataUrl?: string;
   proofSubmittedAt?: string;
   paymentNote?: string;
   rejectionReason?: string;
@@ -190,10 +194,55 @@ export interface AdminMembershipsOverview {
   members: SafeMember[];
   requests: MembershipOrder[];
   memberships: AdminMembershipRecord[];
+  history?: MembershipHistoryEntry[];
   auditLogs: AdminAuditEntry[];
   emailNotifications: AdminEmailNotification[];
   config: MembershipConfig;
   admins: SafeAdmin[];
+}
+
+const MEMBER_TOKEN_KEY = 'feviqo_member_token';
+const ADMIN_TOKEN_KEY = 'feviqo_admin_token';
+
+function readStoredToken(key: string): string | null {
+  try {
+    return typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredToken(key: string, token: string | null): void {
+  try {
+    if (typeof window === 'undefined') return;
+    if (token) {
+      window.localStorage.setItem(key, token);
+    } else {
+      window.localStorage.removeItem(key);
+    }
+  } catch {}
+}
+
+export function getMemberToken(): string | null {
+  return readStoredToken(MEMBER_TOKEN_KEY);
+}
+
+export function getAdminToken(): string | null {
+  return readStoredToken(ADMIN_TOKEN_KEY);
+}
+
+function memberHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra || {}) };
+  const token = getMemberToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+function adminHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra || {}) };
+  const token = getAdminToken();
+  if (token) headers['X-Admin-Authorization'] = `Bearer ${token}`;
+  return headers;
 }
 
 async function parseJsonSafe(res: Response) {
@@ -218,7 +267,13 @@ export async function fetchMembershipCatalog(): Promise<{
 export async function fetchMemberAccount(): Promise<
   ({ success: true } & MemberAccountState) | { success: false; code?: string; error?: string }
 > {
-  const res = await fetch('/api/membership/account', { credentials: 'include' });
+  const res = await fetch('/api/membership/account', {
+    credentials: 'include',
+    headers: memberHeaders(),
+  });
+  if (res.status === 401) {
+    writeStoredToken(MEMBER_TOKEN_KEY, null);
+  }
   return parseJsonSafe(res);
 }
 
@@ -237,7 +292,11 @@ export async function registerMemberAccount(payload: {
     credentials: 'include',
     body: JSON.stringify(payload),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success && data?.token) {
+    writeStoredToken(MEMBER_TOKEN_KEY, data.token);
+  }
+  return data;
 }
 
 export async function loginMemberAccount(payload: {
@@ -252,14 +311,40 @@ export async function loginMemberAccount(payload: {
     credentials: 'include',
     body: JSON.stringify(payload),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success && data?.token) {
+    writeStoredToken(MEMBER_TOKEN_KEY, data.token);
+  }
+  return data;
+}
+
+export async function authenticateMemberWithGoogle(payload: {
+  idToken: string;
+  fullName?: string;
+  phone?: string;
+}): Promise<
+  ({ success: true } & MemberAccountState) | { success: false; error: string }
+> {
+  const res = await fetch('/api/membership/google-auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  const data = await parseJsonSafe(res);
+  if (data?.success && data?.token) {
+    writeStoredToken(MEMBER_TOKEN_KEY, data.token);
+  }
+  return data;
 }
 
 export async function logoutMemberAccount(): Promise<void> {
+  writeStoredToken(MEMBER_TOKEN_KEY, null);
   await fetch('/api/membership/logout', {
     method: 'POST',
     credentials: 'include',
-  });
+    headers: memberHeaders(),
+  }).catch(() => {});
 }
 
 export async function createMembershipCheckout(payload: {
@@ -278,7 +363,7 @@ export async function createMembershipCheckout(payload: {
 }> {
   const res = await fetch('/api/membership/checkout', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: memberHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify(payload),
   });
@@ -289,6 +374,7 @@ export async function submitOrderPaymentProofFile(payload: {
   orderId: string;
   file: File;
   paymentNote?: string;
+  proofDataUrl?: string;
 }): Promise<
   | {
       success: true;
@@ -303,9 +389,13 @@ export async function submitOrderPaymentProofFile(payload: {
   if (payload.paymentNote?.trim()) {
     form.append('paymentNote', payload.paymentNote.trim());
   }
+  if (payload.proofDataUrl) {
+    form.append('proofDataUrl', payload.proofDataUrl);
+  }
   const res = await fetch(`/api/membership/orders/${encodeURIComponent(payload.orderId)}/proof`, {
     method: 'POST',
     credentials: 'include',
+    headers: memberHeaders(),
     body: form,
   });
   return parseJsonSafe(res);
@@ -317,6 +407,7 @@ export async function cancelActiveMembership(): Promise<
   const res = await fetch('/api/membership/cancel', {
     method: 'POST',
     credentials: 'include',
+    headers: memberHeaders(),
   });
   return parseJsonSafe(res);
 }
@@ -343,9 +434,32 @@ export async function requestProtectedEpisodeStream(
 > {
   const res = await fetch(
     `/api/membership/watch/${encodeURIComponent(dramaId)}/${encodeURIComponent(episodeSlug)}`,
-    { credentials: 'include' }
+    {
+      credentials: 'include',
+      headers: memberHeaders(),
+    }
   );
   return parseJsonSafe(res);
+}
+
+export async function fetchAuthenticatedProofObjectUrl(
+  orderId: string,
+  isAdmin = false
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `/api/membership/orders/${encodeURIComponent(orderId)}/proof?t=${Date.now()}`,
+      {
+        credentials: 'include',
+        headers: isAdmin ? adminHeaders() : memberHeaders(),
+      }
+    );
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
 }
 
 // --- ADMIN PANEL SERVICE ---
@@ -356,8 +470,15 @@ export async function fetchAdminAuthStatus(): Promise<{
   hasConfiguredAdmins: boolean;
   configuredAdminEmail: string;
 }> {
-  const res = await fetch('/api/admin/auth/status', { credentials: 'include' });
-  return parseJsonSafe(res);
+  const res = await fetch('/api/admin/auth/status', {
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  const data = await parseJsonSafe(res);
+  if (data && !data.authenticated) {
+    writeStoredToken(ADMIN_TOKEN_KEY, null);
+  }
+  return data;
 }
 
 export async function bootstrapAdminAccount(payload: {
@@ -365,51 +486,84 @@ export async function bootstrapAdminAccount(payload: {
   name: string;
   password: string;
   confirmPassword: string;
-}): Promise<{ success: true; admin: SafeAdmin } | { success: false; error: string }> {
+}): Promise<{ success: true; admin: SafeAdmin; token?: string } | { success: false; error: string }> {
   const res = await fetch('/api/admin/auth/bootstrap', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify(payload),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success && data?.token) {
+    writeStoredToken(ADMIN_TOKEN_KEY, data.token);
+  }
+  return data;
 }
 
 export async function loginAdminAccount(payload: {
   email: string;
   password: string;
-}): Promise<{ success: true; admin: SafeAdmin } | { success: false; error: string }> {
+}): Promise<{ success: true; admin: SafeAdmin; token?: string } | { success: false; error: string }> {
   const res = await fetch('/api/admin/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify(payload),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success && data?.token) {
+    writeStoredToken(ADMIN_TOKEN_KEY, data.token);
+  }
+  return data;
+}
+
+export async function authenticateAdminWithGoogle(
+  idToken: string
+): Promise<{ success: true; admin: SafeAdmin; token?: string } | { success: false; error: string }> {
+  const res = await fetch('/api/admin/auth/google', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ idToken }),
+  });
+  const data = await parseJsonSafe(res);
+  if (data?.success && data?.token) {
+    writeStoredToken(ADMIN_TOKEN_KEY, data.token);
+  }
+  return data;
 }
 
 export async function logoutAdminAccount(): Promise<void> {
+  writeStoredToken(ADMIN_TOKEN_KEY, null);
   await fetch('/api/admin/auth/logout', {
     method: 'POST',
     credentials: 'include',
-  });
+    headers: adminHeaders(),
+  }).catch(() => {});
 }
 
 export async function fetchAdminMembershipsOverview(): Promise<
   ({ success: true } & AdminMembershipsOverview) | { success: false; code?: string; error: string }
 > {
-  const res = await fetch('/api/admin/memberships/overview', { credentials: 'include' });
+  const res = await fetch('/api/admin/memberships/overview', {
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  if (res.status === 401 || res.status === 403) {
+    writeStoredToken(ADMIN_TOKEN_KEY, null);
+  }
   return parseJsonSafe(res);
 }
 
 export async function approvePaymentOrder(orderId: string): Promise<
-  { success: true; overview: AdminMembershipsOverview } | { success: false; error: string }
+  { success: true; order?: MembershipOrder; membership?: AdminMembershipRecord; overview: AdminMembershipsOverview } | { success: false; error: string }
 > {
   const res = await fetch(
     `/api/admin/memberships/requests/${encodeURIComponent(orderId)}/approve`,
     {
       method: 'POST',
       credentials: 'include',
+      headers: adminHeaders(),
     }
   );
   return parseJsonSafe(res);
@@ -418,12 +572,12 @@ export async function approvePaymentOrder(orderId: string): Promise<
 export async function rejectPaymentOrder(
   orderId: string,
   reason: string
-): Promise<{ success: true; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+): Promise<{ success: true; order?: MembershipOrder; overview: AdminMembershipsOverview } | { success: false; error: string }> {
   const res = await fetch(
     `/api/admin/memberships/requests/${encodeURIComponent(orderId)}/reject`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
       credentials: 'include',
       body: JSON.stringify({ reason }),
     }
@@ -431,13 +585,57 @@ export async function rejectPaymentOrder(
   return parseJsonSafe(res);
 }
 
+export async function assignCustomerMembership(payload: {
+  fullName: string;
+  email: string;
+  phone?: string;
+  password?: string;
+  planId: MembershipPlanId;
+  selectedDramaIds: string[];
+  durationDays?: number;
+  paymentNote?: string;
+}): Promise<
+  | {
+      success: true;
+      member: SafeMember;
+      order: MembershipOrder;
+      membership: AdminMembershipRecord;
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/assign', {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function syncAdminCloudState(snapshot: {
+  members?: SafeMember[];
+  orders?: MembershipOrder[];
+  memberships?: AdminMembershipRecord[];
+  history?: MembershipHistoryEntry[];
+  config?: MembershipConfig | null;
+}): Promise<{ success: true; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+  const res = await fetch('/api/admin/memberships/sync', {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(snapshot),
+  });
+  return parseJsonSafe(res);
+}
+
 export async function revokeMembershipAccess(
   membershipId: string,
   reason: string
-): Promise<{ success: true; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+): Promise<{ success: true; membership?: MembershipRecord; overview: AdminMembershipsOverview } | { success: false; error: string }> {
   const res = await fetch(`/api/admin/memberships/${encodeURIComponent(membershipId)}/revoke`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify({ reason }),
   });
@@ -449,7 +647,7 @@ export async function updateMembershipSettings(
 ): Promise<{ success: true; config: MembershipConfig; overview: AdminMembershipsOverview } | { success: false; error: string }> {
   const res = await fetch('/api/admin/memberships/config', {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify(updates),
   });
@@ -465,6 +663,7 @@ export async function uploadPlanQrImage(
   const res = await fetch(`/api/admin/memberships/qr/${encodeURIComponent(planId)}`, {
     method: 'POST',
     credentials: 'include',
+    headers: adminHeaders(),
     body: form,
   });
   return parseJsonSafe(res);
@@ -476,6 +675,7 @@ export async function retryEmailNotification(
   const res = await fetch(`/api/admin/memberships/emails/${encodeURIComponent(notifId)}/retry`, {
     method: 'POST',
     credentials: 'include',
+    headers: adminHeaders(),
   });
   return parseJsonSafe(res);
 }
@@ -487,7 +687,7 @@ export async function grantAdminRole(payload: {
 }): Promise<{ success: true; overview: AdminMembershipsOverview } | { success: false; error: string }> {
   const res = await fetch('/api/admin/roles', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify(payload),
   });
@@ -500,7 +700,7 @@ export async function updateAdminRoleStatus(
 ): Promise<{ success: true; overview: AdminMembershipsOverview } | { success: false; error: string }> {
   const res = await fetch(`/api/admin/roles/${encodeURIComponent(adminId)}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify({ isActive }),
   });
@@ -523,7 +723,10 @@ export interface AdminEmailTransportStatus {
 export async function fetchAdminEmailTransport(): Promise<
   { success: true; transport: AdminEmailTransportStatus } | { success: false; error: string }
 > {
-  const res = await fetch('/api/admin/memberships/email-transport', { credentials: 'include' });
+  const res = await fetch('/api/admin/memberships/email-transport', {
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
   return parseJsonSafe(res);
 }
 
@@ -548,7 +751,7 @@ export async function saveAdminEmailTransport(payload: {
 > {
   const res = await fetch('/api/admin/memberships/email-transport', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify(payload),
   });

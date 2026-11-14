@@ -55,6 +55,7 @@ const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
 
 export interface MemberRecord {
   id: string;
+  ownerUid?: string;
   email: string;
   fullName: string;
   phone: string;
@@ -65,6 +66,7 @@ export interface MemberRecord {
 
 export interface SafeMember {
   id: string;
+  ownerUid?: string;
   email: string;
   fullName: string;
   phone: string;
@@ -76,6 +78,10 @@ export type MembershipStatus = 'active' | 'cancelled' | 'expired';
 export interface MembershipRecord {
   id: string;
   memberId: string;
+  ownerUid?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
   orderId: string;
   planId: MembershipPlanId;
   planName: string;
@@ -104,6 +110,7 @@ export type OrderStatus =
 export interface MembershipOrder {
   id: string;
   memberId: string;
+  ownerUid?: string;
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
@@ -120,6 +127,7 @@ export interface MembershipOrder {
   proofFileName?: string;
   proofOriginalName?: string;
   proofMimeType?: string;
+  proofDataUrl?: string;
   proofSubmittedAt?: string;
   paymentNote?: string;
   rejectionReason?: string;
@@ -207,6 +215,7 @@ export interface AdminAuditEntry {
     | 'admin_role_updated'
     | 'payment_approved'
     | 'payment_rejected'
+    | 'membership_assigned'
     | 'membership_revoked'
     | 'config_updated'
     | 'qr_image_updated'
@@ -241,7 +250,9 @@ export interface PaymentGatewayStatus {
 function readJson<T>(filePath: string, fallback: T): T {
   try {
     if (fs.existsSync(filePath)) {
-      return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as T;
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      if (!raw || !raw.trim()) return fallback;
+      return JSON.parse(raw) as T;
     }
   } catch (err) {
     console.error(`[MembershipStore] Error reading ${filePath}:`, err);
@@ -251,7 +262,13 @@ function readJson<T>(filePath: string, fallback: T): T {
 
 function writeJson<T>(filePath: string, data: T): boolean {
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const tmpPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, filePath);
     return true;
   } catch (err) {
     console.error(`[MembershipStore] Error writing ${filePath}:`, err);
@@ -385,6 +402,7 @@ export function verifyAdminSessionToken(token: string | undefined): SafeAdmin | 
 function sanitizeMember(member: MemberRecord): SafeMember {
   return {
     id: member.id,
+    ownerUid: member.ownerUid,
     email: member.email,
     fullName: member.fullName,
     phone: member.phone || '',
@@ -756,6 +774,50 @@ export function loginAdmin(params: {
   return { success: true, admin: safe, token: createAdminSessionToken(safe) };
 }
 
+export function loginAdminWithGoogle(params: {
+  uid: string;
+  email: string;
+  name?: string;
+}): { success: true; admin: SafeAdmin; token: string } | { success: false; error: string; statusCode: number } {
+  syncEnvAdmin();
+  const email = (params.email || '').trim().toLowerCase();
+  if (!email) {
+    return { success: false, error: 'Google account email is required.', statusCode: 400 };
+  }
+
+  const admins = readJson<AdminRecord[]>(ADMINS_FILE, []);
+  let found = admins.find((a) => a.email === email && a.role === 'admin');
+
+  if (!found && email === 'rexanmedia01@gmail.com') {
+    found = {
+      id: `adm-google-${params.uid.slice(0, 24)}`,
+      email,
+      name: (params.name || 'FEVIQO Owner').trim(),
+      passwordHash: hashMemberPassword(crypto.randomBytes(24).toString('hex')),
+      role: 'admin',
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      createdBy: 'firebase_google_owner',
+    };
+    admins.unshift(found);
+    writeJson(ADMINS_FILE, admins);
+  }
+
+  if (!found) {
+    return {
+      success: false,
+      error: `The Google account ${email} is not authorized as a FEVIQO administrator.`,
+      statusCode: 403,
+    };
+  }
+  if (!found.isActive) {
+    return { success: false, error: 'This administrator account has been deactivated.', statusCode: 403 };
+  }
+
+  const safe = sanitizeAdmin(found);
+  return { success: true, admin: safe, token: createAdminSessionToken(safe) };
+}
+
 export function listAdmins(): SafeAdmin[] {
   syncEnvAdmin();
   return readJson<AdminRecord[]>(ADMINS_FILE, []).map(sanitizeAdmin);
@@ -939,6 +1001,69 @@ export function loginMember(params: {
   }
 
   const safe = sanitizeMember(found);
+  return { success: true, member: safe, token: createMemberSessionToken(safe) };
+}
+
+export function upsertGoogleMember(params: {
+  uid: string;
+  email: string;
+  fullName?: string;
+  phone?: string;
+}): { success: true; member: SafeMember; token: string } | { success: false; error: string } {
+  const email = (params.email || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) {
+    return { success: false, error: 'Verified Google email is required.' };
+  }
+
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const now = new Date().toISOString();
+  const existingIdx = members.findIndex((m) => m.email === email);
+
+  if (existingIdx !== -1) {
+    const existing = members[existingIdx];
+    let updated = false;
+    if (!existing.ownerUid && params.uid) {
+      existing.ownerUid = params.uid;
+      updated = true;
+    }
+    if ((!existing.fullName || existing.fullName === 'FEVIQO Member') && params.fullName?.trim()) {
+      existing.fullName = params.fullName.trim();
+      updated = true;
+    }
+    if (!existing.phone && params.phone?.trim()) {
+      existing.phone = params.phone.trim();
+      updated = true;
+    }
+    if (updated) {
+      existing.updatedAt = now;
+      members[existingIdx] = existing;
+      writeJson(MEMBERS_FILE, members);
+    }
+    const safe = sanitizeMember(existing);
+    return { success: true, member: safe, token: createMemberSessionToken(safe) };
+  }
+
+  const newMember: MemberRecord = {
+    id: `mem-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+    ownerUid: params.uid,
+    email,
+    fullName: (params.fullName || email.split('@')[0] || 'FEVIQO Member').trim().slice(0, 120),
+    phone: (params.phone || '').trim().slice(0, 32),
+    passwordHash: hashMemberPassword(crypto.randomBytes(24).toString('hex')),
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  members.unshift(newMember);
+  writeJson(MEMBERS_FILE, members);
+
+  appendHistory({
+    memberId: newMember.id,
+    event: 'account_created',
+    details: `Personal FEVIQO account connected via Google for ${email}.`,
+  });
+
+  const safe = sanitizeMember(newMember);
   return { success: true, member: safe, token: createMemberSessionToken(safe) };
 }
 
@@ -1144,6 +1269,7 @@ export async function createMembershipCheckoutOrder(params: {
   const order: MembershipOrder = {
     id: orderId,
     memberId: member.id,
+    ownerUid: member.ownerUid,
     customerName: member.fullName,
     customerEmail: member.email,
     customerPhone: member.phone,
@@ -1191,6 +1317,7 @@ export function submitOrderPaymentProof(params: {
   fileBuffer: Buffer;
   originalName: string;
   paymentNote?: string;
+  proofDataUrl?: string;
 }):
   | { success: true; order: MembershipOrder; member: SafeMember }
   | { success: false; error: string; statusCode: number } {
@@ -1244,9 +1371,24 @@ export function submitOrderPaymentProof(params: {
   }
 
   const nowIso = new Date().toISOString();
+  let storedDataUrl: string | undefined =
+    params.proofDataUrl &&
+    params.proofDataUrl.startsWith('data:image/') &&
+    params.proofDataUrl.length <= 800000
+      ? params.proofDataUrl
+      : undefined;
+
+  if (!storedDataUrl && params.fileBuffer.length <= 550 * 1024) {
+    storedDataUrl = `data:${detected.mime};base64,${params.fileBuffer.toString('base64')}`;
+  }
+
+  order.ownerUid = order.ownerUid || member.ownerUid;
   order.proofFileName = proofFileName;
   order.proofOriginalName = (params.originalName || `payment-proof.${detected.ext}`).slice(0, 180);
   order.proofMimeType = detected.mime;
+  if (storedDataUrl) {
+    order.proofDataUrl = storedDataUrl;
+  }
   order.proofSubmittedAt = nowIso;
   order.paymentNote = params.paymentNote ? String(params.paymentNote).trim().slice(0, 400) : undefined;
   order.status = 'pending_verification';
@@ -1290,12 +1432,25 @@ export function getAuthorizedProofFile(params: {
     return { success: false, error: 'Forbidden: you cannot access another member’s payment proof.', statusCode: 403 };
   }
 
-  if (!order.proofFileName) {
+  if (!order.proofFileName && !order.proofDataUrl) {
     return { success: false, error: 'No payment proof has been uploaded for this request yet.', statusCode: 404 };
   }
 
-  const safeBase = path.basename(order.proofFileName);
+  const safeBase = order.proofFileName
+    ? path.basename(order.proofFileName)
+    : `proof-${order.id}.jpg`;
   const filePath = path.join(PRIVATE_PROOFS_DIR, safeBase);
+
+  if (!fs.existsSync(filePath) && order.proofDataUrl) {
+    const match = order.proofDataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (match) {
+      try {
+        const buf = Buffer.from(match[2], 'base64');
+        fs.writeFileSync(filePath, buf);
+      } catch {}
+    }
+  }
+
   if (!fs.existsSync(filePath)) {
     return { success: false, error: 'Stored payment proof file could not be found.', statusCode: 404 };
   }
@@ -1362,10 +1517,15 @@ export function approvePaymentRequest(params: {
     plan.dramaLimit === 'all'
       ? MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id)
       : order.selectedDramaIds;
+  const orderMember = getMemberById(order.memberId);
 
   const newMembership: MembershipRecord = {
     id: `sub-${nowMs}-${crypto.randomBytes(3).toString('hex')}`,
     memberId: order.memberId,
+    ownerUid: order.ownerUid || orderMember?.ownerUid,
+    customerName: order.customerName || orderMember?.fullName || 'FEVIQO Member',
+    customerEmail: order.customerEmail || orderMember?.email || '',
+    customerPhone: order.customerPhone || orderMember?.phone || '',
     orderId: order.id,
     planId: plan.id,
     planName: plan.name,
@@ -1558,6 +1718,352 @@ export function updateEmailNotificationLog(
   return logs[idx];
 }
 
+export function assignMembershipByAdmin(params: {
+  fullName: string;
+  email: string;
+  phone?: string;
+  password?: string;
+  planId: string;
+  selectedDramaIds: unknown;
+  durationDays?: number;
+  paymentNote?: string;
+  admin: SafeAdmin;
+}):
+  | { success: true; member: SafeMember; order: MembershipOrder; membership: MembershipRecord }
+  | { success: false; error: string; statusCode: number } {
+  const cleanEmail = (params.email || '').trim().toLowerCase();
+  const cleanName = (params.fullName || '').trim();
+  const cleanPhone = (params.phone || '').trim();
+
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return { success: false, error: 'Please enter a valid customer email address.', statusCode: 400 };
+  }
+
+  const validation = validatePlanAndDramas({
+    planId: params.planId,
+    selectedDramaIds: params.selectedDramaIds,
+  });
+  if (!('plan' in validation)) {
+    return { success: false, error: validation.error, statusCode: 400 };
+  }
+
+  const { plan, normalizedDramaIds } = validation;
+  const customDays =
+    typeof params.durationDays === 'number' && Number.isFinite(params.durationDays) && params.durationDays >= 1
+      ? Math.min(3650, Math.round(params.durationDays))
+      : plan.durationDays;
+
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  let memberIdx = members.findIndex((m) => m.email === cleanEmail);
+  let member: MemberRecord;
+
+  if (memberIdx === -1) {
+    if (!cleanName || cleanName.length < 2) {
+      return { success: false, error: 'Customer Full Name is required for a new member.', statusCode: 400 };
+    }
+    const rawPass = params.password && params.password.trim().length >= 6
+      ? params.password.trim()
+      : crypto.randomBytes(16).toString('hex');
+    member = {
+      id: `mem-${nowMs}-${crypto.randomBytes(3).toString('hex')}`,
+      ownerUid: 'admin_assigned',
+      email: cleanEmail,
+      fullName: cleanName,
+      phone: cleanPhone || '—',
+      passwordHash: hashMemberPassword(rawPass),
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    members.unshift(member);
+    writeJson(MEMBERS_FILE, members);
+    appendHistory({
+      memberId: member.id,
+      event: 'account_created',
+      details: `Member account created during admin membership assignment for ${cleanEmail}.`,
+    });
+  } else {
+    member = members[memberIdx];
+    let changed = false;
+    if (cleanName && cleanName.length >= 2 && member.fullName !== cleanName) {
+      member.fullName = cleanName;
+      changed = true;
+    }
+    if (cleanPhone && member.phone !== cleanPhone) {
+      member.phone = cleanPhone;
+      changed = true;
+    }
+    if (params.password && params.password.trim().length >= 6) {
+      member.passwordHash = hashMemberPassword(params.password.trim());
+      changed = true;
+    }
+    if (changed) {
+      member.updatedAt = nowIso;
+      members[memberIdx] = member;
+      writeJson(MEMBERS_FILE, members);
+    }
+  }
+
+  const safeMember = sanitizeMember(member);
+  const orderId = `ord-assign-${nowMs}-${crypto.randomBytes(3).toString('hex')}`;
+  const order: MembershipOrder = {
+    id: orderId,
+    memberId: member.id,
+    ownerUid: member.ownerUid || 'admin_assigned',
+    customerName: member.fullName,
+    customerEmail: member.email,
+    customerPhone: member.phone,
+    planId: plan.id,
+    planName: plan.name,
+    amountPkr: plan.pricePkr,
+    durationDays: customDays,
+    selectedDramaIds: normalizedDramaIds,
+    status: 'approved',
+    provider: 'admin_assigned',
+    paymentNote: params.paymentNote?.trim() || 'Assigned directly by FEVIQO administrator',
+    reviewedByAdminId: params.admin.id,
+    reviewedByAdminEmail: params.admin.email,
+    reviewedAt: nowIso,
+    paidAt: nowIso,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
+
+  const orders = readAllOrders();
+  orders.unshift(order);
+  writeJson(ORDERS_FILE, orders);
+
+  const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  for (const existing of memberships) {
+    if (existing.memberId === member.id && existing.status === 'active') {
+      existing.status = 'cancelled';
+      existing.cancelledAt = nowIso;
+    }
+  }
+
+  const expiresAtIso = new Date(nowMs + customDays * 24 * 60 * 60 * 1000).toISOString();
+  const newMembership: MembershipRecord = {
+    id: `sub-${nowMs}-${crypto.randomBytes(3).toString('hex')}`,
+    memberId: member.id,
+    ownerUid: member.ownerUid || 'admin_assigned',
+    customerName: member.fullName,
+    customerEmail: member.email,
+    customerPhone: member.phone,
+    orderId: order.id,
+    planId: plan.id,
+    planName: plan.name,
+    pricePkr: plan.pricePkr,
+    durationDays: customDays,
+    selectedDramaIds: normalizedDramaIds,
+    status: 'active',
+    activatedAt: nowIso,
+    expiresAt: expiresAtIso,
+    approvedByAdminEmail: params.admin.email,
+    paymentProvider: 'admin_assigned',
+    paymentReference: order.paymentNote || order.id,
+    createdAt: nowIso,
+  };
+
+  memberships.unshift(newMembership);
+  writeJson(MEMBERSHIPS_FILE, memberships);
+
+  appendHistory({
+    memberId: member.id,
+    membershipId: newMembership.id,
+    orderId: order.id,
+    event: 'membership_activated',
+    planId: plan.id,
+    planName: plan.name,
+    amountPkr: plan.pricePkr,
+    selectedDramaIds: normalizedDramaIds,
+    details: `${plan.name} (${customDays} days) assigned directly by administration until ${expiresAtIso}.`,
+  });
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'membership_assigned',
+    targetId: newMembership.id,
+    details: `Assigned ${plan.name} (${customDays} days) to ${member.fullName} (${member.email}). Active until ${expiresAtIso}.`,
+  });
+
+  return {
+    success: true,
+    member: safeMember,
+    order,
+    membership: newMembership,
+  };
+}
+
+export function mergeCloudSyncSnapshot(payload: {
+  members?: Array<Partial<MemberRecord>>;
+  orders?: Array<Partial<MembershipOrder>>;
+  memberships?: Array<Partial<MembershipRecord>>;
+  history?: Array<Partial<MembershipHistoryEntry>>;
+  config?: Partial<MembershipConfig> | null;
+}) {
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const memberById = new Map(members.map((m) => [m.id, m]));
+  const memberByEmail = new Map(members.map((m) => [m.email.toLowerCase(), m]));
+
+  for (const incoming of payload.members || []) {
+    if (!incoming?.id || !incoming?.email) continue;
+    const emailLower = incoming.email.trim().toLowerCase();
+    const existing = memberById.get(incoming.id) || memberByEmail.get(emailLower);
+    if (!existing) {
+      const created: MemberRecord = {
+        id: incoming.id,
+        ownerUid: incoming.ownerUid,
+        email: emailLower,
+        fullName: incoming.fullName || 'FEVIQO Member',
+        phone: incoming.phone || '',
+        passwordHash: incoming.passwordHash || hashMemberPassword(crypto.randomBytes(16).toString('hex')),
+        createdAt: incoming.createdAt || new Date().toISOString(),
+        updatedAt: incoming.updatedAt || new Date().toISOString(),
+      };
+      members.push(created);
+      memberById.set(created.id, created);
+      memberByEmail.set(created.email, created);
+    } else if (incoming.ownerUid && !existing.ownerUid) {
+      existing.ownerUid = incoming.ownerUid;
+    }
+  }
+  writeJson(MEMBERS_FILE, members);
+
+  const orders = readAllOrders();
+  const orderById = new Map(orders.map((o) => [o.id, o]));
+  for (const inc of payload.orders || []) {
+    if (!inc?.id || !inc?.memberId || !inc?.planId) continue;
+    const existing = orderById.get(inc.id);
+    if (!existing) {
+      const created: MembershipOrder = {
+        id: inc.id,
+        memberId: inc.memberId,
+        ownerUid: inc.ownerUid,
+        customerName: inc.customerName,
+        customerEmail: inc.customerEmail,
+        customerPhone: inc.customerPhone,
+        planId: inc.planId,
+        planName: inc.planName || inc.planId,
+        amountPkr: Number(inc.amountPkr) || 0,
+        durationDays: Number(inc.durationDays) || 15,
+        selectedDramaIds: Array.isArray(inc.selectedDramaIds) ? inc.selectedDramaIds : [],
+        status: normalizeOrderStatus(inc.status || 'awaiting_payment'),
+        provider: inc.provider || 'bank_qr',
+        qrImageUrl: inc.qrImageUrl,
+        proofFileName: inc.proofFileName,
+        proofOriginalName: inc.proofOriginalName,
+        proofMimeType: inc.proofMimeType,
+        proofDataUrl: inc.proofDataUrl,
+        proofSubmittedAt: inc.proofSubmittedAt,
+        paymentNote: inc.paymentNote,
+        rejectionReason: inc.rejectionReason,
+        reviewedByAdminId: inc.reviewedByAdminId,
+        reviewedByAdminEmail: inc.reviewedByAdminEmail,
+        reviewedAt: inc.reviewedAt,
+        paidAt: inc.paidAt,
+        createdAt: inc.createdAt || new Date().toISOString(),
+        updatedAt: inc.updatedAt || new Date().toISOString(),
+      };
+      orders.push(created);
+      orderById.set(created.id, created);
+    } else {
+      const incUpdated = Date.parse(inc.updatedAt || '') || 0;
+      const extUpdated = Date.parse(existing.updatedAt || '') || 0;
+      if (incUpdated > extUpdated) {
+        const merged: MembershipOrder = {
+          ...existing,
+          ...inc,
+          status: normalizeOrderStatus(inc.status || existing.status),
+          proofDataUrl: inc.proofDataUrl || existing.proofDataUrl,
+        };
+        orderById.set(existing.id, merged);
+      } else if (!existing.proofDataUrl && inc.proofDataUrl) {
+        existing.proofDataUrl = inc.proofDataUrl;
+      }
+    }
+  }
+  writeJson(
+    ORDERS_FILE,
+    Array.from(orderById.values()).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+  );
+
+  const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const subById = new Map(memberships.map((s) => [s.id, s]));
+  for (const inc of payload.memberships || []) {
+    if (!inc?.id || !inc?.memberId || !inc?.planId) continue;
+    const existing = subById.get(inc.id);
+    if (!existing) {
+      const created: MembershipRecord = {
+        id: inc.id,
+        memberId: inc.memberId,
+        ownerUid: inc.ownerUid,
+        customerName: inc.customerName,
+        customerEmail: inc.customerEmail,
+        customerPhone: inc.customerPhone,
+        orderId: inc.orderId || inc.id,
+        planId: inc.planId,
+        planName: inc.planName || inc.planId,
+        pricePkr: Number(inc.pricePkr) || 0,
+        durationDays: Number(inc.durationDays) || 15,
+        selectedDramaIds: Array.isArray(inc.selectedDramaIds) ? inc.selectedDramaIds : [],
+        status: inc.status || 'active',
+        activatedAt: inc.activatedAt || new Date().toISOString(),
+        expiresAt: inc.expiresAt || new Date().toISOString(),
+        cancelledAt: inc.cancelledAt,
+        revokedByAdminEmail: inc.revokedByAdminEmail,
+        revokedReason: inc.revokedReason,
+        approvedByAdminEmail: inc.approvedByAdminEmail,
+        paymentProvider: inc.paymentProvider || 'bank_qr',
+        paymentReference: inc.paymentReference || '',
+        createdAt: inc.createdAt || new Date().toISOString(),
+      };
+      subById.set(created.id, created);
+    } else if (inc.status && existing.status === 'active' && inc.status !== 'active') {
+      subById.set(existing.id, { ...existing, ...inc });
+    }
+  }
+  writeJson(
+    MEMBERSHIPS_FILE,
+    Array.from(subById.values()).sort((a, b) => Date.parse(b.activatedAt) - Date.parse(a.activatedAt))
+  );
+
+  const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []);
+  const histById = new Map(history.map((h) => [h.id, h]));
+  for (const inc of payload.history || []) {
+    if (!inc?.id || !inc?.memberId || !inc?.details) continue;
+    if (!histById.has(inc.id)) {
+      histById.set(inc.id, {
+        id: inc.id,
+        memberId: inc.memberId,
+        membershipId: inc.membershipId,
+        orderId: inc.orderId,
+        event: (inc.event as any) || 'membership_activated',
+        planId: inc.planId,
+        planName: inc.planName,
+        amountPkr: inc.amountPkr,
+        selectedDramaIds: inc.selectedDramaIds,
+        details: inc.details,
+        createdAt: inc.createdAt || new Date().toISOString(),
+      });
+    }
+  }
+  writeJson(
+    HISTORY_FILE,
+    Array.from(histById.values()).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+  );
+
+  if (payload.config && payload.config.updatedAt) {
+    const current = getMembershipConfig();
+    if (Date.parse(payload.config.updatedAt) > Date.parse(current.updatedAt || '')) {
+      writeJson(CONFIG_FILE, { ...current, ...payload.config });
+    }
+  }
+
+  return getAdminMembershipsOverview();
+}
+
 // --- ADMIN OVERVIEW DASHBOARD DATA ---
 export function getAdminMembershipsOverview() {
   const members = readJson<MemberRecord[]>(MEMBERS_FILE, []).map(sanitizeMember);
@@ -1571,7 +2077,7 @@ export function getAdminMembershipsOverview() {
         customerName: o.customerName || m?.fullName || 'Unknown',
         customerEmail: o.customerEmail || m?.email || 'Unknown',
         customerPhone: o.customerPhone || m?.phone || '—',
-        hasProof: Boolean(o.proofFileName),
+        hasProof: Boolean(o.proofFileName || o.proofDataUrl),
       };
     })
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
@@ -1580,9 +2086,9 @@ export function getAdminMembershipsOverview() {
     const m = memberById.get(sub.memberId);
     return {
       ...sub,
-      customerName: m?.fullName || 'Unknown',
-      customerEmail: m?.email || 'Unknown',
-      customerPhone: m?.phone || '—',
+      customerName: m?.fullName || sub.customerName || 'Unknown',
+      customerEmail: m?.email || sub.customerEmail || 'Unknown',
+      customerPhone: m?.phone || sub.customerPhone || '—',
     };
   });
 
@@ -1590,6 +2096,7 @@ export function getAdminMembershipsOverview() {
   const emailNotifications = readJson<EmailNotificationLog[]>(EMAIL_NOTIFS_FILE, []).map(
     ({ html: _omitHtml, ...rest }) => rest
   );
+  const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []).slice(0, 200);
 
   const metrics = {
     totalMembers: members.length,
@@ -1607,6 +2114,7 @@ export function getAdminMembershipsOverview() {
     members,
     requests: orders,
     memberships: enrichedMemberships,
+    history,
     auditLogs: auditLogs.slice(0, 120),
     emailNotifications: emailNotifications.slice(0, 100),
     config: getMembershipConfig(),

@@ -1,0 +1,733 @@
+{
+  "entities": {
+    "AdminProfile": {
+      "title": "AdminProfile",
+      "description": "Authorized FEVIQO administrator record synced with Firestore for verification and membership management.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Authentication UID of the administrator."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 200,
+          "description": "Verified administrator email address."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Display name of the administrator."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"],
+          "description": "Administrator role identifier."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the administrator account is currently active."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the admin record was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the admin record was last updated."
+        }
+      },
+      "required": ["uid", "email", "name", "role", "isActive", "createdAt", "updatedAt"]
+    },
+    "MemberAccount": {
+      "title": "MemberAccount",
+      "description": "FEVIQO customer account profile with isolated PII accessible only to the owning member or an active administrator.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Canonical FEVIQO member identifier."
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the member or admin_assigned marker when created by admin."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 200,
+          "description": "Member email address."
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120,
+          "description": "Customer full name."
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32,
+          "description": "Customer WhatsApp or mobile number."
+        },
+        "passwordHash": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 300,
+          "description": "Salted PBKDF2 hash when registered via email and password."
+        },
+        "createdAtIso": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64,
+          "description": "ISO-8601 creation timestamp."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the member document was written."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the member document was last updated."
+        }
+      },
+      "required": ["id", "ownerUid", "email", "fullName", "phone", "createdAtIso", "createdAt", "updatedAt"]
+    },
+    "MembershipOrder": {
+      "title": "MembershipOrder",
+      "description": "Customer Bank QR checkout request and payment proof submission in the admin verification queue.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique payment request ID."
+        },
+        "memberId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Associated FEVIQO member ID."
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the customer who owns the order."
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "customerEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 200
+        },
+        "customerPhone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "planId": {
+          "type": "string",
+          "enum": ["starter", "standard", "plus", "vip"]
+        },
+        "planName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "amountPkr": {
+          "type": "number"
+        },
+        "durationDays": {
+          "type": "number"
+        },
+        "selectedDramaIds": {
+          "type": "array",
+          "description": "Selected eligible drama IDs (1 to 10 entries)."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["awaiting_payment", "pending_verification", "approved", "rejected", "expired"]
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "qrImageUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512
+        },
+        "proofFileName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 256
+        },
+        "proofOriginalName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 256
+        },
+        "proofMimeType": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "proofDataUrl": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 800000,
+          "description": "Compressed data URL of the payment screenshot under 800KB so it persists across restarts."
+        },
+        "proofSubmittedAt": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "paymentNote": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "rejectionReason": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "reviewedByAdminId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "reviewedByAdminEmail": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "reviewedAt": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "paidAt": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "createdAtIso": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "updatedAtIso": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "memberId",
+        "ownerUid",
+        "customerName",
+        "customerEmail",
+        "planId",
+        "planName",
+        "amountPkr",
+        "durationDays",
+        "selectedDramaIds",
+        "status",
+        "provider",
+        "createdAtIso",
+        "updatedAtIso",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CustomerMembership": {
+      "title": "CustomerMembership",
+      "description": "Active, expired, or cancelled customer membership record activated by admin approval or direct assignment.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "memberId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "orderId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "customerEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 200
+        },
+        "customerPhone": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "planId": {
+          "type": "string",
+          "enum": ["starter", "standard", "plus", "vip"]
+        },
+        "planName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "pricePkr": {
+          "type": "number"
+        },
+        "durationDays": {
+          "type": "number"
+        },
+        "selectedDramaIds": {
+          "type": "array"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "cancelled", "expired"]
+        },
+        "activatedAt": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "expiresAt": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "cancelledAt": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "revokedByAdminEmail": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "revokedReason": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "approvedByAdminEmail": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
+        "paymentProvider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "paymentReference": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 400
+        },
+        "createdAtIso": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "memberId",
+        "ownerUid",
+        "orderId",
+        "customerName",
+        "customerEmail",
+        "planId",
+        "planName",
+        "pricePkr",
+        "durationDays",
+        "selectedDramaIds",
+        "status",
+        "activatedAt",
+        "expiresAt",
+        "paymentProvider",
+        "createdAtIso",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MembershipHistoryItem": {
+      "title": "MembershipHistoryItem",
+      "description": "Immutable activity log entry for a customer membership lifecycle event.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "memberId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "membershipId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "orderId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "event": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "planId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "planName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "amountPkr": {
+          "type": "number"
+        },
+        "selectedDramaIds": {
+          "type": "array"
+        },
+        "details": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "createdAtIso": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "memberId", "ownerUid", "event", "details", "createdAtIso", "createdAt"]
+    },
+    "MembershipSettings": {
+      "title": "MembershipSettings",
+      "description": "Admin-managed Bank QR images, WhatsApp support digits, and verification copy.",
+      "type": "object",
+      "properties": {
+        "starterQrImage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "standardQrImage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "plusQrImage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "vipQrImage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "whatsappNumber": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 40
+        },
+        "adminEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 200
+        },
+        "supportEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 200
+        },
+        "supportNoteEn": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "supportNoteUr": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "updatedAtIso": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "starterQrImage",
+        "standardQrImage",
+        "plusQrImage",
+        "vipQrImage",
+        "adminEmail",
+        "supportEmail",
+        "updatedAtIso",
+        "updatedAt"
+      ]
+    },
+    "AdminAuditItem": {
+      "title": "AdminAuditItem",
+      "description": "Immutable administrator audit trail entry.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "adminId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "adminEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 200
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "targetId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "details": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "createdAtIso": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "adminId", "adminEmail", "action", "details", "createdAtIso", "createdAt"]
+    },
+    "EmailNotificationItem": {
+      "title": "EmailNotificationItem",
+      "description": "Admin record of outbound payment and membership verification email notifications.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "orderId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "to": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 200
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "status": {
+          "type": "string",
+          "enum": ["sent", "failed"]
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "error": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1000
+        },
+        "attempts": {
+          "type": "number"
+        },
+        "createdAtIso": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "lastAttemptAt": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "to",
+        "subject",
+        "type",
+        "status",
+        "attempts",
+        "createdAtIso",
+        "lastAttemptAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminProfile" },
+      "description": "Authorized FEVIQO administrators keyed by Firebase Auth UID."
+    },
+    "/members/{memberId}": {
+      "schema": { "$ref": "#/entities/MemberAccount" },
+      "description": "Customer member accounts with strict owner or admin PII isolation."
+    },
+    "/membershipOrders/{orderId}": {
+      "schema": { "$ref": "#/entities/MembershipOrder" },
+      "description": "Payment verification queue orders and compressed proof screenshots."
+    },
+    "/memberships/{membershipId}": {
+      "schema": { "$ref": "#/entities/CustomerMembership" },
+      "description": "Approved and admin-assigned customer memberships."
+    },
+    "/membershipHistory/{historyId}": {
+      "schema": { "$ref": "#/entities/MembershipHistoryItem" },
+      "description": "Immutable customer membership lifecycle audit events."
+    },
+    "/membershipConfig/{configId}": {
+      "schema": { "$ref": "#/entities/MembershipSettings" },
+      "description": "Admin-managed Bank QR and support configuration."
+    },
+    "/adminAuditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AdminAuditItem" },
+      "description": "Immutable administrator action audit trail."
+    },
+    "/emailNotifications/{notifId}": {
+      "schema": { "$ref": "#/entities/EmailNotificationItem" },
+      "description": "Outbound verification email delivery logs."
+    }
+  }
+}

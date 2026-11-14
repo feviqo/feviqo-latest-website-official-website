@@ -52,6 +52,7 @@ import { AppRoute, PreselectedPlan } from './types';
 import { initializeAssetSync } from './services/assetService';
 import { findVideoItem } from './data/videoRegistry';
 import SEOHead from './seo/SEOHead';
+import { testFirestoreConnection } from './firebase';
 
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
@@ -192,6 +193,7 @@ export default function App() {
     window.addEventListener('popstate', handleUrlStateAndVideo);
     window.addEventListener('keydown', handleKeyDown);
     initializeAssetSync();
+    testFirestoreConnection().catch(() => {});
     return () => {
       window.removeEventListener('popstate', handleUrlStateAndVideo);
       window.removeEventListener('keydown', handleKeyDown);

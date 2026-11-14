@@ -66,10 +66,13 @@ import {
   approvePaymentRequest,
   rejectPaymentRequest,
   revokeMembershipByAdmin,
+  assignMembershipByAdmin,
+  mergeCloudSyncSnapshot,
   getAdminMembershipsOverview,
   getAdminAuthStatus,
   bootstrapFirstAdmin,
   loginAdmin,
+  loginAdminWithGoogle,
   verifyAdminSessionToken,
   createAdditionalAdmin,
   toggleAdminActiveStatus,
@@ -79,8 +82,10 @@ import {
   appendAdminAudit,
   cancelMemberSubscription,
   authorizeEpisodePlayback,
+  upsertGoogleMember,
   SafeAdmin,
 } from './server/membershipStore';
+import { verifyFirebaseIdToken } from './server/firestoreAdmin';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -190,9 +195,16 @@ app.use(express.urlencoded({ limit: '2048mb', extended: true }));
 
 // Enable global CORS & cellular network compatibility headers
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Vary', 'Origin');
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Authorization');
   
   // Explicitly clear QUIC/UDP advertisement so mobile browsers use stable TCP/TLS HTTP/2
   res.setHeader('Alt-Svc', 'clear');
@@ -3020,10 +3032,21 @@ function parseCookiesMap(req: express.Request): Record<string, string> {
   return out;
 }
 
+function isHttpsRequest(req: express.Request): boolean {
+  const xfProto = String(req.headers['x-forwarded-proto'] || '')
+    .split(',')[0]
+    .trim()
+    .toLowerCase();
+  return req.secure || xfProto === 'https';
+}
+
 function extractMemberToken(req: express.Request): string | undefined {
   const authHeader = req.headers.authorization;
   if (authHeader && /^Bearer\s+/i.test(authHeader)) {
     return authHeader.replace(/^Bearer\s+/i, '').trim();
+  }
+  if (typeof req.query.authToken === 'string' && req.query.authToken.trim()) {
+    return req.query.authToken.trim();
   }
   const cookies = parseCookiesMap(req);
   return cookies[MEMBER_COOKIE_NAME];
@@ -3035,29 +3058,50 @@ function getAuthenticatedMemberId(req: express.Request): string | null {
   return parsed?.memberId || null;
 }
 
-function getAuthenticatedAdmin(req: express.Request): SafeAdmin | null {
+function extractAdminToken(req: express.Request): string | undefined {
+  const adminHeader = req.headers['x-admin-authorization'];
+  if (typeof adminHeader === 'string' && adminHeader.trim()) {
+    return adminHeader.replace(/^Bearer\s+/i, '').trim();
+  }
+  const authHeader = req.headers.authorization;
+  if (authHeader && /^Bearer\s+/i.test(authHeader)) {
+    const candidate = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (verifyAdminSessionToken(candidate)) {
+      return candidate;
+    }
+  }
+  if (typeof req.query.authToken === 'string' && req.query.authToken.trim()) {
+    const candidate = req.query.authToken.trim();
+    if (verifyAdminSessionToken(candidate)) {
+      return candidate;
+    }
+  }
   const cookies = parseCookiesMap(req);
-  const adminToken = cookies[ADMIN_COOKIE_NAME];
+  return cookies[ADMIN_COOKIE_NAME];
+}
+
+function getAuthenticatedAdmin(req: express.Request): SafeAdmin | null {
+  const adminToken = extractAdminToken(req);
   return verifyAdminSessionToken(adminToken);
 }
 
-function setMemberSessionCookie(res: express.Response, token: string): void {
-  const isProd = process.env.NODE_ENV === 'production';
+function setMemberSessionCookie(req: express.Request, res: express.Response, token: string): void {
+  const isHttps = isHttpsRequest(req);
   res.cookie(MEMBER_COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: isProd,
+    sameSite: isHttps ? 'none' : 'lax',
+    secure: isHttps,
     maxAge: 30 * 24 * 60 * 60 * 1000,
     path: '/',
   });
 }
 
-function setAdminSessionCookie(res: express.Response, token: string): void {
-  const isProd = process.env.NODE_ENV === 'production';
+function setAdminSessionCookie(req: express.Request, res: express.Response, token: string): void {
+  const isHttps = isHttpsRequest(req);
   res.cookie(ADMIN_COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: isProd,
+    sameSite: isHttps ? 'none' : 'lax',
+    secure: isHttps,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/',
   });
@@ -3170,7 +3214,7 @@ app.post('/api/membership/register', (req, res) => {
     if ('error' in result) {
       return res.status(result.statusCode || 400).json({ success: false, error: result.error });
     }
-    setMemberSessionCookie(res, result.token);
+    setMemberSessionCookie(req, res, result.token);
     const account = getMemberAccountState(result.member.id);
     return res.status(201).json({
       success: true,
@@ -3189,7 +3233,7 @@ app.post('/api/membership/login', (req, res) => {
     if ('error' in result) {
       return res.status(401).json({ success: false, error: result.error });
     }
-    setMemberSessionCookie(res, result.token);
+    setMemberSessionCookie(req, res, result.token);
     const account = getMemberAccountState(result.member.id);
     return res.json({
       success: true,
@@ -3198,6 +3242,37 @@ app.post('/api/membership/login', (req, res) => {
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to sign in.' });
+  }
+});
+
+app.post('/api/membership/google-auth', async (req, res) => {
+  try {
+    const { idToken, fullName, phone } = req.body || {};
+    const decoded = await verifyFirebaseIdToken(idToken);
+    if (!decoded || !decoded.email || !decoded.email_verified) {
+      return res.status(401).json({
+        success: false,
+        error: 'Verified Google account authentication is required.',
+      });
+    }
+    const result = upsertGoogleMember({
+      uid: decoded.uid,
+      email: decoded.email,
+      fullName: decoded.name || fullName,
+      phone,
+    });
+    if ('error' in result) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    setMemberSessionCookie(req, res, result.token);
+    const account = getMemberAccountState(result.member.id);
+    return res.json({
+      success: true,
+      token: result.token,
+      ...account,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Google sign-in verification failed.' });
   }
 });
 
@@ -3301,6 +3376,7 @@ app.post(
         fileBuffer: file.buffer,
         originalName: file.originalname,
         paymentNote: req.body?.paymentNote,
+        proofDataUrl: req.body?.proofDataUrl,
       });
 
       if ('error' in submission) {
@@ -3458,9 +3534,10 @@ app.post('/api/admin/auth/bootstrap', (req, res) => {
     if ('error' in result) {
       return res.status(result.statusCode).json({ success: false, error: result.error });
     }
-    setAdminSessionCookie(res, result.token);
+    setAdminSessionCookie(req, res, result.token);
     return res.status(201).json({
       success: true,
+      token: result.token,
       admin: result.admin,
     });
   } catch {
@@ -3475,13 +3552,43 @@ app.post('/api/admin/auth/login', (req, res) => {
     if ('error' in result) {
       return res.status(result.statusCode).json({ success: false, error: result.error });
     }
-    setAdminSessionCookie(res, result.token);
+    setAdminSessionCookie(req, res, result.token);
     return res.json({
       success: true,
+      token: result.token,
       admin: result.admin,
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Administrator sign-in failed.' });
+  }
+});
+
+app.post('/api/admin/auth/google', async (req, res) => {
+  try {
+    const { idToken } = req.body || {};
+    const decoded = await verifyFirebaseIdToken(idToken);
+    if (!decoded || !decoded.email || !decoded.email_verified) {
+      return res.status(401).json({
+        success: false,
+        error: 'Verified Google account sign-in is required.',
+      });
+    }
+    const result = loginAdminWithGoogle({
+      uid: decoded.uid,
+      email: decoded.email,
+      name: decoded.name,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    setAdminSessionCookie(req, res, result.token);
+    return res.json({
+      success: true,
+      token: result.token,
+      admin: result.admin,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Google administrator sign-in failed.' });
   }
 });
 
@@ -3606,6 +3713,93 @@ app.post('/api/admin/memberships/requests/:orderId/reject', requireAdmin, async 
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to reject payment request.' });
+  }
+});
+
+app.post('/api/admin/memberships/assign', requireAdmin, async (req: any, res) => {
+  try {
+    const {
+      fullName,
+      email,
+      phone,
+      password,
+      planId,
+      selectedDramaIds,
+      durationDays,
+      paymentNote,
+    } = req.body || {};
+
+    const result = assignMembershipByAdmin({
+      fullName,
+      email,
+      phone,
+      password,
+      planId,
+      selectedDramaIds,
+      durationDays: durationDays ? Number(durationDays) : undefined,
+      paymentNote,
+      admin: req.admin,
+    });
+
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+
+    const { member, order, membership } = result;
+    const dramaTitles = membership.selectedDramaIds
+      .map((id) => getDramaById(id)?.title || id)
+      .join(', ');
+
+    if (member?.email) {
+      const customerEmailHtml = `
+        <div style="font-family:Inter,Arial,sans-serif;background:#F8FAFC;padding:24px;color:#0B0B0D;">
+          <div style="max-width:580px;margin:0 auto;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:28px;">
+            <div style="font-size:12px;font-weight:700;color:#16A34A;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+              FEVIQO Premium Membership Active
+            </div>
+            <h2 style="margin:0 0 12px 0;font-size:20px;color:#0B0B0D;">
+              Your membership has been activated
+            </h2>
+            <p style="font-size:14px;color:#475569;line-height:1.6;">
+              Hello ${escapeHtml(member.fullName)}, your ${escapeHtml(membership.planName)} membership (${membership.durationDays} Days) is now active on your FEVIQO account.
+            </p>
+            <p style="font-size:13px;color:#334155;">
+              <strong>Included Dramas:</strong> ${escapeHtml(dramaTitles)}<br/>
+              <strong>Valid Until:</strong> ${escapeHtml(membership.expiresAt)}
+            </p>
+          </div>
+        </div>
+      `;
+      dispatchTrackedEmail({
+        orderId: order.id,
+        to: member.email,
+        subject: `FEVIQO Membership Activated — ${membership.planName}`,
+        html: customerEmailHtml,
+        type: 'member_payment_approved',
+      }).catch(() => {});
+    }
+
+    return res.status(201).json({
+      success: true,
+      member,
+      order,
+      membership,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to assign customer membership.' });
+  }
+});
+
+app.post('/api/admin/memberships/sync', requireAdmin, (req: any, res) => {
+  try {
+    const overview = mergeCloudSyncSnapshot(req.body || {});
+    return res.json({
+      success: true,
+      overview,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to synchronize cloud membership state.' });
   }
 });
 
