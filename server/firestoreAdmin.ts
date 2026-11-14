@@ -101,6 +101,22 @@ function getAdminFirestoreDb(): Firestore | null {
   }
 }
 
+export function isServerFirestoreEnabled(): boolean {
+  if (firestoreWriteDisabled) return false;
+  getFirebaseAdminApp();
+  return hasExplicitServiceAccount && Boolean(getAdminFirestoreDb());
+}
+
+function toIso(val: unknown): string | undefined {
+  if (!val) return undefined;
+  if (typeof val === 'string') return val;
+  if (val instanceof Timestamp) return val.toDate().toISOString();
+  if (typeof (val as any).toDate === 'function') {
+    return (val as any).toDate().toISOString();
+  }
+  return undefined;
+}
+
 export async function mirrorDocToFirestoreServer(
   collectionName: string,
   docId: string,
@@ -109,14 +125,18 @@ export async function mirrorDocToFirestoreServer(
   const db = getAdminFirestoreDb();
   if (!db) return;
   try {
+    const cleanData: Record<string, any> = {};
+    for (const [k, v] of Object.entries(data)) {
+      if (v !== undefined) cleanData[k] = v;
+    }
     const now = Timestamp.now();
     await db
       .collection(collectionName)
       .doc(docId)
       .set(
         {
-          ...data,
-          createdAt: data.createdAt instanceof Timestamp ? data.createdAt : now,
+          ...cleanData,
+          createdAt: cleanData.createdAt instanceof Timestamp ? cleanData.createdAt : now,
           updatedAt: now,
         },
         { merge: true }
@@ -124,6 +144,86 @@ export async function mirrorDocToFirestoreServer(
   } catch (err: any) {
     if (err?.code === 7 || String(err?.message || '').includes('PERMISSION_DENIED')) {
       firestoreWriteDisabled = true;
+    } else {
+      console.warn(`[FirestoreAdmin] Mirror failed for ${collectionName}/${docId}:`, err?.message || err);
     }
+  }
+}
+
+export async function pullSnapshotFromFirestoreServer(): Promise<{
+  members: any[];
+  orders: any[];
+  memberships: any[];
+  history: any[];
+  config: Record<string, any> | null;
+} | null> {
+  const db = getAdminFirestoreDb();
+  if (!db) return null;
+  try {
+    const [membersSnap, ordersSnap, subsSnap, histSnap, cfgSnap] = await Promise.all([
+      db.collection('members').get(),
+      db.collection('membershipOrders').get(),
+      db.collection('memberships').get(),
+      db.collection('membershipHistory').get(),
+      db.collection('membershipConfig').doc('public').get(),
+    ]);
+
+    const members = membersSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: data.id || d.id,
+        ownerUid: data.ownerUid,
+        email: data.email || '',
+        fullName: data.fullName || 'FEVIQO Member',
+        phone: data.phone || '',
+        createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
+        updatedAt: toIso(data.updatedAtIso || data.updatedAt) || new Date().toISOString(),
+      };
+    });
+
+    const orders = ordersSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        ...data,
+        id: data.id || d.id,
+        createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
+        updatedAt: toIso(data.updatedAtIso || data.updatedAt) || new Date().toISOString(),
+      };
+    });
+
+    const memberships = subsSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        ...data,
+        id: data.id || d.id,
+        createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
+      };
+    });
+
+    const history = histSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        ...data,
+        id: data.id || d.id,
+        createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
+      };
+    });
+
+    let config: Record<string, any> | null = null;
+    if (cfgSnap.exists) {
+      const data = cfgSnap.data() || {};
+      config = {
+        ...data,
+        updatedAt: toIso(data.updatedAtIso || data.updatedAt) || new Date().toISOString(),
+      };
+    }
+
+    return { members, orders, memberships, history, config };
+  } catch (err: any) {
+    if (err?.code === 7 || String(err?.message || '').includes('PERMISSION_DENIED')) {
+      firestoreWriteDisabled = true;
+    }
+    console.warn('[FirestoreAdmin] Pull snapshot failed:', err?.message || err);
+    return null;
   }
 }

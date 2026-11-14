@@ -8,6 +8,11 @@ import {
   getPlanById,
   getDramaById,
 } from '../src/data/membershipCatalog';
+import {
+  isServerFirestoreEnabled,
+  mirrorDocToFirestoreServer,
+  pullSnapshotFromFirestoreServer,
+} from './firestoreAdmin';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const PRIVATE_PROOFS_DIR = path.join(DATA_DIR, 'private_proofs');
@@ -53,9 +58,12 @@ const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
   },
 };
 
+export type MemberAuthMethod = 'google' | 'email' | 'admin_assigned';
+
 export interface MemberRecord {
   id: string;
   ownerUid?: string;
+  authMethod?: MemberAuthMethod;
   email: string;
   fullName: string;
   phone: string;
@@ -67,6 +75,7 @@ export interface MemberRecord {
 export interface SafeMember {
   id: string;
   ownerUid?: string;
+  authMethod: MemberAuthMethod;
   email: string;
   fullName: string;
   phone: string;
@@ -399,10 +408,26 @@ export function verifyAdminSessionToken(token: string | undefined): SafeAdmin | 
   }
 }
 
+function inferMemberAuthMethod(member: Pick<MemberRecord, 'ownerUid' | 'authMethod'>): MemberAuthMethod {
+  if (member.authMethod) return member.authMethod;
+  if (
+    member.ownerUid &&
+    member.ownerUid !== 'admin_assigned' &&
+    member.ownerUid !== 'email_member'
+  ) {
+    return 'google';
+  }
+  if (member.ownerUid === 'admin_assigned') {
+    return 'admin_assigned';
+  }
+  return 'email';
+}
+
 function sanitizeMember(member: MemberRecord): SafeMember {
   return {
     id: member.id,
     ownerUid: member.ownerUid,
+    authMethod: inferMemberAuthMethod(member),
     email: member.email,
     fullName: member.fullName,
     phone: member.phone || '',
@@ -422,6 +447,47 @@ function sanitizeAdmin(admin: AdminRecord): SafeAdmin {
   };
 }
 
+function mirrorMemberServer(member: SafeMember) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('members', member.id, {
+    id: member.id,
+    ownerUid: member.ownerUid || 'email_member',
+    email: member.email,
+    fullName: member.fullName,
+    phone: member.phone || '',
+    createdAtIso: member.createdAt,
+    updatedAtIso: new Date().toISOString(),
+  });
+}
+
+function mirrorOrderServer(order: MembershipOrder) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('membershipOrders', order.id, {
+    ...order,
+    ownerUid: order.ownerUid || 'email_member',
+    createdAtIso: order.createdAt,
+    updatedAtIso: order.updatedAt,
+  });
+}
+
+function mirrorMembershipServer(sub: MembershipRecord) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('memberships', sub.id, {
+    ...sub,
+    ownerUid: sub.ownerUid || 'admin_assigned',
+    createdAtIso: sub.createdAt,
+    updatedAtIso: new Date().toISOString(),
+  });
+}
+
+function mirrorConfigServer(cfg: MembershipConfig) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('membershipConfig', 'public', {
+    ...cfg,
+    updatedAtIso: cfg.updatedAt,
+  });
+}
+
 function appendHistory(entry: Omit<MembershipHistoryEntry, 'id' | 'createdAt'>): MembershipHistoryEntry {
   const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []);
   const item: MembershipHistoryEntry = {
@@ -432,6 +498,13 @@ function appendHistory(entry: Omit<MembershipHistoryEntry, 'id' | 'createdAt'>):
   history.unshift(item);
   if (history.length > 2500) history.length = 2500;
   writeJson(HISTORY_FILE, history);
+  if (isServerFirestoreEnabled()) {
+    void mirrorDocToFirestoreServer('membershipHistory', item.id, {
+      ...item,
+      ownerUid: 'server_sync',
+      createdAtIso: item.createdAt,
+    });
+  }
   return item;
 }
 
@@ -559,6 +632,7 @@ export function updateMembershipConfig(params: {
   };
 
   writeJson(CONFIG_FILE, next);
+  mirrorConfigServer(next);
   appendAdminAudit({
     adminId: params.admin.id,
     adminEmail: params.admin.email,
@@ -599,6 +673,7 @@ export function saveUploadedQrImage(params: {
     updatedAt: new Date().toISOString(),
   };
   writeJson(CONFIG_FILE, next);
+  mirrorConfigServer(next);
 
   appendAdminAudit({
     adminId: params.admin.id,
@@ -962,6 +1037,8 @@ export function registerMember(params: {
   const now = new Date().toISOString();
   const newMember: MemberRecord = {
     id: `mem-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+    ownerUid: 'email_member',
+    authMethod: 'email',
     email,
     fullName,
     phone: phoneCheck.phone,
@@ -980,6 +1057,7 @@ export function registerMember(params: {
   });
 
   const safe = sanitizeMember(newMember);
+  mirrorMemberServer(safe);
   return { success: true, member: safe, token: createMemberSessionToken(safe) };
 }
 
@@ -1022,8 +1100,17 @@ export function upsertGoogleMember(params: {
   if (existingIdx !== -1) {
     const existing = members[existingIdx];
     let updated = false;
-    if (!existing.ownerUid && params.uid) {
+    if (
+      params.uid &&
+      (!existing.ownerUid ||
+        existing.ownerUid === 'email_member' ||
+        existing.ownerUid === 'admin_assigned')
+    ) {
       existing.ownerUid = params.uid;
+      existing.authMethod = 'google';
+      updated = true;
+    } else if (existing.authMethod !== 'google') {
+      existing.authMethod = 'google';
       updated = true;
     }
     if ((!existing.fullName || existing.fullName === 'FEVIQO Member') && params.fullName?.trim()) {
@@ -1040,12 +1127,14 @@ export function upsertGoogleMember(params: {
       writeJson(MEMBERS_FILE, members);
     }
     const safe = sanitizeMember(existing);
+    if (updated) mirrorMemberServer(safe);
     return { success: true, member: safe, token: createMemberSessionToken(safe) };
   }
 
   const newMember: MemberRecord = {
     id: `mem-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
     ownerUid: params.uid,
+    authMethod: 'google',
     email,
     fullName: (params.fullName || email.split('@')[0] || 'FEVIQO Member').trim().slice(0, 120),
     phone: (params.phone || '').trim().slice(0, 32),
@@ -1064,6 +1153,7 @@ export function upsertGoogleMember(params: {
   });
 
   const safe = sanitizeMember(newMember);
+  mirrorMemberServer(safe);
   return { success: true, member: safe, token: createMemberSessionToken(safe) };
 }
 
@@ -1288,6 +1378,7 @@ export async function createMembershipCheckoutOrder(params: {
   const orders = readAllOrders();
   orders.unshift(order);
   writeJson(ORDERS_FILE, orders);
+  mirrorOrderServer(order);
 
   appendHistory({
     memberId: member.id,
@@ -1396,6 +1487,7 @@ export function submitOrderPaymentProof(params: {
   order.updatedAt = nowIso;
   orders[idx] = order;
   writeJson(ORDERS_FILE, orders);
+  mirrorOrderServer(order);
 
   appendHistory({
     memberId: member.id,
@@ -1543,6 +1635,8 @@ export function approvePaymentRequest(params: {
 
   memberships.unshift(newMembership);
   writeJson(MEMBERSHIPS_FILE, memberships);
+  mirrorOrderServer(order);
+  mirrorMembershipServer(newMembership);
 
   appendHistory({
     memberId: order.memberId,
@@ -1608,6 +1702,7 @@ export function rejectPaymentRequest(params: {
   order.updatedAt = nowIso;
   orders[idx] = order;
   writeJson(ORDERS_FILE, orders);
+  mirrorOrderServer(order);
 
   appendHistory({
     memberId: order.memberId,
@@ -1658,6 +1753,7 @@ export function revokeMembershipByAdmin(params: {
   all[idx].revokedByAdminEmail = params.admin.email;
   all[idx].revokedReason = reason;
   writeJson(MEMBERSHIPS_FILE, all);
+  mirrorMembershipServer(all[idx]);
 
   appendHistory({
     memberId: all[idx].memberId,
@@ -1867,6 +1963,9 @@ export function assignMembershipByAdmin(params: {
 
   memberships.unshift(newMembership);
   writeJson(MEMBERSHIPS_FILE, memberships);
+  mirrorMemberServer(safeMember);
+  mirrorOrderServer(order);
+  mirrorMembershipServer(newMembership);
 
   appendHistory({
     memberId: member.id,
@@ -2119,7 +2218,32 @@ export function getAdminMembershipsOverview() {
     emailNotifications: emailNotifications.slice(0, 100),
     config: getMembershipConfig(),
     admins: listAdmins(),
+    serverCloudConnected: isServerFirestoreEnabled(),
   };
+}
+
+export async function hydrateStoreFromFirestore(): Promise<boolean> {
+  if (!isServerFirestoreEnabled()) return false;
+  const snap = await pullSnapshotFromFirestoreServer();
+  if (!snap) return false;
+  mergeCloudSyncSnapshot(snap);
+  return true;
+}
+
+export async function syncServerFirestoreSnapshot(): Promise<ReturnType<typeof getAdminMembershipsOverview>> {
+  if (isServerFirestoreEnabled()) {
+    const snap = await pullSnapshotFromFirestoreServer();
+    if (snap) {
+      mergeCloudSyncSnapshot(snap);
+    }
+    const overview = getAdminMembershipsOverview();
+    for (const m of overview.members) mirrorMemberServer(m);
+    for (const o of overview.requests) mirrorOrderServer(o);
+    for (const s of overview.memberships) mirrorMembershipServer(s);
+    mirrorConfigServer(overview.config);
+    return overview;
+  }
+  return getAdminMembershipsOverview();
 }
 
 // --- CANCEL & PLAYBACK ENTITLEMENT ---
@@ -2138,6 +2262,7 @@ export function cancelMemberSubscription(memberId: string): {
   all[idx].status = 'cancelled';
   all[idx].cancelledAt = nowIso;
   writeJson(MEMBERSHIPS_FILE, all);
+  mirrorMembershipServer(all[idx]);
 
   appendHistory({
     memberId,

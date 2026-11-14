@@ -28,6 +28,7 @@ import {
   AdminMembershipsOverview,
   MembershipOrder,
   SafeAdmin,
+  SafeMember,
   fetchAdminAuthStatus,
   bootstrapAdminAccount,
   loginAdminAccount,
@@ -63,7 +64,7 @@ interface MembershipAdminPageProps {
   onNavigatePage: (route: AppRoute) => void;
 }
 
-type AdminTab = 'requests' | 'memberships' | 'config' | 'audit' | 'roles';
+type AdminTab = 'requests' | 'memberships' | 'accounts' | 'config' | 'audit' | 'roles';
 
 export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   onBookCall,
@@ -95,6 +96,8 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const [requestSearch, setRequestSearch] = useState('');
   const [membershipStatusFilter, setMembershipStatusFilter] = useState<string>('all');
   const [membershipSearch, setMembershipSearch] = useState('');
+  const [accountAuthFilter, setAccountAuthFilter] = useState<'all' | 'google' | 'email' | 'admin_assigned'>('all');
+  const [accountSearch, setAccountSearch] = useState('');
 
   // Selected request detail & action state
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
@@ -356,6 +359,11 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     }
   };
 
+  const formatUnauthorizedDomainMessage = () => {
+    const host = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+    return `Domain "${host}" is not authorized for Google popup sign-in yet. Add "${host}" in Firebase Console → Authentication → Settings → Authorized domains (Project: double-foundation-r98sv), or set FIREBASE_SERVICE_ACCOUNT_JSON in your server environment variables for automatic zero-popup Cloud DB persistence.`;
+  };
+
   const handleGoogleAdminSignIn = async () => {
     setAuthError(null);
     setGoogleAuthLoading(true);
@@ -373,6 +381,8 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     } catch (err: any) {
       if (err?.code === 'auth/popup-closed-by-user') {
         setAuthError('Google sign-in popup was closed before finishing.');
+      } else if (err?.code === 'auth/unauthorized-domain') {
+        setAuthError(formatUnauthorizedDomainMessage());
       } else {
         setAuthError(err?.message || 'Google administrator sign-in failed.');
       }
@@ -384,16 +394,55 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const handleManualCloudSync = async () => {
     setFeedbackBanner(null);
     try {
+      if (overview?.serverCloudConnected && !isFirebaseAdminUser()) {
+        setCloudSyncing(true);
+        try {
+          const res = await syncAdminCloudState({
+            members: overview.members,
+            orders: overview.requests,
+            memberships: overview.memberships,
+            history: overview.history,
+            config: overview.config,
+          });
+          if ('error' in res) {
+            setFeedbackBanner({ type: 'error', text: res.error });
+          } else {
+            setOverview(res.overview);
+            syncSettingsFromOverview(res.overview);
+            setCloudSyncedAt(new Date().toISOString());
+            setFeedbackBanner({
+              type: 'success',
+              text: 'Server Cloud Firestore database synchronized successfully.',
+            });
+          }
+        } finally {
+          setCloudSyncing(false);
+        }
+        return;
+      }
+
       await runBidirectionalCloudSync({ interactive: true, seedOverview: overview });
       setFeedbackBanner({
         type: 'success',
         text: 'Cloud Firestore database synchronized successfully.',
       });
     } catch (err: any) {
-      setFeedbackBanner({
-        type: 'error',
-        text: err?.message || 'Could not sync with Cloud Firestore.',
-      });
+      if (err?.code === 'auth/unauthorized-domain') {
+        setFeedbackBanner({
+          type: 'error',
+          text: formatUnauthorizedDomainMessage(),
+        });
+      } else if (err?.code === 'auth/popup-closed-by-user') {
+        setFeedbackBanner({
+          type: 'error',
+          text: 'Google sign-in popup was closed before finishing Cloud Sync.',
+        });
+      } else {
+        setFeedbackBanner({
+          type: 'error',
+          text: err?.message || 'Could not sync with Cloud Firestore.',
+        });
+      }
     }
   };
 
@@ -495,12 +544,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     }
   };
 
-  const handleOpenAssignModal = () => {
+  const handleOpenAssignModal = (prefillMember?: SafeMember) => {
     const defaultPlan = MEMBERSHIP_PLANS.find((p) => p.id === 'vip') || MEMBERSHIP_PLANS[0];
-    setAssignExistingMemberId('');
-    setAssignFullName('');
-    setAssignEmail('');
-    setAssignPhone('');
+    setAssignExistingMemberId(prefillMember?.id || '');
+    setAssignFullName(prefillMember?.fullName || '');
+    setAssignEmail(prefillMember?.email || '');
+    setAssignPhone(prefillMember?.phone || '');
     setAssignPassword('');
     setAssignPlanId(defaultPlan.id);
     setAssignDurationDays(String(defaultPlan.durationDays));
@@ -596,6 +645,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setFeedbackBanner({ type: 'error', text: res.error });
       } else {
         setOverview(res.overview);
+        mirrorToCloudQuietly(res.overview);
         setFeedbackBanner({ type: 'success', text: `Updated Bank QR image for ${planId.toUpperCase()} plan.` });
       }
     } catch {
@@ -722,6 +772,39 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       m.planName.toLowerCase().includes(q)
     );
   });
+
+  const getMemberAuthMethod = (member: Pick<SafeMember, 'ownerUid' | 'authMethod'>): 'google' | 'email' | 'admin_assigned' => {
+    if (member.authMethod) return member.authMethod;
+    if (member.ownerUid && member.ownerUid !== 'admin_assigned' && member.ownerUid !== 'email_member') {
+      return 'google';
+    }
+    if (member.ownerUid === 'admin_assigned') return 'admin_assigned';
+    return 'email';
+  };
+
+  const memberByIdMap = new Map((overview?.members || []).map((m) => [m.id, m]));
+
+  const filteredAccounts = (overview?.members || []).filter((member) => {
+    const method = getMemberAuthMethod(member);
+    if (accountAuthFilter !== 'all' && method !== accountAuthFilter) return false;
+    if (!accountSearch.trim()) return true;
+    const q = accountSearch.toLowerCase();
+    return (
+      member.fullName.toLowerCase().includes(q) ||
+      member.email.toLowerCase().includes(q) ||
+      (member.phone || '').toLowerCase().includes(q)
+    );
+  });
+
+  const googleAccountsCount = (overview?.members || []).filter(
+    (m) => getMemberAuthMethod(m) === 'google'
+  ).length;
+  const emailAccountsCount = (overview?.members || []).filter(
+    (m) => getMemberAuthMethod(m) === 'email'
+  ).length;
+  const adminAssignedAccountsCount = (overview?.members || []).filter(
+    (m) => getMemberAuthMethod(m) === 'admin_assigned'
+  ).length;
 
   const formatDateTime = (iso?: string) => {
     if (!iso) return '—';
@@ -884,11 +967,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   <p className="text-xs text-zinc-500">
                     Signed in as <strong>{authenticatedAdmin.name}</strong> ({authenticatedAdmin.email})
                   </p>
-                  {firebaseAdminConnected ? (
+                  {firebaseAdminConnected || overview?.serverCloudConnected ? (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
                       <Cloud className="w-3 h-3" />
                       <span>
-                        Cloud DB Connected{cloudSyncedAt ? ` · Synced ${new Date(cloudSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                        Cloud DB Connected{overview?.serverCloudConnected && !firebaseAdminConnected ? ' (Server)' : ''}
+                        {cloudSyncedAt ? ` · Synced ${new Date(cloudSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
                       </span>
                     </span>
                   ) : (
@@ -906,7 +990,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   onClick={handleManualCloudSync}
                   disabled={cloudSyncing}
                   className={`px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition ${
-                    firebaseAdminConnected
+                    firebaseAdminConnected || overview?.serverCloudConnected
                       ? 'border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900'
                       : 'bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white'
                   }`}
@@ -915,7 +999,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   <span>
                     {cloudSyncing
                       ? 'Syncing Cloud...'
-                      : firebaseAdminConnected
+                      : firebaseAdminConnected || overview?.serverCloudConnected
                       ? 'Sync Cloud DB'
                       : 'Connect Cloud Sync'}
                   </span>
@@ -987,6 +1071,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 [
                   { id: 'requests', label: 'Payment Verification Queue', icon: CheckCircle2 },
                   { id: 'memberships', label: 'Customer Memberships', icon: Users },
+                  { id: 'accounts', label: 'Registered Accounts', icon: UserPlus },
                   { id: 'config', label: 'QR Codes & Settings', icon: Settings },
                   { id: 'audit', label: 'Email Logs & Audit Trail', icon: ClipboardList },
                   { id: 'roles', label: 'Admin Roles', icon: ShieldCheck },
@@ -1078,7 +1163,22 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                               {req.id}
                             </td>
                             <td className="py-3.5 px-4">
-                              <div className="font-semibold text-[#0B0B0D]">{req.customerName || 'Member'}</div>
+                              <div className="font-semibold text-[#0B0B0D] flex items-center gap-1.5">
+                                <span>{req.customerName || 'Member'}</span>
+                                {(() => {
+                                  const m = memberByIdMap.get(req.memberId);
+                                  const method = m
+                                    ? getMemberAuthMethod(m)
+                                    : req.ownerUid && req.ownerUid !== 'admin_assigned' && req.ownerUid !== 'email_member'
+                                    ? 'google'
+                                    : null;
+                                  return method === 'google' ? (
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                      Google
+                                    </span>
+                                  ) : null;
+                                })()}
+                              </div>
                               <div className="text-zinc-500">{req.customerEmail}</div>
                               {req.customerPhone && <div className="text-zinc-400">{req.customerPhone}</div>}
                             </td>
@@ -1167,7 +1267,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     </div>
                     <button
                       type="button"
-                      onClick={handleOpenAssignModal}
+                      onClick={() => handleOpenAssignModal()}
                       className="px-4 py-2 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer shrink-0"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -1199,7 +1299,22 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         filteredMemberships.map((m) => (
                           <tr key={m.id} className="hover:bg-zinc-50/70">
                             <td className="py-3.5 px-4">
-                              <div className="font-semibold text-[#0B0B0D]">{m.customerName}</div>
+                              <div className="font-semibold text-[#0B0B0D] flex items-center gap-1.5">
+                                <span>{m.customerName}</span>
+                                {(() => {
+                                  const member = memberByIdMap.get(m.memberId);
+                                  const method = member
+                                    ? getMemberAuthMethod(member)
+                                    : m.ownerUid && m.ownerUid !== 'admin_assigned' && m.ownerUid !== 'email_member'
+                                    ? 'google'
+                                    : null;
+                                  return method === 'google' ? (
+                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                      Google
+                                    </span>
+                                  ) : null;
+                                })()}
+                              </div>
                               <div className="text-zinc-500">{m.customerEmail}</div>
                               {m.customerPhone && <div className="text-zinc-400">{m.customerPhone}</div>}
                             </td>
@@ -1272,6 +1387,122 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                             </td>
                           </tr>
                         ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: REGISTERED ACCOUNTS & SIGN-IN METHOD (GOOGLE VS EMAIL) */}
+            {overview && activeTab === 'accounts' && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {[
+                      { id: 'all' as const, label: `All (${overview.members.length})` },
+                      { id: 'google' as const, label: `Google Sign-In (${googleAccountsCount})` },
+                      { id: 'email' as const, label: `Email & Password (${emailAccountsCount})` },
+                      { id: 'admin_assigned' as const, label: `Admin Created (${adminAssignedAccountsCount})` },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setAccountAuthFilter(f.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
+                          accountAuthFilter === f.id
+                            ? 'bg-[#22C55E] text-[#0B0B0D]'
+                            : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full sm:w-72">
+                    <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={accountSearch}
+                      onChange={(e) => setAccountSearch(e.target.value)}
+                      placeholder="Search account name, email, phone"
+                      className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-white border border-zinc-200 overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                      <tr>
+                        <th className="py-3.5 px-4">Customer</th>
+                        <th className="py-3.5 px-4">Sign-In Method</th>
+                        <th className="py-3.5 px-4">Membership Status</th>
+                        <th className="py-3.5 px-4">Joined</th>
+                        <th className="py-3.5 px-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100">
+                      {filteredAccounts.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="py-10 text-center text-zinc-500">
+                            No registered accounts match this filter yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAccounts.map((member) => {
+                          const method = getMemberAuthMethod(member);
+                          const activeSub = overview.memberships.find(
+                            (s) => s.memberId === member.id && s.status === 'active'
+                          );
+                          return (
+                            <tr key={member.id} className="hover:bg-zinc-50/70">
+                              <td className="py-3.5 px-4">
+                                <div className="font-semibold text-[#0B0B0D]">{member.fullName}</div>
+                                <div className="text-zinc-500">{member.email}</div>
+                                {member.phone && <div className="text-zinc-400">{member.phone}</div>}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                {method === 'google' ? (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                    <span>Google Sign-In</span>
+                                  </span>
+                                ) : method === 'admin_assigned' ? (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    Admin Created
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-zinc-100 text-zinc-700">
+                                    Email &amp; Password
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                {activeSub ? (
+                                  <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700">
+                                    {activeSub.planName} (Active)
+                                  </span>
+                                ) : (
+                                  <span className="text-zinc-400">No active plan</span>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 text-zinc-500 whitespace-nowrap">
+                                {formatDateTime(member.createdAt)}
+                              </td>
+                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenAssignModal(member)}
+                                  className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>Assign Plan</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

@@ -7,6 +7,7 @@ import {
 export interface SafeMember {
   id: string;
   ownerUid?: string;
+  authMethod?: 'google' | 'email' | 'admin_assigned';
   email: string;
   fullName: string;
   phone: string;
@@ -199,6 +200,7 @@ export interface AdminMembershipsOverview {
   emailNotifications: AdminEmailNotification[];
   config: MembershipConfig;
   admins: SafeAdmin[];
+  serverCloudConnected?: boolean;
 }
 
 const MEMBER_TOKEN_KEY = 'feviqo_member_token';

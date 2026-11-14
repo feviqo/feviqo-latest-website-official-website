@@ -31,7 +31,7 @@ services:
         value: SAMEORIGIN
       - path: /*
         name: Cross-Origin-Opener-Policy
-        value: same-origin
+        value: same-origin-allow-popups
       - path: /*
         name: Referrer-Policy
         value: strict-origin-when-cross-origin

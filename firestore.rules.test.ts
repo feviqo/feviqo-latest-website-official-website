@@ -2,7 +2,8 @@
  * FEVIQO Firestore Security Rules Test Specification (Dirty Dozen Adversarial Suite)
  * Run against Firebase Emulator Suite (@firebase/rules-unit-testing) when testing locally.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 
 export interface DirtyDozenCase {
   id: number;
@@ -181,9 +182,9 @@ export const DIRTY_DOZEN_PAYLOADS: DirtyDozenCase[] = [
 
 describe('FEVIQO Firestore Dirty Dozen Invariants', () => {
   it('defines all 12 adversarial payloads expecting PERMISSION_DENIED', () => {
-    expect(DIRTY_DOZEN_PAYLOADS).toHaveLength(12);
+    assert.equal(DIRTY_DOZEN_PAYLOADS.length, 12);
     for (const testCase of DIRTY_DOZEN_PAYLOADS) {
-      expect(testCase.expectedOutcome).toBe('PERMISSION_DENIED');
+      assert.equal(testCase.expectedOutcome, 'PERMISSION_DENIED');
     }
   });
 });

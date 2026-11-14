@@ -77,6 +77,12 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
         setError(
           isUrdu ? 'گوگل سائن ان مکمل ہونے سے پہلے بند ہو گیا۔' : 'Google sign-in popup was closed before completing.'
         );
+      } else if (err?.code === 'auth/unauthorized-domain') {
+        setError(
+          isUrdu
+            ? 'اس ڈومین پر گوگل سائن ان ابھی فعال نہیں ہے۔ براہ کرم نیچے ای میل اور پاس ورڈ استعمال کریں۔'
+            : 'Google sign-in is not yet enabled on this domain. Please use Email & Password below to create your account or sign in.'
+        );
       } else {
         setError(
           err?.message ||

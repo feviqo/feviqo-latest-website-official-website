@@ -68,6 +68,8 @@ import {
   revokeMembershipByAdmin,
   assignMembershipByAdmin,
   mergeCloudSyncSnapshot,
+  hydrateStoreFromFirestore,
+  syncServerFirestoreSnapshot,
   getAdminMembershipsOverview,
   getAdminAuthStatus,
   bootstrapFirstAdmin,
@@ -3791,9 +3793,10 @@ app.post('/api/admin/memberships/assign', requireAdmin, async (req: any, res) =>
   }
 });
 
-app.post('/api/admin/memberships/sync', requireAdmin, (req: any, res) => {
+app.post('/api/admin/memberships/sync', requireAdmin, async (req: any, res) => {
   try {
-    const overview = mergeCloudSyncSnapshot(req.body || {});
+    mergeCloudSyncSnapshot(req.body || {});
+    const overview = await syncServerFirestoreSnapshot();
     return res.json({
       success: true,
       overview,
@@ -4098,6 +4101,11 @@ try {
 
 // --- VITE DEV / PRODUCTION MIDDLEWARE ---
 async function startServer() {
+  try {
+    await hydrateStoreFromFirestore();
+  } catch (err) {
+    console.warn('Initial Firestore hydration skipped:', (err as Error)?.message || err);
+  }
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true, host: true, allowedHosts: true },
