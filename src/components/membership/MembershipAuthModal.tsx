@@ -7,7 +7,7 @@ import {
   authenticateMemberWithGoogle,
   MemberAccountState,
 } from '../../services/membershipService';
-import { auth, googleProvider } from '../../firebase';
+import { auth, googleProvider, checkGoogleDomainAuthorized } from '../../firebase';
 import { syncMemberAccountToFirestore } from '../../services/firestoreMembershipSync';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MEMBERSHIP_COPY } from '../../i18n/membershipTranslations';
@@ -37,12 +37,24 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleEnabledForDomain, setGoogleEnabledForDomain] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMode(initialMode);
     setError(null);
   }, [initialMode, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let active = true;
+    checkGoogleDomainAuthorized().then((allowed) => {
+      if (active) setGoogleEnabledForDomain(allowed);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -78,10 +90,11 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
           isUrdu ? 'گوگل سائن ان مکمل ہونے سے پہلے بند ہو گیا۔' : 'Google sign-in popup was closed before completing.'
         );
       } else if (err?.code === 'auth/unauthorized-domain') {
+        setGoogleEnabledForDomain(false);
         setError(
           isUrdu
-            ? 'اس ڈومین پر گوگل سائن ان ابھی فعال نہیں ہے۔ براہ کرم نیچے ای میل اور پاس ورڈ استعمال کریں۔'
-            : 'Google sign-in is not yet enabled on this domain. Please use Email & Password below to create your account or sign in.'
+            ? 'براہ کرم نیچے ای میل اور پاس ورڈ کے ساتھ جاری رکھیں۔'
+            : 'Please continue using Email & Password below.'
         );
       } else {
         setError(
@@ -215,49 +228,51 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
           )}
         </div>
 
-        {/* Google Sign-In Button */}
-        <div className="mt-5">
-          <button
-            type="button"
-            disabled={googleLoading || submitting}
-            onClick={handleGoogleSignIn}
-            className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 disabled:opacity-60 text-[#0B0B0D] text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 transition cursor-pointer"
-          >
-            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"
-              />
-            </svg>
-            <span>
-              {googleLoading
-                ? isUrdu
-                  ? 'گوگل سے منسلک ہو رہا ہے...'
-                  : 'Connecting Google...'
-                : isUrdu
-                ? 'گوگل کے ساتھ جاری رکھیں'
-                : 'Continue with Google'}
-            </span>
-          </button>
+        {/* Google Sign-In Button (auto-shown only on domains authorized in Firebase Auth) */}
+        {googleEnabledForDomain && (
+          <div className="mt-5">
+            <button
+              type="button"
+              disabled={googleLoading || submitting}
+              onClick={handleGoogleSignIn}
+              className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 disabled:opacity-60 text-[#0B0B0D] text-xs sm:text-sm font-semibold flex items-center justify-center gap-2.5 transition cursor-pointer"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24Z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14Z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96Z"
+                />
+              </svg>
+              <span>
+                {googleLoading
+                  ? isUrdu
+                    ? 'گوگل سے منسلک ہو رہا ہے...'
+                    : 'Connecting Google...'
+                  : isUrdu
+                  ? 'گوگل کے ساتھ جاری رکھیں'
+                  : 'Continue with Google'}
+              </span>
+            </button>
 
-          <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-wider text-zinc-400">
-            <div className="flex-1 h-px bg-zinc-200" />
-            <span>{isUrdu ? 'یا' : 'or'}</span>
-            <div className="flex-1 h-px bg-zinc-200" />
+            <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-wider text-zinc-400">
+              <div className="flex-1 h-px bg-zinc-200" />
+              <span>{isUrdu ? 'یا' : 'or'}</span>
+              <div className="flex-1 h-px bg-zinc-200" />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Clean segmented toggle */}
         <div className="mt-4 grid grid-cols-2 bg-zinc-100 p-1 rounded-xl">

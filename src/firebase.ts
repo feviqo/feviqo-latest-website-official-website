@@ -75,3 +75,38 @@ export async function testFirestoreConnection(): Promise<void> {
     }
   }
 }
+
+let cachedDomainAuthorized: boolean | null = null;
+let domainCheckPromise: Promise<boolean> | null = null;
+
+export async function checkGoogleDomainAuthorized(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  if (cachedDomainAuthorized !== null) return cachedDomainAuthorized;
+  if (domainCheckPromise) return domainCheckPromise;
+
+  domainCheckPromise = (async () => {
+    try {
+      const hostname = (window.location.hostname || '').toLowerCase();
+      if (!hostname) return true;
+      const res = await fetch(
+        `https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=${encodeURIComponent(firebaseConfig.apiKey)}`
+      );
+      if (!res.ok) return true;
+      const data = await res.json();
+      if (Array.isArray(data?.authorizedDomains)) {
+        const allowed = data.authorizedDomains.some(
+          (d: unknown) => typeof d === 'string' && d.toLowerCase() === hostname
+        );
+        cachedDomainAuthorized = allowed;
+        return allowed;
+      }
+      return true;
+    } catch {
+      return true;
+    } finally {
+      domainCheckPromise = null;
+    }
+  })();
+
+  return domainCheckPromise;
+}
