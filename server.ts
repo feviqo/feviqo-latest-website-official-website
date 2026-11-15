@@ -4401,6 +4401,7 @@ try {
       'https://feviqo.com/gunesin-dogdugu-yer/episode-7',
       'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
       'https://feviqo.com/dramas',
+      'https://feviqo.com/membership',
       'https://feviqo.com/sitemap.xml'
     ],
     reason: 'Server startup / IndexNow automated episode ping'

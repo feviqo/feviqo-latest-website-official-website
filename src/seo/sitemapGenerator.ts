@@ -114,7 +114,7 @@ export function generateSitemapXml(): string {
     let priority = '0.9';
     let changefreq = 'daily';
 
-    if (routeKey === '/') priority = '1.0';
+    if (routeKey === '/' || routeKey === '/membership') priority = '1.0';
     if (routeKey.includes('episode-')) priority = '1.0';
     if (['/privacy', '/terms'].includes(routeKey)) {
       priority = '0.5';
@@ -296,8 +296,12 @@ export function updateSitemapFiles(): void {
     const publicDir = path.join(process.cwd(), 'public');
     const xml = generateSitemapXml();
 
-    // Write ONLY public/sitemap.xml
+    // Write public/sitemap.xml and mirror to dist/sitemap.xml if dist/ exists
     fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), xml, 'utf-8');
+    const distDir = path.join(process.cwd(), 'dist');
+    if (fs.existsSync(distDir)) {
+      fs.writeFileSync(path.join(distDir, 'sitemap.xml'), xml, 'utf-8');
+    }
 
     // Clean up any stale sub-sitemap files in public/ if they exist
     const staleFiles = [

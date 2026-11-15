@@ -36,6 +36,13 @@
       "description": "1080p HD Turkish drama streaming portal with high-fidelity Urdu subtitles and story recaps.",
       "url": "https://feviqo.com/dramas",
       "tags": ["turkish-drama", "urdu-subtitles", "mehmed-fetihler-sultani", "teskilat"]
+    },
+    {
+      "id": "feviqo-premium-membership",
+      "name": "FEVIQO Premium Membership",
+      "description": "Starter, Standard, Plus, and VIP plans (PKR & USD) for Urdu-dubbed Turkish drama episode access.",
+      "url": "https://feviqo.com/membership",
+      "tags": ["membership", "urdu-dubbed", "turkish-dramas", "pricing"]
     }
   ],
   "endpoints": {

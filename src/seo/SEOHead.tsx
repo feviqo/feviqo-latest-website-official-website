@@ -314,6 +314,39 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
           "name": "Season 7"
         }
       });
+    } else if (pathname === '/membership') {
+      schemaGraph.push(
+        {
+          "@type": "Service",
+          "@id": "https://feviqo.com/membership#service",
+          "url": "https://feviqo.com/membership",
+          "name": "FEVIQO Premium Membership",
+          "serviceType": "Streaming Membership Subscription",
+          "provider": {
+            "@id": "https://feviqo.com/#organization"
+          },
+          "description": config.metaDescription,
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "FEVIQO Premium Membership Plans",
+            "itemListElement": [
+              { "@type": "Offer", "name": "Starter Plan (15 Days, 1 Drama)", "priceCurrency": "USD", "price": "1.20" },
+              { "@type": "Offer", "name": "Standard Plan (30 Days, 1 Drama)", "priceCurrency": "USD", "price": "2.50" },
+              { "@type": "Offer", "name": "Plus Plan (30 Days, 2 Dramas)", "priceCurrency": "USD", "price": "3.50" },
+              { "@type": "Offer", "name": "VIP Plan (30 Days, All Eligible VIP Dramas)", "priceCurrency": "USD", "price": "5.00" }
+            ]
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://feviqo.com/membership#breadcrumb",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://feviqo.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Turkish Dramas", "item": "https://feviqo.com/dramas" },
+            { "@type": "ListItem", "position": 3, "name": "FEVIQO Premium Membership", "item": "https://feviqo.com/membership" }
+          ]
+        }
+      );
     } else if (config.schemaType === 'Service') {
       schemaGraph.push({
         "@type": "Service",

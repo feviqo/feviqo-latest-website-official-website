@@ -68,7 +68,7 @@ export async function pingSearchEnginesForReindexing(
   const sitemapUrl = options.sitemapUrl || DEFAULT_SITEMAP_URL;
   const rawUrls = options.urls && options.urls.length > 0
     ? options.urls
-    : ['/teskilat/episode-188', '/teskilat-urdu/episode-188', '/teskilat', '/sitemap.xml'];
+    : ['/membership', '/teskilat/episode-188', '/teskilat-urdu/episode-188', '/teskilat', '/sitemap.xml'];
 
   const urlsPinged = formatCanonicalUrls(rawUrls, DEFAULT_SITE_URL);
   const host = options.host || DEFAULT_HOST;

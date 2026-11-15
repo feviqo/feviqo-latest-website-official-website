@@ -809,11 +809,140 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     });
   }
 
+  if (cleanPath === '/membership') {
+    transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
+
+    schemaObj["@graph"].push(
+      {
+        "@type": "WebPage",
+        "@id": "https://feviqo.com/membership#webpage",
+        "url": "https://feviqo.com/membership",
+        "name": config.seoTitle,
+        "description": config.metaDescription,
+        "isPartOf": { "@id": "https://feviqo.com/#website" },
+        "primaryImageOfPage": {
+          "@type": "ImageObject",
+          "url": config.ogImage
+        }
+      },
+      {
+        "@type": "Service",
+        "@id": "https://feviqo.com/membership#service",
+        "url": "https://feviqo.com/membership",
+        "name": "FEVIQO Premium Membership",
+        "serviceType": "Streaming Membership Subscription",
+        "description": "FEVIQO Premium Membership plans to stream Urdu-dubbed Turkish dramas including Teşkilat, Mehmed: Fetihler Sultanı, and Güneşin Doğduğu Yer in HD.",
+        "provider": { "@id": "https://feviqo.com/#organization" },
+        "areaServed": [
+          { "@type": "Country", "name": "Pakistan" },
+          { "@type": "Place", "name": "Worldwide" }
+        ],
+        "hasOfferCatalog": {
+          "@type": "OfferCatalog",
+          "name": "FEVIQO Premium Membership Plans",
+          "itemListElement": [
+            {
+              "@type": "Offer",
+              "name": "Starter Plan (15 Days, 1 Drama)",
+              "url": "https://feviqo.com/membership",
+              "priceCurrency": "PKR",
+              "price": "299",
+              "availability": "https://schema.org/InStock",
+              "priceSpecification": [
+                { "@type": "UnitPriceSpecification", "price": "299", "priceCurrency": "PKR" },
+                { "@type": "UnitPriceSpecification", "price": "1.20", "priceCurrency": "USD" }
+              ]
+            },
+            {
+              "@type": "Offer",
+              "name": "Standard Plan (30 Days, 1 Drama)",
+              "url": "https://feviqo.com/membership",
+              "priceCurrency": "PKR",
+              "price": "599",
+              "availability": "https://schema.org/InStock",
+              "priceSpecification": [
+                { "@type": "UnitPriceSpecification", "price": "599", "priceCurrency": "PKR" },
+                { "@type": "UnitPriceSpecification", "price": "2.50", "priceCurrency": "USD" }
+              ]
+            },
+            {
+              "@type": "Offer",
+              "name": "Plus Plan (30 Days, 2 Dramas)",
+              "url": "https://feviqo.com/membership",
+              "priceCurrency": "PKR",
+              "price": "899",
+              "availability": "https://schema.org/InStock",
+              "priceSpecification": [
+                { "@type": "UnitPriceSpecification", "price": "899", "priceCurrency": "PKR" },
+                { "@type": "UnitPriceSpecification", "price": "3.50", "priceCurrency": "USD" }
+              ]
+            },
+            {
+              "@type": "Offer",
+              "name": "VIP Plan (30 Days, All Eligible VIP Dramas)",
+              "url": "https://feviqo.com/membership",
+              "priceCurrency": "PKR",
+              "price": "1299",
+              "availability": "https://schema.org/InStock",
+              "priceSpecification": [
+                { "@type": "UnitPriceSpecification", "price": "1299", "priceCurrency": "PKR" },
+                { "@type": "UnitPriceSpecification", "price": "5.00", "priceCurrency": "USD" }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://feviqo.com/membership#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://feviqo.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Turkish Dramas", "item": "https://feviqo.com/dramas" },
+          { "@type": "ListItem", "position": 3, "name": "FEVIQO Premium Membership", "item": "https://feviqo.com/membership" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://feviqo.com/membership#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Which Turkish dramas are included in FEVIQO Premium Membership?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "FEVIQO Premium covers Teşkilat, Mehmed: Fetihler Sultanı, and Güneşin Doğduğu Yer in Urdu HD, along with newly released VIP catalogue episodes."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What are the Starter, Standard, Plus, and VIP plan prices?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Starter is PKR 299 ($1.20 USD) for 15 days (1 drama), Standard is PKR 599 ($2.50 USD) for 30 days (1 drama), Plus is PKR 899 ($3.50 USD) for 30 days (2 dramas), and VIP is PKR 1,299 ($5.00 USD) for 30 days across all eligible VIP catalogue dramas."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How can viewers in Pakistan and internationally pay for FEVIQO Premium?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Viewers in Pakistan can pay via Pakistani Bank QR (PKR), while international viewers can pay the fixed USD amount via Binance QR and upload payment proof for admin verification."
+            }
+          }
+        ]
+      }
+    );
+  }
+
   const jsonLdScript = `<script type="application/ld+json" id="feviqo-server-jsonld">${JSON.stringify(schemaObj)}</script>`;
   transformed = transformed.replace('</head>', `  ${jsonLdScript}\n  </head>`);
 
+  const routeArticle = cleanPath === '/membership'
+    ? `<article><h2>FEVIQO Premium Membership — Watch Turkish Dramas in Urdu HD</h2><p>Subscribe to unlock premium Urdu-dubbed episodes of Teşkilat, Mehmed: Fetihler Sultanı, and Güneşin Doğduğu Yer. Choose Starter (PKR 299 / $1.20 USD, 15 days), Standard (PKR 599 / $2.50 USD, 30 days), Plus (PKR 899 / $3.50 USD, 2 dramas), or VIP (PKR 1,299 / $5.00 USD, full VIP catalogue). Pay via Pakistani Bank QR or International Binance QR.</p></article>`
+    : `<article><h2>FEVIQO — Watch Online with Urdu Subtitles HD & Video Post-Production</h2><p>Experience full HD 1080p streaming with complete story recaps, character breakdowns, and official video streams on FEVIQO.</p></article>`;
+
   // Inject prerendered semantic body content inside <noscript> inside <div id="root"> so search crawlers see full text & internal links without blocking human users with static splash screens
-  const prerenderedBody = `<div id="root"><noscript><div id="seo-crawler-content"><header><nav aria-label="FEVIQO Master Navigation"><a href="/">Home</a> | <a href="/unlimited-editing">Unlimited Video Editing</a> | <a href="/creators">Creators</a> | <a href="/agencies">Agencies</a> | <a href="/business">Business & Brands</a> | <a href="/gallery">Video Showcase</a> | <a href="/pricing">Pricing</a> | <a href="/membership">Premium Membership</a> | <a href="/about">About Us</a> | <a href="/dramas">Turkish Dramas Directory</a> | <a href="/turkish-drama">Turkish Series Hub</a> | <a href="/teskilat">Teskilat Season 7</a> | <a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani</a> | <a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer</a></nav></header><main><header><h1>${config.seoTitle}</h1><p>${config.metaDescription}</p></header><article><h2>FEVIQO — Watch Online with Urdu Subtitles HD & Video Post-Production</h2><p>Experience full HD 1080p streaming with complete story recaps, character breakdowns, and official video streams on FEVIQO.</p></article><section><h2>Complete FEVIQO Sitemap Directory & Navigation Links</h2><ul><li><a href="/">FEVIQO Unlimited Video Editing Agency Home</a></li><li><a href="/membership">FEVIQO Premium Membership & Pricing</a></li><li><a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani Main Hub</a></li><li><a href="/mehmed-fetihler-sultani/episode-90">Mehmed Fetihler Sultani Episode 90 (Bolum 90) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-89">Mehmed Fetihler Sultani Episode 89 (Bolum 89) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-88">Mehmed Fetihler Sultani Episode 88 (Bolum 88) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-87">Mehmed Fetihler Sultani Episode 87 (Bolum 87) Urdu Subtitles</a></li><li><a href="/teskilat">Teskilat Season 7 Main Hub</a></li><li><a href="/teskilat/episode-189">Teskilat Season 7 Episode 189 (Bolum 189) Urdu Subtitles</a></li><li><a href="/teskilat/episode-188">Teskilat Season 7 Episode 188 (Bolum 188) Urdu Subtitles - Ender Rescue</a></li><li><a href="/teskilat/episode-187">Teskilat Season 7 Episode 187 (Bolum 187) Urdu Subtitles</a></li><li><a href="/teskilat/episode-186">Teskilat Season 7 Episode 186 (Bolum 186) Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer Main Hub</a></li><li><a href="/gunesin-dogdugu-yer/episode-7">Gunesin Dogdugu Yer Episode 7 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-5">Gunesin Dogdugu Yer Episode 5 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-4">Gunesin Dogdugu Yer Episode 4 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-3">Gunesin Dogdugu Yer Episode 3 Urdu Subtitles</a></li><li><a href="/dramas">Turkish Drama Urdu Subtitles Directory</a></li><li><a href="/unlimited-editing">Unlimited Video Editing Subscription</a></li><li><a href="/creators">High-Retention Video Editing for Content Creators</a></li><li><a href="/agencies">White-Label Video Editing Pods for Agencies</a></li><li><a href="/business">Performance Ad Creatives for Business & Brands</a></li><li><a href="/gallery">FEVIQO Video Portfolio & Showreel Showcase</a></li><li><a href="/pricing">Transparent Flat-Rate Pricing Plans</a></li><li><a href="/about">About FEVIQO Creative Agency</a></li><li><a href="/booking">Book a Creative Strategy Call</a></li></ul></section></main></div></noscript></div>`;
+  const prerenderedBody = `<div id="root"><noscript><div id="seo-crawler-content"><header><nav aria-label="FEVIQO Master Navigation"><a href="/">Home</a> | <a href="/unlimited-editing">Unlimited Video Editing</a> | <a href="/creators">Creators</a> | <a href="/agencies">Agencies</a> | <a href="/business">Business & Brands</a> | <a href="/gallery">Video Showcase</a> | <a href="/pricing">Pricing</a> | <a href="/membership">Premium Membership</a> | <a href="/about">About Us</a> | <a href="/dramas">Turkish Dramas Directory</a> | <a href="/turkish-drama">Turkish Series Hub</a> | <a href="/teskilat">Teskilat Season 7</a> | <a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani</a> | <a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer</a></nav></header><main><header><h1>${config.seoTitle}</h1><p>${config.metaDescription}</p></header>${routeArticle}<section><h2>Complete FEVIQO Sitemap Directory & Navigation Links</h2><ul><li><a href="/">FEVIQO Unlimited Video Editing Agency Home</a></li><li><a href="/membership">FEVIQO Premium Membership & Pricing</a></li><li><a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani Main Hub</a></li><li><a href="/mehmed-fetihler-sultani/episode-90">Mehmed Fetihler Sultani Episode 90 (Bolum 90) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-89">Mehmed Fetihler Sultani Episode 89 (Bolum 89) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-88">Mehmed Fetihler Sultani Episode 88 (Bolum 88) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-87">Mehmed Fetihler Sultani Episode 87 (Bolum 87) Urdu Subtitles</a></li><li><a href="/teskilat">Teskilat Season 7 Main Hub</a></li><li><a href="/teskilat/episode-189">Teskilat Season 7 Episode 189 (Bolum 189) Urdu Subtitles</a></li><li><a href="/teskilat/episode-188">Teskilat Season 7 Episode 188 (Bolum 188) Urdu Subtitles - Ender Rescue</a></li><li><a href="/teskilat/episode-187">Teskilat Season 7 Episode 187 (Bolum 187) Urdu Subtitles</a></li><li><a href="/teskilat/episode-186">Teskilat Season 7 Episode 186 (Bolum 186) Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer Main Hub</a></li><li><a href="/gunesin-dogdugu-yer/episode-7">Gunesin Dogdugu Yer Episode 7 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-5">Gunesin Dogdugu Yer Episode 5 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-4">Gunesin Dogdugu Yer Episode 4 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-3">Gunesin Dogdugu Yer Episode 3 Urdu Subtitles</a></li><li><a href="/dramas">Turkish Drama Urdu Subtitles Directory</a></li><li><a href="/unlimited-editing">Unlimited Video Editing Subscription</a></li><li><a href="/creators">High-Retention Video Editing for Content Creators</a></li><li><a href="/agencies">White-Label Video Editing Pods for Agencies</a></li><li><a href="/business">Performance Ad Creatives for Business & Brands</a></li><li><a href="/gallery">FEVIQO Video Portfolio & Showreel Showcase</a></li><li><a href="/pricing">Transparent Flat-Rate Pricing Plans</a></li><li><a href="/about">About FEVIQO Creative Agency</a></li><li><a href="/booking">Book a Creative Strategy Call</a></li></ul></section></main></div></noscript></div>`;
 
   transformed = transformed.replace('<div id="root"></div>', prerenderedBody);
 
