@@ -32,6 +32,7 @@ export interface MehmedEpisode {
   recapUrdu?: string;
   downloadUrl?: string;
   embeds: { label: string; src: string }[];
+  isLockedPremium?: boolean;
 }
 
 export const MEHMED_SERIES_DATA: MehmedSeries = {
@@ -64,6 +65,21 @@ export const MEHMED_SERIES_DATA: MehmedSeries = {
 };
 
 export const MEHMED_EPISODES: MehmedEpisode[] = [
+  {
+    number: 91,
+    season: 4,
+    seasonEpisodeNumber: 8,
+    slug: "episode-91",
+    title: "Mehmed Season 4 Episode 91 Urdu Dubbed | Bolum 91 — Premium Access",
+    airDate: "2026-11-10T04:00:00.000Z",
+    thumbnail: "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
+    duration: "2h 34m",
+    shortSummary: "Mehmed: Fetihler Sultani Season 4 Episode 91 in Urdu Dubbed HD is exclusively unlocked for active FEVIQO Premium Members.",
+    recap: `Mehmed Season 4 Episode 91 (Bolum 91) advances Sultan Mehmed II's decisive campaign with full Urdu Dubbed HD audio.\n\nThis episode is protected by FEVIQO Premium. Sign in or subscribe to an eligible plan covering Mehmed: Fetihler Sultani or VIP to unlock instant playback directly on this page.`,
+    recapUrdu: `مہمد فتحلر سلطان سیزن 4 قسط 91 مکمل اردو ڈبنگ میں صرف FEVIQO پریمیم ممبرز کے لیے دستیاب ہے۔ مکمل قسط دیکھنے کے لیے پریمیم سبسکرپشن حاصل کریں یا اپنے ممبر اکاؤنٹ میں سائن ان کریں۔`,
+    embeds: [],
+    isLockedPremium: true,
+  },
   {
     number: 90,
     season: 4,

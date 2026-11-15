@@ -155,16 +155,18 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
   orders: any[];
   memberships: any[];
   history: any[];
+  notifications: any[];
   config: Record<string, any> | null;
 } | null> {
   const db = getAdminFirestoreDb();
   if (!db) return null;
   try {
-    const [membersSnap, ordersSnap, subsSnap, histSnap, cfgSnap] = await Promise.all([
+    const [membersSnap, ordersSnap, subsSnap, histSnap, notifSnap, cfgSnap] = await Promise.all([
       db.collection('members').get(),
       db.collection('membershipOrders').get(),
       db.collection('memberships').get(),
       db.collection('membershipHistory').get(),
+      db.collection('memberNotifications').get(),
       db.collection('membershipConfig').doc('public').get(),
     ]);
 
@@ -209,6 +211,15 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       };
     });
 
+    const notifications = notifSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        ...data,
+        id: data.id || d.id,
+        createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
+      };
+    });
+
     let config: Record<string, any> | null = null;
     if (cfgSnap.exists) {
       const data = cfgSnap.data() || {};
@@ -218,7 +229,7 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       };
     }
 
-    return { members, orders, memberships, history, config };
+    return { members, orders, memberships, history, notifications, config };
   } catch (err: any) {
     if (err?.code === 7 || String(err?.message || '').includes('PERMISSION_DENIED')) {
       firestoreWriteDisabled = true;

@@ -15,23 +15,32 @@ import {
   Upload,
   Phone,
   Eye,
+  Bell,
+  ExternalLink,
+  CheckCheck,
 } from 'lucide-react';
 import {
   MemberAccountState,
   MembershipOrder,
+  MembershipRecord,
   cancelActiveMembership,
   requestProtectedEpisodeStream,
   fetchAuthenticatedProofObjectUrl,
+  markMemberNotificationRead,
+  markAllMemberNotificationsRead,
+  updateMemberPhone,
 } from '../../services/membershipService';
 import {
   isFirebaseSignedInVerified,
   cancelMembershipInFirestore,
+  syncMemberAccountToFirestore,
 } from '../../services/firestoreMembershipSync';
 import { getDramaById } from '../../data/membershipCatalog';
 import { extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MEMBERSHIP_COPY } from '../../i18n/membershipTranslations';
 import { BankQrPaymentSection } from './BankQrPaymentSection';
+import { notifyMembershipAuthChanged } from './useDramaEntitlement';
 
 interface MembershipAccountPanelProps {
   account: MemberAccountState;
@@ -55,6 +64,16 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
   const [proofViewerOrderId, setProofViewerOrderId] = useState<string | null>(null);
   const [proofViewerSrc, setProofViewerSrc] = useState<string | null>(null);
   const [proofViewerLoading, setProofViewerLoading] = useState(false);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
+  const [nowTs, setNowTs] = useState<number>(() => Date.now());
+  const [notifLoadingId, setNotifLoadingId] = useState<string | null>(null);
+  const [missingPhoneInput, setMissingPhoneInput] = useState('');
+  const [savingMissingPhone, setSavingMissingPhone] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowTs(Date.now()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Server-authorized episode theater state
   const [loadingEpisodeSlug, setLoadingEpisodeSlug] = useState<string | null>(null);
@@ -139,13 +158,13 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
     }
   };
 
-  const handleCancelMembership = async () => {
+  const handleCancelMembership = async (targetMembershipId?: string) => {
     setCancelling(true);
     setActionError(null);
     setActionMessage(null);
     try {
-      const priorActiveId = account.activeMembership?.id;
-      const res = await cancelActiveMembership();
+      const priorActiveId = targetMembershipId || account.activeMembership?.id;
+      const res = await cancelActiveMembership(priorActiveId);
       if ('error' in res) {
         setActionError(res.error || 'Could not cancel membership.');
       } else {
@@ -156,12 +175,14 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
           ).catch(() => {});
         }
         setConfirmCancel(false);
+        setConfirmCancelId(null);
         setActiveStream(null);
         setActionMessage(
           isUrdu
             ? 'آپ کی ممبرشپ منسوخ کر دی گئی ہے اور محفوظ رسائی فوری طور پر ختم ہو گئی ہے۔'
             : 'Your membership has been cancelled and protected access ended immediately.'
         );
+        notifyMembershipAuthChanged();
         onAccountUpdated(res);
       }
     } catch {
@@ -169,6 +190,34 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
     } finally {
       setCancelling(false);
     }
+  };
+
+  const handleMarkNotifRead = async (notifId: string) => {
+    setNotifLoadingId(notifId);
+    try {
+      const res = await markMemberNotificationRead(notifId);
+      if (res.success && res.member) {
+        onAccountUpdated(res as MemberAccountState);
+      }
+    } finally {
+      setNotifLoadingId(null);
+    }
+  };
+
+  const handleMarkAllNotifsRead = async () => {
+    setNotifLoadingId('all');
+    try {
+      const res = await markAllMemberNotificationsRead();
+      if (res.success && res.member) {
+        onAccountUpdated(res as MemberAccountState);
+      }
+    } finally {
+      setNotifLoadingId(null);
+    }
+  };
+
+  const triggerMembershipUrl = (targetUrl: string) => {
+    window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: targetUrl }));
   };
 
   const handleWatchEpisode = async (dramaId: string, episodeSlug: string) => {
@@ -202,18 +251,38 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
   const {
     member,
     activeMembership,
+    activeMemberships: rawActiveMemberships,
+    allMemberships: rawAllMemberships,
     latestMembership,
     remainingDays,
     remainingHours = 0,
     unlockedDramas,
     orders,
     history,
+    notifications = [],
+    unreadNotificationCount = 0,
     publicConfig,
   } = account;
 
+  const activeMembershipsList: MembershipRecord[] =
+    rawActiveMemberships && rawActiveMemberships.length > 0
+      ? rawActiveMemberships.filter((m) => m.status === 'active' && Date.parse(m.expiresAt) > nowTs)
+      : activeMembership && Date.parse(activeMembership.expiresAt) > nowTs
+      ? [activeMembership]
+      : [];
+
+  const allMembershipsList: MembershipRecord[] =
+    rawAllMemberships && rawAllMemberships.length > 0
+      ? rawAllMemberships
+      : activeMembership
+      ? [activeMembership]
+      : latestMembership
+      ? [latestMembership]
+      : [];
+
   const pendingVerificationOrder = orders.find((o) => o.status === 'pending_verification');
   const awaitingPaymentOrder = orders.find((o) => o.status === 'awaiting_payment');
-  const latestRejectedOrder = !activeMembership
+  const latestRejectedOrder = activeMembershipsList.length === 0
     ? orders.find((o) => o.status === 'rejected')
     : undefined;
 
@@ -228,6 +297,50 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
     } catch {
       return iso;
     }
+  };
+
+  const formatLocalDateTime = (iso?: string) => {
+    if (!iso) return '—';
+    try {
+      return new Date(iso).toLocaleString(isUrdu ? 'ur-PK' : undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+    } catch {
+      return iso;
+    }
+  };
+
+  const formatCountdown = (expiresAtIso?: string) => {
+    if (!expiresAtIso) return '—';
+    const diffMs = Date.parse(expiresAtIso) - nowTs;
+    if (Number.isNaN(diffMs) || diffMs <= 0) {
+      return isUrdu ? 'میعاد ختم' : 'Expired';
+    }
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const mins = totalMinutes % 60;
+    if (days > 0) {
+      return isUrdu ? `${days} دن ${hours} گھنٹے` : `${days}d ${hours}h left`;
+    }
+    return isUrdu ? `${hours} گھنٹے ${mins} منٹ` : `${hours}h ${mins}m left`;
+  };
+
+  const formatOrderAmount = (ord: MembershipOrder) => {
+    if (ord.currency === 'USD' || ord.paymentMethod === 'binance_qr') {
+      const usd = Number(ord.expectedAmount ?? ord.amountUsd ?? 0);
+      return `$${usd.toFixed(2)} USD`;
+    }
+    return `PKR ${ord.amountPkr.toLocaleString()}`;
+  };
+
+  const formatMembershipPrice = (m: MembershipRecord) => {
+    if (m.currency === 'USD' || m.paymentMethod === 'binance_qr') {
+      const usd = Number(m.expectedAmount ?? m.priceUsd ?? 0);
+      return `$${usd.toFixed(2)} USD`;
+    }
+    return `PKR ${m.pricePkr.toLocaleString()}`;
   };
 
   const getOrderStatusLabel = (status: MembershipOrder['status']) => {
@@ -283,6 +396,78 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
         </div>
       </div>
 
+      {/* Missing Phone Completion Prompt for Google Sign-In Accounts */}
+      {(!member.phone || member.phone.replace(/[^\d]/g, '').length < 10) && (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setActionError(null);
+            setActionMessage(null);
+            const digits = missingPhoneInput.replace(/[^\d]/g, '');
+            if (digits.length < 10 || digits.length > 15) {
+              setActionError(
+                isUrdu
+                  ? 'براہ کرم درست فون / واٹس ایپ نمبر درج کریں (کم از کم 10 ہندسے)۔'
+                  : 'Please enter a valid WhatsApp / phone number (10 to 15 digits, e.g. 0300 1234567).'
+              );
+              return;
+            }
+            setSavingMissingPhone(true);
+            try {
+              const res = await updateMemberPhone(missingPhoneInput.trim());
+              if ('error' in res) {
+                setActionError(res.error || 'Could not save phone number.');
+              } else {
+                if (isFirebaseSignedInVerified()) {
+                  await syncMemberAccountToFirestore(res.member).catch(() => {});
+                }
+                setMissingPhoneInput('');
+                setActionMessage(
+                  isUrdu
+                    ? 'آپ کا فون / واٹس ایپ نمبر محفوظ ہو گیا ہے۔'
+                    : 'Your WhatsApp / phone number has been saved.'
+                );
+                notifyMembershipAuthChanged();
+                onAccountUpdated(res);
+              }
+            } catch {
+              setActionError('Network error while saving phone number.');
+            } finally {
+              setSavingMissingPhone(false);
+            }
+          }}
+          className="rounded-2xl bg-amber-50 border border-amber-300 p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4"
+        >
+          <div className="space-y-1">
+            <div className="text-sm font-bold text-amber-950 flex items-center gap-2">
+              <Phone className="w-4 h-4 text-amber-800 shrink-0" />
+              <span>{t(MEMBERSHIP_COPY.auth.googlePhoneTitle)}</span>
+            </div>
+            <p className="text-xs text-amber-900">{t(MEMBERSHIP_COPY.auth.googlePhoneDesc)}</p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+            <input
+              type="tel"
+              dir="ltr"
+              required
+              value={missingPhoneInput}
+              onChange={(e) => setMissingPhoneInput(e.target.value)}
+              placeholder={t(MEMBERSHIP_COPY.auth.phonePlaceholder)}
+              className="px-3.5 py-2 text-xs bg-white border border-amber-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] min-w-[200px]"
+            />
+            <button
+              type="submit"
+              disabled={savingMissingPhone}
+              className="px-4 py-2 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] hover:text-[#0B0B0D] disabled:opacity-60 text-white text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+            >
+              {savingMissingPhone
+                ? t(MEMBERSHIP_COPY.auth.googlePhoneSaving)
+                : t(MEMBERSHIP_COPY.auth.googlePhoneSaveBtn)}
+            </button>
+          </div>
+        </form>
+      )}
+
       {/* Status Alert Banners */}
       {activeMembership && (
         <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 sm:p-5 flex items-start gap-3">
@@ -310,7 +495,8 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
               </div>
               <p className="text-xs text-amber-900">
                 {pendingVerificationOrder.planName} ·{' '}
-                <span dir="ltr">PKR {pendingVerificationOrder.amountPkr.toLocaleString()}</span> ·{' '}
+                <span dir="ltr">{formatOrderAmount(pendingVerificationOrder)}</span> ·{' '}
+                {pendingVerificationOrder.orderType === 'renewal' ? (isUrdu ? 'تجدید · ' : 'Renewal · ') : ''}
                 {pendingVerificationOrder.selectedDramaIds
                   .map((id) => getDramaById(id)?.title || id)
                   .join(', ')}
@@ -330,7 +516,7 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
         </div>
       )}
 
-      {!activeMembership && latestRejectedOrder && !pendingVerificationOrder && (
+      {activeMembershipsList.length === 0 && latestRejectedOrder && !pendingVerificationOrder && (
         <div
           role="alert"
           className="rounded-2xl bg-red-50 border border-red-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
@@ -360,7 +546,7 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
         </div>
       )}
 
-      {!activeMembership && awaitingPaymentOrder && !pendingVerificationOrder && (
+      {activeMembershipsList.length === 0 && awaitingPaymentOrder && !pendingVerificationOrder && (
         <div className="rounded-2xl bg-zinc-100 border border-zinc-300 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="text-sm font-bold text-[#0B0B0D]">
@@ -368,7 +554,7 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
             </div>
             <p className="text-xs text-zinc-600">
               {awaitingPaymentOrder.planName} ·{' '}
-              <span dir="ltr">PKR {awaitingPaymentOrder.amountPkr.toLocaleString()}</span> · Request ID:{' '}
+              <span dir="ltr">{formatOrderAmount(awaitingPaymentOrder)}</span> · Request ID:{' '}
               <span className="font-mono" dir="ltr">
                 {awaitingPaymentOrder.id}
               </span>
@@ -380,7 +566,11 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
             className="px-4 py-2 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer self-start sm:self-auto shrink-0"
           >
             <Upload className="w-3.5 h-3.5" />
-            <span>{t(MEMBERSHIP_COPY.payment.stepTitle)}</span>
+            <span>
+              {awaitingPaymentOrder.currency === 'USD'
+                ? t(MEMBERSHIP_COPY.payment.stepTitleBinance)
+                : t(MEMBERSHIP_COPY.payment.stepTitle)}
+            </span>
           </button>
         </div>
       )}
@@ -427,123 +617,241 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
         </div>
       )}
 
-      {/* Membership Summary Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 rounded-2xl border border-zinc-200 bg-[#F8FAFC] p-6 sm:p-8 flex flex-col justify-between gap-6">
-          {activeMembership ? (
-            <>
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#16A34A]">
-                    {t(MEMBERSHIP_COPY.statuses.active)}
+      {/* In-Account Notification Center & Renewal Alerts */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100">
+          <div className="flex items-center gap-2.5">
+            <Bell className="w-4 h-4 text-[#16A34A]" />
+            <h3 className="text-base font-bold text-[#0B0B0D]">
+              {t(MEMBERSHIP_COPY.account.notificationsHeading)}
+            </h3>
+            {unreadNotificationCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-[#22C55E] text-[#0B0B0D] text-[11px] font-bold">
+                {unreadNotificationCount}
+              </span>
+            )}
+          </div>
+          {unreadNotificationCount > 0 && (
+            <button
+              type="button"
+              disabled={notifLoadingId === 'all'}
+              onClick={handleMarkAllNotifsRead}
+              className="text-xs font-semibold text-[#16A34A] hover:underline inline-flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+            >
+              <CheckCheck className="w-3.5 h-3.5" />
+              <span>{t(MEMBERSHIP_COPY.account.markAllRead)}</span>
+            </button>
+          )}
+        </div>
+
+        {notifications.length === 0 ? (
+          <p className="text-xs text-zinc-500">{t(MEMBERSHIP_COPY.account.noNotifications)}</p>
+        ) : (
+          <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+            {notifications.slice(0, 12).map((n) => (
+              <div
+                key={n.id}
+                className={`rounded-xl border p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                  n.isRead ? 'bg-zinc-50/70 border-zinc-200' : 'bg-emerald-50/70 border-emerald-200'
+                }`}
+              >
+                <div className="space-y-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!n.isRead && <span className="w-2 h-2 rounded-full bg-[#22C55E]" />}
+                    <span className="text-xs font-bold text-[#0B0B0D]">
+                      {isUrdu && n.titleUr ? n.titleUr : n.title}
+                    </span>
+                    <span className="text-[10px] text-zinc-500" dir="ltr">
+                      {formatLocalDateTime(n.createdAt)}
+                    </span>
                   </div>
-                  <h3 className="text-2xl font-bold text-[#0B0B0D] mt-1">
-                    {activeMembership.planName} Plan
-                  </h3>
-                  <p className="text-sm text-zinc-600 mt-1 tabular-nums">
-                    <span dir="ltr">PKR {activeMembership.pricePkr.toLocaleString()}</span> ·{' '}
-                    {activeMembership.durationDays} {isUrdu ? 'دن' : 'Days'}
+                  <p className="text-xs text-zinc-700 leading-relaxed">
+                    {isUrdu && n.messageUr ? n.messageUr : n.message}
                   </p>
-                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-500 mt-2">
-                    <span>
-                      {t(MEMBERSHIP_COPY.account.activatedOn)} {formatDate(activeMembership.activatedAt)}
-                    </span>
-                    <span>
-                      {t(MEMBERSHIP_COPY.account.expiresOn)} {formatDate(activeMembership.expiresAt)}
-                    </span>
-                  </div>
                 </div>
-                <div className="text-left sm:text-right">
-                  <div className="text-2xl font-bold text-[#0B0B0D] tabular-nums">{remainingDays}</div>
-                  <div className="text-xs text-zinc-500">{t(MEMBERSHIP_COPY.account.daysRemaining)}</div>
-                  {remainingHours > 0 && remainingDays <= 2 && (
-                    <div className="text-[11px] text-zinc-500 tabular-nums mt-0.5">
-                      ({remainingHours} {t(MEMBERSHIP_COPY.account.hoursRemaining)})
-                    </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {n.ctaHref && (
+                    <button
+                      type="button"
+                      onClick={() => triggerMembershipUrl(n.ctaHref!)}
+                      className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold transition cursor-pointer"
+                    >
+                      {n.ctaLabel || t(MEMBERSHIP_COPY.account.renewMembership)}
+                    </button>
+                  )}
+                  {!n.isRead && (
+                    <button
+                      type="button"
+                      disabled={notifLoadingId === n.id}
+                      onClick={() => handleMarkNotifRead(n.id)}
+                      className="px-2.5 py-1.5 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 text-zinc-700 text-[11px] font-semibold cursor-pointer"
+                    >
+                      {t(MEMBERSHIP_COPY.account.markRead)}
+                    </button>
                   )}
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-              <div className="pt-5 border-t border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="text-xs text-zinc-600">
-                  {t(MEMBERSHIP_COPY.account.selectedDramasLabel)}{' '}
-                  <span className="font-semibold text-[#0B0B0D]">
-                    {activeMembership.selectedDramaIds
-                      .map((id) => getDramaById(id)?.title || id)
-                      .join(', ')}
-                  </span>
-                </div>
+      {/* Membership Summary & Multi-Drama Memberships Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-bold text-[#0B0B0D]">
+              {t(MEMBERSHIP_COPY.account.activeMembershipsHeading)}
+            </h3>
+            <button
+              type="button"
+              onClick={onChoosePlanClick}
+              className="text-xs font-semibold text-[#16A34A] hover:underline cursor-pointer"
+            >
+              + {t(MEMBERSHIP_COPY.account.addAnotherDrama)}
+            </button>
+          </div>
 
-                {!confirmCancel ? (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmCancel(true)}
-                    className="text-xs font-semibold text-red-600 hover:text-red-700 underline underline-offset-4 cursor-pointer self-start sm:self-auto"
-                  >
-                    {t(MEMBERSHIP_COPY.account.cancelMembership)}
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-xs text-zinc-700">
-                      {isUrdu ? 'فوری منسوخی کی تصدیق کریں؟' : 'Confirm immediate cancellation?'}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={cancelling}
-                      onClick={handleCancelMembership}
-                      className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer"
-                    >
-                      {cancelling ? '...' : isUrdu ? 'جی ہاں، منسوخ کریں' : 'Yes, Cancel Now'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setConfirmCancel(false)}
-                      className="px-3 py-1.5 rounded-lg border border-zinc-300 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 cursor-pointer"
-                    >
-                      {isUrdu ? 'نہیں' : 'Keep Plan'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : latestMembership ? (
+          {allMembershipsList.length > 0 ? (
             <div className="space-y-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
-                {latestMembership.status === 'cancelled'
-                  ? t(MEMBERSHIP_COPY.statuses.cancelled)
-                  : t(MEMBERSHIP_COPY.statuses.expired)}
-              </div>
-              <h3 className="text-2xl font-bold text-[#0B0B0D]">
-                {latestMembership.status === 'cancelled'
-                  ? isUrdu
-                    ? `آپ کا ${latestMembership.planName} پلان منسوخ ہو چکا ہے`
-                    : `Your ${latestMembership.planName} Plan was cancelled`
-                  : t(MEMBERSHIP_COPY.account.expiredBanner)}
-              </h3>
-              <p className="text-sm text-zinc-600 leading-relaxed max-w-xl">
-                {latestMembership.status === 'cancelled'
-                  ? isUrdu
-                    ? `${formatDate(latestMembership.cancelledAt)} کو منسوخ کیا گیا۔`
-                    : `Ended on ${formatDate(latestMembership.cancelledAt)}. ${
-                        latestMembership.revokedReason ? `Note: ${latestMembership.revokedReason}` : ''
-                      }`
-                  : isUrdu
-                  ? `آپ کے ${latestMembership.durationDays} دن کی مدت ${formatDate(latestMembership.expiresAt)} کو مکمل ہو گئی تھی۔`
-                  : `Your ${latestMembership.durationDays}-day term ended on ${formatDate(latestMembership.expiresAt)}. Renew your membership to continue watching.`}
-              </p>
-              <div>
-                <button
-                  type="button"
-                  onClick={onChoosePlanClick}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-semibold transition cursor-pointer"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>{t(MEMBERSHIP_COPY.account.renewMembership)}</span>
-                </button>
-              </div>
+              {allMembershipsList.map((m) => {
+                const isExpiredNow = m.status !== 'active' || Date.parse(m.expiresAt) <= nowTs;
+                const msLeft = Math.max(0, Date.parse(m.expiresAt) - nowTs);
+                const isExpiringSoon = !isExpiredNow && msLeft <= 7 * 24 * 60 * 60 * 1000;
+                const renewHref = `/membership?renew=${encodeURIComponent(m.id)}&plan=${encodeURIComponent(
+                  m.planId
+                )}${m.selectedDramaIds[0] ? `&drama=${encodeURIComponent(m.selectedDramaIds[0])}` : ''}`;
+
+                return (
+                  <div
+                    key={m.id}
+                    className={`rounded-2xl border p-6 space-y-4 ${
+                      !isExpiredNow
+                        ? 'border-zinc-200 bg-[#F8FAFC]'
+                        : 'border-zinc-200 bg-zinc-50/70'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`text-xs font-semibold uppercase tracking-[0.12em] ${
+                              !isExpiredNow
+                                ? 'text-[#16A34A]'
+                                : m.status === 'cancelled'
+                                ? 'text-red-600'
+                                : 'text-amber-700'
+                            }`}
+                          >
+                            {!isExpiredNow
+                              ? t(MEMBERSHIP_COPY.statuses.active)
+                              : m.status === 'cancelled'
+                              ? t(MEMBERSHIP_COPY.statuses.cancelled)
+                              : t(MEMBERSHIP_COPY.statuses.expired)}
+                          </span>
+                          {isExpiringSoon && (
+                            <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold">
+                              {isUrdu ? 'جلد ختم ہونے والی ہے' : 'Expiring Soon'}
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-xl font-bold text-[#0B0B0D] mt-1">
+                          {m.planName} Plan · <span dir="ltr">{formatMembershipPrice(m)}</span>
+                        </h4>
+                        <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-zinc-500 mt-1.5">
+                          <span>
+                            {t(MEMBERSHIP_COPY.account.activatedOn)} {formatLocalDateTime(m.activatedAt)}
+                          </span>
+                          <span>
+                            {t(MEMBERSHIP_COPY.account.expiresOn)} {formatLocalDateTime(m.expiresAt)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-left sm:text-right shrink-0">
+                        <div
+                          className={`text-lg font-bold tabular-nums ${
+                            !isExpiredNow ? 'text-[#0B0B0D]' : 'text-zinc-500'
+                          }`}
+                        >
+                          {!isExpiredNow ? formatCountdown(m.expiresAt) : t(MEMBERSHIP_COPY.statuses.expired)}
+                        </div>
+                        <div className="text-[11px] text-zinc-500">
+                          {m.durationDays} {isUrdu ? 'دن' : 'Days'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-zinc-700">
+                      {t(MEMBERSHIP_COPY.account.selectedDramasLabel)}{' '}
+                      <span className="font-semibold text-[#0B0B0D]">
+                        {m.selectedDramaIds.map((id) => getDramaById(id)?.title || id).join(', ')}
+                      </span>
+                    </div>
+
+                    {m.renewalHistory && m.renewalHistory.length > 0 && (
+                      <div className="rounded-xl bg-white border border-zinc-200 p-3 space-y-1.5">
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                          {t(MEMBERSHIP_COPY.account.renewalHistoryLabel)} ({m.renewalHistory.length})
+                        </div>
+                        {m.renewalHistory.slice(0, 3).map((rh) => (
+                          <div key={rh.id} className="text-[11px] text-zinc-600 flex flex-wrap justify-between gap-2">
+                            <span>
+                              +{rh.addedDays} {isUrdu ? 'دن' : 'days'} ({rh.planName})
+                            </span>
+                            <span dir="ltr">{formatDate(rh.renewedAt)} → {formatDate(rh.newExpiresAt)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="pt-3 border-t border-zinc-200 flex flex-wrap items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => triggerMembershipUrl(renewHref)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold transition cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>{t(MEMBERSHIP_COPY.account.renewMembership)}</span>
+                      </button>
+
+                      {!isExpiredNow && (
+                        confirmCancelId !== m.id ? (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmCancelId(m.id)}
+                            className="text-xs font-semibold text-red-600 hover:text-red-700 underline underline-offset-4 cursor-pointer"
+                          >
+                            {t(MEMBERSHIP_COPY.account.cancelMembership)}
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={cancelling}
+                              onClick={() => handleCancelMembership(m.id)}
+                              className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer"
+                            >
+                              {cancelling ? '...' : isUrdu ? 'جی ہاں، منسوخ کریں' : 'Yes, Cancel Now'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmCancelId(null)}
+                              className="px-3 py-1.5 rounded-lg border border-zinc-300 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 cursor-pointer"
+                            >
+                              {isUrdu ? 'نہیں' : 'Keep Plan'}
+                            </button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="rounded-2xl border border-zinc-200 bg-[#F8FAFC] p-6 sm:p-8 space-y-4">
               <div className="text-xs font-semibold uppercase tracking-[0.12em] text-zinc-500">
                 {t(MEMBERSHIP_COPY.statuses.inactive)}
               </div>
@@ -579,11 +887,16 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
             </p>
           ) : (
             <div className="space-y-3">
-              {orders.slice(0, 5).map((ord) => (
+              {orders.slice(0, 6).map((ord) => (
                 <div key={ord.id} className="pb-3 border-b border-zinc-100 last:border-b-0 last:pb-0 space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-semibold text-[#0B0B0D]">
-                      {ord.planName} · <span dir="ltr">PKR {ord.amountPkr.toLocaleString()}</span>
+                      {ord.planName} · <span dir="ltr">{formatOrderAmount(ord)}</span>
+                      {ord.orderType === 'renewal' && (
+                        <span className="ml-1.5 text-[10px] font-bold text-[#16A34A] uppercase">
+                          Renewal
+                        </span>
+                      )}
                     </span>
                     <span
                       className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
@@ -718,7 +1031,7 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
       )}
 
       {/* Unlocked Dramas & Eligible Episodes */}
-      {activeMembership && unlockedDramas.length > 0 && (
+      {activeMembershipsList.length > 0 && unlockedDramas.length > 0 && (
         <div className="space-y-5">
           <div>
             <h3 className="text-xl font-bold text-[#0B0B0D]">
@@ -742,8 +1055,20 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
                       {drama.episodes.length} {t(MEMBERSHIP_COPY.dramaSelection.episodes)}
                     </div>
                   </div>
-                  <div className="font-urdu-slim text-lg text-zinc-700" dir="rtl">
-                    {drama.urduTitle}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        triggerMembershipUrl(drama.id === 'teskilat' ? '/teskilat' : `/${drama.id}`)
+                      }
+                      className="px-3 py-1.5 rounded-lg border border-zinc-300 hover:border-[#22C55E] text-xs font-semibold text-[#0B0B0D] inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3 h-3 text-[#16A34A]" />
+                      <span>{t(MEMBERSHIP_COPY.account.openDramaPage)}</span>
+                    </button>
+                    <div className="font-urdu-slim text-lg text-zinc-700" dir="rtl">
+                      {drama.urduTitle}
+                    </div>
                   </div>
                 </div>
 
@@ -823,7 +1148,7 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
       )}
 
       {/* Protected Preview Notice when Inactive */}
-      {!activeMembership && (
+      {activeMembershipsList.length === 0 && (
         <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6 flex items-start gap-3.5">
           <Lock className="w-5 h-5 text-zinc-500 shrink-0 mt-0.5" />
           <div className="space-y-1">

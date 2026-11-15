@@ -48,7 +48,7 @@ import {
   triggerEpisodeReindexingPing,
   getSearchEnginePingHistory
 } from './src/seo/seoIndexingService';
-import { MEMBERSHIP_PLANS, MEMBERSHIP_DRAMAS, getDramaById, MembershipPlanId } from './src/data/membershipCatalog';
+import { MEMBERSHIP_PLANS, MEMBERSHIP_DRAMAS, getDramaById, MembershipPlanId, PaymentRegion } from './src/data/membershipCatalog';
 import {
   registerMember,
   loginMember,
@@ -57,6 +57,7 @@ import {
   getPaymentGatewayStatus,
   getPublicMembershipConfig,
   getMembershipConfig,
+  getResolvedPlans,
   updateMembershipConfig,
   saveUploadedQrImage,
   resolveQrDiskPath,
@@ -65,6 +66,7 @@ import {
   getAuthorizedProofFile,
   approvePaymentRequest,
   rejectPaymentRequest,
+  extendMembershipByAdmin,
   revokeMembershipByAdmin,
   assignMembershipByAdmin,
   mergeCloudSyncSnapshot,
@@ -85,8 +87,16 @@ import {
   cancelMemberSubscription,
   authorizeEpisodePlayback,
   upsertGoogleMember,
+  updateMemberPhone,
+  markMemberNotificationRead,
+  markAllMemberNotificationsRead,
+  runLifecycleReminderCheck,
+  getCustomerNotificationById,
+  updateCustomerNotificationEmailStatus,
+  LifecycleEmailDispatcher,
   SafeAdmin,
 } from './server/membershipStore';
+import { resolveGeoPricing } from './server/geoCurrency';
 import { verifyFirebaseIdToken } from './server/firestoreAdmin';
 
 const app = express();
@@ -3139,10 +3149,17 @@ function escapeHtml(text: string): string {
 
 async function dispatchTrackedEmail(params: {
   orderId?: string;
+  membershipId?: string;
+  customerNotificationId?: string;
   to: string;
   subject: string;
   html: string;
-  type: 'admin_payment_verification' | 'member_payment_approved' | 'member_payment_rejected';
+  type:
+    | 'admin_payment_verification'
+    | 'member_payment_approved'
+    | 'member_payment_rejected'
+    | 'member_renewal_reminder'
+    | 'member_membership_expired';
 }) {
   try {
     const res = await sendServerEmail({
@@ -3150,11 +3167,13 @@ async function dispatchTrackedEmail(params: {
       subject: params.subject,
       html: params.html,
       type: params.type,
-      data: { orderId: params.orderId },
+      data: { orderId: params.orderId, membershipId: params.membershipId },
     });
 
     const record = saveEmailNotificationLog({
       orderId: params.orderId,
+      membershipId: params.membershipId,
+      customerNotificationId: params.customerNotificationId,
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -3168,6 +3187,8 @@ async function dispatchTrackedEmail(params: {
   } catch (err: any) {
     const record = saveEmailNotificationLog({
       orderId: params.orderId,
+      membershipId: params.membershipId,
+      customerNotificationId: params.customerNotificationId,
       to: params.to,
       subject: params.subject,
       html: params.html,
@@ -3180,30 +3201,87 @@ async function dispatchTrackedEmail(params: {
   }
 }
 
+function createLifecycleEmailDispatcher(): LifecycleEmailDispatcher {
+  return async ({ to, subject, html, type, membershipId, customerNotificationId }) => {
+    const hasTransport = getResendCandidates().length > 0 || getSmtpCandidates().length > 0;
+    if (!hasTransport) {
+      return {
+        success: false,
+        notConfigured: true,
+        error: 'SMTP / Resend email transport is not configured on this server.',
+      };
+    }
+    const dispatched = await dispatchTrackedEmail({
+      membershipId,
+      customerNotificationId,
+      to,
+      subject,
+      html,
+      type,
+    });
+    const d = dispatched as {
+      success?: boolean;
+      provider?: string;
+      error?: unknown;
+      smtpError?: string;
+    };
+    return {
+      success: Boolean(d.success),
+      provider: d.provider,
+      error: d.error ? String(d.error) : undefined,
+      smtpError: d.smtpError,
+    };
+  };
+}
+
+// Visitor geo-country & indicative local currency conversion endpoint (Binance always charges exact USD)
+app.get('/api/membership/geo', async (req, res) => {
+  try {
+    const cfg = getMembershipConfig();
+    const geo = await resolveGeoPricing(req, cfg.usdPrices);
+    return res.json({ success: true, geo });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to resolve region pricing.' });
+  }
+});
+
 // Public catalogue metadata + QR/WhatsApp config only (zero protected episode stream URLs or secrets exposed)
-app.get('/api/membership/catalog', (_req, res) => {
+app.get('/api/membership/catalog', async (req, res) => {
+  const cfg = getMembershipConfig();
+  const geo = await resolveGeoPricing(req, cfg.usdPrices).catch(() => null);
   return res.json({
     success: true,
-    plans: MEMBERSHIP_PLANS,
+    plans: getResolvedPlans(),
     dramas: MEMBERSHIP_DRAMAS,
     publicConfig: getPublicMembershipConfig(),
     gatewayStatus: getPaymentGatewayStatus(),
+    geo,
   });
 });
 
 // Download crisp uncropped QR image for a plan cleanly without cross-origin CORS restrictions
 app.get('/api/membership/qr/:planId/download', (req, res) => {
   const planId = req.params.planId as MembershipPlanId;
-  const plan = MEMBERSHIP_PLANS.find((p) => p.id === planId);
+  const region: PaymentRegion = req.query.region === 'international' ? 'international' : 'pakistan';
+  const plan = getResolvedPlans().find((p) => p.id === planId) || MEMBERSHIP_PLANS.find((p) => p.id === planId);
   if (!plan) {
     return res.status(404).json({ success: false, error: 'Invalid plan QR requested.' });
   }
-  const diskPath = resolveQrDiskPath(planId);
+  const diskPath = resolveQrDiskPath(planId, region);
   if (!diskPath) {
-    return res.status(404).json({ success: false, error: 'Local QR file not found on disk.' });
+    return res.status(404).json({
+      success: false,
+      error:
+        region === 'international'
+          ? 'Binance USD QR image has not been uploaded for this plan yet.'
+          : 'Local QR file not found on disk.',
+    });
   }
   const ext = path.extname(diskPath) || '.jpg';
-  const safeName = `FEVIQO-${plan.name}-${plan.pricePkr}PKR-QR${ext}`;
+  const safeName =
+    region === 'international'
+      ? `FEVIQO-Binance-${plan.name}-${plan.priceUsd.toFixed(2)}USD-QR${ext}`
+      : `FEVIQO-${plan.name}-${plan.pricePkr}PKR-QR${ext}`;
   res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   return res.sendFile(diskPath);
@@ -3295,6 +3373,29 @@ app.get('/api/membership/account', (req, res) => {
   return res.json({ success: true, ...account });
 });
 
+app.post('/api/membership/profile/phone', (req, res) => {
+  try {
+    const memberId = getAuthenticatedMemberId(req);
+    if (!memberId) {
+      return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Not signed in.' });
+    }
+    const result = updateMemberPhone({
+      memberId,
+      phone: req.body?.phone,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode || 400).json({ success: false, error: result.error });
+    }
+    const account = getMemberAccountState(memberId);
+    if (!account) {
+      return res.status(404).json({ success: false, error: 'Account not found.' });
+    }
+    return res.json({ success: true, ...account });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to save phone number.' });
+  }
+});
+
 app.post('/api/membership/checkout', async (req, res) => {
   try {
     const memberId = getAuthenticatedMemberId(req);
@@ -3305,7 +3406,15 @@ app.post('/api/membership/checkout', async (req, res) => {
         error: 'Please sign in or create an account before continuing to payment.',
       });
     }
-    const { planId, selectedDramaIds } = req.body || {};
+    const {
+      planId,
+      selectedDramaIds,
+      paymentRegion,
+      orderType,
+      targetMembershipId,
+      visitorCountryCode,
+      indicativeLocalDisplay,
+    } = req.body || {};
     const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
     const host = req.headers.host || 'localhost:3000';
     const originUrl = `${proto}://${host}`;
@@ -3315,10 +3424,19 @@ app.post('/api/membership/checkout', async (req, res) => {
       planId,
       selectedDramaIds,
       originUrl,
+      paymentRegion: paymentRegion === 'international' ? 'international' : 'pakistan',
+      orderType: orderType === 'renewal' ? 'renewal' : 'new',
+      targetMembershipId,
+      visitorCountryCode,
+      indicativeLocalDisplay,
     });
 
     if ('error' in result) {
-      return res.status(result.statusCode || 400).json({ success: false, error: result.error });
+      return res.status(result.statusCode || 400).json({
+        success: false,
+        code: result.code,
+        error: result.error,
+      });
     }
 
     const account = getMemberAccountState(memberId);
@@ -3394,6 +3512,15 @@ app.post(
         .map((id) => getDramaById(id)?.title || id)
         .join(', ');
       const adminReviewUrl = `${baseUrl}/admin/memberships?request=${encodeURIComponent(order.id)}`;
+      const paymentMethodLabel =
+        order.paymentMethod === 'binance_qr'
+          ? 'International Binance QR (USD)'
+          : 'Pakistan Bank QR (PKR)';
+      const orderAmountDisplay =
+        order.currency === 'USD'
+          ? `$${Number(order.amountUsd ?? order.expectedAmount ?? 0).toFixed(2)} USD`
+          : `PKR ${order.amountPkr.toLocaleString()}`;
+      const orderTypeLabel = order.orderType === 'renewal' ? 'Membership Renewal' : 'New Membership';
 
       const adminEmailHtml = `
         <div style="font-family:Inter,Arial,sans-serif;background:#F8FAFC;padding:24px;color:#0B0B0D;">
@@ -3402,18 +3529,20 @@ app.post(
               FEVIQO Premium Membership Verification
             </div>
             <h2 style="margin:0 0 12px 0;font-size:20px;color:#0B0B0D;">
-              New FEVIQO Membership Payment — Verification Required
+              New FEVIQO ${escapeHtml(orderTypeLabel)} Payment — Verification Required
             </h2>
             <p style="font-size:14px;color:#475569;line-height:1.6;">
-              A customer submitted a Bank QR payment screenshot and is awaiting verification before membership activation.
+              A customer submitted a <strong>${escapeHtml(paymentMethodLabel)}</strong> screenshot and is awaiting verification before membership activation.
             </p>
             <table style="width:100%;border-collapse:collapse;margin:18px 0;font-size:13px;">
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Payment Request ID</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${escapeHtml(order.id)}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Order Type</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${escapeHtml(orderTypeLabel)}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Payment Method</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${escapeHtml(paymentMethodLabel)}</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Customer Name</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${escapeHtml(member.fullName)}</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Customer Email</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(member.email)}</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Customer Phone</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(member.phone || 'Not provided')}</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Plan Selected</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${escapeHtml(order.planName)}</td></tr>
-              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Amount</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;color:#16A34A;">PKR ${order.amountPkr.toLocaleString()}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Amount</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;color:#16A34A;">${escapeHtml(orderAmountDisplay)}</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Duration</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${order.durationDays} Days</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Selected Dramas</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(dramaTitles)}</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Submission Time</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(order.proofSubmittedAt || order.updatedAt)}</td></tr>
@@ -3476,13 +3605,34 @@ app.get('/api/membership/orders/:orderId/proof', (req, res) => {
   return res.sendFile(result.filePath);
 });
 
+app.post('/api/membership/notifications/:notifId/read', (req, res) => {
+  const memberId = getAuthenticatedMemberId(req);
+  if (!memberId) {
+    return res.status(401).json({ success: false, error: 'Authentication required.' });
+  }
+  const ok = markMemberNotificationRead({ memberId, notifId: req.params.notifId });
+  const account = getMemberAccountState(memberId);
+  return res.json({ success: ok, ...account });
+});
+
+app.post('/api/membership/notifications/read-all', (req, res) => {
+  const memberId = getAuthenticatedMemberId(req);
+  if (!memberId) {
+    return res.status(401).json({ success: false, error: 'Authentication required.' });
+  }
+  const markedCount = markAllMemberNotificationsRead(memberId);
+  const account = getMemberAccountState(memberId);
+  return res.json({ success: true, markedCount, ...account });
+});
+
 app.post('/api/membership/cancel', (req, res) => {
   try {
     const memberId = getAuthenticatedMemberId(req);
     if (!memberId) {
       return res.status(401).json({ success: false, error: 'Authentication required.' });
     }
-    const cancelled = cancelMemberSubscription(memberId);
+    const { membershipId } = req.body || {};
+    const cancelled = cancelMemberSubscription(memberId, membershipId);
     if (!cancelled.success) {
       return res.status(400).json({ success: false, error: cancelled.error });
     }
@@ -3503,6 +3653,11 @@ app.get('/api/membership/watch/:dramaId/:episodeSlug', (req, res) => {
       success: false,
       code: auth.code,
       error: auth.error,
+      coveredDramaIds: auth.coveredDramaIds,
+      activePlanNames: auth.activePlanNames,
+      expiredMembershipId: auth.expiredMembershipId,
+      expiredPlanId: auth.expiredPlanId,
+      expiresAt: auth.expiresAt,
     });
   }
   return res.json({
@@ -3514,6 +3669,7 @@ app.get('/api/membership/watch/:dramaId/:episodeSlug', (req, res) => {
     fallbackThumbnail: auth.fallbackThumbnail,
     planName: auth.planName,
     expiresAt: auth.expiresAt,
+    membershipId: auth.membershipId,
   });
 });
 
@@ -3620,27 +3776,31 @@ app.post('/api/admin/memberships/requests/:orderId/approve', requireAdmin, async
       return res.status(result.statusCode).json({ success: false, error: result.error });
     }
 
-    const { order, membership, member } = result;
+    const { order, membership, member, wasRenewal } = result;
     const dramaTitles = membership.selectedDramaIds
       .map((id) => getDramaById(id)?.title || id)
       .join(', ');
+    const paidLabel =
+      order.currency === 'USD'
+        ? `$${Number(order.amountUsd ?? order.expectedAmount ?? 0).toFixed(2)} USD`
+        : `PKR ${membership.pricePkr.toLocaleString()}`;
 
     if (member?.email) {
       const customerEmailHtml = `
         <div style="font-family:Inter,Arial,sans-serif;background:#F8FAFC;padding:24px;color:#0B0B0D;">
           <div style="max-width:580px;margin:0 auto;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:28px;">
             <div style="font-size:12px;font-weight:700;color:#16A34A;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
-              FEVIQO Premium Membership Active
+              FEVIQO Premium Membership ${wasRenewal ? 'Renewed' : 'Active'}
             </div>
             <h2 style="margin:0 0 12px 0;font-size:20px;color:#0B0B0D;">
               Your payment has been approved
             </h2>
             <p style="font-size:14px;color:#475569;line-height:1.6;">
-              Hello ${escapeHtml(member.fullName)}, your ${escapeHtml(membership.planName)} membership (PKR ${membership.pricePkr.toLocaleString()} / ${membership.durationDays} Days) is now active.
+              Hello ${escapeHtml(member.fullName)}, your ${escapeHtml(membership.planName)} membership (${escapeHtml(paidLabel)} / ${order.durationDays} Days) is ${wasRenewal ? 'renewed and extended' : 'now active'}.
             </p>
             <p style="font-size:13px;color:#334155;">
               <strong>Included Dramas:</strong> ${escapeHtml(dramaTitles)}<br/>
-              <strong>Valid Until:</strong> ${escapeHtml(membership.expiresAt)}
+              <strong>Valid Until (UTC):</strong> ${escapeHtml(membership.expiresAt)}
             </p>
           </div>
         </div>
@@ -3648,8 +3808,9 @@ app.post('/api/admin/memberships/requests/:orderId/approve', requireAdmin, async
 
       await dispatchTrackedEmail({
         orderId: order.id,
+        membershipId: membership.id,
         to: member.email,
-        subject: `FEVIQO Membership Activated — ${membership.planName}`,
+        subject: `FEVIQO Membership ${wasRenewal ? 'Renewed' : 'Activated'} — ${membership.planName}`,
         html: customerEmailHtml,
         type: 'member_payment_approved',
       });
@@ -3659,6 +3820,7 @@ app.post('/api/admin/memberships/requests/:orderId/approve', requireAdmin, async
       success: true,
       order,
       membership,
+      wasRenewal,
       overview: getAdminMembershipsOverview(),
     });
   } catch {
@@ -3806,6 +3968,29 @@ app.post('/api/admin/memberships/sync', requireAdmin, async (req: any, res) => {
   }
 });
 
+app.post('/api/admin/memberships/:membershipId/extend', requireAdmin, (req: any, res) => {
+  try {
+    const { membershipId } = req.params;
+    const { addDays, reason } = req.body || {};
+    const result = extendMembershipByAdmin({
+      membershipId,
+      addDays: Number(addDays),
+      reason,
+      admin: req.admin,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      membership: result.membership,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to extend membership.' });
+  }
+});
+
 app.post('/api/admin/memberships/:membershipId/revoke', requireAdmin, (req: any, res) => {
   try {
     const { membershipId } = req.params;
@@ -3822,6 +4007,69 @@ app.post('/api/admin/memberships/:membershipId/revoke', requireAdmin, (req: any,
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to revoke membership.' });
   }
+});
+
+app.post('/api/admin/memberships/reminders/run', requireAdmin, async (req: any, res) => {
+  try {
+    const runLog = await runLifecycleReminderCheck('admin_manual', createLifecycleEmailDispatcher());
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'reminders_executed',
+      targetId: runLog.id,
+      details: runLog.summary,
+    });
+    return res.json({
+      success: true,
+      runLog,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to run expiry & renewal reminder check.' });
+  }
+});
+
+app.post('/api/admin/memberships/notifications/:notifId/retry-email', requireAdmin, async (req: any, res) => {
+  try {
+    const notif = getCustomerNotificationById(req.params.notifId);
+    if (!notif) {
+      return res.status(404).json({ success: false, error: 'Customer notification not found.' });
+    }
+    if (!notif.customerEmail || !notif.customerEmail.includes('@')) {
+      return res.status(400).json({ success: false, error: 'Customer email is unavailable for this notification.' });
+    }
+    const dispatcher = createLifecycleEmailDispatcher();
+    const baseUrl = process.env.APP_URL || 'https://feviqo.com';
+    const result = await dispatcher({
+      to: notif.customerEmail,
+      subject: `FEVIQO: ${notif.title}`,
+      html: `<p>${escapeHtml(notif.message)}</p><p><a href="${escapeHtml(baseUrl + (notif.ctaHref || '/membership?tab=account'))}">Open My Account</a></p>`,
+      type: notif.type === 'membership_expired' ? 'member_membership_expired' : 'member_renewal_reminder',
+      membershipId: notif.membershipId,
+      customerNotificationId: notif.id,
+    });
+    const nextStatus = result.success ? 'sent' : result.notConfigured ? 'not_configured' : 'failed';
+    const updated = updateCustomerNotificationEmailStatus(notif.id, nextStatus, result.error);
+    return res.json({
+      success: Boolean(result.success),
+      error: result.error,
+      notification: updated,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to retry reminder email.' });
+  }
+});
+
+app.post('/api/internal/cron/memberships', async (req, res) => {
+  const admin = getAuthenticatedAdmin(req);
+  const cronSecret = process.env.FEVIQO_CRON_SECRET || '';
+  const providedSecret = String(req.headers['x-cron-secret'] || req.query.secret || '').trim();
+  if (!admin && (!cronSecret || providedSecret !== cronSecret)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized cron trigger.' });
+  }
+  const runLog = await runLifecycleReminderCheck('cron_endpoint', createLifecycleEmailDispatcher());
+  return res.json({ success: true, runLog });
 });
 
 app.put('/api/admin/memberships/config', requireAdmin, (req: any, res) => {
@@ -3850,6 +4098,10 @@ app.post(
   },
   (req: any, res) => {
     const planId = req.params.planId as MembershipPlanId;
+    const region: PaymentRegion =
+      req.query.region === 'international' || req.body?.region === 'international'
+        ? 'international'
+        : 'pakistan';
     if (!['starter', 'standard', 'plus', 'vip'].includes(planId)) {
       return res.status(400).json({ success: false, error: 'Invalid plan ID.' });
     }
@@ -3858,6 +4110,7 @@ app.post(
     }
     const result = saveUploadedQrImage({
       planId,
+      region,
       buffer: req.file.buffer,
       admin: req.admin,
     });
@@ -3866,6 +4119,7 @@ app.post(
     }
     return res.json({
       success: true,
+      region,
       imageUrl: result.imageUrl,
       config: result.config,
       overview: getAdminMembershipsOverview(),
@@ -4205,6 +4459,20 @@ async function startServer() {
   const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`FEVIQO full-stack server running on http://0.0.0.0:${PORT}`);
   });
+
+  // Automated membership expiry & renewal reminder lifecycle scheduler (startup + every 5 min)
+  const dispatcher = createLifecycleEmailDispatcher();
+  setTimeout(() => {
+    runLifecycleReminderCheck('startup', dispatcher).catch((err) =>
+      console.warn('[MembershipScheduler] Startup check error:', err)
+    );
+  }, 3000).unref();
+
+  setInterval(() => {
+    runLifecycleReminderCheck('scheduled_interval', dispatcher).catch((err) =>
+      console.warn('[MembershipScheduler] Interval check error:', err)
+    );
+  }, 5 * 60 * 1000).unref();
 
   server.on('error', (err: any) => {
     if (err.code === 'EADDRINUSE') {

@@ -6,6 +6,10 @@ import {
   AlertCircle,
   User,
   Clock,
+  Globe,
+  RefreshCw,
+  Play,
+  ShieldCheck,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
@@ -14,18 +18,23 @@ import { Footer } from '../Footer';
 import {
   MEMBERSHIP_PLANS,
   MEMBERSHIP_DRAMAS,
+  DEFAULT_USD_PRICES,
   MembershipPlan,
   MembershipPlanId,
   CatalogDramaMeta,
+  PaymentRegion,
+  getDramaById,
 } from '../../data/membershipCatalog';
 import {
   fetchMembershipCatalog,
+  fetchMembershipGeo,
   fetchMemberAccount,
   logoutMemberAccount,
   createMembershipCheckout,
   MemberAccountState,
   MembershipOrder,
   PublicMembershipConfig,
+  GeoPricingInfo,
 } from '../../services/membershipService';
 import { auth } from '../../firebase';
 import {
@@ -38,6 +47,7 @@ import {
 import { MembershipAuthModal } from '../membership/MembershipAuthModal';
 import { MembershipAccountPanel } from '../membership/MembershipAccountPanel';
 import { BankQrPaymentSection } from '../membership/BankQrPaymentSection';
+import { notifyMembershipAuthChanged } from '../membership/useDramaEntitlement';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MEMBERSHIP_COPY } from '../../i18n/membershipTranslations';
 
@@ -69,13 +79,29 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
   const [publicConfig, setPublicConfig] = useState<PublicMembershipConfig | undefined>(undefined);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signup');
+  const [phoneCompletionAccount, setPhoneCompletionAccount] = useState<MemberAccountState | null>(null);
   const [showAccountSection, setShowAccountSection] = useState(initialViewAccount);
   const [pendingCheckoutAfterAuth, setPendingCheckoutAfterAuth] = useState(false);
 
-  // Manual Bank QR Checkout state
+  const hasValidPhone = (acc?: MemberAccountState | null) => {
+    const digits = (acc?.member?.phone || '').replace(/[^\d]/g, '');
+    return digits.length >= 10 && digits.length <= 15;
+  };
+
+  // Manual Bank / Binance QR Checkout state
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [activePaymentOrder, setActivePaymentOrder] = useState<MembershipOrder | null>(null);
+
+  // Payment region, geo pricing, renewal mode & episode deep-link context
+  const [paymentRegion, setPaymentRegion] = useState<PaymentRegion>('pakistan');
+  const [regionManuallySet, setRegionManuallySet] = useState(false);
+  const [geoInfo, setGeoInfo] = useState<GeoPricingInfo | null>(null);
+  const [renewMembershipId, setRenewMembershipId] = useState<string | null>(null);
+  const [returnEpisodeContext, setReturnEpisodeContext] = useState<{
+    dramaId: string;
+    episodeSlug?: string;
+  } | null>(null);
 
   const pricingRef = useRef<HTMLElement | null>(null);
   const dramaSelectionRef = useRef<HTMLElement | null>(null);
@@ -85,31 +111,108 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     setShowAccountSection(initialViewAccount);
   }, [initialViewAccount]);
 
+  const applyUrlContextFromLocation = React.useCallback((currentAccount?: MemberAccountState | null) => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const paramPlan = params.get('plan') as MembershipPlanId | null;
+    const paramDrama = params.get('drama');
+    const paramEpisode = params.get('episode');
+    const paramRenew = params.get('renew');
+    const paramAuth = params.get('auth');
+    const paramTab = params.get('tab');
+    const paramRegion = params.get('region') as PaymentRegion | null;
+
+    if (paramRegion === 'pakistan' || paramRegion === 'international') {
+      setPaymentRegion(paramRegion);
+      setRegionManuallySet(true);
+    }
+
+    if (paramDrama && MEMBERSHIP_DRAMAS.some((d) => d.id === paramDrama)) {
+      setReturnEpisodeContext({
+        dramaId: paramDrama,
+        episodeSlug: paramEpisode || undefined,
+      });
+      setSelectedDramaIds((prev) => (prev.includes(paramDrama) ? prev : [paramDrama]));
+    }
+
+    if (paramRenew) {
+      setRenewMembershipId(paramRenew);
+      setShowAccountSection(false);
+    }
+
+    if (paramPlan && MEMBERSHIP_PLANS.some((p) => p.id === paramPlan)) {
+      setSelectedPlanId(paramPlan);
+      if (paramPlan === 'vip') {
+        setSelectedDramaIds(MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id));
+      }
+      setTimeout(() => {
+        scrollToSection(paramRenew ? dramaSelectionRef.current : pricingRef.current);
+      }, 120);
+    } else if (paramDrama) {
+      setTimeout(() => {
+        scrollToSection(pricingRef.current);
+      }, 120);
+    }
+
+    if (paramTab === 'account') {
+      setShowAccountSection(true);
+    } else if (paramAuth === 'signin' && !(currentAccount || account)) {
+      setPendingCheckoutAfterAuth(Boolean(paramPlan));
+      setAuthModalMode('signin');
+      setAuthModalOpen(true);
+    }
+  }, [account]);
+
   useEffect(() => {
     let active = true;
     const init = async () => {
       try {
-        const [catalogRes, accountRes] = await Promise.all([
+        const [catalogRes, geoRes, accountRes] = await Promise.all([
           fetchMembershipCatalog().catch(() => null),
+          fetchMembershipGeo().catch(() => null),
           fetchMemberAccount().catch(() => null),
         ]);
         if (!active) return;
         if (catalogRes?.publicConfig) {
           setPublicConfig(catalogRes.publicConfig);
         }
+        const resolvedGeo = geoRes?.geo || catalogRes?.geo || null;
+        if (resolvedGeo) {
+          setGeoInfo(resolvedGeo);
+          const params = new URLSearchParams(window.location.search);
+          const explicitRegion = params.get('region');
+          if (!explicitRegion && !regionManuallySet) {
+            setPaymentRegion(resolvedGeo.defaultRegion);
+          }
+        }
+        let loggedAcc: MemberAccountState | null = null;
         if (accountRes && accountRes.success) {
+          loggedAcc = accountRes;
           setAccount(accountRes);
           if (accountRes.publicConfig) {
             setPublicConfig(accountRes.publicConfig);
           }
+          if (!hasValidPhone(accountRes)) {
+            setPhoneCompletionAccount(accountRes);
+            setAuthModalOpen(true);
+          }
         }
+        applyUrlContextFromLocation(loggedAcc);
       } catch {
         // Guest viewer
       }
     };
     init();
+
+    const onUrlEvent = () => {
+      setTimeout(() => applyUrlContextFromLocation(), 30);
+    };
+    window.addEventListener('popstate', onUrlEvent);
+    window.addEventListener('feviqo-navigate-url', onUrlEvent);
     return () => {
       active = false;
+      window.removeEventListener('popstate', onUrlEvent);
+      window.removeEventListener('feviqo-navigate-url', onUrlEvent);
     };
   }, []);
 
@@ -176,16 +279,57 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     setSelectedDramaIds((prev) => [...prev, drama.id]);
   };
 
+  const getPlanUsdAmount = (plan: MembershipPlan): number => {
+    return Number(
+      publicConfig?.usdPrices?.[plan.id] ?? plan.priceUsd ?? DEFAULT_USD_PRICES[plan.id]
+    );
+  };
+
+  const getPlanIndicativeLocal = (plan: MembershipPlan): string | undefined => {
+    if (!geoInfo || geoInfo.localCurrencyCode === 'USD' || geoInfo.localCurrencyCode === 'PKR') {
+      return undefined;
+    }
+    const usdVal = getPlanUsdAmount(plan);
+    const localVal = Math.round(usdVal * geoInfo.rateFromUsd * 100) / 100;
+    try {
+      return `${geoInfo.localCurrencySymbol}${localVal.toLocaleString(undefined, {
+        maximumFractionDigits: localVal >= 100 ? 0 : 2,
+      })} ${geoInfo.localCurrencyCode}`;
+    } catch {
+      return geoInfo.indicativePlans?.[plan.id]?.formattedApproxLocal;
+    }
+  };
+
+  const getPlanDisplayPrice = (plan: MembershipPlan): string => {
+    if (paymentRegion === 'international') {
+      return `$${getPlanUsdAmount(plan).toFixed(2)} USD`;
+    }
+    return plan.priceDisplay;
+  };
+
   const runServerCheckout = async (plan: MembershipPlan, dramaIds: string[]) => {
     setCheckingOut(true);
     setCheckoutError(null);
     try {
+      const indicativeLocalDisplay =
+        paymentRegion === 'international' ? getPlanIndicativeLocal(plan) : undefined;
       const res = await createMembershipCheckout({
         planId: plan.id,
         selectedDramaIds: dramaIds,
+        paymentRegion,
+        orderType: renewMembershipId ? 'renewal' : 'new',
+        targetMembershipId: renewMembershipId || undefined,
+        visitorCountryCode: geoInfo?.countryCode,
+        indicativeLocalDisplay,
       });
 
       if (!res.success || !res.order) {
+        if (res.code === 'PHONE_REQUIRED' && account) {
+          setPhoneCompletionAccount(account);
+          setPendingCheckoutAfterAuth(true);
+          setAuthModalOpen(true);
+          return;
+        }
         setCheckoutError(res.error || 'Could not initiate payment request. Please verify your selection.');
         return;
       }
@@ -210,7 +354,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         scrollToSection(paymentSectionRef.current);
       }, 80);
     } catch {
-      setCheckoutError('Network error while preparing Bank QR payment. Please try again.');
+      setCheckoutError('Network error while preparing QR payment. Please try again.');
     } finally {
       setCheckingOut(false);
     }
@@ -255,7 +399,15 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
 
     if (!account) {
       setPendingCheckoutAfterAuth(true);
+      setPhoneCompletionAccount(null);
       setAuthModalMode('signup');
+      setAuthModalOpen(true);
+      return;
+    }
+
+    if (!hasValidPhone(account)) {
+      setPendingCheckoutAfterAuth(true);
+      setPhoneCompletionAccount(account);
       setAuthModalOpen(true);
       return;
     }
@@ -264,6 +416,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
   };
 
   const handleAuthenticated = async (loggedAccount: MemberAccountState) => {
+    setPhoneCompletionAccount(null);
     let enrichedAccount = loggedAccount;
     if (isFirebaseSignedInVerified()) {
       syncMemberAccountToFirestore(loggedAccount.member).catch(() => {});
@@ -288,6 +441,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
       setPublicConfig(enrichedAccount.publicConfig);
     }
     setAuthModalOpen(false);
+    notifyMembershipAuthChanged();
 
     if (pendingCheckoutAfterAuth && selectedPlan) {
       setPendingCheckoutAfterAuth(false);
@@ -296,6 +450,8 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           ? MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id)
           : selectedDramaIds;
       await runServerCheckout(selectedPlan, finalIds);
+    } else if (returnEpisodeContext?.dramaId && enrichedAccount.unlockedDramaIds.includes(returnEpisodeContext.dramaId)) {
+      setShowAccountSection(false);
     } else if (!selectedPlan) {
       setShowAccountSection(true);
     }
@@ -307,6 +463,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     setAccount(null);
     setShowAccountSection(false);
     setActivePaymentOrder(null);
+    notifyMembershipAuthChanged();
   };
 
   const handleOpenMyAccount = () => {
@@ -394,6 +551,49 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Continue Watching Return Banner when visitor arrived from a gated episode */}
+      {returnEpisodeContext && (() => {
+        const ctxDrama = getDramaById(returnEpisodeContext.dramaId);
+        const isNowUnlocked = Boolean(account?.unlockedDramaIds.includes(returnEpisodeContext.dramaId));
+        const returnHref = `/${returnEpisodeContext.dramaId === 'teskilat' ? 'teskilat' : returnEpisodeContext.dramaId}${
+          returnEpisodeContext.episodeSlug ? `/${returnEpisodeContext.episodeSlug}` : ''
+        }`;
+        return (
+          <div
+            dir={dir}
+            className={`border-b ${
+              isNowUnlocked ? 'bg-[#0B0B0D] text-white border-zinc-800' : 'bg-emerald-50 text-[#0B0B0D] border-emerald-200'
+            }`}
+          >
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2 font-semibold">
+                {isNowUnlocked ? (
+                  <ShieldCheck className="w-4 h-4 text-[#22C55E] shrink-0" />
+                ) : (
+                  <Play className="w-4 h-4 text-[#16A34A] shrink-0 fill-current" />
+                )}
+                <span>
+                  {t(MEMBERSHIP_COPY.episodeGate.returnBannerTitle)}{' '}
+                  <strong>{ctxDrama?.title || returnEpisodeContext.dramaId}</strong>
+                  {returnEpisodeContext.episodeSlug ? ` (${returnEpisodeContext.episodeSlug.replace('episode-', 'Episode ')})` : ''}
+                </span>
+              </div>
+              <a
+                href={returnHref}
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: returnHref }));
+                }}
+                className="px-3.5 py-1.5 rounded-lg bg-[#22C55E] hover:bg-emerald-500 text-[#0B0B0D] font-bold inline-flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>{t(MEMBERSHIP_COPY.episodeGate.returnBannerBtn)}</span>
+              </a>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Concise Pending / Awaiting Payment Status Banner for Signed-In Members */}
       {account &&
@@ -610,20 +810,120 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         <section
           id="membership-pricing"
           ref={pricingRef}
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-22 space-y-12"
+          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-22 space-y-10"
         >
-          <div className="max-w-2xl space-y-3">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0B0B0D]">
-              {t(MEMBERSHIP_COPY.plans.heading)}
-            </h2>
-            <p className="text-base text-zinc-600">{t(MEMBERSHIP_COPY.plans.subheading)}</p>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <div className="max-w-2xl space-y-3">
+              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0B0B0D]">
+                {t(MEMBERSHIP_COPY.plans.heading)}
+              </h2>
+              <p className="text-base text-zinc-600">{t(MEMBERSHIP_COPY.plans.subheading)}</p>
+            </div>
+
+            {/* Payment Region Selector: Pakistan (PKR Bank QR) vs International (USD Binance QR) */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-500 flex items-center gap-2">
+                <Globe className="w-3.5 h-3.5 text-[#16A34A]" />
+                <span>{t(MEMBERSHIP_COPY.plans.regionLabel)}</span>
+                {geoInfo && (
+                  <span className="text-zinc-700 font-semibold" dir="ltr">
+                    · {geoInfo.countryName || geoInfo.countryCode}
+                  </span>
+                )}
+              </div>
+              <div className="inline-flex flex-wrap gap-2 p-1 rounded-xl bg-zinc-100 border border-zinc-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentRegion('pakistan');
+                    setRegionManuallySet(true);
+                    setActivePaymentOrder(null);
+                  }}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    paymentRegion === 'pakistan'
+                      ? 'bg-[#0B0B0D] text-white shadow-xs'
+                      : 'text-zinc-600 hover:text-[#0B0B0D]'
+                  }`}
+                >
+                  {t(MEMBERSHIP_COPY.plans.regionPakistan)}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentRegion('international');
+                    setRegionManuallySet(true);
+                    setActivePaymentOrder(null);
+                  }}
+                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    paymentRegion === 'international'
+                      ? 'bg-[#0B0B0D] text-white shadow-xs'
+                      : 'text-zinc-600 hover:text-[#0B0B0D]'
+                  }`}
+                >
+                  {t(MEMBERSHIP_COPY.plans.regionInternational)}
+                </button>
+              </div>
+            </div>
           </div>
+
+          {paymentRegion === 'international' && (
+            <div className="rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-xs text-zinc-700 flex items-start gap-2.5">
+              <Globe className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
+              <span>{t(MEMBERSHIP_COPY.plans.indicativeNotice)}</span>
+            </div>
+          )}
+
+          {renewMembershipId && (() => {
+            const targetM = account?.allMemberships?.find((m) => m.id === renewMembershipId)
+              || account?.activeMemberships?.find((m) => m.id === renewMembershipId)
+              || account?.latestMembership;
+            const isTargetActive = targetM?.status === 'active';
+            return (
+              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <RefreshCw className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <div className="text-sm font-bold text-emerald-950">
+                      {t(MEMBERSHIP_COPY.plans.renewalBannerTitle)}
+                      {targetM ? ` — ${targetM.planName}` : ''}
+                    </div>
+                    <p className="text-xs text-emerald-900 leading-relaxed">
+                      {isTargetActive
+                        ? t(MEMBERSHIP_COPY.plans.renewalBannerActiveNote)
+                        : t(MEMBERSHIP_COPY.plans.renewalBannerExpiredNote)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRenewMembershipId(null)}
+                  className="px-3.5 py-2 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-100 text-emerald-950 text-xs font-semibold cursor-pointer shrink-0 self-start sm:self-auto"
+                >
+                  {t(MEMBERSHIP_COPY.plans.cancelRenewalMode)}
+                </button>
+              </div>
+            );
+          })()}
+
+          {account &&
+            !renewMembershipId &&
+            (account.activeMemberships?.length || (account.activeMembership ? 1 : 0)) > 0 &&
+            returnEpisodeContext?.dramaId &&
+            !account.unlockedDramaIds.includes(returnEpisodeContext.dramaId) && (
+              <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4 text-xs text-zinc-700 flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
+                <span>{t(MEMBERSHIP_COPY.plans.additionalDramaNote)}</span>
+              </div>
+            )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {MEMBERSHIP_PLANS.map((plan) => {
               const isSelected = selectedPlanId === plan.id;
               const isPopular = Boolean(plan.isFeatured);
               const copy = MEMBERSHIP_COPY.plans.items[plan.id];
+              const displayPrice = getPlanDisplayPrice(plan);
+              const approxLocal =
+                paymentRegion === 'international' ? getPlanIndicativeLocal(plan) : undefined;
 
               return (
                 <div
@@ -648,8 +948,13 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
 
                     <div className="space-y-1">
                       <div className="text-3xl font-bold tracking-tight tabular-nums" dir="ltr">
-                        {plan.priceDisplay}
+                        {displayPrice}
                       </div>
+                      {approxLocal && (
+                        <div className={`text-xs font-medium ${isPopular ? 'text-[#22C55E]' : 'text-[#16A34A]'}`} dir="ltr">
+                          {t(MEMBERSHIP_COPY.plans.approxLocalPrefix)} {approxLocal}
+                        </div>
+                      )}
                       <div className={`text-xs font-medium ${isPopular ? 'text-zinc-400' : 'text-zinc-500'}`}>
                         {t(copy.durationLabel)}
                       </div>
@@ -702,7 +1007,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                 <div className="space-y-1.5">
                   <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
                     {t(MEMBERSHIP_COPY.dramaSelection.stepEyebrow)} · {selectedPlan.name} (
-                    <span dir="ltr">{selectedPlan.priceDisplay}</span> /{' '}
+                    <span dir="ltr">{getPlanDisplayPrice(selectedPlan)}</span> /{' '}
                     {t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})
                   </div>
                   <h2 id="drama-selection-heading" className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0B0B0D]">
@@ -815,8 +1120,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
               <div className="rounded-2xl bg-white border border-zinc-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="text-sm font-bold text-[#0B0B0D]">
-                    {selectedPlan.name} · <span dir="ltr">{selectedPlan.priceDisplay}</span> (
+                    {selectedPlan.name} · <span dir="ltr">{getPlanDisplayPrice(selectedPlan)}</span> (
                     {t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})
+                    {renewMembershipId ? ` · ${t(MEMBERSHIP_COPY.payment.orderTypeRenewal)}` : ''}
                   </div>
                   <div className="text-xs text-zinc-600">
                     {account
@@ -835,7 +1141,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                     {checkingOut
                       ? t(MEMBERSHIP_COPY.dramaSelection.preparingCheckout)
                       : account
-                      ? t(MEMBERSHIP_COPY.dramaSelection.proceedToPayment)
+                      ? paymentRegion === 'international'
+                        ? t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentUsd)
+                        : t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentPkr)
                       : t(MEMBERSHIP_COPY.dramaSelection.continueSignInCheckout)}
                   </span>
                   <ArrowRight className="w-4 h-4" />
@@ -962,13 +1270,24 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
       <MembershipAuthModal
         isOpen={authModalOpen}
         initialMode={authModalMode}
+        forcePhoneAccount={phoneCompletionAccount}
+        onSignedOutDuringPhoneStep={() => {
+          setPhoneCompletionAccount(null);
+          setAccount(null);
+          setPendingCheckoutAfterAuth(false);
+        }}
         pendingContextLabel={
           selectedPlan
-            ? `${selectedPlan.name} (${selectedPlan.priceDisplay} · ${selectedPlan.durationLabel})`
+            ? `${selectedPlan.name} (${getPlanDisplayPrice(selectedPlan)} · ${selectedPlan.durationLabel})`
+            : returnEpisodeContext
+            ? `${getDramaById(returnEpisodeContext.dramaId)?.title || returnEpisodeContext.dramaId}${
+                returnEpisodeContext.episodeSlug ? ` · ${returnEpisodeContext.episodeSlug}` : ''
+              }`
             : undefined
         }
         onClose={() => {
           setAuthModalOpen(false);
+          setPhoneCompletionAccount(null);
           setPendingCheckoutAfterAuth(false);
         }}
         onAuthenticated={handleAuthenticated}

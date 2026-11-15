@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Play, ChevronRight } from 'lucide-react';
+import { Play, ChevronRight, Lock, ShieldCheck } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
 import { AdBanner728x90 } from '../AdBanner728x90';
@@ -8,6 +8,8 @@ import { AdBanner468x60 } from '../AdBanner468x60';
 import { AdBanner300x250 } from '../AdBanner300x250';
 import { AdBanner160x300 } from '../AdBanner160x300';
 import { AdNativeBanner } from '../AdNativeBanner';
+import { getDramaById } from '../../data/membershipCatalog';
+import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 
 interface DramasPageProps {
   onBackToHome: () => void;
@@ -113,6 +115,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
   onNavigatePage,
 }) => {
   const [activeSlide, setActiveSlide] = useState(0);
+  const { hasDramaAccess } = useDramaEntitlement();
 
   // Client-side SEO injection
   useEffect(() => {
@@ -378,6 +381,10 @@ export const DramasPage: React.FC<DramasPageProps> = ({
         <div className="max-w-7xl mx-auto space-y-20 sm:space-y-24">
           {dramas.map((drama, index) => {
             const isEven = index % 2 === 0;
+            const isUnlocked = hasDramaAccess(drama.id);
+            const premiumEp = getDramaById(drama.id)?.episodes.find(
+              (ep) => ep.accessType === 'premium' && ep.isPublished
+            );
             return (
               <article 
                 key={drama.id}
@@ -410,6 +417,17 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                       className="w-full h-full object-cover block opacity-100 group-hover:scale-105 transition-all duration-[450ms] ease-out"
                       loading="lazy"
                     />
+                    {isUnlocked ? (
+                      <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#22C55E] text-[#0B0B0D] text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>Membership Active</span>
+                      </div>
+                    ) : premiumEp ? (
+                      <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#0B0B0D]/90 text-[#22C55E] border border-[#22C55E]/40 text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
+                        <Lock className="w-3 h-3" />
+                        <span>Urdu Dubbed Premium</span>
+                      </div>
+                    ) : null}
                     {/* Balanced visual depth gradient on bottom */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-transparent pointer-events-none" />
                   </a>
@@ -447,13 +465,49 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                       {drama.description}
                     </p>
 
+                    {premiumEp && (
+                      <div className="p-3 bg-[#0B0B0D] text-white rounded-xl flex items-center justify-between gap-3 border border-zinc-800">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isUnlocked ? (
+                            <ShieldCheck className="w-4 h-4 text-[#22C55E] shrink-0" />
+                          ) : (
+                            <Lock className="w-4 h-4 text-[#22C55E] shrink-0" />
+                          )}
+                          <span className="text-xs font-semibold truncate">
+                            {isUnlocked
+                              ? `Unlocked: ${premiumEp.title} (Urdu Dubbed)`
+                              : `Premium Urdu Dubbed: Episode ${premiumEp.number}`}
+                          </span>
+                        </div>
+                        <a
+                          href={
+                            isUnlocked
+                              ? `${drama.href}/${premiumEp.slug}`
+                              : `/membership?drama=${encodeURIComponent(drama.id)}&episode=${encodeURIComponent(premiumEp.slug)}`
+                          }
+                          onClick={(e) => {
+                            if (!e.metaKey && !e.ctrlKey) {
+                              e.preventDefault();
+                              const target = isUnlocked
+                                ? `${drama.href}/${premiumEp.slug}`
+                                : `/membership?drama=${encodeURIComponent(drama.id)}&episode=${encodeURIComponent(premiumEp.slug)}`;
+                              window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: target }));
+                            }
+                          }}
+                          className="text-xs font-black text-[#22C55E] hover:underline shrink-0"
+                        >
+                          {isUnlocked ? 'Watch Now →' : 'Unlock →'}
+                        </a>
+                      </div>
+                    )}
+
                     {/* Latest Episode Direct Crawlable Power Link */}
                     {drama.latestEpisodeUrl && (
                       <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                           <span className="text-xs font-bold text-slate-900">
-                            Latest Stream: <span className="text-emerald-700">{drama.latestEpisodeLabel || 'New Episode'}</span>
+                            Latest Free Stream: <span className="text-emerald-700">{drama.latestEpisodeLabel || 'New Episode'}</span>
                           </span>
                         </div>
                         <a

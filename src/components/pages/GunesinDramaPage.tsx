@@ -15,7 +15,9 @@ import {
   Calendar,
   Search,
   DollarSign,
-  Sparkles
+  Sparkles,
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
@@ -28,7 +30,10 @@ import { AdBanner160x600 } from '../AdBanner160x600';
 import { AdNativeBanner } from '../AdNativeBanner';
 import { VastPreRollAdOverlay } from '../VastPreRollAdOverlay';
 import { GUNESIN_SERIES_DATA, GUNESIN_EPISODES, GunesinEpisode } from '../../data/gunesinDogduguYer';
+import { isEpisodePremium } from '../../data/membershipCatalog';
 import { attachHlsStream, extractMuxPlaybackId } from '../../utils/hlsPlayer';
+import { useDramaEntitlement } from '../membership/useDramaEntitlement';
+import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
 
 interface GunesinDramaPageProps {
   onBackToHome: () => void;
@@ -81,6 +86,18 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
   // Native HTML5 Video references
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsVideoPlaying] = useState(false);
+
+  const {
+    member,
+    checkingEpisodeKey,
+    unlockedStreams,
+    gateState,
+    hasDramaAccess,
+    verifyAndUnlockEpisode,
+    attemptWatchEpisode,
+    closeGateModal,
+  } = useDramaEntitlement('gunesin-dogdugu-yer');
+  const isDramaUnlocked = hasDramaAccess('gunesin-dogdugu-yer');
 
   // SEO & Google Search Keyword Optimization Effect for Main & Episode 3 Pages
   useEffect(() => {
@@ -181,18 +198,41 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
     } catch {}
   };
 
-  const currentStreamUrl = selectedEpisode.embeds[0]?.src;
+  const selectedEpSlug = selectedEpisode.slug;
+  const isSelectedPremium = Boolean(
+    selectedEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', selectedEpSlug)
+  );
+  const resolvedStreamUrl = isSelectedPremium
+    ? unlockedStreams[`gunesin-dogdugu-yer:${selectedEpSlug}`] || ''
+    : selectedEpisode.embeds[0]?.src || '';
 
   useEffect(() => {
-    if (activeView === 'episode-detail' && videoRef.current && currentStreamUrl) {
-      const cleanup = attachHlsStream(videoRef.current, currentStreamUrl, {
+    if (activeView === 'episode-detail' && isSelectedPremium) {
+      verifyAndUnlockEpisode('gunesin-dogdugu-yer', selectedEpSlug);
+    }
+  }, [activeView, isSelectedPremium, selectedEpSlug, verifyAndUnlockEpisode]);
+
+  const handleSelectEpisode = (ep: GunesinEpisode) => {
+    const epIsPremium = Boolean(ep.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', ep.slug));
+    if (!epIsPremium) {
+      navigateToEpisode(ep);
+      return;
+    }
+    attemptWatchEpisode('gunesin-dogdugu-yer', ep.slug, ep.title, () => {
+      navigateToEpisode(ep);
+    });
+  };
+
+  useEffect(() => {
+    if (activeView === 'episode-detail' && videoRef.current && resolvedStreamUrl) {
+      const cleanup = attachHlsStream(videoRef.current, resolvedStreamUrl, {
         autoPlay: false,
       });
       return () => {
         if (cleanup) cleanup();
       };
     }
-  }, [activeView, selectedEpisode, currentStreamUrl]);
+  }, [activeView, selectedEpisode, resolvedStreamUrl]);
 
   const handleStartPlayback = () => {
     setShowPosterOverlay(false);
@@ -338,13 +378,27 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     </div>
 
                     {/* Right button panel */}
-                    <div className="lg:col-span-4 flex items-center lg:justify-end w-full">
+                    <div className="lg:col-span-4 flex flex-col items-stretch lg:items-end justify-center gap-2 w-full">
+                      {isDramaUnlocked && (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] font-bold self-start lg:self-end">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>FEVIQO Premium Active</span>
+                        </div>
+                      )}
                       <button 
-                        onClick={() => navigateToEpisode(latestEpisode)}
+                        onClick={() => handleSelectEpisode(latestEpisode)}
                         className="w-full lg:w-auto px-10 py-4 bg-[#22C55E] hover:bg-emerald-600 active:scale-95 text-slate-950 font-black text-sm rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg"
                       >
-                        <Play className="w-4 h-4 fill-current" />
-                        <span>Watch Episode {latestEpisode.number} Now</span>
+                        {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked ? (
+                          <Lock className="w-4 h-4" />
+                        ) : (
+                          <Play className="w-4 h-4 fill-current" />
+                        )}
+                        <span>
+                          {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked
+                            ? `Unlock Episode ${latestEpisode.number} (Premium)`
+                            : `Watch Episode ${latestEpisode.number} Now`}
+                        </span>
                       </button>
                     </div>
 
@@ -359,7 +413,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                   
                   {/* Thumbnail Cover */}
                   <div 
-                    onClick={() => navigateToEpisode(latestEpisode)}
+                    onClick={() => handleSelectEpisode(latestEpisode)}
                     className="relative w-full md:w-[320px] aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 cursor-pointer group shadow-sm"
                   >
                     <img 
@@ -367,9 +421,16 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                       alt={`Gunesin Dogdugu Yer Episode ${latestEpisode.number}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                     />
-                    <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
-                      NEW
-                    </div>
+                    {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) ? (
+                      <div className={`absolute top-3 left-3 px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${isDramaUnlocked ? 'bg-emerald-500 text-slate-950' : 'bg-[#0B0B0D]/90 text-[#22C55E] border border-[#22C55E]/40'}`}>
+                        {isDramaUnlocked ? <ShieldCheck className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                        <span>{isDramaUnlocked ? 'Unlocked · Urdu Dubbed' : 'Urdu Dubbed · Premium'}</span>
+                      </div>
+                    ) : (
+                      <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
+                        NEW
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
                       <div className="w-11 h-11 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
                         <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
@@ -380,12 +441,17 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                   {/* Details Block */}
                   <div className="flex-1 space-y-4">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-3 text-xs text-slate-400 font-bold uppercase tracking-wider">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 font-bold uppercase tracking-wider">
                         <span>LATEST RELEASE</span>
                         <span>·</span>
                         <span>EPISODE {latestEpisode.number}</span>
+                        {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && (
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-[10px] font-black">
+                            {isDramaUnlocked ? 'MEMBERSHIP UNLOCKED' : 'FEVIQO PREMIUM'}
+                          </span>
+                        )}
                       </div>
-                      <h2 className="text-2xl font-black text-slate-900 hover:text-[#22C55E] cursor-pointer transition" onClick={() => navigateToEpisode(latestEpisode)}>
+                      <h2 className="text-2xl font-black text-slate-900 hover:text-[#22C55E] cursor-pointer transition" onClick={() => handleSelectEpisode(latestEpisode)}>
                         {latestEpisode.title}
                       </h2>
                       <p className="text-xs text-slate-500 flex items-center gap-3">
@@ -400,11 +466,19 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     </p>
 
                     <button 
-                      onClick={() => navigateToEpisode(latestEpisode)}
+                      onClick={() => handleSelectEpisode(latestEpisode)}
                       className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-lg transition duration-150 cursor-pointer"
                     >
-                      <Play className="w-3.5 h-3.5 fill-current" />
-                      <span>Watch Episode {latestEpisode.number} Now</span>
+                      {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked ? (
+                        <Lock className="w-3.5 h-3.5" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                      )}
+                      <span>
+                        {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked
+                          ? `Unlock Episode ${latestEpisode.number} with Premium`
+                          : `Watch Episode ${latestEpisode.number} Now`}
+                      </span>
                     </button>
                   </div>
 
@@ -461,52 +535,71 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                 {/* Directory Cards Grid in 16:9 rectangle aspect ratio with zero mobile cropping */}
                 {filteredEpisodes.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {filteredEpisodes.map((ep) => (
-                      <a
-                        key={ep.slug}
-                        href={`/gunesin-dogdugu-yer/${ep.slug}/`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          navigateToEpisode(ep);
-                        }}
-                        className="group bg-slate-50/20 hover:bg-slate-50/50 border border-slate-100 hover:border-slate-300 rounded-2xl overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition duration-200 text-left select-none cursor-pointer flex flex-col h-full shadow-sm"
-                      >
-                        
-                        {/* 16:9 Rectangle aspect-video Thumbnail Cover */}
-                        <div className="relative aspect-video bg-slate-100 border-b border-slate-100 overflow-hidden">
-                          <img 
-                            src={ep.thumbnail} 
-                            alt={ep.title} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                          />
-                          <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
-                            <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                              <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Details */}
-                        <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              <span>EPISODE {ep.number}</span>
-                              <span>·</span>
-                              <span>{ep.duration}</span>
-                            </div>
-                            <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-[#22C55E] transition line-clamp-2">
-                              {ep.title}
-                            </h3>
-                          </div>
+                    {filteredEpisodes.map((ep) => {
+                      const epPremium = Boolean(ep.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', ep.slug));
+                      return (
+                        <a
+                          key={ep.slug}
+                          href={`/gunesin-dogdugu-yer/${ep.slug}/`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSelectEpisode(ep);
+                          }}
+                          className="group bg-slate-50/20 hover:bg-slate-50/50 border border-slate-100 hover:border-slate-300 rounded-2xl overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition duration-200 text-left select-none cursor-pointer flex flex-col h-full shadow-sm"
+                        >
                           
-                          <div className="pt-2 flex items-center justify-between text-xs text-[#22C55E] font-bold">
-                            <span>Watch Online</span>
-                            <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                          {/* 16:9 Rectangle aspect-video Thumbnail Cover */}
+                          <div className="relative aspect-video bg-slate-100 border-b border-slate-100 overflow-hidden">
+                            <img 
+                              src={ep.thumbnail} 
+                              alt={ep.title} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            />
+                            {epPremium && (
+                              <div className={`absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md ${isDramaUnlocked ? 'bg-[#22C55E] text-[#0B0B0D]' : 'bg-[#0B0B0D]/90 text-[#22C55E] border border-[#22C55E]/40'}`}>
+                                {isDramaUnlocked ? <ShieldCheck className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+                                <span>{isDramaUnlocked ? 'Unlocked · Membership' : 'Premium · Urdu Dubbed'}</span>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
+                              <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
+                                {epPremium && !isDramaUnlocked ? (
+                                  <Lock className="w-4 h-4 text-slate-950" />
+                                ) : (
+                                  <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
 
-                      </a>
-                    ))}
+                          {/* Details */}
+                          <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                <span>EPISODE {ep.number}</span>
+                                <span>·</span>
+                                <span>{ep.duration}</span>
+                              </div>
+                              <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-[#22C55E] transition line-clamp-2">
+                                {ep.title}
+                              </h3>
+                            </div>
+                            
+                            <div className="pt-2 flex items-center justify-between text-xs text-[#22C55E] font-bold">
+                              <span>
+                                {epPremium && !isDramaUnlocked
+                                  ? 'Unlock with FEVIQO Premium'
+                                  : epPremium
+                                  ? 'Unlocked with Membership'
+                                  : 'Watch Online'}
+                              </span>
+                              <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                            </div>
+                          </div>
+
+                        </a>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="py-12 text-center border border-dashed border-slate-200 rounded-3xl space-y-2">
@@ -618,66 +711,121 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                 </p>
               </div>
 
-              {/* Secure 16:9 Anti-Download Mux Video Player */}
+              {/* Secure 16:9 Anti-Download Mux Video Player OR Locked Premium Gate */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div 
-                  onContextMenu={(e) => e.preventDefault()}
-                  className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center select-none aspect-video border border-slate-200/80 mx-auto"
-                >
-                  {/* Poster Overlay */}
-                  {showPosterOverlay && (
-                    <div 
-                      onClick={handleStartPlayback}
-                      className="absolute inset-0 z-30 bg-black flex items-center justify-center cursor-pointer group overflow-hidden rounded-2xl sm:rounded-3xl"
-                    >
-                      <img 
-                        src={selectedEpisode.thumbnail} 
-                        alt={selectedEpisode.title} 
-                        className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition duration-500 rounded-2xl sm:rounded-3xl"
-                      />
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition flex items-center justify-center">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all">
-                          <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-slate-950 ml-1" />
-                        </div>
+                {isSelectedPremium && !resolvedStreamUrl ? (
+                  <div className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0B0B0D] shadow-2xl flex items-center justify-center select-none aspect-video border border-zinc-800 mx-auto">
+                    <img
+                      src={selectedEpisode.thumbnail}
+                      alt={selectedEpisode.title}
+                      className="absolute inset-0 w-full h-full object-cover opacity-30 blur-[2px] scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/75 to-black/60" />
+                    <div className="relative z-10 max-w-xl mx-auto px-6 py-8 text-center space-y-4">
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/60 text-[#22C55E] flex items-center justify-center mx-auto shadow-xl">
+                        <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
+                      </div>
+                      <div className="text-[11px] font-black uppercase tracking-[0.16em] text-[#22C55E]">
+                        URDU DUBBED · FEVIQO PREMIUM
+                      </div>
+                      <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight">
+                        Unlock Gunesin Dogdugu Yer Episode {selectedEpisode.number} in Urdu Dubbed HD
+                      </h2>
+                      <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-md mx-auto">
+                        Click below to check your FEVIQO Premium membership status, renew an expired plan, or sign in to watch immediately.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            attemptWatchEpisode(
+                              'gunesin-dogdugu-yer',
+                              selectedEpSlug,
+                              selectedEpisode.title
+                            )
+                          }
+                          className="px-6 py-3 rounded-xl bg-[#22C55E] hover:bg-emerald-500 text-[#0B0B0D] font-black text-xs sm:text-sm transition cursor-pointer shadow-lg"
+                        >
+                          {checkingEpisodeKey === `gunesin-dogdugu-yer:${selectedEpSlug}`
+                            ? 'Checking Membership...'
+                            : 'Unlock with FEVIQO Premium'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            window.dispatchEvent(
+                              new CustomEvent('feviqo-navigate-url', {
+                                detail: `/membership?auth=signin&drama=gunesin-dogdugu-yer&episode=${selectedEpSlug}`,
+                              })
+                            )
+                          }
+                          className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs sm:text-sm transition cursor-pointer"
+                        >
+                          {member ? 'My Account' : 'Sign In'}
+                        </button>
                       </div>
                     </div>
-                  )}
+                  </div>
+                ) : (
+                  <div 
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-2xl flex items-center justify-center select-none aspect-video border border-slate-200/80 mx-auto"
+                  >
+                    {/* Poster Overlay */}
+                    {showPosterOverlay && (
+                      <div 
+                        onClick={handleStartPlayback}
+                        className="absolute inset-0 z-30 bg-black flex items-center justify-center cursor-pointer group overflow-hidden rounded-2xl sm:rounded-3xl"
+                      >
+                        <img 
+                          src={selectedEpisode.thumbnail} 
+                          alt={selectedEpisode.title} 
+                          className="w-full h-full object-cover object-center bg-black group-hover:scale-105 transition duration-500 rounded-2xl sm:rounded-3xl"
+                        />
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition flex items-center justify-center">
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all">
+                            <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-current text-slate-950 ml-1" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-                  {/* VAST Pre-Roll Video Ad Layer for Drama Pages */}
-                  {showPreRollAd && (
-                    <VastPreRollAdOverlay
-                      onAdComplete={handleAdComplete}
-                    />
-                  )}
+                    {/* VAST Pre-Roll Video Ad Layer for Drama Pages */}
+                    {showPreRollAd && (
+                      <VastPreRollAdOverlay
+                        onAdComplete={handleAdComplete}
+                      />
+                    )}
 
-                  <style>{`
-                    mux-video, video-skin, video-player { object-fit: contain !important; }
-                    mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
-                    media-error-dialog, .media-error-dialog, [class*="dialog-root"], media-dialog-backdrop, media-dialog-popup {
-                      display: none !important;
-                      visibility: hidden !important;
-                      opacity: 0 !important;
-                      pointer-events: none !important;
-                    }
-                  `}</style>
+                    <style>{`
+                      mux-video, video-skin, video-player { object-fit: contain !important; }
+                      mux-video::part(video), mux-video video { object-fit: contain !important; width: 100% !important; height: 100% !important; }
+                      media-error-dialog, .media-error-dialog, [class*="dialog-root"], media-dialog-backdrop, media-dialog-popup {
+                        display: none !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                        pointer-events: none !important;
+                      }
+                    `}</style>
 
-                  {/* Official VideoJS / Mux Video Player Web Components */}
-                  <video-player className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden">
-                    <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
-                      <mux-video
-                        ref={videoRef as any}
-                        src={currentStreamUrl}
-                        playback-id={extractMuxPlaybackId(currentStreamUrl) || undefined}
-                        crossorigin="anonymous"
-                        playsinline
-                        poster={selectedEpisode.thumbnail}
-                        onContextMenu={(e: any) => e.preventDefault()}
-                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                      ></mux-video>
-                      <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.title}></mux-data>
-                    </video-skin>
-                  </video-player>
-                </div>
+                    {/* Official VideoJS / Mux Video Player Web Components */}
+                    <video-player className="w-full h-full block bg-black rounded-2xl sm:rounded-3xl overflow-hidden">
+                      <video-skin style={{ display: 'block', width: '100%', height: '100%', aspectRatio: '16 / 9' }}>
+                        <mux-video
+                          ref={videoRef as any}
+                          src={resolvedStreamUrl}
+                          playback-id={extractMuxPlaybackId(resolvedStreamUrl) || undefined}
+                          crossorigin="anonymous"
+                          playsinline
+                          poster={selectedEpisode.thumbnail}
+                          onContextMenu={(e: any) => e.preventDefault()}
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                        ></mux-video>
+                        <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.title}></mux-data>
+                      </video-skin>
+                    </video-player>
+                  </div>
+                )}
               </div>
 
               {/* Actions Row: Download & Share Buttons (Guaranteed same line on phones) */}
@@ -792,31 +940,40 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    {GUNESIN_EPISODES.filter(ep => ep.number !== selectedEpisode.number).map(ep => (
-                      <a
-                        key={ep.slug}
-                        href={`/gunesin-dogdugu-yer/${ep.slug}/`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          navigateToEpisode(ep);
-                        }}
-                        className="block group bg-slate-50 border border-slate-100 hover:border-slate-300 rounded-xl overflow-hidden hover:scale-105 transition cursor-pointer select-none"
-                      >
-                        <div className="aspect-video relative overflow-hidden bg-slate-100">
-                          <img 
-                            src={ep.thumbnail} 
-                            alt={ep.title} 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="p-4 space-y-1">
-                          <span className="text-[10px] font-bold text-slate-400">EPISODE {ep.number}</span>
-                          <h4 className="text-sm font-black text-slate-900 group-hover:text-[#22C55E] transition truncate">
-                            {ep.title}
-                          </h4>
-                        </div>
-                      </a>
-                    ))}
+                    {GUNESIN_EPISODES.filter(ep => ep.number !== selectedEpisode.number).map(ep => {
+                      const epPremium = Boolean(ep.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', ep.slug));
+                      return (
+                        <a
+                          key={ep.slug}
+                          href={`/gunesin-dogdugu-yer/${ep.slug}/`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSelectEpisode(ep);
+                          }}
+                          className="block group bg-slate-50 border border-slate-100 hover:border-slate-300 rounded-xl overflow-hidden hover:scale-105 transition cursor-pointer select-none"
+                        >
+                          <div className="aspect-video relative overflow-hidden bg-slate-100">
+                            <img 
+                              src={ep.thumbnail} 
+                              alt={ep.title} 
+                              className="w-full h-full object-cover"
+                            />
+                            {epPremium && (
+                              <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${isDramaUnlocked ? 'bg-[#22C55E] text-[#0B0B0D]' : 'bg-[#0B0B0D]/90 text-[#22C55E]'}`}>
+                                {isDramaUnlocked ? <ShieldCheck className="w-2.5 h-2.5" /> : <Lock className="w-2.5 h-2.5" />}
+                                <span>{isDramaUnlocked ? 'Unlocked' : 'Premium'}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-4 space-y-1">
+                            <span className="text-[10px] font-bold text-slate-400">EPISODE {ep.number}</span>
+                            <h4 className="text-sm font-black text-slate-900 group-hover:text-[#22C55E] transition truncate">
+                              {ep.title}
+                            </h4>
+                          </div>
+                        </a>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -826,6 +983,14 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
         </AnimatePresence>
       </main>
 
+      <PremiumEpisodeModal
+        gateState={gateState}
+        member={member}
+        onClose={closeGateModal}
+        onNavigateMembershipUrl={(targetUrl) => {
+          window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: targetUrl }));
+        }}
+      />
     </div>
   );
 };

@@ -8,6 +8,7 @@ import {
   MessageCircle,
   RefreshCw,
   Image as ImageIcon,
+  Globe,
 } from 'lucide-react';
 import {
   MembershipOrder,
@@ -59,11 +60,26 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
   const dramaTitlesList = order.selectedDramaIds.map((id) => getDramaById(id)?.title || id);
   const dramaTitlesText = dramaTitlesList.join(', ');
 
-  const qrUrl =
-    order.qrImageUrl ||
-    publicConfig?.qrImages?.[order.planId] ||
-    `/images/qr/${order.planId}-qr.jpg`;
-  const qrDownloadUrl = `/api/membership/qr/${encodeURIComponent(order.planId)}/download`;
+  const isInternational =
+    order.paymentMethod === 'binance_qr' ||
+    order.paymentRegion === 'international' ||
+    order.currency === 'USD';
+  const isRenewal = order.orderType === 'renewal';
+  const usdAmount = Number(order.expectedAmount ?? order.amountUsd ?? 0);
+  const exactAmountLabel = isInternational
+    ? `$${usdAmount.toFixed(2)} USD`
+    : `PKR ${order.amountPkr.toLocaleString()}`;
+
+  const qrUrl = isInternational
+    ? order.qrImageUrl ||
+      publicConfig?.binanceQrImages?.[order.planId] ||
+      `/images/qr/${order.planId}-binance-qr.jpg`
+    : order.qrImageUrl ||
+      publicConfig?.qrImages?.[order.planId] ||
+      `/images/qr/${order.planId}-qr.jpg`;
+  const qrDownloadUrl = `/api/membership/qr/${encodeURIComponent(order.planId)}/download?region=${
+    isInternational ? 'international' : 'pakistan'
+  }`;
 
   const statusEntry = MEMBERSHIP_COPY.statuses[order.status] || MEMBERSHIP_COPY.statuses.awaiting_payment;
 
@@ -153,11 +169,13 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
     'Assalam-o-Alaikum FEVIQO Team,',
     'I have paid for my FEVIQO Premium Membership and am sending my payment details:',
     `Request ID: ${order.id}`,
+    `Order Type: ${isRenewal ? 'Membership Renewal' : 'New Membership'}`,
+    `Payment Method: ${isInternational ? 'International Binance QR (USD)' : 'Pakistan Bank QR (PKR)'}`,
     `Name: ${member.fullName}`,
     `Email: ${member.email}`,
     member.phone ? `Phone: ${member.phone}` : '',
     `Plan: ${order.planName} (${order.durationDays} Days)`,
-    `Amount Paid: PKR ${order.amountPkr.toLocaleString()}`,
+    `Amount Paid: ${exactAmountLabel}`,
     `Selected Drama(s): ${dramaTitlesText}`,
     '(Payment screenshot attached below)',
   ]
@@ -182,13 +200,31 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-zinc-200">
         <div className="space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
-            {t(MEMBERSHIP_COPY.payment.stepTitle)}
+          <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A] flex flex-wrap items-center gap-2">
+            <span>
+              {isInternational
+                ? t(MEMBERSHIP_COPY.payment.stepTitleBinance)
+                : t(MEMBERSHIP_COPY.payment.stepTitle)}
+            </span>
+            {isRenewal && (
+              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                {t(MEMBERSHIP_COPY.payment.orderTypeRenewal)}
+              </span>
+            )}
           </div>
           <h3 className="text-2xl font-bold text-[#0B0B0D]">
-            {order.planName} Plan — <span dir="ltr">PKR {order.amountPkr.toLocaleString()}</span> ({order.durationDays}{' '}
+            {order.planName} Plan — <span dir="ltr">{exactAmountLabel}</span> ({order.durationDays}{' '}
             {isUrdu ? 'دن' : 'Days'})
           </h3>
+          {isInternational && order.indicativeLocalDisplay && (
+            <p className="text-xs text-zinc-500">
+              {t(MEMBERSHIP_COPY.plans.approxLocalPrefix)}{' '}
+              <span dir="ltr" className="font-semibold text-zinc-700">
+                {order.indicativeLocalDisplay}
+              </span>{' '}
+              — {t(MEMBERSHIP_COPY.plans.exactUsdPayable)} <strong dir="ltr">{exactAmountLabel}</strong>
+            </p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -252,36 +288,62 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
 
       {/* 2-Column QR + Summary & Upload */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left: Exact Uncropped Plan Bank QR Code */}
+        {/* Left: Exact Uncropped Plan Bank OR Binance QR Code */}
         <div className="lg:col-span-5 rounded-2xl bg-[#F8FAFC] border border-zinc-200 p-6 space-y-5 text-center">
-          <div className="text-xs font-bold uppercase tracking-[0.12em] text-[#16A34A]">
-            {t(MEMBERSHIP_COPY.payment.qrHeading)}
+          <div className="text-xs font-bold uppercase tracking-[0.12em] text-[#16A34A] inline-flex items-center justify-center gap-1.5">
+            {isInternational && <Globe className="w-3.5 h-3.5" />}
+            <span>
+              {isInternational
+                ? t(MEMBERSHIP_COPY.payment.binanceQrHeading)
+                : t(MEMBERSHIP_COPY.payment.qrHeading)}
+            </span>
           </div>
 
-          <div className="mx-auto max-w-[300px] bg-white rounded-2xl border border-zinc-200 p-4 shadow-xs flex items-center justify-center">
-            <img
-              src={qrUrl}
-              alt={`${order.planName} Bank QR Code — PKR ${order.amountPkr}`}
-              className="w-full h-auto max-h-[340px] object-contain block"
-              referrerPolicy="no-referrer"
-            />
-          </div>
+          {qrUrl ? (
+            <>
+              <div className="mx-auto max-w-[300px] bg-white rounded-2xl border border-zinc-200 p-4 shadow-xs flex items-center justify-center">
+                <img
+                  src={qrUrl}
+                  alt={`${order.planName} ${isInternational ? 'Binance' : 'Bank'} QR Code — ${exactAmountLabel}`}
+                  className="w-full h-auto max-h-[340px] object-contain block"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
 
-          <a
-            href={qrDownloadUrl}
-            download={`FEVIQO-${order.planName}-${order.amountPkr}PKR-QR.jpg`}
-            className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-100 text-[#0B0B0D] text-xs font-semibold inline-flex items-center justify-center gap-2 transition"
-          >
-            <Download className="w-4 h-4 text-[#16A34A]" />
-            <span>{t(MEMBERSHIP_COPY.payment.downloadQr)}</span>
-          </a>
+              <a
+                href={qrDownloadUrl}
+                download={
+                  isInternational
+                    ? `FEVIQO-${order.planName}-Binance-${usdAmount.toFixed(2)}USD-QR.png`
+                    : `FEVIQO-${order.planName}-${order.amountPkr}PKR-QR.jpg`
+                }
+                className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-100 text-[#0B0B0D] text-xs font-semibold inline-flex items-center justify-center gap-2 transition"
+              >
+                <Download className="w-4 h-4 text-[#16A34A]" />
+                <span>{t(MEMBERSHIP_COPY.payment.downloadQr)}</span>
+              </a>
+            </>
+          ) : (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-xs text-amber-900 space-y-2">
+              <AlertCircle className="w-6 h-6 text-amber-700 mx-auto" />
+              <p className="font-semibold leading-relaxed">
+                {t(MEMBERSHIP_COPY.payment.binanceQrMissing)}
+              </p>
+            </div>
+          )}
 
           <div className="text-left space-y-2.5 pt-2 border-t border-zinc-200">
             <p className="text-xs font-semibold text-[#0B0B0D] leading-relaxed">
-              {MEMBERSHIP_COPY.payment.scanInstructionEn}
+              {isInternational
+                ? publicConfig?.internationalInstructionsEn ||
+                  MEMBERSHIP_COPY.payment.binanceInstructionEn
+                : MEMBERSHIP_COPY.payment.scanInstructionEn}
             </p>
             <p dir="rtl" className="font-urdu-slim text-sm text-zinc-700 leading-relaxed">
-              {MEMBERSHIP_COPY.payment.scanInstructionUr}
+              {isInternational
+                ? publicConfig?.internationalInstructionsUr ||
+                  MEMBERSHIP_COPY.payment.binanceInstructionUr
+                : MEMBERSHIP_COPY.payment.scanInstructionUr}
             </p>
           </div>
 
@@ -311,9 +373,36 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
               <div>
                 <div className="text-zinc-500">{t(MEMBERSHIP_COPY.payment.totalAmountLabel)}</div>
                 <div className="font-bold text-[#16A34A] mt-0.5 text-sm tabular-nums" dir="ltr">
-                  PKR {order.amountPkr.toLocaleString()}
+                  {exactAmountLabel}
                 </div>
               </div>
+              <div>
+                <div className="text-zinc-500">{t(MEMBERSHIP_COPY.payment.paymentMethodLabel)}</div>
+                <div className="font-semibold text-[#0B0B0D] mt-0.5">
+                  {isInternational
+                    ? t(MEMBERSHIP_COPY.payment.methodBinanceQr)
+                    : t(MEMBERSHIP_COPY.payment.methodBankQr)}
+                </div>
+              </div>
+              <div>
+                <div className="text-zinc-500">{t(MEMBERSHIP_COPY.payment.orderTypeLabel)}</div>
+                <div className="font-semibold text-[#0B0B0D] mt-0.5">
+                  {isRenewal
+                    ? t(MEMBERSHIP_COPY.payment.orderTypeRenewal)
+                    : t(MEMBERSHIP_COPY.payment.orderTypeNew)}
+                </div>
+              </div>
+              {isInternational && order.indicativeLocalDisplay && (
+                <div className="sm:col-span-2 rounded-lg bg-zinc-50 border border-zinc-200 px-3 py-2">
+                  <div className="text-zinc-500">{t(MEMBERSHIP_COPY.payment.indicativeLocalLabel)}</div>
+                  <div className="font-semibold text-[#0B0B0D] mt-0.5" dir="ltr">
+                    {order.indicativeLocalDisplay}{' '}
+                    <span className="text-zinc-500 font-normal">
+                      ({MEMBERSHIP_COPY.plans.exactUsdPayable.en} {exactAmountLabel})
+                    </span>
+                  </div>
+                </div>
+              )}
               <div>
                 <div className="text-zinc-500">{t(MEMBERSHIP_COPY.payment.durationLabel)}</div>
                 <div className="font-semibold text-[#0B0B0D] mt-0.5">

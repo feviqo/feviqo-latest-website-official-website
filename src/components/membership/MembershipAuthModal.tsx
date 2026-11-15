@@ -1,21 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, ArrowRight } from 'lucide-react';
-import { signInWithPopup } from 'firebase/auth';
+import { X, Eye, EyeOff, ArrowRight, Phone, CheckCircle2 } from 'lucide-react';
+import { signInWithPopup, signOut } from 'firebase/auth';
 import {
   loginMemberAccount,
   registerMemberAccount,
   authenticateMemberWithGoogle,
+  updateMemberPhone,
+  logoutMemberAccount,
   MemberAccountState,
 } from '../../services/membershipService';
 import { auth, googleProvider, checkGoogleDomainAuthorized } from '../../firebase';
 import { syncMemberAccountToFirestore } from '../../services/firestoreMembershipSync';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MEMBERSHIP_COPY } from '../../i18n/membershipTranslations';
+import { notifyMembershipAuthChanged } from './useDramaEntitlement';
+
+function hasValidPhoneNumber(phone?: string): boolean {
+  const digits = (phone || '').replace(/[^\d]/g, '');
+  return digits.length >= 10 && digits.length <= 15;
+}
 
 interface MembershipAuthModalProps {
   isOpen: boolean;
   initialMode?: 'signin' | 'signup';
   pendingContextLabel?: string;
+  forcePhoneAccount?: MemberAccountState | null;
+  onSignedOutDuringPhoneStep?: () => void;
   onClose: () => void;
   onAuthenticated: (account: MemberAccountState) => void;
 }
@@ -24,11 +34,19 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
   isOpen,
   initialMode = 'signup',
   pendingContextLabel,
+  forcePhoneAccount,
+  onSignedOutDuringPhoneStep,
   onClose,
   onAuthenticated,
 }) => {
   const { t, isUrdu, dir } = useLanguage();
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+  const [step, setStep] = useState<'auth' | 'phone'>('auth');
+  const [pendingGoogleAccount, setPendingGoogleAccount] = useState<MemberAccountState | null>(null);
+  const [pendingGoogleUid, setPendingGoogleUid] = useState<string | null>(null);
+  const [phoneCompletionValue, setPhoneCompletionValue] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -41,9 +59,19 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMode(initialMode);
     setError(null);
-  }, [initialMode, isOpen]);
+    if (isOpen && forcePhoneAccount && !hasValidPhoneNumber(forcePhoneAccount.member.phone)) {
+      setStep('phone');
+      setPendingGoogleAccount(forcePhoneAccount);
+      setPendingGoogleUid(forcePhoneAccount.member.ownerUid || null);
+      setPhoneCompletionValue(forcePhoneAccount.member.phone || '');
+    } else if (!isOpen || !forcePhoneAccount) {
+      setStep('auth');
+      setPendingGoogleAccount(null);
+      setPendingGoogleUid(null);
+      setMode(initialMode);
+    }
+  }, [initialMode, isOpen, forcePhoneAccount]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,11 +87,11 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && step !== 'phone') onClose();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, step]);
 
   if (!isOpen) return null;
 
@@ -83,6 +111,17 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
         return;
       }
       await syncMemberAccountToFirestore(result.member, cred.user.uid).catch(() => {});
+      notifyMembershipAuthChanged();
+
+      if (!hasValidPhoneNumber(result.member.phone)) {
+        setPendingGoogleAccount(result);
+        setPendingGoogleUid(cred.user.uid);
+        setPhoneCompletionValue(result.member.phone || '');
+        setStep('phone');
+        setGoogleLoading(false);
+        return;
+      }
+
       onAuthenticated(result);
     } catch (err: any) {
       if (err?.code === 'auth/popup-closed-by-user') {
@@ -107,6 +146,54 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
     } finally {
       setGoogleLoading(false);
     }
+  };
+
+  const handlePhoneCompletionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const trimmed = phoneCompletionValue.trim();
+    if (!hasValidPhoneNumber(trimmed)) {
+      setError(
+        isUrdu
+          ? 'براہ کرم درست فون / واٹس ایپ نمبر درج کریں (کم از کم 10 ہندسے)۔'
+          : 'Please enter a valid WhatsApp / phone number (10 to 15 digits, e.g. 0300 1234567).'
+      );
+      return;
+    }
+
+    setSavingPhone(true);
+    try {
+      const updated = await updateMemberPhone(trimmed);
+      if ('error' in updated) {
+        setError(updated.error || 'Unable to save phone number.');
+        setSavingPhone(false);
+        return;
+      }
+      await syncMemberAccountToFirestore(
+        updated.member,
+        pendingGoogleUid || updated.member.ownerUid || undefined
+      ).catch(() => {});
+      notifyMembershipAuthChanged();
+      setStep('auth');
+      setPendingGoogleAccount(null);
+      setPendingGoogleUid(null);
+      onAuthenticated(updated);
+    } catch {
+      setError('Unable to reach server while saving your phone number. Please try again.');
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
+  const handleAbandonPhoneStep = async () => {
+    await logoutMemberAccount().catch(() => {});
+    await signOut(auth).catch(() => {});
+    notifyMembershipAuthChanged();
+    setStep('auth');
+    setPendingGoogleAccount(null);
+    setPendingGoogleUid(null);
+    onSignedOutDuringPhoneStep?.();
+    onClose();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -177,6 +264,7 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
         return;
       }
 
+      notifyMembershipAuthChanged();
       onAuthenticated(result);
     } catch {
       setError('Unable to reach authentication server. Please try again.');
@@ -184,6 +272,101 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
       setSubmitting(false);
     }
   };
+
+  if (step === 'phone' && pendingGoogleAccount) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="membership-phone-step-title"
+      >
+        <div
+          dir={dir}
+          className={`w-full max-w-md bg-white text-[#0B0B0D] rounded-2xl border border-zinc-200 p-6 sm:p-8 shadow-2xl relative my-auto ${
+            isUrdu ? 'font-urdu-slim' : ''
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
+              <Phone className="w-3.5 h-3.5" />
+              <span>{t(MEMBERSHIP_COPY.auth.eyebrow)}</span>
+            </div>
+            <h2 id="membership-phone-step-title" className="text-2xl font-bold tracking-tight text-[#0B0B0D]">
+              {t(MEMBERSHIP_COPY.auth.googlePhoneTitle)}
+            </h2>
+            <p className="text-sm text-zinc-600 leading-relaxed">
+              {t(MEMBERSHIP_COPY.auth.googlePhoneDesc)}
+            </p>
+          </div>
+
+          <div className="mt-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2.5 text-xs text-emerald-950">
+            <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0" />
+            <div className="min-w-0">
+              <div className="font-bold truncate">{pendingGoogleAccount.member.fullName}</div>
+              <div className="text-emerald-800 truncate" dir="ltr">
+                {pendingGoogleAccount.member.email}
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handlePhoneCompletionSubmit} className="mt-5 space-y-4">
+            <div className="space-y-1">
+              <label htmlFor="google-member-phone" className="block text-xs font-semibold text-zinc-700">
+                {t(MEMBERSHIP_COPY.auth.phone)} <span className="text-red-600">*</span>
+              </label>
+              <input
+                id="google-member-phone"
+                type="tel"
+                dir="ltr"
+                autoComplete="tel"
+                autoFocus
+                required
+                value={phoneCompletionValue}
+                onChange={(e) => setPhoneCompletionValue(e.target.value)}
+                placeholder={t(MEMBERSHIP_COPY.auth.phonePlaceholder)}
+                className="w-full px-3.5 py-2.5 text-sm bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] transition"
+              />
+            </div>
+
+            {error && (
+              <div
+                role="alert"
+                className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 leading-relaxed"
+              >
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={savingPhone}
+              className="w-full py-3 px-4 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] hover:text-[#0B0B0D] disabled:opacity-60 text-white text-sm font-semibold flex items-center justify-center gap-2 transition cursor-pointer"
+            >
+              <span>
+                {savingPhone
+                  ? t(MEMBERSHIP_COPY.auth.googlePhoneSaving)
+                  : t(MEMBERSHIP_COPY.auth.googlePhoneSaveBtn)}
+              </span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={handleAbandonPhoneStep}
+                disabled={savingPhone}
+                className="text-xs font-semibold text-zinc-500 hover:text-red-600 transition cursor-pointer"
+              >
+                {t(MEMBERSHIP_COPY.auth.googlePhoneSwitchAccount)}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -71,15 +71,15 @@ export const MEMBERSHIP_COPY = {
       en: 'Pick the membership tier that matches how you watch, then choose one or two specific Turkish dramas—or unlock all eligible VIP titles at once.',
       ur: 'اپنی پسند کا پلان منتخب کریں، پھر ایک یا دو ترکی ڈرامے چنیں یا تمام دستیاب VIP ڈرامے ان لاک کریں۔',
     },
-    step2Title: { en: '02 — Pay via Bank QR & Upload Proof', ur: '02 — بینک QR سے ادائیگی اور ثبوت اپ لوڈ کریں' },
+    step2Title: { en: '02 — Pay via QR & Upload Proof', ur: '02 — QR سے ادائیگی اور ثبوت اپ لوڈ کریں' },
     step2Desc: {
-      en: 'Sign in or create your personal FEVIQO account, scan the plan-specific Bank QR code to pay the exact PKR amount, and upload your payment screenshot.',
-      ur: 'اپنا ذاتی اکاؤنٹ بنائیں یا سائن ان کریں، پلان کا بینک QR کوڈ اسکین کر کے مقررہ رقم ادا کریں اور ادائیگی کا اسکرین شاٹ اپ لوڈ کریں۔',
+      en: 'Pay in PKR via Pakistani Bank QR or internationally in USD via Binance QR, then upload your payment confirmation screenshot for team verification.',
+      ur: 'پاکستان میں بینک QR کے ذریعے PKR میں یا بین الاقوامی طور پر Binance QR کے ذریعے USD میں ادائیگی کریں اور اسکرین شاٹ اپ لوڈ کریں۔',
     },
     step3Title: { en: '03 — Verified Activation & New Episodes', ur: '03 — تصدیق کے بعد ایکٹیویشن اور نئی اقساط' },
     step3Desc: {
-      en: 'Once our team verifies your receipt, your 15-day or 30-day membership activates with instant access to all eligible current and upcoming episodes.',
-      ur: 'ہماری ٹیم کی تصدیق کے بعد آپ کی 15 یا 30 دن کی ممبرشپ فعال ہو جاتی ہے اور تمام موجودہ و نئی اقساط کھل جاتی ہیں۔',
+      en: 'Once our team verifies your receipt, your 15-day or 30-day membership activates with instant access to all eligible current and upcoming episodes across drama pages.',
+      ur: 'ہماری ٹیم کی تصدیق کے بعد آپ کی 15 یا 30 دن کی ممبرشپ فعال ہو جاتی ہے اور تمام ڈرامہ صفحات پر متعلقہ اقساط خودکار طور پر کھل جاتی ہیں۔',
     },
   },
 
@@ -91,6 +91,30 @@ export const MEMBERSHIP_COPY = {
     },
     mostPopular: { en: 'Most Popular', ur: 'سب سے مقبول' },
     selectedSuffix: { en: 'Selected', ur: 'منتخب شدہ' },
+    regionLabel: { en: 'Payment Region & Currency', ur: 'ادائیگی کا خطہ اور کرنسی' },
+    regionPakistan: { en: 'Pakistan — Pay in PKR (Bank QR)', ur: 'پاکستان — PKR میں ادائیگی (بینک QR)' },
+    regionInternational: { en: 'International — Pay in USD (Binance QR)', ur: 'انٹرنیشنل — USD میں ادائیگی (Binance QR)' },
+    autoDetectedCountry: { en: 'Detected region:', ur: 'خودکار خطہ:' },
+    indicativeNotice: {
+      en: 'Local currency shown is approximate only. For International Binance payments, the exact payable amount is strictly USD as shown.',
+      ur: 'مقامی کرنسی صرف اندازے کے لیے دکھائی گئی ہے۔ انٹرنیشنل Binance ادائیگی کے لیے ہمیشہ مقررہ USD رقم ہی ادا کرنی ہو گی۔',
+    },
+    approxLocalPrefix: { en: 'Approx.', ur: 'تقریباً' },
+    exactUsdPayable: { en: 'Exact payable via Binance:', ur: 'Binance پر اصل واجب الادا رقم:' },
+    renewalBannerTitle: { en: 'Renewing Existing Membership', ur: 'موجودہ ممبرشپ کی تجدید' },
+    renewalBannerActiveNote: {
+      en: 'Renewing early adds the full plan duration directly onto your current expiry date without losing remaining days.',
+      ur: 'وقت سے پہلے تجدید کرنے پر پورے دن آپ کی موجودہ آخری تاریخ کے آگے شامل ہو جائیں گے، کوئی دن ضائع نہیں ہو گا۔',
+    },
+    renewalBannerExpiredNote: {
+      en: 'Your previous membership has expired. Completing payment will restore access on your existing account immediately upon approval.',
+      ur: 'آپ کی پچھلی ممبرشپ کی میعاد ختم ہو چکی ہے۔ ادائیگی کی منظوری پر اسی اکاؤنٹ پر رسائی بحال ہو جائے گی۔',
+    },
+    cancelRenewalMode: { en: 'Switch to New Membership', ur: 'نئی ممبرشپ پر جائیں' },
+    additionalDramaNote: {
+      en: 'You already have active access on another drama. Purchasing a plan for a new drama keeps your existing active membership intact.',
+      ur: 'آپ کی ایک اور ڈرامے کی ممبرشپ پہلے سے فعال ہے۔ نیا ڈرامہ لینے سے آپ کی موجودہ ممبرشپ متاثر نہیں ہو گی۔',
+    },
     items: {
       starter: {
         name: { en: 'Starter', ur: 'اسٹارٹر (Starter)' },
@@ -164,10 +188,12 @@ export const MEMBERSHIP_COPY = {
     urduDubbed: { en: 'Urdu Dubbed', ur: 'اردو ڈبنگ' },
     signedInAs: { en: 'Signed in as', ur: 'سائن ان اکاؤنٹ:' },
     guestCheckoutNote: {
-      en: 'Sign in or create your FEVIQO account next to proceed to Bank QR payment.',
-      ur: 'بینک QR ادائیگی کے لیے اگلے مرحلے میں سائن ان یا نیا اکاؤنٹ بنائیں۔',
+      en: 'Sign in or create your FEVIQO account next to proceed to QR payment.',
+      ur: 'QR ادائیگی کے لیے اگلے مرحلے میں سائن ان یا نیا اکاؤنٹ بنائیں۔',
     },
-    proceedToPayment: { en: 'Continue to Bank QR Payment', ur: 'بینک QR ادائیگی پر جائیں' },
+    proceedToPaymentPkr: { en: 'Continue to Bank QR Payment (PKR)', ur: 'بینک QR ادائیگی (PKR) پر جائیں' },
+    proceedToPaymentUsd: { en: 'Continue to Binance QR Payment (USD)', ur: 'Binance QR ادائیگی (USD) پر جائیں' },
+    proceedToPayment: { en: 'Continue to QR Payment', ur: 'QR ادائیگی پر جائیں' },
     continueSignInCheckout: {
       en: 'Continue to Sign In and Checkout',
       ur: 'سائن ان اور چیک آؤٹ جاری رکھیں',
@@ -180,12 +206,12 @@ export const MEMBERSHIP_COPY = {
     createTitle: { en: 'Create your account', ur: 'نیا اکاؤنٹ بنائیں' },
     signInTitle: { en: 'Sign in to FEVIQO', ur: 'فیویکو میں سائن ان کریں' },
     subtitlePending: {
-      en: 'Your chosen plan and selected drama(s) are saved and will carry straight to the Bank QR payment screen.',
-      ur: 'آپ کا منتخب پلان اور ڈرامے محفوظ ہیں اور سائن ان کے فوراً بعد بینک QR ادائیگی پر جائیں گے۔',
+      en: 'Your chosen plan and selected drama(s) are saved and will carry straight to the QR payment screen.',
+      ur: 'آپ کا منتخب پلان اور ڈرامے محفوظ ہیں اور سائن ان کے فوراً بعد QR ادائیگی پر جائیں گے۔',
     },
     subtitleGeneral: {
-      en: 'Access your FEVIQO Premium Membership, selected dramas, and payment history.',
-      ur: 'اپنی فیویکو پریمیم ممبرشپ، منتخب ڈرامے اور ادائیگی کی تفصیلات دیکھیں۔',
+      en: 'Access your FEVIQO Premium Membership, selected dramas, renewal alerts, and payment history.',
+      ur: 'اپنی فیویکو پریمیم ممبرشپ، منتخب ڈرامے، تجدید الرٹس اور ادائیگی کی تفصیلات دیکھیں۔',
     },
     createTab: { en: 'Create Account', ur: 'نیا اکاؤنٹ' },
     signInTab: { en: 'Sign In', ur: 'سائن ان' },
@@ -202,40 +228,77 @@ export const MEMBERSHIP_COPY = {
     signInButton: { en: 'Sign In & Continue', ur: 'سائن ان کریں اور آگے بڑھیں' },
     creating: { en: 'Creating account...', ur: 'اکاؤنٹ بن رہا ہے...' },
     signingIn: { en: 'Signing in...', ur: 'سائن ان ہو رہا ہے...' },
+    googlePhoneTitle: {
+      en: 'Add Your Phone / WhatsApp Number',
+      ur: 'اپنا فون / واٹس ایپ نمبر درج کریں',
+    },
+    googlePhoneDesc: {
+      en: 'Required after Google Sign-In so our team can reach you about your membership verification or if you leave an unfinished order.',
+      ur: 'گوگل سائن ان مکمل کرنے کے لیے فون نمبر لازمی ہے تاکہ ادائیگی کی تصدیق یا نامکمل آرڈر کی صورت میں ہماری ٹیم آپ سے رابطہ کر سکے۔',
+    },
+    googlePhoneSaveBtn: {
+      en: 'Save Phone & Continue',
+      ur: 'نمبر محفوظ کریں اور آگے بڑھیں',
+    },
+    googlePhoneSaving: {
+      en: 'Saving phone number...',
+      ur: 'فون نمبر محفوظ ہو رہا ہے...',
+    },
+    googlePhoneSwitchAccount: {
+      en: 'Sign out & cancel',
+      ur: 'لاگ آؤٹ کریں',
+    },
   },
 
   payment: {
     stepTitle: { en: 'Complete Your Bank QR Payment', ur: 'بینک QR کے ذریعے ادائیگی مکمل کریں' },
+    stepTitleBinance: { en: 'Complete Your Binance QR Payment (USD)', ur: 'Binance QR (USD) کے ذریعے ادائیگی مکمل کریں' },
     orderSummaryHeading: { en: 'Payment Details', ur: 'ادائیگی کی تفصیلات' },
+    orderTypeLabel: { en: 'Order Type', ur: 'آرڈر کی قسم' },
+    orderTypeNew: { en: 'New Membership', ur: 'نئی ممبرشپ' },
+    orderTypeRenewal: { en: 'Membership Renewal', ur: 'ممبرشپ تجدید' },
+    paymentMethodLabel: { en: 'Payment Method', ur: 'ادائیگی کا طریقہ' },
+    methodBankQr: { en: 'Pakistan Bank QR (PKR)', ur: 'پاکستان بینک QR (PKR)' },
+    methodBinanceQr: { en: 'International Binance QR (USD)', ur: 'انٹرنیشنل Binance QR (USD)' },
     planLabel: { en: 'Selected Plan', ur: 'منتخب پلان' },
     dramasLabel: { en: 'Selected Drama(s)', ur: 'منتخب ڈرامے' },
-    totalAmountLabel: { en: 'Total Amount', ur: 'کل رقم' },
+    totalAmountLabel: { en: 'Exact Payable Amount', ur: 'اصل واجب الادا رقم' },
+    indicativeLocalLabel: { en: 'Approx. Local Equivalent', ur: 'تقریباً مقامی قیمت' },
     durationLabel: { en: 'Duration', ur: 'مدت' },
     customerNameLabel: { en: 'Customer Name', ur: 'کسٹمر کا نام' },
     customerEmailLabel: { en: 'Customer Email', ur: 'کسٹمر ای میل' },
     paymentStatusLabel: { en: 'Payment Status', ur: 'ادائیگی کی کیفیت' },
     requestIdLabel: { en: 'Payment Request ID', ur: 'ریکویسٹ آئی ڈی' },
     qrHeading: { en: 'Scan Bank QR Code', ur: 'بینک QR کوڈ اسکین کریں' },
+    binanceQrHeading: { en: 'Scan Binance Pay QR Code (USD)', ur: 'Binance Pay QR کوڈ اسکین کریں (USD)' },
+    binanceQrMissing: {
+      en: 'The administrator has not uploaded the Binance QR code for this plan yet. Please check back shortly or switch to Pakistan Bank QR.',
+      ur: 'اس پلان کے لیے ایڈمن نے ابھی Binance QR کوڈ اپ لوڈ نہیں کیا۔ براہ کرم تھوڑی دیر بعد چیک کریں یا بینک QR استعمال کریں۔',
+    },
     downloadQr: { en: 'Save / Download QR Code', ur: 'QR کوڈ محفوظ / ڈاؤن لوڈ کریں' },
     scanInstructionEn: 'Scan this QR code using your banking app and pay the exact amount shown.',
     scanInstructionUr: 'اپنی بینکنگ ایپ سے اس QR کوڈ کو اسکین کریں اور بالکل اتنی ہی رقم ادا کریں جتنی یہاں درج ہے۔',
+    binanceInstructionEn:
+      'Open the Binance app → Tap Pay / Scan QR → Send the EXACT USD amount shown for this plan → Upload a clear screenshot of your Binance payment receipt below.',
+    binanceInstructionUr:
+      'Binance ایپ کھولیں → Pay / QR اسکین پر ٹیپ کریں → اس پلان کی بالکل مقررہ USD رقم بھیجیں → نیچے Binance ادائیگی کی رسید کا واضح اسکرین شاٹ اپ لوڈ کریں۔',
     mobileNoteEn:
-      'Paying from the same mobile phone? Save/download this QR code and open it inside a banking or wallet app that supports scanning QR codes from your phone gallery, or scan it using a second device.',
+      'Paying from the same mobile phone? Save/download this QR code and open it inside your banking or Binance app from your photo gallery, or scan it using a second device.',
     mobileNoteUr:
-      'اگر آپ اسی موبائل فون سے ادائیگی کر رہے ہیں تو یہ QR کوڈ محفوظ/ڈاؤن لوڈ کریں اور اپنی بینکنگ ایپ کے گیلری QR اسکین فیچر سے کھولیں، یا کسی دوسرے فون سے اسکین کریں۔',
+      'اگر آپ اسی موبائل فون سے ادائیگی کر رہے ہیں تو یہ QR کوڈ محفوظ/ڈاؤن لوڈ کریں اور اپنی بینکنگ یا Binance ایپ کے گیلری QR اسکین فیچر سے کھولیں، یا کسی دوسرے فون سے اسکین کریں۔',
     proofHeading: { en: 'Upload Payment Proof', ur: 'ادائیگی کا ثبوت (اسکرین شاٹ) اپ لوڈ کریں' },
-    uploadInstructionEn: 'After paying, please upload a clear screenshot of your payment confirmation.',
-    uploadInstructionUr: 'ادائیگی کے بعد، براہ کرم ادائیگی کی تصدیق کا واضح اسکرین شاٹ اپ لوڈ کریں۔',
+    uploadInstructionEn: 'After paying, please upload a clear screenshot of your payment confirmation. Our team verifies every receipt before activation.',
+    uploadInstructionUr: 'ادائیگی کے بعد، براہ کرم ادائیگی کی تصدیق کا واضح اسکرین شاٹ اپ لوڈ کریں۔ ہماری ٹیم کی تصدیق کے بعد ممبرشپ فعال ہو گی۔',
     allowedFormats: {
       en: 'Accepted formats: JPG, JPEG, PNG, WebP (Max 8 MB)',
       ur: 'منظور شدہ فارمیٹس: JPG, JPEG, PNG, WebP (زیادہ سے زیادہ 8 MB)',
     },
     chooseScreenshot: { en: 'Choose Payment Screenshot', ur: 'اسکرین شاٹ منتخب کریں' },
     replaceScreenshot: { en: 'Replace Screenshot', ur: 'اسکرین شاٹ تبدیل کریں' },
-    noteLabel: { en: 'Transaction Reference or Note (Optional)', ur: 'ٹرانزیکشن ریفرنس یا نوٹ (اختیاری)' },
+    noteLabel: { en: 'Transaction / Binance Pay ID or Note (Optional)', ur: 'ٹرانزیکشن / Binance Pay آئی ڈی یا نوٹ (اختیاری)' },
     notePlaceholder: {
-      en: 'Optional: Bank name or transaction reference ID',
-      ur: 'اختیاری: بینک کا نام یا ٹرانزیکشن ریفرنس آئی ڈی',
+      en: 'Optional: Bank / Binance Pay Order ID or reference',
+      ur: 'اختیاری: بینک یا Binance Pay آرڈر آئی ڈی / ریفرنس',
     },
     submitProof: { en: 'Submit Payment Proof', ur: 'ادائیگی کا ثبوت جمع کروائیں' },
     submittingProof: { en: 'Uploading Proof...', ur: 'ثبوت اپ لوڈ ہو رہا ہے...' },
@@ -266,6 +329,57 @@ export const MEMBERSHIP_COPY = {
     inactive: { en: 'Inactive', ur: 'غیر فعال' },
   },
 
+  episodeGate: {
+    premiumBadge: { en: 'Premium Episode', ur: 'پریمیم قسط' },
+    urduPremiumTag: { en: 'Urdu Dubbed — Premium Access', ur: 'اردو ڈبنگ — پریمیم رسائی' },
+    unlockPrompt: { en: 'Unlock with FEVIQO Premium', ur: 'فیویکو پریمیم سے ان لاک کریں' },
+    unlockedBadge: { en: 'Unlocked with Membership', ur: 'ممبرشپ کے ساتھ ان لاک' },
+    checkingAccess: { en: 'Checking your FEVIQO Premium access...', ur: 'آپ کی ممبرشپ رسائی چیک کی جا رہی ہے...' },
+    caseATitle: {
+      en: 'Enjoy this episode with FEVIQO Premium.',
+      ur: 'فیویکو پریمیم کے ساتھ اس قسط سے لطف اندوز ہوں۔',
+    },
+    caseADesc: {
+      en: 'Subscribe to unlock Urdu-dubbed episodes of your favourite dramas. Already have an account? Sign in to unlock automatically.',
+      ur: 'اپنے پسندیدہ ترکی ڈراموں کی اردو ڈب شدہ اقساط دیکھنے کے لیے ممبرشپ حاصل کریں، یا اگر اکاؤنٹ موجود ہے تو سائن ان کریں۔',
+    },
+    caseBTitle: {
+      en: 'Unlock this Premium Episode',
+      ur: 'یہ پریمیم قسط ان لاک کریں',
+    },
+    caseBDesc: {
+      en: 'You are signed in, but you do not have an active membership covering this drama yet.',
+      ur: 'آپ سائن ان ہیں، لیکن اس ڈرامے کے لیے آپ کی کوئی فعال ممبرشپ موجود نہیں ہے۔',
+    },
+    caseDTitle: {
+      en: 'This Drama Is Not in Your Current Plan',
+      ur: 'یہ ڈرامہ آپ کے موجودہ پلان میں شامل نہیں',
+    },
+    caseDDescPrefix: {
+      en: 'Your active membership covers:',
+      ur: 'آپ کی موجودہ فعال ممبرشپ میں شامل ہیں:',
+    },
+    caseDKeepIntactNote: {
+      en: 'Adding a new plan for this drama or choosing VIP will keep your existing active membership and remaining days untouched.',
+      ur: 'اس ڈرامے کا نیا پلان لینے یا VIP منتخب کرنے سے آپ کی موجودہ فعال ممبرشپ اور باقی دن محفوظ رہیں گے۔',
+    },
+    caseETitle: {
+      en: 'Your FEVIQO Membership Has Expired',
+      ur: 'آپ کی فیویکو ممبرشپ کی میعاد ختم ہو گئی ہے',
+    },
+    caseEDesc: {
+      en: 'Renew your membership on your existing account to unlock this episode immediately after verification.',
+      ur: 'اسی اکاؤنٹ پر اپنی ممبرشپ تجدید کریں تاکہ تصدیق کے فوراً بعد یہ قسط دوبارہ کھل جائے۔',
+    },
+    explorePlansBtn: { en: 'Explore Membership Plans', ur: 'ممبرشپ پلانز دیکھیں' },
+    signInBtn: { en: 'Sign In / Create Account', ur: 'سائن ان / نیا اکاؤنٹ' },
+    renewNowBtn: { en: 'Renew Membership', ur: 'ممبرشپ تجدید کریں' },
+    addPlanBtn: { en: 'Choose Plan for This Drama', ur: 'اس ڈرامے کا پلان منتخب کریں' },
+    closeBtn: { en: 'Back to Episode List', ur: 'اقساط کی فہرست پر واپس جائیں' },
+    returnBannerTitle: { en: 'Continue Watching:', ur: 'دیکھنا جاری رکھیں:' },
+    returnBannerBtn: { en: 'Back to Episode', ur: 'قسط پر واپس جائیں' },
+  },
+
   account: {
     myAccount: { en: 'My Account', ur: 'میرا اکاؤنٹ' },
     viewPlans: { en: 'View Plans', ur: 'پلانز دیکھیں' },
@@ -278,8 +392,8 @@ export const MEMBERSHIP_COPY = {
       ur: 'آپ کی ادائیگی تصدیق کے انتظار میں ہے۔',
     },
     awaitingPaymentBanner: {
-      en: 'Your payment request is saved and awaiting your Bank QR transfer and screenshot upload.',
-      ur: 'آپ کی ادائیگی کی درخواست محفوظ ہے، بینک QR ادائیگی اور اسکرین شاٹ اپ لوڈ کا انتظار ہے۔',
+      en: 'Your payment request is saved and awaiting your QR transfer and screenshot upload.',
+      ur: 'آپ کی ادائیگی کی درخواست محفوظ ہے، QR ادائیگی اور اسکرین شاٹ اپ لوڈ کا انتظار ہے۔',
     },
     expiredBanner: {
       en: 'Your membership has expired. Renew your membership to continue watching.',
@@ -292,16 +406,28 @@ export const MEMBERSHIP_COPY = {
     rejectionReasonLabel: { en: 'Reason:', ur: 'وجہ:' },
     reuploadCta: { en: 'Re-upload Payment Proof', ur: 'ادائیگی کا ثبوت دوبارہ اپ لوڈ کریں' },
     renewMembership: { en: 'Renew Membership', ur: 'ممبرشپ تجدید کریں' },
+    addAnotherDrama: { en: 'Add Another Drama Plan', ur: 'ایک اور ڈرامے کا پلان شامل کریں' },
     chooseMembership: { en: 'Choose Your Membership', ur: 'اپنی ممبرشپ منتخب کریں' },
     daysRemaining: { en: 'days remaining', ur: 'دن باقی' },
     hoursRemaining: { en: 'hours remaining', ur: 'گھنٹے باقی' },
+    countdownLabel: { en: 'Time Remaining:', ur: 'باقی وقت:' },
     activatedOn: { en: 'Activated:', ur: 'آغاز:' },
     expiresOn: { en: 'Expires:', ur: 'میعاد ختم:' },
     selectedDramasLabel: { en: 'Selected Dramas:', ur: 'منتخب ڈرامے:' },
+    activeMembershipsHeading: { en: 'Your Active & Past Memberships', ur: 'آپ کی فعال اور سابقہ ممبرشپس' },
+    renewalHistoryLabel: { en: 'Renewal History', ur: 'تجدید کا ریکارڈ' },
+    notificationsHeading: { en: 'Notifications & Renewal Alerts', ur: 'نوٹیفیکیشنز اور تجدید کے الرٹس' },
+    markAllRead: { en: 'Mark all as read', ur: 'سب کو پڑھا ہوا نشان زد کریں' },
+    markRead: { en: 'Mark read', ur: 'پڑھا ہوا' },
+    noNotifications: {
+      en: 'No notifications right now. Renewal reminders and approval updates appear here.',
+      ur: 'فی الحال کوئی نیا نوٹیفیکیشن نہیں ہے۔ تجدید کی یاددہانی اور منظوری کے پیغامات یہاں آئیں گے۔',
+    },
     verificationHistory: { en: 'Payment Verification Requests', ur: 'ادائیگی کی تصدیق کا ریکارڈ' },
     membershipHistory: { en: 'Membership Activity History', ur: 'ممبرشپ ہسٹری' },
     unlockedLibrary: { en: 'Your Unlocked Dramas & Episodes', ur: 'آپ کے ان لاک شدہ ڈرامے اور اقساط' },
     watchEpisode: { en: 'Watch Episode', ur: 'قسط دیکھیں' },
+    openDramaPage: { en: 'Open Drama Page', ur: 'ڈرامہ پیج کھولیں' },
     verifyingStream: { en: 'Verifying...', ur: 'تصدیق ہو رہی ہے...' },
     cancelMembership: { en: 'Cancel Membership', ur: 'ممبرشپ منسوخ کریں' },
   },
@@ -338,16 +464,16 @@ export const MEMBERSHIP_COPY = {
         id: 'payment-verification',
         title: { en: 'Manual Payment Verification', ur: 'ادائیگی کی دستی تصدیق' },
         description: {
-          en: 'Bank QR transfers are manually verified by the FEVIQO team from your submitted payment screenshot before membership activation.',
-          ur: 'بینک QR ادائیگی آپ کے جمع کردہ اسکرین شاٹ سے ٹیم کی تصدیق کے بعد فعال کی جاتی ہے۔',
+          en: 'Bank QR (PKR) and Binance QR (USD) transfers are manually verified by the FEVIQO team from your submitted payment screenshot before activation.',
+          ur: 'بینک QR (PKR) اور Binance QR (USD) ادائیگی آپ کے جمع کردہ اسکرین شاٹ سے ٹیم کی تصدیق کے بعد فعال کی جاتی ہے۔',
         },
       },
       {
         id: 'renewal',
-        title: { en: 'Renewal & Switching', ur: 'تجدید اور تبدیلی' },
+        title: { en: 'Early & Expiry Renewals', ur: 'قبل از وقت اور بعد از میعاد تجدید' },
         description: {
-          en: 'When your 15-day or 30-day term expires, you can renew the same plan or switch tiers and drama selections cleanly from My Account.',
-          ur: 'مدت ختم ہونے پر آپ آسانی سے وہی پلان تجدید کر سکتے ہیں یا نیا پلان و ڈرامے منتخب کر سکتے ہیں۔',
+          en: 'Renew early at any time without losing remaining days—newly approved days stack directly onto your existing expiry date. Expired plans can be renewed on the same account.',
+          ur: 'میعاد ختم ہونے سے پہلے تجدید کرنے پر باقی دن ضائع نہیں ہوتے بلکہ نئے دن آگے شامل ہو جاتے ہیں، اور میعاد ختم ہونے کے بعد بھی اسی اکاؤنٹ سے تجدید ممکن ہے۔',
         },
       },
       {
@@ -372,8 +498,8 @@ export const MEMBERSHIP_COPY = {
           ur: 'سوال 1: فیویکو پریمیم ممبرشپ میں کیا شامل ہے؟',
         },
         answer: {
-          en: 'A FEVIQO Premium Membership gives your personal account access to Urdu-dubbed Turkish drama episodes for the dramas included in your chosen plan, with automatic access to newly added eligible episodes while active.',
-          ur: 'فیویکو پریمیم ممبرشپ آپ کے ذاتی اکاؤنٹ پر منتخب پلان کے مطابق اردو ڈبنگ میں ترکی ڈراموں اور فعال مدت کے دوران آنے والی تمام نئی اقساط تک رسائی دیتی ہے۔',
+          en: 'A FEVIQO Premium Membership gives your personal account access to Urdu-dubbed Turkish drama episodes directly across all eligible drama pages, with automatic unlocking once approved.',
+          ur: 'فیویکو پریمیم ممبرشپ آپ کے ذاتی اکاؤنٹ پر منتخب پلان کے مطابق اردو ڈبنگ میں ترکی ڈراموں تک تمام ڈرامہ صفحات پر براہ راست رسائی دیتی ہے۔',
         },
       },
       {
@@ -383,19 +509,19 @@ export const MEMBERSHIP_COPY = {
           ur: 'سوال 2: اسٹارٹر، اسٹینڈرڈ، پلس اور VIP پلانز میں کیا فرق ہے؟',
         },
         answer: {
-          en: 'Starter (PKR 299) covers 1 selected drama for 15 days. Standard (PKR 599) covers 1 selected drama for 30 days. Plus (PKR 899) covers any 2 dramas for 30 days. VIP (PKR 1,299) unlocks all eligible VIP catalogue dramas for 30 days.',
-          ur: 'اسٹارٹر (299 روپے) 15 دن کے لیے 1 ڈرامہ، اسٹینڈرڈ (599 روپے) 30 دن کے لیے 1 ڈرامہ، پلس (899 روپے) 30 دن کے لیے 2 ڈرامے اور VIP (1,299 روپے) 30 دن کے لیے تمام دستیاب VIP ڈرامے کھولتا ہے۔',
+          en: 'Starter covers 1 selected drama for 15 days. Standard covers 1 selected drama for 30 days. Plus covers any 2 dramas for 30 days. VIP unlocks all eligible VIP catalogue dramas for 30 days.',
+          ur: 'اسٹارٹر 15 دن کے لیے 1 ڈرامہ، اسٹینڈرڈ 30 دن کے لیے 1 ڈرامہ، پلس 30 دن کے لیے 2 ڈرامے اور VIP 30 دن کے لیے تمام دستیاب VIP ڈرامے کھولتا ہے۔',
         },
       },
       {
         id: 'q3',
         question: {
-          en: 'Q3. How do I pay using the Bank QR code?',
-          ur: 'سوال 3: بینک QR کوڈ سے ادائیگی کیسے کی جاتی ہے؟',
+          en: 'Q3. How do I pay from Pakistan vs. internationally?',
+          ur: 'سوال 3: پاکستان اور بیرونِ ملک سے ادائیگی کیسے کی جاتی ہے؟',
         },
         answer: {
-          en: 'Select your plan and drama(s), sign in or create an account, then scan the plan QR code with your banking app, pay the exact PKR amount shown, and upload your screenshot directly on the payment page.',
-          ur: 'اپنا پلان اور ڈرامے منتخب کریں، اکاؤنٹ میں سائن ان کریں، بینک QR کوڈ اسکین کر کے مقررہ رقم ادا کریں اور ادائیگی کا اسکرین شاٹ اسی صفحے پر اپ لوڈ کریں۔',
+          en: 'In Pakistan, pay the exact PKR amount via Pakistani Bank QR. Outside Pakistan, switch to International — Pay in USD and scan the plan-specific Binance Pay QR code to pay the exact USD amount shown.',
+          ur: 'پاکستان میں بینک QR کے ذریعے PKR میں اور بیرونِ ملک سے انٹرنیشنل آپشن منتخب کر کے Binance QR کے ذریعے مقررہ USD رقم ادا کریں۔',
         },
       },
       {
@@ -405,30 +531,30 @@ export const MEMBERSHIP_COPY = {
           ur: 'سوال 4: میری ممبرشپ کب فعال ہو گی؟',
         },
         answer: {
-          en: 'Submitting your screenshot places your request into Pending Verification. Once an authorized FEVIQO administrator verifies your payment receipt, your 15-day or 30-day term begins immediately from activation.',
-          ur: 'اسکرین شاٹ جمع کروانے کے بعد آپ کی درخواست تصدیق کے مرحلے میں جاتی ہے۔ فیویکو ٹیم کی تصدیق کے فوراً بعد آپ کی ممبرشپ اور دنوں کا شمار شروع ہو جاتا ہے۔',
+          en: 'Submitting your screenshot places your request into Pending Verification. Once an authorized FEVIQO administrator verifies your payment receipt, your 15-day or 30-day term begins immediately.',
+          ur: 'اسکرین شاٹ جمع کروانے کے بعد آپ کی درخواست تصدیق کے مرحلے میں جاتی ہے۔ فیویکو ٹیم کی تصدیق کے فوراً بعد آپ کی ممبرشپ فعال ہو جاتی ہے۔',
         },
       },
       {
         id: 'q5',
         question: {
-          en: 'Q5. What if I am paying from the same mobile phone?',
-          ur: 'سوال 5: اگر میں اسی موبائل فون سے ادائیگی کر رہا ہوں تو کیا کروں؟',
+          en: 'Q5. Can I renew early without losing my remaining days?',
+          ur: 'سوال 5: کیا وقت سے پہلے تجدید کرنے پر باقی دن ضائع تو نہیں ہوں گے؟',
         },
         answer: {
-          en: 'Use the Save / Download QR Code button below the QR image, then open the saved image inside a banking or wallet app that supports scanning QR codes from your gallery, or scan from a second device.',
-          ur: 'QR تصویر کے نیچے موجود محفوظ / ڈاؤن لوڈ بٹن استعمال کریں اور اپنی بینکنگ یا والٹ ایپ میں گیلری سے QR اسکین کرنے کا آپشن استعمال کریں، یا کسی دوسرے فون سے اسکین کریں۔',
+          en: 'Never. Your current membership keeps running while your renewal is reviewed, and upon approval the full new duration is added onto your existing expiry date.',
+          ur: 'ہرگز نہیں۔ تصدیق کے دوران آپ کی موجودہ ممبرشپ چلتی رہتی ہے اور منظوری پر نئے دن آپ کی موجودہ آخری تاریخ کے آگے شامل ہو جاتے ہیں۔',
         },
       },
       {
         id: 'q6',
         question: {
-          en: 'Q6. Will I receive newly uploaded episodes during my active membership?',
-          ur: 'سوال 6: کیا ممبرشپ کے دوران آنے والی نئی اقساط بھی شامل ہوں گی؟',
+          en: 'Q6. Do I need to enter a code on drama pages to watch unlocked episodes?',
+          ur: 'سوال 6: کیا ڈرامہ پیج پر قسط دیکھنے کے لیے کوئی کوڈ درج کرنا ہو گا؟',
         },
         answer: {
-          en: 'Yes. Every newly added eligible episode for the drama(s) in your active membership becomes playable in My Account without any extra fee.',
-          ur: 'جی ہاں، آپ کی فعال ممبرشپ کے دوران آپ کے منتخب ڈراموں کی ہر نئی قسط بغیر کسی اضافی چارجز کے آپ کے اکاؤنٹ میں دستیاب ہو گی۔',
+          en: 'No. Simply visit any drama page while signed in and click a premium episode—your entitlement is verified automatically on the server and playback starts immediately.',
+          ur: 'نہیں۔ بس اپنے اکاؤنٹ میں سائن ان رہتے ہوئے کسی بھی ڈرامہ پیج پر پریمیم قسط پر کلک کریں، سرور آپ کی ممبرشپ خودکار طور پر تصدیق کر کے ویڈیو چلا دے گا۔',
         },
       },
     ],

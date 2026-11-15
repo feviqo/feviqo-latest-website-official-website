@@ -1,0 +1,93 @@
+[
+  {
+    "id": "sched-1794767038833-f202",
+    "triggerSource": "startup",
+    "ranAt": "2026-11-15T18:23:58.833Z",
+    "durationMs": 1,
+    "checkedMemberships": 0,
+    "expiredCount": 0,
+    "remindersCreated": 0,
+    "emailsSent": 0,
+    "emailsFailed": 0,
+    "emailsNotConfigured": 0,
+    "summary": "Checked 0 membership(s): 0 expired, 0 notification(s) created (emails sent: 0, not configured: 0, failed: 0)."
+  },
+  {
+    "id": "sched-1794766944960-da6d",
+    "triggerSource": "startup",
+    "ranAt": "2026-11-15T18:22:24.960Z",
+    "durationMs": 1,
+    "checkedMemberships": 0,
+    "expiredCount": 0,
+    "remindersCreated": 0,
+    "emailsSent": 0,
+    "emailsFailed": 0,
+    "emailsNotConfigured": 0,
+    "summary": "Checked 0 membership(s): 0 expired, 0 notification(s) created (emails sent: 0, not configured: 0, failed: 0)."
+  },
+  {
+    "id": "sched-1794766671467-3577",
+    "triggerSource": "startup",
+    "ranAt": "2026-11-15T18:17:51.467Z",
+    "durationMs": 1,
+    "checkedMemberships": 0,
+    "expiredCount": 0,
+    "remindersCreated": 0,
+    "emailsSent": 0,
+    "emailsFailed": 0,
+    "emailsNotConfigured": 0,
+    "summary": "Checked 0 membership(s): 0 expired, 0 notification(s) created (emails sent: 0, not configured: 0, failed: 0)."
+  },
+  {
+    "id": "sched-1794766642117-4f95",
+    "triggerSource": "scheduled_interval",
+    "ranAt": "2026-11-15T18:17:22.117Z",
+    "durationMs": 1,
+    "checkedMemberships": 0,
+    "expiredCount": 0,
+    "remindersCreated": 0,
+    "emailsSent": 0,
+    "emailsFailed": 0,
+    "emailsNotConfigured": 0,
+    "summary": "Checked 0 membership(s): 0 expired, 0 notification(s) created (emails sent: 0, not configured: 0, failed: 0)."
+  },
+  {
+    "id": "sched-1794766345117-a9d2",
+    "triggerSource": "startup",
+    "ranAt": "2026-11-15T18:12:25.117Z",
+    "durationMs": 1,
+    "checkedMemberships": 0,
+    "expiredCount": 0,
+    "remindersCreated": 0,
+    "emailsSent": 0,
+    "emailsFailed": 0,
+    "emailsNotConfigured": 0,
+    "summary": "Checked 0 membership(s): 0 expired, 0 notification(s) created (emails sent: 0, not configured: 0, failed: 0)."
+  },
+  {
+    "id": "sched-1794766291319-7bb5",
+    "triggerSource": "startup",
+    "ranAt": "2026-11-15T18:11:31.319Z",
+    "durationMs": 1,
+    "checkedMemberships": 0,
+    "expiredCount": 0,
+    "remindersCreated": 0,
+    "emailsSent": 0,
+    "emailsFailed": 0,
+    "emailsNotConfigured": 0,
+    "summary": "Checked 0 membership(s): 0 expired, 0 notification(s) created (emails sent: 0, not configured: 0, failed: 0)."
+  },
+  {
+    "id": "sched-1794766274448-4f7c",
+    "triggerSource": "startup",
+    "ranAt": "2026-11-15T18:11:14.448Z",
+    "durationMs": 1,
+    "checkedMemberships": 0,
+    "expiredCount": 0,
+    "remindersCreated": 0,
+    "emailsSent": 0,
+    "emailsFailed": 0,
+    "emailsNotConfigured": 0,
+    "summary": "Checked 0 membership(s): 0 expired, 0 notification(s) created (emails sent: 0, not configured: 0, failed: 0)."
+  }
+]

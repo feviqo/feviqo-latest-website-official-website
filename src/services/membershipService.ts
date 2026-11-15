@@ -2,6 +2,9 @@ import {
   MembershipPlan,
   CatalogDramaMeta,
   MembershipPlanId,
+  PaymentRegion,
+  PaymentMethod,
+  PaymentCurrency,
 } from '../data/membershipCatalog';
 
 export interface SafeMember {
@@ -14,6 +17,22 @@ export interface SafeMember {
   createdAt: string;
 }
 
+export interface RenewalHistoryEntry {
+  id: string;
+  orderId?: string;
+  renewedAt: string;
+  previousExpiresAt: string;
+  newExpiresAt: string;
+  addedDays: number;
+  planId: MembershipPlanId;
+  planName: string;
+  paymentMethod: PaymentMethod;
+  currency: PaymentCurrency;
+  amount: number;
+  approvedByAdminEmail?: string;
+  note?: string;
+}
+
 export interface MembershipRecord {
   id: string;
   memberId: string;
@@ -22,6 +41,7 @@ export interface MembershipRecord {
   planId: MembershipPlanId;
   planName: string;
   pricePkr: number;
+  priceUsd?: number;
   durationDays: number;
   selectedDramaIds: string[];
   status: 'active' | 'cancelled' | 'expired';
@@ -32,7 +52,13 @@ export interface MembershipRecord {
   revokedReason?: string;
   approvedByAdminEmail?: string;
   paymentProvider: string;
+  paymentRegion?: PaymentRegion;
+  paymentMethod?: PaymentMethod;
+  currency?: PaymentCurrency;
+  expectedAmount?: number;
   paymentReference: string;
+  renewalHistory?: RenewalHistoryEntry[];
+  lastExtendedAt?: string;
   createdAt: string;
 }
 
@@ -43,6 +69,8 @@ export type OrderStatus =
   | 'rejected'
   | 'expired';
 
+export type OrderType = 'new' | 'renewal';
+
 export interface MembershipOrder {
   id: string;
   memberId: string;
@@ -50,9 +78,20 @@ export interface MembershipOrder {
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
+  orderType?: OrderType;
+  targetMembershipId?: string;
+  targetMembershipCurrentExpiry?: string;
+  targetMembershipStatus?: string;
   planId: MembershipPlanId;
   planName: string;
   amountPkr: number;
+  amountUsd?: number;
+  expectedAmount?: number;
+  currency?: PaymentCurrency;
+  paymentRegion?: PaymentRegion;
+  paymentMethod?: PaymentMethod;
+  visitorCountryCode?: string;
+  indicativeLocalDisplay?: string;
   durationDays: number;
   selectedDramaIds: string[];
   status: OrderStatus;
@@ -86,19 +125,98 @@ export interface MembershipHistoryEntry {
     | 'payment_approved'
     | 'payment_rejected'
     | 'membership_activated'
+    | 'membership_renewed'
+    | 'membership_extended'
     | 'membership_cancelled'
     | 'membership_revoked'
     | 'membership_expired';
   planId?: MembershipPlanId;
   planName?: string;
   amountPkr?: number;
+  amountUsd?: number;
+  currency?: PaymentCurrency;
   selectedDramaIds?: string[];
   details: string;
   createdAt: string;
 }
 
+export type CustomerNotificationType =
+  | 'renewal_7d'
+  | 'renewal_3d'
+  | 'renewal_1d'
+  | 'membership_expired'
+  | 'membership_approved'
+  | 'membership_renewed'
+  | 'membership_extended'
+  | 'payment_rejected';
+
+export interface CustomerNotification {
+  id: string;
+  memberId: string;
+  ownerUid?: string;
+  customerEmail?: string;
+  membershipId?: string;
+  orderId?: string;
+  planId?: MembershipPlanId;
+  dramaIds?: string[];
+  type: CustomerNotificationType;
+  title: string;
+  titleUr?: string;
+  message: string;
+  messageUr?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  dedupeKey: string;
+  emailStatus: 'not_sent' | 'not_configured' | 'sent' | 'failed';
+  emailError?: string;
+  isRead: boolean;
+  readAt?: string;
+  supersededAt?: string;
+  createdAt: string;
+}
+
+export interface SchedulerRunLog {
+  id: string;
+  triggerSource: 'startup' | 'scheduled_interval' | 'admin_manual' | 'cron_endpoint';
+  ranAt: string;
+  durationMs: number;
+  checkedMemberships: number;
+  expiredCount: number;
+  remindersCreated: number;
+  emailsSent: number;
+  emailsFailed: number;
+  emailsNotConfigured: number;
+  summary: string;
+}
+
+export interface IndicativePlanPrice {
+  usd: number;
+  formattedUsd: string;
+  approxLocal: number;
+  formattedApproxLocal: string;
+  currencyCode: string;
+}
+
+export interface GeoPricingInfo {
+  countryCode: string;
+  countryName: string;
+  detected: boolean;
+  defaultRegion: PaymentRegion;
+  localCurrencyCode: string;
+  localCurrencySymbol: string;
+  rateFromUsd: number;
+  rateSource: 'live' | 'cached' | 'fallback';
+  ratesUpdatedAt: string;
+  indicativePlans: Record<MembershipPlanId, IndicativePlanPrice>;
+}
+
 export interface PublicMembershipConfig {
   qrImages: Record<MembershipPlanId, string>;
+  binanceQrImages: Record<MembershipPlanId, string>;
+  hasBinanceQr: Record<MembershipPlanId, boolean>;
+  usdPrices: Record<MembershipPlanId, number>;
+  internationalInstructionsEn: string;
+  internationalInstructionsUr: string;
   whatsappConfigured: boolean;
   whatsappDigits: string;
   supportEmail: string;
@@ -108,7 +226,7 @@ export interface PublicMembershipConfig {
 
 export interface PaymentGatewayStatus {
   configured: boolean;
-  provider: 'bank_qr' | 'stripe' | 'safepay' | 'payfast';
+  provider: 'bank_qr' | 'binance_qr' | 'stripe' | 'safepay' | 'payfast';
   missingCredentials: string[];
   instructions: string;
 }
@@ -116,6 +234,8 @@ export interface PaymentGatewayStatus {
 export interface MemberAccountState {
   member: SafeMember;
   activeMembership: MembershipRecord | null;
+  activeMemberships?: MembershipRecord[];
+  allMemberships?: MembershipRecord[];
   latestMembership: MembershipRecord | null;
   remainingDays: number;
   remainingHours?: number;
@@ -123,6 +243,9 @@ export interface MemberAccountState {
   unlockedDramas: CatalogDramaMeta[];
   orders: MembershipOrder[];
   history: MembershipHistoryEntry[];
+  notifications?: CustomerNotification[];
+  unreadNotificationCount?: number;
+  plans?: MembershipPlan[];
   publicConfig?: PublicMembershipConfig;
   gatewayStatus: PaymentGatewayStatus;
 }
@@ -141,6 +264,7 @@ export interface AdminMembershipRecord extends MembershipRecord {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  hasPendingRenewal?: boolean;
 }
 
 export interface AdminAuditEntry {
@@ -156,6 +280,8 @@ export interface AdminAuditEntry {
 export interface AdminEmailNotification {
   id: string;
   orderId?: string;
+  membershipId?: string;
+  customerNotificationId?: string;
   to: string;
   subject: string;
   type: string;
@@ -172,6 +298,13 @@ export interface MembershipConfig {
   standardQrImage: string;
   plusQrImage: string;
   vipQrImage: string;
+  starterBinanceQrImage?: string;
+  standardBinanceQrImage?: string;
+  plusBinanceQrImage?: string;
+  vipBinanceQrImage?: string;
+  usdPrices?: Record<MembershipPlanId, number>;
+  internationalInstructionsEn?: string;
+  internationalInstructionsUr?: string;
   whatsappNumber: string;
   adminEmail: string;
   supportEmail: string;
@@ -190,6 +323,9 @@ export interface AdminMembershipsOverview {
     approvedPayments: number;
     rejectedPayments: number;
     expiredMemberships: number;
+    expiringIn7Days?: number;
+    pendingRenewals?: number;
+    internationalOrders?: number;
     failedEmails: number;
   };
   members: SafeMember[];
@@ -198,7 +334,10 @@ export interface AdminMembershipsOverview {
   history?: MembershipHistoryEntry[];
   auditLogs: AdminAuditEntry[];
   emailNotifications: AdminEmailNotification[];
+  customerNotifications?: CustomerNotification[];
+  schedulerRuns?: SchedulerRunLog[];
   config: MembershipConfig;
+  plans?: MembershipPlan[];
   admins: SafeAdmin[];
   serverCloudConnected?: boolean;
 }
@@ -255,12 +394,22 @@ async function parseJsonSafe(res: Response) {
   }
 }
 
+export async function fetchMembershipGeo(countryOverride?: string): Promise<{
+  success: boolean;
+  geo?: GeoPricingInfo;
+}> {
+  const qs = countryOverride ? `?country=${encodeURIComponent(countryOverride)}` : '';
+  const res = await fetch(`/api/membership/geo${qs}`, { credentials: 'include' });
+  return parseJsonSafe(res);
+}
+
 export async function fetchMembershipCatalog(): Promise<{
   success: boolean;
   plans?: MembershipPlan[];
   dramas?: CatalogDramaMeta[];
   publicConfig?: PublicMembershipConfig;
   gatewayStatus?: PaymentGatewayStatus;
+  geo?: GeoPricingInfo | null;
 }> {
   const res = await fetch('/api/membership/catalog', { credentials: 'include' });
   return parseJsonSafe(res);
@@ -340,6 +489,18 @@ export async function authenticateMemberWithGoogle(payload: {
   return data;
 }
 
+export async function updateMemberPhone(phone: string): Promise<
+  ({ success: true } & MemberAccountState) | { success: false; error: string }
+> {
+  const res = await fetch('/api/membership/profile/phone', {
+    method: 'POST',
+    headers: memberHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify({ phone }),
+  });
+  return parseJsonSafe(res);
+}
+
 export async function logoutMemberAccount(): Promise<void> {
   writeStoredToken(MEMBER_TOKEN_KEY, null);
   await fetch('/api/membership/logout', {
@@ -352,8 +513,14 @@ export async function logoutMemberAccount(): Promise<void> {
 export async function createMembershipCheckout(payload: {
   planId: MembershipPlanId;
   selectedDramaIds: string[];
+  paymentRegion?: PaymentRegion;
+  orderType?: OrderType;
+  targetMembershipId?: string;
+  visitorCountryCode?: string;
+  indicativeLocalDisplay?: string;
 }): Promise<{
   success: boolean;
+  code?: string;
   error?: string;
   order?: MembershipOrder;
   qrImageUrl?: string;
@@ -403,13 +570,36 @@ export async function submitOrderPaymentProofFile(payload: {
   return parseJsonSafe(res);
 }
 
-export async function cancelActiveMembership(): Promise<
+export async function markMemberNotificationRead(notifId: string): Promise<
+  ({ success: boolean } & Partial<MemberAccountState>)
+> {
+  const res = await fetch(`/api/membership/notifications/${encodeURIComponent(notifId)}/read`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: memberHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function markAllMemberNotificationsRead(): Promise<
+  ({ success: boolean; markedCount?: number } & Partial<MemberAccountState>)
+> {
+  const res = await fetch('/api/membership/notifications/read-all', {
+    method: 'POST',
+    credentials: 'include',
+    headers: memberHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function cancelActiveMembership(membershipId?: string): Promise<
   ({ success: true } & MemberAccountState) | { success: false; error: string }
 > {
   const res = await fetch('/api/membership/cancel', {
     method: 'POST',
     credentials: 'include',
-    headers: memberHeaders(),
+    headers: memberHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(membershipId ? { membershipId } : {}),
   });
   return parseJsonSafe(res);
 }
@@ -427,11 +617,17 @@ export async function requestProtectedEpisodeStream(
       fallbackThumbnail?: string;
       planName: string;
       expiresAt: string;
+      membershipId?: string;
     }
   | {
       success: false;
       code?: string;
       error: string;
+      coveredDramaIds?: string[];
+      activePlanNames?: string[];
+      expiredMembershipId?: string;
+      expiredPlanId?: MembershipPlanId;
+      expiresAt?: string;
     }
 > {
   const res = await fetch(
@@ -558,7 +754,7 @@ export async function fetchAdminMembershipsOverview(): Promise<
 }
 
 export async function approvePaymentOrder(orderId: string): Promise<
-  { success: true; order?: MembershipOrder; membership?: AdminMembershipRecord; overview: AdminMembershipsOverview } | { success: false; error: string }
+  { success: true; order?: MembershipOrder; membership?: AdminMembershipRecord; wasRenewal?: boolean; overview: AdminMembershipsOverview } | { success: false; error: string }
 > {
   const res = await fetch(
     `/api/admin/memberships/requests/${encodeURIComponent(orderId)}/approve`,
@@ -615,11 +811,49 @@ export async function assignCustomerMembership(payload: {
   return parseJsonSafe(res);
 }
 
+export async function extendMembershipByAdmin(
+  membershipId: string,
+  addDays: number,
+  reason: string
+): Promise<{ success: true; membership?: MembershipRecord; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+  const res = await fetch(`/api/admin/memberships/${encodeURIComponent(membershipId)}/extend`, {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify({ addDays, reason }),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function runAdminLifecycleReminders(): Promise<
+  { success: true; runLog: SchedulerRunLog; overview: AdminMembershipsOverview } | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/reminders/run', {
+    method: 'POST',
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function retryCustomerNotificationEmail(
+  notifId: string
+): Promise<{ success: boolean; notification?: CustomerNotification; overview?: AdminMembershipsOverview; error?: string }> {
+  const res = await fetch(`/api/admin/memberships/notifications/${encodeURIComponent(notifId)}/retry-email`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
 export async function syncAdminCloudState(snapshot: {
   members?: SafeMember[];
   orders?: MembershipOrder[];
   memberships?: AdminMembershipRecord[];
   history?: MembershipHistoryEntry[];
+  customerNotifications?: CustomerNotification[];
+  schedulerRuns?: SchedulerRunLog[];
   config?: MembershipConfig | null;
 }): Promise<{ success: true; overview: AdminMembershipsOverview } | { success: false; error: string }> {
   const res = await fetch('/api/admin/memberships/sync', {
@@ -658,16 +892,20 @@ export async function updateMembershipSettings(
 
 export async function uploadPlanQrImage(
   planId: MembershipPlanId,
-  file: File
-): Promise<{ success: true; imageUrl: string; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+  file: File,
+  region: PaymentRegion = 'pakistan'
+): Promise<{ success: true; region?: PaymentRegion; imageUrl: string; overview: AdminMembershipsOverview } | { success: false; error: string }> {
   const form = new FormData();
   form.append('qr', file);
-  const res = await fetch(`/api/admin/memberships/qr/${encodeURIComponent(planId)}`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: adminHeaders(),
-    body: form,
-  });
+  const res = await fetch(
+    `/api/admin/memberships/qr/${encodeURIComponent(planId)}?region=${encodeURIComponent(region)}`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: adminHeaders(),
+      body: form,
+    }
+  );
   return parseJsonSafe(res);
 }
 

@@ -189,13 +189,25 @@ export default function App() {
       }
     };
 
+    const handleCustomUrlNavigate = (evt: Event) => {
+      const targetUrl = (evt as CustomEvent<string>)?.detail;
+      if (!targetUrl || typeof targetUrl !== 'string') return;
+      try {
+        window.history.pushState({}, '', targetUrl);
+      } catch {}
+      handleUrlStateAndVideo();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     handleUrlStateAndVideo();
     window.addEventListener('popstate', handleUrlStateAndVideo);
+    window.addEventListener('feviqo-navigate-url', handleCustomUrlNavigate);
     window.addEventListener('keydown', handleKeyDown);
     initializeAssetSync();
     testFirestoreConnection().catch(() => {});
     return () => {
       window.removeEventListener('popstate', handleUrlStateAndVideo);
+      window.removeEventListener('feviqo-navigate-url', handleCustomUrlNavigate);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
@@ -825,6 +837,9 @@ export default function App() {
       case 'terms': return '/terms';
       case 'teskilat-urdu':
         if (typeof window !== 'undefined') {
+          if (window.location.pathname.includes('/episode-192') || window.location.pathname.includes('192')) {
+            return '/teskilat/episode-192';
+          }
           if (window.location.pathname.includes('/episode-189') || window.location.pathname.includes('189')) {
             return '/teskilat/episode-189';
           }

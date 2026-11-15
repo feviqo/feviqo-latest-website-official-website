@@ -88,11 +88,13 @@ service cloud.firestore {
         ])
         && data.keys().hasOnly([
           'id', 'memberId', 'ownerUid', 'customerName', 'customerEmail', 'customerPhone',
-          'planId', 'planName', 'amountPkr', 'durationDays', 'selectedDramaIds',
+          'orderType', 'targetMembershipId', 'planId', 'planName', 'amountPkr', 'amountUsd',
+          'expectedAmount', 'currency', 'paymentRegion', 'paymentMethod', 'visitorCountryCode',
+          'indicativeLocalDisplay', 'durationDays', 'selectedDramaIds',
           'status', 'provider', 'qrImageUrl', 'proofFileName', 'proofOriginalName',
           'proofMimeType', 'proofDataUrl', 'proofSubmittedAt', 'paymentNote',
           'rejectionReason', 'reviewedByAdminId', 'reviewedByAdminEmail', 'reviewedAt',
-          'paidAt', 'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+          'paidAt', 'paidAtMs', 'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
         ])
         && isValidId(data.id)
         && isValidId(data.memberId)
@@ -100,9 +102,18 @@ service cloud.firestore {
         && isBoundedString(data.customerName, 1, 120)
         && isBoundedString(data.customerEmail, 5, 200)
         && (!('customerPhone' in data) || isBoundedString(data.customerPhone, 0, 32))
+        && (!('orderType' in data) || (data.orderType in ['new', 'renewal']))
+        && (!('targetMembershipId' in data) || isBoundedString(data.targetMembershipId, 0, 128))
         && (data.planId in ['starter', 'standard', 'plus', 'vip'])
         && isBoundedString(data.planName, 1, 64)
         && data.amountPkr is number && data.amountPkr >= 0 && data.amountPkr <= 1000000
+        && (!('amountUsd' in data) || (data.amountUsd is number && data.amountUsd >= 0 && data.amountUsd <= 10000))
+        && (!('expectedAmount' in data) || (data.expectedAmount is number && data.expectedAmount >= 0 && data.expectedAmount <= 1000000))
+        && (!('currency' in data) || (data.currency in ['PKR', 'USD']))
+        && (!('paymentRegion' in data) || (data.paymentRegion in ['pakistan', 'international']))
+        && (!('paymentMethod' in data) || (data.paymentMethod in ['bank_qr', 'binance_qr', 'admin_assigned']))
+        && (!('visitorCountryCode' in data) || isBoundedString(data.visitorCountryCode, 0, 12))
+        && (!('indicativeLocalDisplay' in data) || isBoundedString(data.indicativeLocalDisplay, 0, 64))
         && data.durationDays is number && data.durationDays >= 1 && data.durationDays <= 3650
         && isValidDramaIdList(data.selectedDramaIds)
         && (data.status in ['awaiting_payment', 'pending_verification', 'approved', 'rejected', 'expired'])
@@ -119,6 +130,7 @@ service cloud.firestore {
         && (!('reviewedByAdminEmail' in data) || isBoundedString(data.reviewedByAdminEmail, 0, 200))
         && (!('reviewedAt' in data) || isBoundedString(data.reviewedAt, 0, 64))
         && (!('paidAt' in data) || isBoundedString(data.paidAt, 0, 64))
+        && (!('paidAtMs' in data) || data.paidAtMs is number)
         && isBoundedString(data.createdAtIso, 10, 64)
         && isBoundedString(data.updatedAtIso, 10, 64)
         && data.createdAt is timestamp
@@ -134,10 +146,11 @@ service cloud.firestore {
         ])
         && data.keys().hasOnly([
           'id', 'memberId', 'ownerUid', 'orderId', 'customerName', 'customerEmail', 'customerPhone',
-          'planId', 'planName', 'pricePkr', 'durationDays', 'selectedDramaIds',
+          'planId', 'planName', 'pricePkr', 'priceUsd', 'durationDays', 'selectedDramaIds',
           'status', 'activatedAt', 'expiresAt', 'cancelledAt', 'revokedByAdminEmail',
-          'revokedReason', 'approvedByAdminEmail', 'paymentProvider', 'paymentReference',
-          'createdAtIso', 'createdAt', 'updatedAt'
+          'revokedReason', 'approvedByAdminEmail', 'paymentProvider', 'paymentRegion',
+          'paymentMethod', 'currency', 'expectedAmount', 'paymentReference',
+          'renewalHistory', 'lastExtendedAt', 'createdAtIso', 'createdAt', 'updatedAt'
         ])
         && isValidId(data.id)
         && isValidId(data.memberId)
@@ -149,6 +162,7 @@ service cloud.firestore {
         && (data.planId in ['starter', 'standard', 'plus', 'vip'])
         && isBoundedString(data.planName, 1, 64)
         && data.pricePkr is number && data.pricePkr >= 0 && data.pricePkr <= 1000000
+        && (!('priceUsd' in data) || (data.priceUsd is number && data.priceUsd >= 0 && data.priceUsd <= 10000))
         && data.durationDays is number && data.durationDays >= 1 && data.durationDays <= 3650
         && isValidDramaIdList(data.selectedDramaIds)
         && (data.status in ['active', 'cancelled', 'expired'])
@@ -159,7 +173,13 @@ service cloud.firestore {
         && (!('revokedReason' in data) || isBoundedString(data.revokedReason, 0, 500))
         && (!('approvedByAdminEmail' in data) || isBoundedString(data.approvedByAdminEmail, 0, 200))
         && isBoundedString(data.paymentProvider, 1, 40)
+        && (!('paymentRegion' in data) || (data.paymentRegion in ['pakistan', 'international']))
+        && (!('paymentMethod' in data) || (data.paymentMethod in ['bank_qr', 'binance_qr', 'admin_assigned']))
+        && (!('currency' in data) || (data.currency in ['PKR', 'USD']))
+        && (!('expectedAmount' in data) || (data.expectedAmount is number && data.expectedAmount >= 0 && data.expectedAmount <= 1000000))
         && (!('paymentReference' in data) || isBoundedString(data.paymentReference, 0, 400))
+        && (!('renewalHistory' in data) || (data.renewalHistory is list && data.renewalHistory.size() <= 100))
+        && (!('lastExtendedAt' in data) || isBoundedString(data.lastExtendedAt, 0, 64))
         && isBoundedString(data.createdAtIso, 10, 64)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
@@ -169,7 +189,7 @@ service cloud.firestore {
       return data.keys().hasAll(['id', 'memberId', 'ownerUid', 'event', 'details', 'createdAtIso', 'createdAt'])
         && data.keys().hasOnly([
           'id', 'memberId', 'ownerUid', 'membershipId', 'orderId', 'event',
-          'planId', 'planName', 'amountPkr', 'selectedDramaIds', 'details',
+          'planId', 'planName', 'amountPkr', 'amountUsd', 'currency', 'selectedDramaIds', 'details',
           'createdAtIso', 'createdAt'
         ])
         && isValidId(data.id)
@@ -181,6 +201,8 @@ service cloud.firestore {
         && (!('planId' in data) || isBoundedString(data.planId, 0, 32))
         && (!('planName' in data) || isBoundedString(data.planName, 0, 64))
         && (!('amountPkr' in data) || (data.amountPkr is number && data.amountPkr >= 0 && data.amountPkr <= 1000000))
+        && (!('amountUsd' in data) || (data.amountUsd is number && data.amountUsd >= 0 && data.amountUsd <= 10000))
+        && (!('currency' in data) || (data.currency in ['PKR', 'USD']))
         && (!('selectedDramaIds' in data) || isValidDramaIdList(data.selectedDramaIds))
         && isBoundedString(data.details, 1, 1000)
         && isBoundedString(data.createdAtIso, 10, 64)
@@ -194,6 +216,8 @@ service cloud.firestore {
         ])
         && data.keys().hasOnly([
           'starterQrImage', 'standardQrImage', 'plusQrImage', 'vipQrImage',
+          'starterBinanceQrImage', 'standardBinanceQrImage', 'plusBinanceQrImage', 'vipBinanceQrImage',
+          'usdPrices', 'internationalInstructionsEn', 'internationalInstructionsUr',
           'whatsappNumber', 'adminEmail', 'supportEmail', 'supportNoteEn',
           'supportNoteUr', 'updatedAtIso', 'updatedAt'
         ])
@@ -201,6 +225,13 @@ service cloud.firestore {
         && isBoundedString(data.standardQrImage, 1, 512)
         && isBoundedString(data.plusQrImage, 1, 512)
         && isBoundedString(data.vipQrImage, 1, 512)
+        && (!('starterBinanceQrImage' in data) || isBoundedString(data.starterBinanceQrImage, 0, 512))
+        && (!('standardBinanceQrImage' in data) || isBoundedString(data.standardBinanceQrImage, 0, 512))
+        && (!('plusBinanceQrImage' in data) || isBoundedString(data.plusBinanceQrImage, 0, 512))
+        && (!('vipBinanceQrImage' in data) || isBoundedString(data.vipBinanceQrImage, 0, 512))
+        && (!('usdPrices' in data) || data.usdPrices is map)
+        && (!('internationalInstructionsEn' in data) || isBoundedString(data.internationalInstructionsEn, 0, 1500))
+        && (!('internationalInstructionsUr' in data) || isBoundedString(data.internationalInstructionsUr, 0, 1500))
         && (!('whatsappNumber' in data) || isBoundedString(data.whatsappNumber, 0, 40))
         && isBoundedString(data.adminEmail, 5, 200)
         && isBoundedString(data.supportEmail, 5, 200)
@@ -226,11 +257,13 @@ service cloud.firestore {
     function isValidEmailNotificationItem(data) {
       return data.keys().hasAll(['id', 'to', 'subject', 'type', 'status', 'attempts', 'createdAtIso', 'lastAttemptAt', 'createdAt', 'updatedAt'])
         && data.keys().hasOnly([
-          'id', 'orderId', 'to', 'subject', 'type', 'status', 'provider',
+          'id', 'orderId', 'membershipId', 'customerNotificationId', 'to', 'subject', 'type', 'status', 'provider',
           'error', 'attempts', 'createdAtIso', 'lastAttemptAt', 'createdAt', 'updatedAt'
         ])
         && isValidId(data.id)
         && (!('orderId' in data) || isBoundedString(data.orderId, 0, 128))
+        && (!('membershipId' in data) || isBoundedString(data.membershipId, 0, 128))
+        && (!('customerNotificationId' in data) || isBoundedString(data.customerNotificationId, 0, 128))
         && isBoundedString(data.to, 5, 200)
         && isBoundedString(data.subject, 1, 300)
         && isBoundedString(data.type, 1, 64)
@@ -240,6 +273,66 @@ service cloud.firestore {
         && data.attempts is number && data.attempts >= 1 && data.attempts <= 100
         && isBoundedString(data.createdAtIso, 10, 64)
         && isBoundedString(data.lastAttemptAt, 10, 64)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidMemberNotification(data) {
+      return data.keys().hasAll([
+          'id', 'memberId', 'ownerUid', 'type', 'title', 'message',
+          'dedupeKey', 'emailStatus', 'isRead', 'createdAtIso', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'memberId', 'ownerUid', 'customerEmail', 'membershipId', 'orderId', 'planId', 'dramaIds',
+          'type', 'title', 'titleUr', 'message', 'messageUr', 'ctaLabel', 'ctaHref',
+          'dedupeKey', 'emailStatus', 'emailError', 'isRead', 'readAt', 'supersededAt',
+          'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.memberId)
+        && isValidId(data.ownerUid)
+        && (!('customerEmail' in data) || isBoundedString(data.customerEmail, 0, 200))
+        && (!('membershipId' in data) || isBoundedString(data.membershipId, 0, 128))
+        && (!('orderId' in data) || isBoundedString(data.orderId, 0, 128))
+        && (!('planId' in data) || isBoundedString(data.planId, 0, 32))
+        && (!('dramaIds' in data) || (data.dramaIds is list && data.dramaIds.size() <= 10))
+        && isBoundedString(data.type, 1, 64)
+        && isBoundedString(data.title, 1, 240)
+        && (!('titleUr' in data) || isBoundedString(data.titleUr, 0, 240))
+        && isBoundedString(data.message, 1, 1200)
+        && (!('messageUr' in data) || isBoundedString(data.messageUr, 0, 1200))
+        && (!('ctaLabel' in data) || isBoundedString(data.ctaLabel, 0, 100))
+        && (!('ctaHref' in data) || isBoundedString(data.ctaHref, 0, 240))
+        && isBoundedString(data.dedupeKey, 3, 240)
+        && (data.emailStatus in ['not_sent', 'not_configured', 'sent', 'failed'])
+        && (!('emailError' in data) || isBoundedString(data.emailError, 0, 500))
+        && data.isRead is bool
+        && (!('readAt' in data) || isBoundedString(data.readAt, 0, 64))
+        && (!('supersededAt' in data) || isBoundedString(data.supersededAt, 0, 64))
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && (!('updatedAtIso' in data) || isBoundedString(data.updatedAtIso, 0, 64))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSchedulerRun(data) {
+      return data.keys().hasAll([
+          'id', 'triggerSource', 'ranAt', 'checkedMemberships',
+          'expiredCount', 'remindersCreated', 'summary', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'triggerSource', 'ranAt', 'ranAtIso', 'durationMs',
+          'checkedMemberships', 'expiredCount', 'remindersCreated',
+          'emailsSent', 'emailsFailed', 'emailsNotConfigured',
+          'summary', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isBoundedString(data.triggerSource, 1, 64)
+        && isBoundedString(data.ranAt, 10, 64)
+        && data.checkedMemberships is number
+        && data.expiredCount is number
+        && data.remindersCreated is number
+        && isBoundedString(data.summary, 1, 1000)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
@@ -380,6 +473,8 @@ service cloud.firestore {
         && incoming().updatedAt == request.time
         && incoming().diff(existing()).affectedKeys().hasOnly([
           'starterQrImage', 'standardQrImage', 'plusQrImage', 'vipQrImage',
+          'starterBinanceQrImage', 'standardBinanceQrImage', 'plusBinanceQrImage', 'vipBinanceQrImage',
+          'usdPrices', 'internationalInstructionsEn', 'internationalInstructionsUr',
           'whatsappNumber', 'adminEmail', 'supportEmail', 'supportNoteEn',
           'supportNoteUr', 'updatedAtIso', 'updatedAt'
         ]);
@@ -410,6 +505,42 @@ service cloud.firestore {
         && incoming().updatedAt == request.time
         && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'provider', 'error', 'attempts', 'lastAttemptAt', 'updatedAt']);
       allow delete: if false;
+    }
+
+    match /memberNotifications/{notifId} {
+      allow get: if isValidId(notifId) && isVerifiedUser() && (existing().ownerUid == request.auth.uid || isAdmin());
+      allow list: if isVerifiedUser() && (resource.data.ownerUid == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isValidId(notifId) && isAdmin()
+        && isValidMemberNotification(incoming())
+        && incoming().id == notifId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(notifId) && isVerifiedUser()
+        && isValidMemberNotification(incoming())
+        && incoming().id == existing().id
+        && incoming().memberId == existing().memberId
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().dedupeKey == existing().dedupeKey
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin()
+          || (
+            existing().ownerUid == request.auth.uid
+            && incoming().diff(existing()).affectedKeys().hasOnly(['isRead', 'readAt', 'updatedAt'])
+          )
+        );
+      allow delete: if false;
+    }
+
+    match /schedulerRuns/{runId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(runId) && isAdmin()
+        && isValidSchedulerRun(incoming())
+        && incoming().id == runId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update, delete: if false;
     }
   }
 }

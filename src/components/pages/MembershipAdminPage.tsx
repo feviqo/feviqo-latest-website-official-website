@@ -18,12 +18,21 @@ import {
   UserPlus,
   Plus,
   Cloud,
+  Bell,
+  Clock,
+  Globe,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
-import { MEMBERSHIP_PLANS, MEMBERSHIP_DRAMAS, MembershipPlanId, getDramaById } from '../../data/membershipCatalog';
+import {
+  MEMBERSHIP_PLANS,
+  MEMBERSHIP_DRAMAS,
+  MembershipPlanId,
+  PaymentRegion,
+  getDramaById,
+} from '../../data/membershipCatalog';
 import {
   AdminMembershipsOverview,
   MembershipOrder,
@@ -38,6 +47,9 @@ import {
   approvePaymentOrder,
   rejectPaymentOrder,
   assignCustomerMembership,
+  extendMembershipByAdmin,
+  runAdminLifecycleReminders,
+  retryCustomerNotificationEmail,
   syncAdminCloudState,
   revokeMembershipAccess,
   updateMembershipSettings,
@@ -64,7 +76,7 @@ interface MembershipAdminPageProps {
   onNavigatePage: (route: AppRoute) => void;
 }
 
-type AdminTab = 'requests' | 'memberships' | 'accounts' | 'config' | 'audit' | 'roles';
+type AdminTab = 'requests' | 'memberships' | 'accounts' | 'notifications' | 'config' | 'audit' | 'roles';
 
 export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   onBookCall,
@@ -93,8 +105,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
   // Filters
   const [requestStatusFilter, setRequestStatusFilter] = useState<string>('all');
+  const [requestTypeFilter, setRequestTypeFilter] = useState<'all' | 'new' | 'renewal'>('all');
+  const [requestMethodFilter, setRequestMethodFilter] = useState<'all' | 'bank_qr' | 'binance_qr'>('all');
   const [requestSearch, setRequestSearch] = useState('');
-  const [membershipStatusFilter, setMembershipStatusFilter] = useState<string>('all');
+  const [membershipStatusFilter, setMembershipStatusFilter] = useState<
+    'all' | 'active' | 'expiring_7d' | 'expired' | 'pending_renewal' | 'cancelled' | 'history'
+  >('all');
   const [membershipSearch, setMembershipSearch] = useState('');
   const [accountAuthFilter, setAccountAuthFilter] = useState<'all' | 'google' | 'email' | 'admin_assigned'>('all');
   const [accountSearch, setAccountSearch] = useState('');
@@ -105,9 +121,16 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const [rejectReasonInput, setRejectReasonInput] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
 
-  // Revoke membership state
+  // Revoke / Extend membership state
   const [revokingMembershipId, setRevokingMembershipId] = useState<string | null>(null);
   const [revokeReasonInput, setRevokeReasonInput] = useState('');
+  const [extendingMembershipId, setExtendingMembershipId] = useState<string | null>(null);
+  const [extendDaysInput, setExtendDaysInput] = useState('30');
+  const [extendReasonInput, setExtendReasonInput] = useState('');
+
+  // Lifecycle Scheduler & Customer Notifications state
+  const [runningScheduler, setRunningScheduler] = useState(false);
+  const [retryingCustNotifId, setRetryingCustNotifId] = useState<string | null>(null);
 
   // Settings form state
   const [whatsappInput, setWhatsappInput] = useState('');
@@ -115,8 +138,17 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const [supportEmailInput, setSupportEmailInput] = useState('');
   const [supportNoteEnInput, setSupportNoteEnInput] = useState('');
   const [supportNoteUrInput, setSupportNoteUrInput] = useState('');
+  const [usdPriceInputs, setUsdPriceInputs] = useState<Record<MembershipPlanId, string>>({
+    starter: '1.20',
+    standard: '2.50',
+    plus: '3.50',
+    vip: '5.00',
+  });
+  const [intlInstructionsEnInput, setIntlInstructionsEnInput] = useState('');
+  const [intlInstructionsUrInput, setIntlInstructionsUrInput] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [uploadingQrPlanId, setUploadingQrPlanId] = useState<MembershipPlanId | null>(null);
+  const [uploadingBinanceQrPlanId, setUploadingBinanceQrPlanId] = useState<MembershipPlanId | null>(null);
 
   // Add new admin role state
   const [newAdminName, setNewAdminName] = useState('');
@@ -171,6 +203,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     setSupportEmailInput(ov.config.supportEmail || '');
     setSupportNoteEnInput(ov.config.supportNoteEn || '');
     setSupportNoteUrInput(ov.config.supportNoteUr || '');
+    setUsdPriceInputs({
+      starter: String(ov.config.usdPrices?.starter ?? 1.2),
+      standard: String(ov.config.usdPrices?.standard ?? 2.5),
+      plus: String(ov.config.usdPrices?.plus ?? 3.5),
+      vip: String(ov.config.usdPrices?.vip ?? 5),
+    });
+    setIntlInstructionsEnInput(ov.config.internationalInstructionsEn || '');
+    setIntlInstructionsUrInput(ov.config.internationalInstructionsUr || '');
   };
 
   const runBidirectionalCloudSync = useCallback(
@@ -192,6 +232,8 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
           orders: cloudSnap.orders,
           memberships: cloudSnap.memberships,
           history: cloudSnap.history,
+          customerNotifications: cloudSnap.customerNotifications,
+          schedulerRuns: cloudSnap.schedulerRuns,
           config: cloudSnap.config,
         });
         let latestOverview = 'overview' in mergeRes ? mergeRes.overview : opts?.seedOverview || null;
@@ -201,6 +243,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             orders: latestOverview.requests,
             memberships: latestOverview.memberships,
             history: latestOverview.history,
+            customerNotifications: latestOverview.customerNotifications,
             config: latestOverview.config,
           });
           setOverview(latestOverview);
@@ -402,6 +445,8 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             orders: overview.requests,
             memberships: overview.memberships,
             history: overview.history,
+            customerNotifications: overview.customerNotifications,
+            schedulerRuns: overview.schedulerRuns,
             config: overview.config,
           });
           if ('error' in res) {
@@ -462,6 +507,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         orders: ov.requests,
         memberships: ov.memberships,
         history: ov.history,
+        customerNotifications: ov.customerNotifications,
         config: ov.config,
       })
         .then(() => setCloudSyncedAt(new Date().toISOString()))
@@ -608,17 +654,102 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     }
   };
 
+  const handleExtendMembership = async (membershipId: string) => {
+    const days = Math.round(Number(extendDaysInput));
+    if (!Number.isFinite(days) || days < 1 || days > 3650) {
+      setFeedbackBanner({ type: 'error', text: 'Enter a valid number of days (1 to 3650).' });
+      return;
+    }
+    if (!extendReasonInput.trim() || extendReasonInput.trim().length < 2) {
+      setFeedbackBanner({ type: 'error', text: 'Please enter a short reason or note for extending access.' });
+      return;
+    }
+    setActionBusy(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await extendMembershipByAdmin(membershipId, days, extendReasonInput.trim());
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setExtendingMembershipId(null);
+        setExtendReasonInput('');
+        mirrorToCloudQuietly(res.overview);
+        setFeedbackBanner({
+          type: 'success',
+          text: `Extended membership ${membershipId} by +${days} days.`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to extend membership.' });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleRunSchedulerNow = async () => {
+    setRunningScheduler(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await runAdminLifecycleReminders();
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        mirrorToCloudQuietly(res.overview);
+        setFeedbackBanner({
+          type: 'success',
+          text: `Lifecycle check complete: ${res.runLog.summary}`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to run expiry & renewal scheduler.' });
+    } finally {
+      setRunningScheduler(false);
+    }
+  };
+
+  const handleRetryCustomerEmail = async (notifId: string) => {
+    setRetryingCustNotifId(notifId);
+    setFeedbackBanner(null);
+    try {
+      const res = await retryCustomerNotificationEmail(notifId);
+      if (res.overview) {
+        setOverview(res.overview);
+        mirrorToCloudQuietly(res.overview);
+      }
+      if (!res.success || res.error) {
+        setFeedbackBanner({ type: 'error', text: res.error || 'Customer email delivery failed.' });
+      } else {
+        setFeedbackBanner({ type: 'success', text: 'Customer renewal/lifecycle email sent successfully.' });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to retry customer notification email.' });
+    } finally {
+      setRetryingCustNotifId(null);
+    }
+  };
+
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingSettings(true);
     setFeedbackBanner(null);
     try {
+      const parsedUsdPrices: Record<MembershipPlanId, number> = {
+        starter: Math.max(0.5, Number(usdPriceInputs.starter) || 1.2),
+        standard: Math.max(0.5, Number(usdPriceInputs.standard) || 2.5),
+        plus: Math.max(0.5, Number(usdPriceInputs.plus) || 3.5),
+        vip: Math.max(0.5, Number(usdPriceInputs.vip) || 5),
+      };
       const res = await updateMembershipSettings({
         whatsappNumber: whatsappInput.trim(),
         adminEmail: adminEmailInput.trim(),
         supportEmail: supportEmailInput.trim(),
         supportNoteEn: supportNoteEnInput.trim(),
         supportNoteUr: supportNoteUrInput.trim(),
+        usdPrices: parsedUsdPrices,
+        internationalInstructionsEn: intlInstructionsEnInput.trim(),
+        internationalInstructionsUr: intlInstructionsUrInput.trim(),
       });
       if ('error' in res) {
         setFeedbackBanner({ type: 'error', text: res.error });
@@ -626,7 +757,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setOverview(res.overview);
         syncSettingsFromOverview(res.overview);
         mirrorToCloudQuietly(res.overview);
-        setFeedbackBanner({ type: 'success', text: 'FEVIQO membership & payment settings saved.' });
+        setFeedbackBanner({
+          type: 'success',
+          text: 'FEVIQO membership, USD pricing & payment settings saved.',
+        });
       }
     } catch {
       setFeedbackBanner({ type: 'error', text: 'Failed to update settings.' });
@@ -635,23 +769,38 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     }
   };
 
-  const handleUploadQr = async (planId: MembershipPlanId, file?: File) => {
+  const handleUploadQr = async (
+    planId: MembershipPlanId,
+    file?: File,
+    region: PaymentRegion = 'pakistan'
+  ) => {
     if (!file) return;
-    setUploadingQrPlanId(planId);
+    if (region === 'international') {
+      setUploadingBinanceQrPlanId(planId);
+    } else {
+      setUploadingQrPlanId(planId);
+    }
     setFeedbackBanner(null);
     try {
-      const res = await uploadPlanQrImage(planId, file);
+      const res = await uploadPlanQrImage(planId, file, region);
       if ('error' in res) {
         setFeedbackBanner({ type: 'error', text: res.error });
       } else {
         setOverview(res.overview);
         mirrorToCloudQuietly(res.overview);
-        setFeedbackBanner({ type: 'success', text: `Updated Bank QR image for ${planId.toUpperCase()} plan.` });
+        setFeedbackBanner({
+          type: 'success',
+          text:
+            region === 'international'
+              ? `Updated Binance USD QR image for ${planId.toUpperCase()} plan.`
+              : `Updated Bank PKR QR image for ${planId.toUpperCase()} plan.`,
+        });
       }
     } catch {
       setFeedbackBanner({ type: 'error', text: 'Failed to upload QR image.' });
     } finally {
       setUploadingQrPlanId(null);
+      setUploadingBinanceQrPlanId(null);
     }
   };
 
@@ -748,8 +897,43 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     };
   }, [selectedRequest?.id, selectedRequest?.proofDataUrl, selectedRequest?.hasProof, selectedRequest?.updatedAt]);
 
+  const formatOrderAmount = (req: Pick<MembershipOrder, 'currency' | 'paymentMethod' | 'expectedAmount' | 'amountUsd' | 'amountPkr'>) => {
+    if (req.currency === 'USD' || req.paymentMethod === 'binance_qr') {
+      const usd = Number(req.expectedAmount ?? req.amountUsd ?? 0);
+      return `$${usd.toFixed(2)} USD`;
+    }
+    return `PKR ${Number(req.amountPkr || 0).toLocaleString()}`;
+  };
+
+  const formatMembershipAmount = (
+    m: { currency?: string; paymentMethod?: string; expectedAmount?: number; priceUsd?: number; pricePkr: number }
+  ) => {
+    if (m.currency === 'USD' || m.paymentMethod === 'binance_qr') {
+      const usd = Number(m.expectedAmount ?? m.priceUsd ?? 0);
+      return `$${usd.toFixed(2)} USD`;
+    }
+    return `PKR ${Number(m.pricePkr || 0).toLocaleString()}`;
+  };
+
+  const getProjectedExtendedExpiry = (req: MembershipOrder) => {
+    const nowMs = Date.now();
+    const existingMs = req.targetMembershipCurrentExpiry ? Date.parse(req.targetMembershipCurrentExpiry) : 0;
+    const baseMs = Number.isFinite(existingMs) && existingMs > nowMs ? existingMs : nowMs;
+    return new Date(baseMs + Math.max(1, req.durationDays) * 86400000).toISOString();
+  };
+
+  const isExpiringWithin7Days = (m: { status: string; expiresAt: string }) => {
+    if (m.status !== 'active') return false;
+    const ms = Date.parse(m.expiresAt) - Date.now();
+    return Number.isFinite(ms) && ms > 0 && ms <= 7 * 86400000;
+  };
+
   const filteredRequests = (overview?.requests || []).filter((req) => {
     if (requestStatusFilter !== 'all' && req.status !== requestStatusFilter) return false;
+    const effectiveType = req.orderType === 'renewal' ? 'renewal' : 'new';
+    if (requestTypeFilter !== 'all' && effectiveType !== requestTypeFilter) return false;
+    const effectiveMethod = req.paymentMethod === 'binance_qr' ? 'binance_qr' : 'bank_qr';
+    if (requestMethodFilter !== 'all' && effectiveMethod !== requestMethodFilter) return false;
     if (!requestSearch.trim()) return true;
     const q = requestSearch.toLowerCase();
     return (
@@ -762,7 +946,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   });
 
   const filteredMemberships = (overview?.memberships || []).filter((m) => {
-    if (membershipStatusFilter !== 'all' && m.status !== membershipStatusFilter) return false;
+    if (membershipStatusFilter === 'active' && m.status !== 'active') return false;
+    if (membershipStatusFilter === 'expired' && m.status !== 'expired') return false;
+    if (membershipStatusFilter === 'cancelled' && m.status !== 'cancelled') return false;
+    if (membershipStatusFilter === 'expiring_7d' && !isExpiringWithin7Days(m)) return false;
+    if (membershipStatusFilter === 'pending_renewal' && !m.hasPendingRenewal) return false;
+    if (membershipStatusFilter === 'history' && (!m.renewalHistory || m.renewalHistory.length === 0)) return false;
     if (!membershipSearch.trim()) return true;
     const q = membershipSearch.toLowerCase();
     return (
@@ -1046,11 +1235,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
             {/* Overview Metrics */}
             {overview && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                 {[
                   { label: 'Total Members', value: overview.metrics.totalMembers, accent: 'text-[#0B0B0D]' },
                   { label: 'Active Plans', value: overview.metrics.activeMemberships, accent: 'text-[#16A34A]' },
+                  { label: 'Expiring ≤7d', value: overview.metrics.expiringIn7Days ?? 0, accent: 'text-amber-600' },
                   { label: 'Pending Review', value: overview.metrics.pendingVerifications, accent: 'text-amber-600' },
+                  { label: 'Pending Renewals', value: overview.metrics.pendingRenewals ?? 0, accent: 'text-blue-700' },
+                  { label: 'USD Binance Orders', value: overview.metrics.internationalOrders ?? 0, accent: 'text-[#0B0B0D]' },
                   { label: 'Awaiting Pay', value: overview.metrics.awaitingPayments, accent: 'text-zinc-600' },
                   { label: 'Approved', value: overview.metrics.approvedPayments, accent: 'text-emerald-700' },
                   { label: 'Rejected', value: overview.metrics.rejectedPayments, accent: 'text-red-600' },
@@ -1072,7 +1264,8 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   { id: 'requests', label: 'Payment Verification Queue', icon: CheckCircle2 },
                   { id: 'memberships', label: 'Customer Memberships', icon: Users },
                   { id: 'accounts', label: 'Registered Accounts', icon: UserPlus },
-                  { id: 'config', label: 'QR Codes & Settings', icon: Settings },
+                  { id: 'notifications', label: 'Reminders & Scheduler', icon: Bell },
+                  { id: 'config', label: 'QR Codes & USD Settings', icon: Settings },
                   { id: 'audit', label: 'Email Logs & Audit Trail', icon: ClipboardList },
                   { id: 'roles', label: 'Admin Roles', icon: ShieldCheck },
                 ] as const
@@ -1100,7 +1293,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             {/* TAB 1: PAYMENT VERIFICATION QUEUE */}
             {overview && activeTab === 'requests' && (
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
                     {[
                       { id: 'all', label: 'All' },
@@ -1122,9 +1315,51 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         {f.label}
                       </button>
                     ))}
+                    <div className="h-4 w-px bg-zinc-200 mx-1 hidden sm:block" />
+                    {(
+                      [
+                        { id: 'all', label: 'All Types' },
+                        { id: 'new', label: 'New' },
+                        { id: 'renewal', label: 'Renewals' },
+                      ] as const
+                    ).map((tf) => (
+                      <button
+                        key={tf.id}
+                        type="button"
+                        onClick={() => setRequestTypeFilter(tf.id)}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
+                          requestTypeFilter === tf.id
+                            ? 'bg-[#0B0B0D] text-white'
+                            : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                        }`}
+                      >
+                        {tf.label}
+                      </button>
+                    ))}
+                    <div className="h-4 w-px bg-zinc-200 mx-1 hidden sm:block" />
+                    {(
+                      [
+                        { id: 'all', label: 'All Methods' },
+                        { id: 'bank_qr', label: 'PKR Bank QR' },
+                        { id: 'binance_qr', label: 'USD Binance QR' },
+                      ] as const
+                    ).map((mf) => (
+                      <button
+                        key={mf.id}
+                        type="button"
+                        onClick={() => setRequestMethodFilter(mf.id)}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
+                          requestMethodFilter === mf.id
+                            ? 'bg-amber-100 text-amber-950 border border-amber-300'
+                            : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                        }`}
+                      >
+                        {mf.label}
+                      </button>
+                    ))}
                   </div>
 
-                  <div className="relative w-full sm:w-72">
+                  <div className="relative w-full lg:w-72 shrink-0">
                     <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
@@ -1140,7 +1375,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   <table className="w-full text-left text-xs">
                     <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
                       <tr>
-                        <th className="py-3.5 px-4">Request ID</th>
+                        <th className="py-3.5 px-4">Request ID &amp; Type</th>
                         <th className="py-3.5 px-4">Customer</th>
                         <th className="py-3.5 px-4">Plan &amp; Amount</th>
                         <th className="py-3.5 px-4">Selected Dramas</th>
@@ -1157,76 +1392,110 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                           </td>
                         </tr>
                       ) : (
-                        filteredRequests.map((req) => (
-                          <tr key={req.id} className="hover:bg-zinc-50/70">
-                            <td className="py-3.5 px-4 font-mono text-[11px] text-zinc-700 whitespace-nowrap">
-                              {req.id}
-                            </td>
-                            <td className="py-3.5 px-4">
-                              <div className="font-semibold text-[#0B0B0D] flex items-center gap-1.5">
-                                <span>{req.customerName || 'Member'}</span>
-                                {(() => {
-                                  const m = memberByIdMap.get(req.memberId);
-                                  const method = m
-                                    ? getMemberAuthMethod(m)
-                                    : req.ownerUid && req.ownerUid !== 'admin_assigned' && req.ownerUid !== 'email_member'
-                                    ? 'google'
-                                    : null;
-                                  return method === 'google' ? (
-                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                                      Google
-                                    </span>
-                                  ) : null;
-                                })()}
-                              </div>
-                              <div className="text-zinc-500">{req.customerEmail}</div>
-                              {req.customerPhone && <div className="text-zinc-400">{req.customerPhone}</div>}
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <div className="font-semibold text-[#0B0B0D]">
-                                {req.planName} ({req.durationDays}d)
-                              </div>
-                              <div className="text-[#16A34A] font-bold tabular-nums">
-                                PKR {req.amountPkr.toLocaleString()}
-                              </div>
-                            </td>
-                            <td className="py-3.5 px-4 max-w-[220px]">
-                              {req.selectedDramaIds.map((id) => getDramaById(id)?.title || id).join(', ')}
-                            </td>
-                            <td className="py-3.5 px-4 text-zinc-500 whitespace-nowrap">
-                              {formatDateTime(req.proofSubmittedAt || req.createdAt)}
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <span
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase ${
-                                  req.status === 'approved'
-                                    ? 'bg-emerald-50 text-emerald-700'
-                                    : req.status === 'pending_verification'
-                                    ? 'bg-amber-50 text-amber-800'
-                                    : req.status === 'rejected'
-                                    ? 'bg-red-50 text-red-700'
-                                    : 'bg-zinc-100 text-zinc-700'
-                                }`}
-                              >
-                                {req.status.replace('_', ' ')}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedRequestId(req.id);
-                                  setConfirmApproveId(null);
-                                  setRejectReasonInput('');
-                                }}
-                                className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                                <span>Inspect</span>
-                              </button>
-                            </td>
-                          </tr>
-                        ))
+                        filteredRequests.map((req) => {
+                          const isRenewal = req.orderType === 'renewal';
+                          const isBinance = req.paymentMethod === 'binance_qr' || req.currency === 'USD';
+                          return (
+                            <tr key={req.id} className="hover:bg-zinc-50/70">
+                              <td className="py-3.5 px-4 font-mono text-[11px] text-zinc-700 whitespace-nowrap space-y-1">
+                                <div>{req.id}</div>
+                                <div className="flex flex-wrap gap-1 font-sans">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                      isRenewal
+                                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                        : 'bg-zinc-100 text-zinc-700'
+                                    }`}
+                                  >
+                                    {isRenewal ? 'Renewal' : 'New'}
+                                  </span>
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                      isBinance
+                                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    }`}
+                                  >
+                                    {isBinance ? 'Binance USD' : 'Bank PKR'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4">
+                                <div className="font-semibold text-[#0B0B0D] flex items-center gap-1.5">
+                                  <span>{req.customerName || 'Member'}</span>
+                                  {(() => {
+                                    const m = memberByIdMap.get(req.memberId);
+                                    const method = m
+                                      ? getMemberAuthMethod(m)
+                                      : req.ownerUid && req.ownerUid !== 'admin_assigned' && req.ownerUid !== 'email_member'
+                                      ? 'google'
+                                      : null;
+                                    return method === 'google' ? (
+                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                        Google
+                                      </span>
+                                    ) : null;
+                                  })()}
+                                </div>
+                                <div className="text-zinc-500">{req.customerEmail}</div>
+                                {req.customerPhone && <div className="text-zinc-400">{req.customerPhone}</div>}
+                                {req.visitorCountryCode && (
+                                  <div className="text-[10px] text-zinc-400 mt-0.5">
+                                    Country: {req.visitorCountryCode}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <div className="font-semibold text-[#0B0B0D]">
+                                  {req.planName} ({req.durationDays}d)
+                                </div>
+                                <div className="text-[#16A34A] font-bold tabular-nums">
+                                  {formatOrderAmount(req)}
+                                </div>
+                                {req.indicativeLocalDisplay && (
+                                  <div className="text-[10px] text-zinc-400">
+                                    Ref: {req.indicativeLocalDisplay}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 max-w-[220px]">
+                                {req.selectedDramaIds.map((id) => getDramaById(id)?.title || id).join(', ')}
+                              </td>
+                              <td className="py-3.5 px-4 text-zinc-500 whitespace-nowrap">
+                                {formatDateTime(req.proofSubmittedAt || req.createdAt)}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap">
+                                <span
+                                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase ${
+                                    req.status === 'approved'
+                                      ? 'bg-emerald-50 text-emerald-700'
+                                      : req.status === 'pending_verification'
+                                      ? 'bg-amber-50 text-amber-800'
+                                      : req.status === 'rejected'
+                                      ? 'bg-red-50 text-red-700'
+                                      : 'bg-zinc-100 text-zinc-700'
+                                  }`}
+                                >
+                                  {req.status.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedRequestId(req.id);
+                                    setConfirmApproveId(null);
+                                    setRejectReasonInput('');
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Inspect</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1237,20 +1506,30 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             {/* TAB 2: MEMBERSHIPS MANAGEMENT */}
             {overview && activeTab === 'memberships' && (
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    {['all', 'active', 'expired', 'cancelled'].map((st) => (
+                    {(
+                      [
+                        { id: 'all', label: 'All' },
+                        { id: 'active', label: 'Active' },
+                        { id: 'expiring_7d', label: 'Expiring ≤7d' },
+                        { id: 'expired', label: 'Expired' },
+                        { id: 'pending_renewal', label: 'Pending Renewal' },
+                        { id: 'cancelled', label: 'Cancelled' },
+                        { id: 'history', label: 'Renewal History' },
+                      ] as const
+                    ).map((st) => (
                       <button
-                        key={st}
+                        key={st.id}
                         type="button"
-                        onClick={() => setMembershipStatusFilter(st)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize cursor-pointer ${
-                          membershipStatusFilter === st
+                        onClick={() => setMembershipStatusFilter(st.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
+                          membershipStatusFilter === st.id
                             ? 'bg-[#22C55E] text-[#0B0B0D]'
                             : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
                         }`}
                       >
-                        {st}
+                        {st.label}
                       </button>
                     ))}
                   </div>
@@ -1281,7 +1560,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
                       <tr>
                         <th className="py-3.5 px-4">Customer</th>
-                        <th className="py-3.5 px-4">Plan</th>
+                        <th className="py-3.5 px-4">Plan &amp; Method</th>
                         <th className="py-3.5 px-4">Selected Dramas</th>
                         <th className="py-3.5 px-4">Activated / Expires</th>
                         <th className="py-3.5 px-4">Status</th>
@@ -1292,101 +1571,187 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       {filteredMemberships.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="py-10 text-center text-zinc-500">
-                            No memberships recorded yet.
+                            No memberships match the selected filter.
                           </td>
                         </tr>
                       ) : (
-                        filteredMemberships.map((m) => (
-                          <tr key={m.id} className="hover:bg-zinc-50/70">
-                            <td className="py-3.5 px-4">
-                              <div className="font-semibold text-[#0B0B0D] flex items-center gap-1.5">
-                                <span>{m.customerName}</span>
-                                {(() => {
-                                  const member = memberByIdMap.get(m.memberId);
-                                  const method = member
-                                    ? getMemberAuthMethod(member)
-                                    : m.ownerUid && m.ownerUid !== 'admin_assigned' && m.ownerUid !== 'email_member'
-                                    ? 'google'
-                                    : null;
-                                  return method === 'google' ? (
-                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                                      Google
+                        filteredMemberships.map((m) => {
+                          const remDays = Math.max(
+                            0,
+                            Math.ceil((Date.parse(m.expiresAt) - Date.now()) / 86400000)
+                          );
+                          const renewalCount = Array.isArray(m.renewalHistory) ? m.renewalHistory.length : 0;
+                          return (
+                            <tr key={m.id} className="hover:bg-zinc-50/70">
+                              <td className="py-3.5 px-4">
+                                <div className="font-semibold text-[#0B0B0D] flex items-center gap-1.5">
+                                  <span>{m.customerName}</span>
+                                  {(() => {
+                                    const member = memberByIdMap.get(m.memberId);
+                                    const method = member
+                                      ? getMemberAuthMethod(member)
+                                      : m.ownerUid && m.ownerUid !== 'admin_assigned' && m.ownerUid !== 'email_member'
+                                      ? 'google'
+                                      : null;
+                                    return method === 'google' ? (
+                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                        Google
+                                      </span>
+                                    ) : null;
+                                  })()}
+                                </div>
+                                <div className="text-zinc-500">{m.customerEmail}</div>
+                                {m.customerPhone && <div className="text-zinc-400">{m.customerPhone}</div>}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap space-y-1">
+                                <div className="font-semibold">{m.planName}</div>
+                                <div className="text-zinc-600 font-semibold tabular-nums">
+                                  {formatMembershipAmount(m)}
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-semibold uppercase">
+                                    {m.paymentMethod === 'binance_qr'
+                                      ? 'Binance QR'
+                                      : m.paymentMethod === 'admin_assigned'
+                                      ? 'Admin Assigned'
+                                      : 'Bank QR'}
+                                  </span>
+                                  {renewalCount > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-semibold">
+                                      {renewalCount} {renewalCount === 1 ? 'Renewal' : 'Renewals'}
                                     </span>
-                                  ) : null;
-                                })()}
-                              </div>
-                              <div className="text-zinc-500">{m.customerEmail}</div>
-                              {m.customerPhone && <div className="text-zinc-400">{m.customerPhone}</div>}
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <div className="font-semibold">{m.planName}</div>
-                              <div className="text-zinc-500">PKR {m.pricePkr.toLocaleString()}</div>
-                            </td>
-                            <td className="py-3.5 px-4 max-w-[220px]">
-                              {m.selectedDramaIds.map((id) => getDramaById(id)?.title || id).join(', ')}
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap text-zinc-600">
-                              <div>Start: {formatDateTime(m.activatedAt)}</div>
-                              <div>End: {formatDateTime(m.expiresAt)}</div>
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <span
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase ${
-                                  m.status === 'active'
-                                    ? 'bg-emerald-50 text-emerald-700'
-                                    : m.status === 'cancelled'
-                                    ? 'bg-red-50 text-red-700'
-                                    : 'bg-zinc-100 text-zinc-700'
-                                }`}
-                              >
-                                {m.status}
-                              </span>
-                            </td>
-                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                              {m.status === 'active' ? (
-                                revokingMembershipId === m.id ? (
-                                  <div className="inline-flex items-center gap-2">
-                                    <input
-                                      type="text"
-                                      value={revokeReasonInput}
-                                      onChange={(e) => setRevokeReasonInput(e.target.value)}
-                                      placeholder="Reason to revoke"
-                                      className="px-2.5 py-1 border border-zinc-300 rounded-lg text-xs"
-                                    />
-                                    <button
-                                      type="button"
-                                      disabled={actionBusy}
-                                      onClick={() => handleRevokeMembership(m.id)}
-                                      className="px-2.5 py-1 rounded-lg bg-red-600 text-white font-semibold cursor-pointer"
-                                    >
-                                      Confirm
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => setRevokingMembershipId(null)}
-                                      className="px-2 py-1 text-zinc-500 cursor-pointer"
-                                    >
-                                      Cancel
-                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3.5 px-4 max-w-[220px]">
+                                {m.selectedDramaIds.map((id) => getDramaById(id)?.title || id).join(', ')}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap text-zinc-600">
+                                <div>Start: {formatDateTime(m.activatedAt)}</div>
+                                <div>End: {formatDateTime(m.expiresAt)}</div>
+                                {m.status === 'active' && (
+                                  <div className={`text-[11px] font-semibold mt-0.5 ${remDays <= 7 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                    {remDays} {remDays === 1 ? 'day' : 'days'} remaining
                                   </div>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setRevokingMembershipId(m.id);
-                                      setRevokeReasonInput('');
-                                    }}
-                                    className="px-3 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 font-semibold cursor-pointer"
-                                  >
-                                    Revoke Access
-                                  </button>
-                                )
-                              ) : (
-                                <span className="text-zinc-400">—</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 whitespace-nowrap space-y-1">
+                                <span
+                                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase inline-block ${
+                                    m.status === 'active'
+                                      ? 'bg-emerald-50 text-emerald-700'
+                                      : m.status === 'cancelled'
+                                      ? 'bg-red-50 text-red-700'
+                                      : 'bg-zinc-100 text-zinc-700'
+                                  }`}
+                                >
+                                  {m.status}
+                                </span>
+                                {m.hasPendingRenewal && (
+                                  <div>
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                      Pending Renewal
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                                <div className="inline-flex flex-col items-end gap-2">
+                                  {extendingMembershipId === m.id ? (
+                                    <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={3650}
+                                        value={extendDaysInput}
+                                        onChange={(e) => setExtendDaysInput(e.target.value)}
+                                        className="w-16 px-2 py-1 border border-zinc-300 rounded-lg text-xs"
+                                        title="Days to add"
+                                      />
+                                      <input
+                                        type="text"
+                                        value={extendReasonInput}
+                                        onChange={(e) => setExtendReasonInput(e.target.value)}
+                                        placeholder="Reason / note"
+                                        className="w-32 px-2 py-1 border border-zinc-300 rounded-lg text-xs"
+                                      />
+                                      <button
+                                        type="button"
+                                        disabled={actionBusy}
+                                        onClick={() => handleExtendMembership(m.id)}
+                                        className="px-2.5 py-1 rounded-lg bg-[#22C55E] text-[#0B0B0D] font-bold cursor-pointer"
+                                      >
+                                        +Add
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setExtendingMembershipId(null)}
+                                        className="px-2 py-1 text-zinc-500 cursor-pointer"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="inline-flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setExtendingMembershipId(m.id);
+                                          setRevokingMembershipId(null);
+                                          setExtendDaysInput('30');
+                                          setExtendReasonInput('Admin manual extension');
+                                        }}
+                                        className="px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-800 hover:bg-emerald-50 font-semibold cursor-pointer"
+                                      >
+                                        Extend +Days
+                                      </button>
+                                      {m.status === 'active' && (
+                                        revokingMembershipId === m.id ? (
+                                          <div className="inline-flex items-center gap-1.5">
+                                            <input
+                                              type="text"
+                                              value={revokeReasonInput}
+                                              onChange={(e) => setRevokeReasonInput(e.target.value)}
+                                              placeholder="Reason to revoke"
+                                              className="px-2.5 py-1 border border-zinc-300 rounded-lg text-xs"
+                                            />
+                                            <button
+                                              type="button"
+                                              disabled={actionBusy}
+                                              onClick={() => handleRevokeMembership(m.id)}
+                                              className="px-2.5 py-1 rounded-lg bg-red-600 text-white font-semibold cursor-pointer"
+                                            >
+                                              Confirm
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setRevokingMembershipId(null)}
+                                              className="px-2 py-1 text-zinc-500 cursor-pointer"
+                                            >
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setRevokingMembershipId(m.id);
+                                              setExtendingMembershipId(null);
+                                              setRevokeReasonInput('');
+                                            }}
+                                            className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 font-semibold cursor-pointer"
+                                          >
+                                            Revoke
+                                          </button>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1510,70 +1875,322 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
               </div>
             )}
 
+            {/* TAB: LIFECYCLE REMINDERS & SCHEDULER */}
+            {overview && activeTab === 'notifications' && (
+              <div className="space-y-6">
+                <div className="rounded-2xl bg-white border border-zinc-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-[#16A34A] flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Automated Membership Expiry &amp; Renewal Reminders</span>
+                    </div>
+                    <h2 className="text-lg font-bold text-[#0B0B0D] mt-1">
+                      Lifecycle Check &amp; Customer Notification Engine
+                    </h2>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Runs automatically every 15 minutes to revoke expired memberships and generate 7d / 3d / 1d / expired reminders.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={runningScheduler}
+                    onClick={handleRunSchedulerNow}
+                    className="px-4 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-2 transition cursor-pointer shrink-0 disabled:opacity-60"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${runningScheduler ? 'animate-spin' : ''}`} />
+                    <span>{runningScheduler ? 'Running Check...' : 'Run Expiry & Renewal Check Now'}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-5 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[#16A34A]" />
+                      <h3 className="text-base font-bold text-[#0B0B0D]">Scheduler Run History</h3>
+                    </div>
+                    {!overview.schedulerRuns || overview.schedulerRuns.length === 0 ? (
+                      <p className="text-xs text-zinc-500">No scheduler runs recorded yet.</p>
+                    ) : (
+                      <div className="space-y-2.5 max-h-[480px] overflow-y-auto">
+                        {overview.schedulerRuns.map((run) => (
+                          <div key={run.id} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 text-xs space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-bold uppercase text-[11px] text-[#0B0B0D]">
+                                {run.triggerSource.replace('_', ' ')}
+                              </span>
+                              <span className="text-zinc-400">{formatDateTime(run.ranAt)}</span>
+                            </div>
+                            <div className="text-zinc-700">{run.summary}</div>
+                            <div className="text-[11px] text-zinc-500">
+                              Checked: {run.checkedMemberships} · Expired: {run.expiredCount} · Reminders: {run.remindersCreated} · Emails Sent: {run.emailsSent} · Failed: {run.emailsFailed}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="lg:col-span-7 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-[#16A34A]" />
+                        <h3 className="text-base font-bold text-[#0B0B0D]">Customer Notification Log</h3>
+                      </div>
+                      <span className="text-xs text-zinc-500">
+                        {(overview.customerNotifications || []).length} recorded
+                      </span>
+                    </div>
+                    {!overview.customerNotifications || overview.customerNotifications.length === 0 ? (
+                      <p className="text-xs text-zinc-500">No customer reminders or notifications recorded yet.</p>
+                    ) : (
+                      <div className="space-y-2.5 max-h-[480px] overflow-y-auto">
+                        {overview.customerNotifications.map((notif) => (
+                          <div key={notif.id} className="p-3.5 rounded-xl border border-zinc-200 bg-zinc-50 text-xs space-y-1.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded bg-[#0B0B0D] text-white font-bold uppercase text-[10px]">
+                                  {notif.type.replace('_', ' ')}
+                                </span>
+                                <span className="font-semibold text-[#0B0B0D]">{notif.title}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                    notif.emailStatus === 'sent'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : notif.emailStatus === 'failed'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-zinc-200 text-zinc-700'
+                                  }`}
+                                >
+                                  Email: {notif.emailStatus.replace('_', ' ')}
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                    notif.isRead ? 'bg-zinc-100 text-zinc-600' : 'bg-blue-50 text-blue-700'
+                                  }`}
+                                >
+                                  {notif.isRead ? 'Read' : 'Unread'}
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-zinc-700">{notif.message}</p>
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500">
+                              <span>
+                                To: {notif.customerEmail || notif.memberId} · {formatDateTime(notif.createdAt)}
+                                {notif.supersededAt ? ' · Superseded on renewal' : ''}
+                              </span>
+                              {(notif.emailStatus === 'failed' || notif.emailStatus === 'not_configured' || notif.emailStatus === 'not_sent') && notif.customerEmail && (
+                                <button
+                                  type="button"
+                                  disabled={retryingCustNotifId === notif.id}
+                                  onClick={() => handleRetryCustomerEmail(notif.id)}
+                                  className="px-2.5 py-1 rounded-lg bg-[#0B0B0D] text-white font-semibold cursor-pointer disabled:opacity-60"
+                                >
+                                  {retryingCustNotifId === notif.id ? 'Sending...' : 'Send / Retry Email'}
+                                </button>
+                              )}
+                            </div>
+                            {notif.emailError && <div className="text-red-700 text-[11px]">{notif.emailError}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* TAB 3: QR CODES & SETTINGS */}
             {overview && activeTab === 'config' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-7 rounded-2xl bg-white border border-zinc-200 p-6 space-y-5">
-                  <div>
-                    <h2 className="text-lg font-bold text-[#0B0B0D]">Plan Bank QR Codes</h2>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      Each membership plan displays its corresponding uncropped Bank QR code below. Upload a replacement image anytime if your bank QR updates.
-                    </p>
+                <div className="lg:col-span-7 space-y-6">
+                  {/* Pakistan Bank QR Codes */}
+                  <div className="rounded-2xl bg-white border border-zinc-200 p-6 space-y-5">
+                    <div>
+                      <h2 className="text-lg font-bold text-[#0B0B0D]">Pakistan Bank QR Codes (PKR)</h2>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Each membership plan displays its corresponding uncropped Pakistani Bank QR code. Upload a replacement image anytime.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {MEMBERSHIP_PLANS.map((plan) => {
+                        const imgSrc =
+                          plan.id === 'starter'
+                            ? overview.config.starterQrImage
+                            : plan.id === 'standard'
+                            ? overview.config.standardQrImage
+                            : plan.id === 'plus'
+                            ? overview.config.plusQrImage
+                            : overview.config.vipQrImage;
+
+                        return (
+                          <div key={plan.id} className="rounded-xl border border-zinc-200 bg-[#F8FAFC] p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold">{plan.name}</span>
+                              <span className="text-xs font-semibold text-[#16A34A]">
+                                PKR {plan.pricePkr.toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="bg-white rounded-lg border border-zinc-200 p-2 h-44 flex items-center justify-center">
+                              <img
+                                src={imgSrc}
+                                alt={`${plan.name} Bank QR`}
+                                className="max-h-full max-w-full object-contain"
+                              />
+                            </div>
+                            <label className="w-full py-2 px-3 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>
+                                {uploadingQrPlanId === plan.id ? 'Uploading...' : `Replace ${plan.name} Bank QR`}
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                                className="sr-only"
+                                onChange={(e) => handleUploadQr(plan.id, e.target.files?.[0], 'pakistan')}
+                              />
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {MEMBERSHIP_PLANS.map((plan) => {
-                      const imgSrc =
-                        plan.id === 'starter'
-                          ? overview.config.starterQrImage
-                          : plan.id === 'standard'
-                          ? overview.config.standardQrImage
-                          : plan.id === 'plus'
-                          ? overview.config.plusQrImage
-                          : overview.config.vipQrImage;
+                  {/* International Binance Pay QR Codes */}
+                  <div className="rounded-2xl bg-white border border-zinc-200 p-6 space-y-5">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5" />
+                        <span>International Payments</span>
+                      </div>
+                      <h2 className="text-lg font-bold text-[#0B0B0D] mt-0.5">
+                        International Binance Pay QR Codes (USD)
+                      </h2>
+                      <p className="text-xs text-zinc-500 mt-0.5">
+                        Upload separate Binance QR images for Starter, Standard, Plus, and VIP. International members always pay the exact USD amount below.
+                      </p>
+                    </div>
 
-                      return (
-                        <div key={plan.id} className="rounded-xl border border-zinc-200 bg-[#F8FAFC] p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold">{plan.name}</span>
-                            <span className="text-xs font-semibold text-[#16A34A]">
-                              PKR {plan.pricePkr.toLocaleString()}
-                            </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {MEMBERSHIP_PLANS.map((plan) => {
+                        const binanceSrc =
+                          plan.id === 'starter'
+                            ? overview.config.starterBinanceQrImage
+                            : plan.id === 'standard'
+                            ? overview.config.standardBinanceQrImage
+                            : plan.id === 'plus'
+                            ? overview.config.plusBinanceQrImage
+                            : overview.config.vipBinanceQrImage;
+                        const usdVal = Number(usdPriceInputs[plan.id] || overview.config.usdPrices?.[plan.id] || plan.priceUsd);
+
+                        return (
+                          <div key={plan.id} className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold">{plan.name}</span>
+                              <span className="text-xs font-bold text-amber-800">
+                                ${usdVal.toFixed(2)} USD
+                              </span>
+                            </div>
+                            <div className="bg-white rounded-lg border border-zinc-200 p-2 h-44 flex items-center justify-center">
+                              {binanceSrc ? (
+                                <img
+                                  src={binanceSrc}
+                                  alt={`${plan.name} Binance QR`}
+                                  className="max-h-full max-w-full object-contain"
+                                />
+                              ) : (
+                                <span className="text-xs text-zinc-400 text-center px-3">
+                                  No Binance QR uploaded for {plan.name} yet
+                                </span>
+                              )}
+                            </div>
+                            <label className="w-full py-2 px-3 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>
+                                {uploadingBinanceQrPlanId === plan.id
+                                  ? 'Uploading...'
+                                  : binanceSrc
+                                  ? `Replace ${plan.name} Binance QR`
+                                  : `Upload ${plan.name} Binance QR`}
+                              </span>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                                className="sr-only"
+                                onChange={(e) => handleUploadQr(plan.id, e.target.files?.[0], 'international')}
+                              />
+                            </label>
                           </div>
-                          <div className="bg-white rounded-lg border border-zinc-200 p-2 h-44 flex items-center justify-center">
-                            <img
-                              src={imgSrc}
-                              alt={`${plan.name} Bank QR`}
-                              className="max-h-full max-w-full object-contain"
-                            />
-                          </div>
-                          <label className="w-full py-2 px-3 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
-                            <Upload className="w-3.5 h-3.5" />
-                            <span>
-                              {uploadingQrPlanId === plan.id ? 'Uploading...' : `Replace ${plan.name} QR`}
-                            </span>
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
-                              className="sr-only"
-                              onChange={(e) => handleUploadQr(plan.id, e.target.files?.[0])}
-                            />
-                          </label>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
                 <form
                   onSubmit={handleSaveSettings}
-                  className="lg:col-span-5 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4"
+                  className="lg:col-span-5 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4 h-fit"
                 >
                   <div>
-                    <h2 className="text-lg font-bold text-[#0B0B0D]">Notification &amp; Support Settings</h2>
+                    <h2 className="text-lg font-bold text-[#0B0B0D]">USD Pricing, Instructions &amp; Support Settings</h2>
                     <p className="text-xs text-zinc-500 mt-0.5">
-                      Configure WhatsApp proof forwarding, admin verification emails, and customer support notes.
+                      Configure exact USD plan pricing, international Binance instructions, WhatsApp proof forwarding, and support notes.
                     </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-200 space-y-3">
+                    <div className="text-xs font-bold text-amber-950">Exact USD Prices (International Binance QR)</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {MEMBERSHIP_PLANS.map((plan) => (
+                        <div key={plan.id}>
+                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                            {plan.name} (USD)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.50"
+                            required
+                            value={usdPriceInputs[plan.id]}
+                            onChange={(e) =>
+                              setUsdPriceInputs((prev) => ({
+                                ...prev,
+                                [plan.id]: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-1.5 text-xs bg-white border border-zinc-300 rounded-lg"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      International Binance Instructions (EN)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={intlInstructionsEnInput}
+                      onChange={(e) => setIntlInstructionsEnInput(e.target.value)}
+                      placeholder="Scan the Binance Pay QR and send the exact USD amount shown..."
+                      className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      International Binance Instructions (Urdu)
+                    </label>
+                    <textarea
+                      rows={2}
+                      dir="rtl"
+                      value={intlInstructionsUrInput}
+                      onChange={(e) => setIntlInstructionsUrInput(e.target.value)}
+                      className="w-full px-3.5 py-2 text-sm font-urdu-slim border border-zinc-300 rounded-xl"
+                    />
                   </div>
 
                   <div>
@@ -2006,11 +2623,33 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
           >
             <div className="flex items-start justify-between gap-4 border-b border-zinc-200 pb-4">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#16A34A]">
-                  Verification Request Detail
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#16A34A]">
+                    Verification Request Detail
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      selectedRequest.orderType === 'renewal'
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                        : 'bg-zinc-100 text-zinc-700'
+                    }`}
+                  >
+                    {selectedRequest.orderType === 'renewal' ? 'Membership Renewal' : 'New Membership'}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      selectedRequest.paymentMethod === 'binance_qr' || selectedRequest.currency === 'USD'
+                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    }`}
+                  >
+                    {selectedRequest.paymentMethod === 'binance_qr' || selectedRequest.currency === 'USD'
+                      ? 'International Binance QR (USD)'
+                      : 'Pakistan Bank QR (PKR)'}
+                  </span>
                 </div>
-                <h3 className="text-xl font-bold text-[#0B0B0D] mt-0.5">
-                  {selectedRequest.planName} — PKR {selectedRequest.amountPkr.toLocaleString()} ({selectedRequest.durationDays} Days)
+                <h3 className="text-xl font-bold text-[#0B0B0D] mt-1">
+                  {selectedRequest.planName} — {formatOrderAmount(selectedRequest)} ({selectedRequest.durationDays} Days)
                 </h3>
                 <div className="text-xs font-mono text-zinc-500 mt-0.5">{selectedRequest.id}</div>
               </div>
@@ -2068,11 +2707,39 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     <strong className="text-[#0B0B0D]">{selectedRequest.customerPhone || '—'}</strong>
                   </div>
                   <div>
+                    <span className="text-zinc-500">Payable Amount:</span>{' '}
+                    <strong className="text-[#16A34A]">{formatOrderAmount(selectedRequest)}</strong>
+                    {selectedRequest.indicativeLocalDisplay && (
+                      <span className="text-zinc-400 ml-1">(Local ref: {selectedRequest.indicativeLocalDisplay})</span>
+                    )}
+                  </div>
+                  {selectedRequest.visitorCountryCode && (
+                    <div>
+                      <span className="text-zinc-500">Visitor Country:</span>{' '}
+                      <strong className="text-[#0B0B0D]">{selectedRequest.visitorCountryCode}</strong>
+                    </div>
+                  )}
+                  <div>
                     <span className="text-zinc-500">Selected Dramas:</span>{' '}
                     <strong className="text-[#0B0B0D]">
                       {selectedRequest.selectedDramaIds.map((d) => getDramaById(d)?.title || d).join(', ')}
                     </strong>
                   </div>
+                  {selectedRequest.orderType === 'renewal' && (
+                    <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200 space-y-1 text-blue-950">
+                      <div className="font-bold">Renewal Extension Preview</div>
+                      <div>
+                        Target Membership: <span className="font-mono">{selectedRequest.targetMembershipId}</span>
+                      </div>
+                      {selectedRequest.targetMembershipCurrentExpiry && (
+                        <div>Current Expiry: {formatDateTime(selectedRequest.targetMembershipCurrentExpiry)}</div>
+                      )}
+                      <div>
+                        Projected New Expiry:{' '}
+                        <strong>{formatDateTime(getProjectedExtendedExpiry(selectedRequest))}</strong>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <span className="text-zinc-500">Submitted At:</span>{' '}
                     <strong>{formatDateTime(selectedRequest.proofSubmittedAt || selectedRequest.createdAt)}</strong>
@@ -2111,12 +2778,18 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         className="w-full py-3 px-4 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        <span>Approve Payment &amp; Activate Membership</span>
+                        <span>
+                          {selectedRequest.orderType === 'renewal'
+                            ? 'Approve Renewal & Extend Membership'
+                            : 'Approve Payment & Activate Membership'}
+                        </span>
                       </button>
                     ) : (
                       <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3">
                         <p className="text-xs font-semibold text-emerald-950">
-                          Confirm approval for PKR {selectedRequest.amountPkr.toLocaleString()}? This immediately activates {selectedRequest.planName} ({selectedRequest.durationDays} days).
+                          {selectedRequest.orderType === 'renewal'
+                            ? `Confirm renewal approval for ${formatOrderAmount(selectedRequest)}? This adds +${selectedRequest.durationDays} days to membership ${selectedRequest.targetMembershipId} (New Expiry: ${formatDateTime(getProjectedExtendedExpiry(selectedRequest))}).`
+                            : `Confirm approval for ${formatOrderAmount(selectedRequest)}? This immediately activates ${selectedRequest.planName} (${selectedRequest.durationDays} days).`}
                         </p>
                         <div className="flex items-center gap-2">
                           <button

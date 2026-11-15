@@ -161,8 +161,45 @@
           "minLength": 1,
           "maxLength": 64
         },
+        "orderType": {
+          "type": "string",
+          "enum": ["new", "renewal"]
+        },
+        "targetMembershipId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
         "amountPkr": {
           "type": "number"
+        },
+        "amountUsd": {
+          "type": "number"
+        },
+        "expectedAmount": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["PKR", "USD"]
+        },
+        "paymentRegion": {
+          "type": "string",
+          "enum": ["pakistan", "international"]
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["bank_qr", "binance_qr", "admin_assigned"]
+        },
+        "visitorCountryCode": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 12
+        },
+        "indicativeLocalDisplay": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
         },
         "durationDays": {
           "type": "number"
@@ -336,6 +373,9 @@
         "pricePkr": {
           "type": "number"
         },
+        "priceUsd": {
+          "type": "number"
+        },
         "durationDays": {
           "type": "number"
         },
@@ -381,10 +421,33 @@
           "minLength": 1,
           "maxLength": 40
         },
+        "paymentRegion": {
+          "type": "string",
+          "enum": ["pakistan", "international"]
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["bank_qr", "binance_qr", "admin_assigned"]
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["PKR", "USD"]
+        },
+        "expectedAmount": {
+          "type": "number"
+        },
         "paymentReference": {
           "type": "string",
           "minLength": 0,
           "maxLength": 400
+        },
+        "renewalHistory": {
+          "type": "array"
+        },
+        "lastExtendedAt": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
         },
         "createdAtIso": {
           "type": "string",
@@ -472,6 +535,13 @@
         "amountPkr": {
           "type": "number"
         },
+        "amountUsd": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["PKR", "USD"]
+        },
         "selectedDramaIds": {
           "type": "array"
         },
@@ -494,7 +564,7 @@
     },
     "MembershipSettings": {
       "title": "MembershipSettings",
-      "description": "Admin-managed Bank QR images, WhatsApp support digits, and verification copy.",
+      "description": "Admin-managed Bank QR and Binance USD QR images, USD pricing, WhatsApp support digits, and verification copy.",
       "type": "object",
       "properties": {
         "starterQrImage": {
@@ -516,6 +586,39 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 512
+        },
+        "starterBinanceQrImage": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512
+        },
+        "standardBinanceQrImage": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512
+        },
+        "plusBinanceQrImage": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512
+        },
+        "vipBinanceQrImage": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 512
+        },
+        "usdPrices": {
+          "type": "object"
+        },
+        "internationalInstructionsEn": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1500
+        },
+        "internationalInstructionsUr": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 1500
         },
         "whatsappNumber": {
           "type": "string",
@@ -630,6 +733,16 @@
           "minLength": 0,
           "maxLength": 128
         },
+        "membershipId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "customerNotificationId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
         "to": {
           "type": "string",
           "format": "email",
@@ -694,6 +807,61 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "MemberNotification": {
+      "title": "MemberNotification",
+      "description": "In-account customer notification for renewal reminders, expiry notices, payment verification outcomes, and extensions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "customerEmail": { "type": "string", "minLength": 0, "maxLength": 200 },
+        "membershipId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "orderId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "planId": { "type": "string", "minLength": 0, "maxLength": 32 },
+        "dramaIds": { "type": "array" },
+        "type": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "titleUr": { "type": "string", "minLength": 0, "maxLength": 240 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 1200 },
+        "messageUr": { "type": "string", "minLength": 0, "maxLength": 1200 },
+        "ctaLabel": { "type": "string", "minLength": 0, "maxLength": 100 },
+        "ctaHref": { "type": "string", "minLength": 0, "maxLength": 240 },
+        "dedupeKey": { "type": "string", "minLength": 3, "maxLength": 240 },
+        "emailStatus": { "type": "string", "enum": ["not_sent", "not_configured", "sent", "failed"] },
+        "emailError": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "isRead": { "type": "boolean" },
+        "readAt": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "supersededAt": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "updatedAtIso": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "memberId", "ownerUid", "type", "title", "message", "dedupeKey", "emailStatus", "isRead", "createdAtIso", "createdAt", "updatedAt"]
+    },
+    "SchedulerRun": {
+      "title": "SchedulerRun",
+      "description": "Audit record of automated membership expiry and renewal reminder scheduler executions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "triggerSource": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "ranAt": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "ranAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "durationMs": { "type": "number" },
+        "checkedMemberships": { "type": "number" },
+        "expiredCount": { "type": "number" },
+        "remindersCreated": { "type": "number" },
+        "emailsSent": { "type": "number" },
+        "emailsFailed": { "type": "number" },
+        "emailsNotConfigured": { "type": "number" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "triggerSource", "ranAt", "checkedMemberships", "expiredCount", "remindersCreated", "summary", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -707,11 +875,11 @@
     },
     "/membershipOrders/{orderId}": {
       "schema": { "$ref": "#/entities/MembershipOrder" },
-      "description": "Payment verification queue orders and compressed proof screenshots."
+      "description": "Payment verification queue orders and compressed proof screenshots (PKR Bank QR & USD Binance QR, New & Renewal)."
     },
     "/memberships/{membershipId}": {
       "schema": { "$ref": "#/entities/CustomerMembership" },
-      "description": "Approved and admin-assigned customer memberships."
+      "description": "Approved and admin-assigned customer memberships with UTC expiry and renewal history."
     },
     "/membershipHistory/{historyId}": {
       "schema": { "$ref": "#/entities/MembershipHistoryItem" },
@@ -719,7 +887,7 @@
     },
     "/membershipConfig/{configId}": {
       "schema": { "$ref": "#/entities/MembershipSettings" },
-      "description": "Admin-managed Bank QR and support configuration."
+      "description": "Admin-managed Bank QR, Binance USD QR, USD pricing, and support configuration."
     },
     "/adminAuditLogs/{logId}": {
       "schema": { "$ref": "#/entities/AdminAuditItem" },
@@ -727,7 +895,15 @@
     },
     "/emailNotifications/{notifId}": {
       "schema": { "$ref": "#/entities/EmailNotificationItem" },
-      "description": "Outbound verification email delivery logs."
+      "description": "Outbound verification and reminder email delivery logs."
+    },
+    "/memberNotifications/{notifId}": {
+      "schema": { "$ref": "#/entities/MemberNotification" },
+      "description": "In-account customer renewal reminder, expiry, and payment notifications."
+    },
+    "/schedulerRuns/{runId}": {
+      "schema": { "$ref": "#/entities/SchedulerRun" },
+      "description": "Execution logs for the automated membership expiry & renewal reminder scheduler."
     }
   }
 }

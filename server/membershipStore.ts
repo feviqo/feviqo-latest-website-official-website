@@ -4,9 +4,15 @@ import crypto from 'crypto';
 import {
   MEMBERSHIP_PLANS,
   MEMBERSHIP_DRAMAS,
+  DEFAULT_USD_PRICES,
+  MembershipPlan,
   MembershipPlanId,
+  PaymentRegion,
+  PaymentMethod,
+  PaymentCurrency,
   getPlanById,
   getDramaById,
+  getEpisodeMeta,
 } from '../src/data/membershipCatalog';
 import {
   isServerFirestoreEnabled,
@@ -26,6 +32,8 @@ const CONFIG_FILE = path.join(DATA_DIR, 'membership_config.json');
 const ADMINS_FILE = path.join(DATA_DIR, 'admins.json');
 const ADMIN_AUDIT_FILE = path.join(DATA_DIR, 'admin_audit_log.json');
 const EMAIL_NOTIFS_FILE = path.join(DATA_DIR, 'email_notifications.json');
+const MEMBER_NOTIFS_FILE = path.join(DATA_DIR, 'member_notifications.json');
+const SCHEDULER_RUNS_FILE = path.join(DATA_DIR, 'scheduler_runs.json');
 const SECRET_FILE = path.join(DATA_DIR, '.member_session_secret');
 
 for (const dir of [DATA_DIR, PRIVATE_PROOFS_DIR, PUBLIC_QR_DIR]) {
@@ -35,7 +43,7 @@ for (const dir of [DATA_DIR, PRIVATE_PROOFS_DIR, PUBLIC_QR_DIR]) {
 }
 
 // Server-only protected episode stream URLs.
-// Never export or serialize these into public catalog endpoints.
+// Never export or serialize these into public catalog endpoints or static frontend bundles.
 const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
   teskilat: {
     'episode-192': 'https://stream.mux.com/9KzAsaCfqKFh5hi4k5o5NCUuYWa3TbQsbCrVgsih8WU.m3u8',
@@ -45,12 +53,14 @@ const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
     'episode-186': 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8',
   },
   'mehmed-fetihler-sultani': {
+    'episode-91': 'https://stream.mux.com/iZwLfzcSIyWE302WmxZ39wVyGRbT00hw2gYJsdmKosn7s.m3u8',
     'episode-90': 'https://stream.mux.com/iZwLfzcSIyWE302WmxZ39wVyGRbT00hw2gYJsdmKosn7s.m3u8',
     'episode-89': 'https://stream.mux.com/q3MFc527rZ7V0101YFeDLV8aCbWBk5oSnRsNQscKjDRuQ.m3u8',
     'episode-88': 'https://stream.mux.com/4yMhhN6VhrnhA72oCdYqlFQatv1k00kVcQHEuNYPo02Gg.m3u8',
     'episode-87': 'https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8',
   },
   'gunesin-dogdugu-yer': {
+    'episode-8': 'https://stream.mux.com/neflT01u9Ey4vSvhNwuZQH8LcR9IpeWcDFnHO4hS7N02M.m3u8',
     'episode-7': 'https://stream.mux.com/neflT01u9Ey4vSvhNwuZQH8LcR9IpeWcDFnHO4hS7N02M.m3u8',
     'episode-5': 'https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8',
     'episode-4': 'https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8',
@@ -84,6 +94,22 @@ export interface SafeMember {
 
 export type MembershipStatus = 'active' | 'cancelled' | 'expired';
 
+export interface RenewalHistoryEntry {
+  id: string;
+  orderId?: string;
+  renewedAt: string;
+  previousExpiresAt: string;
+  newExpiresAt: string;
+  addedDays: number;
+  planId: MembershipPlanId;
+  planName: string;
+  paymentMethod: PaymentMethod;
+  currency: PaymentCurrency;
+  amount: number;
+  approvedByAdminEmail?: string;
+  note?: string;
+}
+
 export interface MembershipRecord {
   id: string;
   memberId: string;
@@ -95,6 +121,7 @@ export interface MembershipRecord {
   planId: MembershipPlanId;
   planName: string;
   pricePkr: number;
+  priceUsd?: number;
   durationDays: number;
   selectedDramaIds: string[];
   status: MembershipStatus;
@@ -105,7 +132,13 @@ export interface MembershipRecord {
   revokedReason?: string;
   approvedByAdminEmail?: string;
   paymentProvider: string;
+  paymentRegion?: PaymentRegion;
+  paymentMethod?: PaymentMethod;
+  currency?: PaymentCurrency;
+  expectedAmount?: number;
   paymentReference: string;
+  renewalHistory?: RenewalHistoryEntry[];
+  lastExtendedAt?: string;
   createdAt: string;
 }
 
@@ -116,6 +149,8 @@ export type OrderStatus =
   | 'rejected'
   | 'expired';
 
+export type OrderType = 'new' | 'renewal';
+
 export interface MembershipOrder {
   id: string;
   memberId: string;
@@ -123,9 +158,18 @@ export interface MembershipOrder {
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
+  orderType?: OrderType;
+  targetMembershipId?: string;
   planId: MembershipPlanId;
   planName: string;
   amountPkr: number;
+  amountUsd?: number;
+  expectedAmount?: number;
+  currency?: PaymentCurrency;
+  paymentRegion?: PaymentRegion;
+  paymentMethod?: PaymentMethod;
+  visitorCountryCode?: string;
+  indicativeLocalDisplay?: string;
   durationDays: number;
   selectedDramaIds: string[];
   status: OrderStatus;
@@ -143,8 +187,9 @@ export interface MembershipOrder {
   reviewedByAdminId?: string;
   reviewedByAdminEmail?: string;
   reviewedAt?: string;
-  createdAt: string;
   paidAt?: string;
+  createdAt: string;
+  paidAtMs?: number;
   updatedAt: string;
 }
 
@@ -160,15 +205,68 @@ export interface MembershipHistoryEntry {
     | 'payment_approved'
     | 'payment_rejected'
     | 'membership_activated'
+    | 'membership_renewed'
+    | 'membership_extended'
     | 'membership_cancelled'
     | 'membership_revoked'
     | 'membership_expired';
   planId?: MembershipPlanId;
   planName?: string;
   amountPkr?: number;
+  amountUsd?: number;
+  currency?: PaymentCurrency;
   selectedDramaIds?: string[];
   details: string;
   createdAt: string;
+}
+
+export type CustomerNotificationType =
+  | 'renewal_7d'
+  | 'renewal_3d'
+  | 'renewal_1d'
+  | 'membership_expired'
+  | 'membership_approved'
+  | 'membership_renewed'
+  | 'membership_extended'
+  | 'payment_rejected';
+
+export interface CustomerNotification {
+  id: string;
+  memberId: string;
+  ownerUid?: string;
+  customerEmail?: string;
+  membershipId?: string;
+  orderId?: string;
+  planId?: MembershipPlanId;
+  dramaIds?: string[];
+  type: CustomerNotificationType;
+  title: string;
+  titleUr?: string;
+  message: string;
+  messageUr?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  dedupeKey: string;
+  emailStatus: 'not_sent' | 'not_configured' | 'sent' | 'failed';
+  emailError?: string;
+  isRead: boolean;
+  readAt?: string;
+  supersededAt?: string;
+  createdAt: string;
+}
+
+export interface SchedulerRunLog {
+  id: string;
+  triggerSource: 'startup' | 'scheduled_interval' | 'admin_manual' | 'cron_endpoint';
+  ranAt: string;
+  durationMs: number;
+  checkedMemberships: number;
+  expiredCount: number;
+  remindersCreated: number;
+  emailsSent: number;
+  emailsFailed: number;
+  emailsNotConfigured: number;
+  summary: string;
 }
 
 export interface MembershipConfig {
@@ -176,6 +274,13 @@ export interface MembershipConfig {
   standardQrImage: string;
   plusQrImage: string;
   vipQrImage: string;
+  starterBinanceQrImage: string;
+  standardBinanceQrImage: string;
+  plusBinanceQrImage: string;
+  vipBinanceQrImage: string;
+  usdPrices: Record<MembershipPlanId, number>;
+  internationalInstructionsEn: string;
+  internationalInstructionsUr: string;
   whatsappNumber: string;
   adminEmail: string;
   supportEmail: string;
@@ -186,6 +291,11 @@ export interface MembershipConfig {
 
 export interface PublicMembershipConfig {
   qrImages: Record<MembershipPlanId, string>;
+  binanceQrImages: Record<MembershipPlanId, string>;
+  hasBinanceQr: Record<MembershipPlanId, boolean>;
+  usdPrices: Record<MembershipPlanId, number>;
+  internationalInstructionsEn: string;
+  internationalInstructionsUr: string;
   whatsappConfigured: boolean;
   whatsappDigits: string;
   supportEmail: string;
@@ -225,10 +335,12 @@ export interface AdminAuditEntry {
     | 'payment_approved'
     | 'payment_rejected'
     | 'membership_assigned'
+    | 'membership_extended'
     | 'membership_revoked'
     | 'config_updated'
     | 'qr_image_updated'
-    | 'email_retried';
+    | 'email_retried'
+    | 'reminders_executed';
   targetId?: string;
   details: string;
   createdAt: string;
@@ -237,10 +349,17 @@ export interface AdminAuditEntry {
 export interface EmailNotificationLog {
   id: string;
   orderId?: string;
+  membershipId?: string;
+  customerNotificationId?: string;
   to: string;
   subject: string;
   html: string;
-  type: 'admin_payment_verification' | 'member_payment_approved' | 'member_payment_rejected';
+  type:
+    | 'admin_payment_verification'
+    | 'member_payment_approved'
+    | 'member_payment_rejected'
+    | 'member_renewal_reminder'
+    | 'member_membership_expired';
   status: 'sent' | 'failed';
   provider?: string;
   error?: string;
@@ -251,10 +370,27 @@ export interface EmailNotificationLog {
 
 export interface PaymentGatewayStatus {
   configured: boolean;
-  provider: 'bank_qr' | 'stripe' | 'safepay' | 'payfast';
+  provider: 'bank_qr' | 'binance_qr' | 'stripe' | 'safepay' | 'payfast';
   missingCredentials: string[];
   instructions: string;
 }
+
+export interface TrackedEmailDispatcherResult {
+  success: boolean;
+  provider?: string;
+  error?: string;
+  smtpError?: string;
+  notConfigured?: boolean;
+}
+
+export type LifecycleEmailDispatcher = (params: {
+  to: string;
+  subject: string;
+  html: string;
+  type: 'member_renewal_reminder' | 'member_membership_expired';
+  membershipId?: string;
+  customerNotificationId?: string;
+}) => Promise<TrackedEmailDispatcherResult>;
 
 function readJson<T>(filePath: string, fallback: T): T {
   try {
@@ -488,6 +624,24 @@ function mirrorConfigServer(cfg: MembershipConfig) {
   });
 }
 
+function mirrorMemberNotificationServer(notif: CustomerNotification) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('memberNotifications', notif.id, {
+    ...notif,
+    ownerUid: notif.ownerUid || 'email_member',
+    createdAtIso: notif.createdAt,
+    updatedAtIso: notif.readAt || notif.supersededAt || notif.createdAt,
+  });
+}
+
+function mirrorSchedulerRunServer(run: SchedulerRunLog) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('schedulerRuns', run.id, {
+    ...run,
+    ranAtIso: run.ranAt,
+  });
+}
+
 function appendHistory(entry: Omit<MembershipHistoryEntry, 'id' | 'createdAt'>): MembershipHistoryEntry {
   const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []);
   const item: MembershipHistoryEntry = {
@@ -521,12 +675,94 @@ export function appendAdminAudit(entry: Omit<AdminAuditEntry, 'id' | 'createdAt'
   return item;
 }
 
+function createCustomerNotificationRecord(
+  input: Omit<CustomerNotification, 'id' | 'createdAt' | 'isRead'> & { isRead?: boolean }
+): { notification: CustomerNotification; created: boolean } {
+  const existingAll = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+  const duplicate = existingAll.find((n) => n.dedupeKey === input.dedupeKey);
+  if (duplicate) {
+    return { notification: duplicate, created: false };
+  }
+  const nowIso = new Date().toISOString();
+  const record: CustomerNotification = {
+    ...input,
+    id: `mnotif-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+    isRead: Boolean(input.isRead),
+    createdAt: nowIso,
+  };
+  existingAll.unshift(record);
+  if (existingAll.length > 5000) existingAll.length = 5000;
+  writeJson(MEMBER_NOTIFS_FILE, existingAll);
+  mirrorMemberNotificationServer(record);
+  return { notification: record, created: true };
+}
+
+function supersedeOldRenewalReminders(membershipId: string, nowIso: string): void {
+  const all = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+  let changed = false;
+  for (const n of all) {
+    if (
+      n.membershipId === membershipId &&
+      !n.supersededAt &&
+      (n.type === 'renewal_7d' || n.type === 'renewal_3d' || n.type === 'renewal_1d' || n.type === 'membership_expired')
+    ) {
+      n.supersededAt = nowIso;
+      n.isRead = true;
+      n.readAt = n.readAt || nowIso;
+      changed = true;
+      mirrorMemberNotificationServer(n);
+    }
+  }
+  if (changed) {
+    writeJson(MEMBER_NOTIFS_FILE, all);
+  }
+}
+
+export function markMemberNotificationRead(params: {
+  memberId: string;
+  notifId: string;
+}): boolean {
+  const all = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+  const idx = all.findIndex((n) => n.id === params.notifId && n.memberId === params.memberId);
+  if (idx === -1) return false;
+  all[idx].isRead = true;
+  all[idx].readAt = all[idx].readAt || new Date().toISOString();
+  writeJson(MEMBER_NOTIFS_FILE, all);
+  mirrorMemberNotificationServer(all[idx]);
+  return true;
+}
+
+export function markAllMemberNotificationsRead(memberId: string): number {
+  const all = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+  const nowIso = new Date().toISOString();
+  let count = 0;
+  for (const n of all) {
+    if (n.memberId === memberId && !n.isRead) {
+      n.isRead = true;
+      n.readAt = nowIso;
+      count += 1;
+      mirrorMemberNotificationServer(n);
+    }
+  }
+  if (count > 0) writeJson(MEMBER_NOTIFS_FILE, all);
+  return count;
+}
+
 // --- CONFIGURATION STORE ---
 const DEFAULT_CONFIG: MembershipConfig = {
   starterQrImage: '/images/qr/starter-qr.jpg',
   standardQrImage: '/images/qr/standard-qr.jpg',
   plusQrImage: '/images/qr/plus-qr.jpg',
   vipQrImage: '/images/qr/vip-qr.jpg',
+  starterBinanceQrImage: '/images/qr/starter-binance-qr.jpg',
+  standardBinanceQrImage: '/images/qr/standard-binance-qr.jpg',
+  plusBinanceQrImage: '/images/qr/plus-binance-qr.jpg',
+  vipBinanceQrImage: '/images/qr/vip-binance-qr.jpg',
+  usdPrices: { ...DEFAULT_USD_PRICES },
+  internationalInstructionsEn:
+    'Scan this Binance Pay QR in the Binance App and pay the exact USD amount shown. Upload your payment screenshot below for manual verification by our team.',
+  internationalInstructionsUr:
+    'بائنینس ایپ (Binance App) میں یہ QR کوڈ اسکین کریں اور درج شدہ بالکل درست USD رقم ادا کریں۔ ادائیگی کے بعد اسکرین شاٹ نیچے اپ لوڈ کریں تاکہ ہماری ٹیم تصدیق کر سکے۔',
   whatsappNumber: (process.env.FEVIQO_WHATSAPP_NUMBER || '+923227811264').trim(),
   adminEmail: (process.env.FEVIQO_ADMIN_EMAIL || 'partner@feviqo.com').trim(),
   supportEmail: 'partner@feviqo.com',
@@ -535,13 +771,34 @@ const DEFAULT_CONFIG: MembershipConfig = {
   updatedAt: new Date().toISOString(),
 };
 
+function sanitizeUsdPrice(raw: unknown, fallback: number): number {
+  const num = Number(raw);
+  if (!Number.isFinite(num) || num <= 0 || num > 10000) return fallback;
+  return Math.round(num * 100) / 100;
+}
+
 export function getMembershipConfig(): MembershipConfig {
   const saved = readJson<Partial<MembershipConfig>>(CONFIG_FILE, {});
+  const savedUsd = saved.usdPrices || ({} as Partial<Record<MembershipPlanId, number>>);
   return {
     starterQrImage: saved.starterQrImage || DEFAULT_CONFIG.starterQrImage,
     standardQrImage: saved.standardQrImage || DEFAULT_CONFIG.standardQrImage,
     plusQrImage: saved.plusQrImage || DEFAULT_CONFIG.plusQrImage,
     vipQrImage: saved.vipQrImage || DEFAULT_CONFIG.vipQrImage,
+    starterBinanceQrImage: saved.starterBinanceQrImage || DEFAULT_CONFIG.starterBinanceQrImage,
+    standardBinanceQrImage: saved.standardBinanceQrImage || DEFAULT_CONFIG.standardBinanceQrImage,
+    plusBinanceQrImage: saved.plusBinanceQrImage || DEFAULT_CONFIG.plusBinanceQrImage,
+    vipBinanceQrImage: saved.vipBinanceQrImage || DEFAULT_CONFIG.vipBinanceQrImage,
+    usdPrices: {
+      starter: sanitizeUsdPrice(savedUsd.starter, DEFAULT_USD_PRICES.starter),
+      standard: sanitizeUsdPrice(savedUsd.standard, DEFAULT_USD_PRICES.standard),
+      plus: sanitizeUsdPrice(savedUsd.plus, DEFAULT_USD_PRICES.plus),
+      vip: sanitizeUsdPrice(savedUsd.vip, DEFAULT_USD_PRICES.vip),
+    },
+    internationalInstructionsEn:
+      saved.internationalInstructionsEn || DEFAULT_CONFIG.internationalInstructionsEn,
+    internationalInstructionsUr:
+      saved.internationalInstructionsUr || DEFAULT_CONFIG.internationalInstructionsUr,
     whatsappNumber:
       saved.whatsappNumber !== undefined
         ? saved.whatsappNumber
@@ -554,6 +811,18 @@ export function getMembershipConfig(): MembershipConfig {
     supportNoteUr: saved.supportNoteUr || DEFAULT_CONFIG.supportNoteUr,
     updatedAt: saved.updatedAt || DEFAULT_CONFIG.updatedAt,
   };
+}
+
+export function getResolvedPlans(): MembershipPlan[] {
+  const cfg = getMembershipConfig();
+  return MEMBERSHIP_PLANS.map((p) => {
+    const usd = cfg.usdPrices[p.id] ?? p.priceUsd;
+    return {
+      ...p,
+      priceUsd: usd,
+      priceUsdDisplay: `$${usd.toFixed(2)} USD`,
+    };
+  });
 }
 
 export function normalizeWhatsappDigits(raw: string): string {
@@ -574,6 +843,21 @@ export function getPublicMembershipConfig(): PublicMembershipConfig {
       plus: cfg.plusQrImage,
       vip: cfg.vipQrImage,
     },
+    binanceQrImages: {
+      starter: cfg.starterBinanceQrImage,
+      standard: cfg.standardBinanceQrImage,
+      plus: cfg.plusBinanceQrImage,
+      vip: cfg.vipBinanceQrImage,
+    },
+    hasBinanceQr: {
+      starter: Boolean(cfg.starterBinanceQrImage),
+      standard: Boolean(cfg.standardBinanceQrImage),
+      plus: Boolean(cfg.plusBinanceQrImage),
+      vip: Boolean(cfg.vipBinanceQrImage),
+    },
+    usdPrices: cfg.usdPrices,
+    internationalInstructionsEn: cfg.internationalInstructionsEn,
+    internationalInstructionsUr: cfg.internationalInstructionsUr,
     whatsappConfigured: whatsappDigits.length >= 10,
     whatsappDigits,
     supportEmail: cfg.supportEmail,
@@ -582,8 +866,23 @@ export function getPublicMembershipConfig(): PublicMembershipConfig {
   };
 }
 
-export function getQrUrlForPlan(planId: MembershipPlanId): string {
+export function getQrUrlForPlan(
+  planId: MembershipPlanId,
+  region: PaymentRegion = 'pakistan'
+): string {
   const cfg = getMembershipConfig();
+  if (region === 'international') {
+    switch (planId) {
+      case 'starter':
+        return cfg.starterBinanceQrImage || '';
+      case 'standard':
+        return cfg.standardBinanceQrImage || '';
+      case 'plus':
+        return cfg.plusBinanceQrImage || '';
+      case 'vip':
+        return cfg.vipBinanceQrImage || '';
+    }
+  }
   switch (planId) {
     case 'starter':
       return cfg.starterQrImage;
@@ -596,8 +895,11 @@ export function getQrUrlForPlan(planId: MembershipPlanId): string {
   }
 }
 
-export function resolveQrDiskPath(planId: MembershipPlanId): string | null {
-  const qrUrl = getQrUrlForPlan(planId);
+export function resolveQrDiskPath(
+  planId: MembershipPlanId,
+  region: PaymentRegion = 'pakistan'
+): string | null {
+  const qrUrl = getQrUrlForPlan(planId, region);
   if (qrUrl.startsWith('/images/qr/')) {
     const fileName = path.basename(qrUrl);
     const full = path.join(PUBLIC_QR_DIR, fileName);
@@ -611,12 +913,39 @@ export function updateMembershipConfig(params: {
   admin: SafeAdmin;
 }): MembershipConfig {
   const current = getMembershipConfig();
+  const updUsd = params.updates.usdPrices || ({} as Partial<Record<MembershipPlanId, number>>);
   const next: MembershipConfig = {
     ...current,
     starterQrImage: params.updates.starterQrImage?.trim() || current.starterQrImage,
     standardQrImage: params.updates.standardQrImage?.trim() || current.standardQrImage,
     plusQrImage: params.updates.plusQrImage?.trim() || current.plusQrImage,
     vipQrImage: params.updates.vipQrImage?.trim() || current.vipQrImage,
+    starterBinanceQrImage:
+      params.updates.starterBinanceQrImage !== undefined
+        ? params.updates.starterBinanceQrImage.trim()
+        : current.starterBinanceQrImage,
+    standardBinanceQrImage:
+      params.updates.standardBinanceQrImage !== undefined
+        ? params.updates.standardBinanceQrImage.trim()
+        : current.standardBinanceQrImage,
+    plusBinanceQrImage:
+      params.updates.plusBinanceQrImage !== undefined
+        ? params.updates.plusBinanceQrImage.trim()
+        : current.plusBinanceQrImage,
+    vipBinanceQrImage:
+      params.updates.vipBinanceQrImage !== undefined
+        ? params.updates.vipBinanceQrImage.trim()
+        : current.vipBinanceQrImage,
+    usdPrices: {
+      starter: sanitizeUsdPrice(updUsd.starter, current.usdPrices.starter),
+      standard: sanitizeUsdPrice(updUsd.standard, current.usdPrices.standard),
+      plus: sanitizeUsdPrice(updUsd.plus, current.usdPrices.plus),
+      vip: sanitizeUsdPrice(updUsd.vip, current.usdPrices.vip),
+    },
+    internationalInstructionsEn:
+      params.updates.internationalInstructionsEn?.trim() || current.internationalInstructionsEn,
+    internationalInstructionsUr:
+      params.updates.internationalInstructionsUr?.trim() || current.internationalInstructionsUr,
     whatsappNumber:
       params.updates.whatsappNumber !== undefined
         ? params.updates.whatsappNumber.trim()
@@ -637,13 +966,14 @@ export function updateMembershipConfig(params: {
     adminId: params.admin.id,
     adminEmail: params.admin.email,
     action: 'config_updated',
-    details: `Updated membership configuration (WhatsApp: ${next.whatsappNumber ? 'configured' : 'unset'}, Admin Email: ${next.adminEmail}).`,
+    details: `Updated membership config (USD Starter=$${next.usdPrices.starter}, Standard=$${next.usdPrices.standard}, Plus=$${next.usdPrices.plus}, VIP=$${next.usdPrices.vip}; WhatsApp: ${next.whatsappNumber ? 'set' : 'unset'}).`,
   });
   return next;
 }
 
 export function saveUploadedQrImage(params: {
   planId: MembershipPlanId;
+  region?: PaymentRegion;
   buffer: Buffer;
   admin: SafeAdmin;
 }): { success: true; imageUrl: string; config: MembershipConfig } | { success: false; error: string } {
@@ -655,16 +985,25 @@ export function saveUploadedQrImage(params: {
     return { success: false, error: 'QR image file size must not exceed 8 MB.' };
   }
 
-  const fileName = `${params.planId}-qr-${Date.now()}.${detected.ext}`;
+  const region: PaymentRegion = params.region === 'international' ? 'international' : 'pakistan';
+  const suffix = region === 'international' ? 'binance-qr' : 'qr';
+  const fileName = `${params.planId}-${suffix}-${Date.now()}.${detected.ext}`;
   const destPath = path.join(PUBLIC_QR_DIR, fileName);
   fs.writeFileSync(destPath, params.buffer);
   const imageUrl = `/images/qr/${fileName}`;
 
   const updates: Partial<MembershipConfig> = {};
-  if (params.planId === 'starter') updates.starterQrImage = imageUrl;
-  if (params.planId === 'standard') updates.standardQrImage = imageUrl;
-  if (params.planId === 'plus') updates.plusQrImage = imageUrl;
-  if (params.planId === 'vip') updates.vipQrImage = imageUrl;
+  if (region === 'international') {
+    if (params.planId === 'starter') updates.starterBinanceQrImage = imageUrl;
+    if (params.planId === 'standard') updates.standardBinanceQrImage = imageUrl;
+    if (params.planId === 'plus') updates.plusBinanceQrImage = imageUrl;
+    if (params.planId === 'vip') updates.vipBinanceQrImage = imageUrl;
+  } else {
+    if (params.planId === 'starter') updates.starterQrImage = imageUrl;
+    if (params.planId === 'standard') updates.standardQrImage = imageUrl;
+    if (params.planId === 'plus') updates.plusQrImage = imageUrl;
+    if (params.planId === 'vip') updates.vipQrImage = imageUrl;
+  }
 
   const current = getMembershipConfig();
   const next: MembershipConfig = {
@@ -679,8 +1018,8 @@ export function saveUploadedQrImage(params: {
     adminId: params.admin.id,
     adminEmail: params.admin.email,
     action: 'qr_image_updated',
-    targetId: params.planId,
-    details: `Uploaded crisp ${detected.ext.toUpperCase()} Bank QR image for ${params.planId} plan (${fileName}).`,
+    targetId: `${params.planId}:${region}`,
+    details: `Uploaded ${detected.ext.toUpperCase()} ${region === 'international' ? 'Binance USD QR' : 'Pakistani Bank QR'} image for ${params.planId} plan (${fileName}).`,
   });
 
   return { success: true, imageUrl, config: next };
@@ -689,11 +1028,9 @@ export function saveUploadedQrImage(params: {
 // --- IMAGE MAGIC-BYTE VALIDATION ---
 export function detectImageType(buf: Buffer): { mime: 'image/jpeg' | 'image/png' | 'image/webp'; ext: 'jpg' | 'png' | 'webp' } | null {
   if (!buf || buf.length < 12) return null;
-  // JPEG: FF D8 FF
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
     return { mime: 'image/jpeg', ext: 'jpg' };
   }
-  // PNG: 89 50 4E 47 0D 0A 1A 0A
   if (
     buf[0] === 0x89 &&
     buf[1] === 0x50 &&
@@ -706,7 +1043,6 @@ export function detectImageType(buf: Buffer): { mime: 'image/jpeg' | 'image/png'
   ) {
     return { mime: 'image/png', ext: 'png' };
   }
-  // WebP: RIFF....WEBP
   if (
     buf[0] === 0x52 &&
     buf[1] === 0x49 &&
@@ -1157,6 +1493,58 @@ export function upsertGoogleMember(params: {
   return { success: true, member: safe, token: createMemberSessionToken(safe) };
 }
 
+export function isMemberPhoneValid(phone?: string): boolean {
+  const digits = (phone || '').replace(/[^\d]/g, '');
+  return digits.length >= 10 && digits.length <= 15;
+}
+
+export function updateMemberPhone(params: {
+  memberId: string;
+  phone: string;
+}): { success: true; member: SafeMember } | { success: false; error: string; statusCode?: number } {
+  const phoneCheck = normalizeAndValidatePhone(params.phone);
+  if (!('phone' in phoneCheck)) {
+    return { success: false, error: phoneCheck.error, statusCode: 400 };
+  }
+
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const idx = members.findIndex((m) => m.id === params.memberId);
+  if (idx === -1) {
+    return { success: false, error: 'Member account not found.', statusCode: 404 };
+  }
+
+  const now = new Date().toISOString();
+  members[idx].phone = phoneCheck.phone.slice(0, 32);
+  members[idx].updatedAt = now;
+  writeJson(MEMBERS_FILE, members);
+
+  const safe = sanitizeMember(members[idx]);
+  mirrorMemberServer(safe);
+
+  // Backfill customerPhone on any existing awaiting_payment / pending_verification orders so admin queue sees it immediately
+  const orders = readAllOrders();
+  let ordersChanged = false;
+  for (let i = 0; i < orders.length; i++) {
+    const ord = orders[i];
+    if (
+      ord.memberId === safe.id &&
+      !isMemberPhoneValid(ord.customerPhone) &&
+      (ord.status === 'awaiting_payment' || ord.status === 'pending_verification')
+    ) {
+      ord.customerPhone = safe.phone;
+      ord.updatedAt = now;
+      orders[i] = ord;
+      ordersChanged = true;
+      mirrorOrderServer(ord);
+    }
+  }
+  if (ordersChanged) {
+    writeJson(ORDERS_FILE, orders);
+  }
+
+  return { success: true, member: safe };
+}
+
 // --- ORDERS & MEMBERSHIPS LIFECYCLE ---
 function normalizeOrderStatus(raw: string): OrderStatus {
   if (raw === 'pending_payment') return 'awaiting_payment';
@@ -1176,11 +1564,33 @@ function normalizeOrderStatus(raw: string): OrderStatus {
 
 function readAllOrders(): MembershipOrder[] {
   const raw = readJson<any[]>(ORDERS_FILE, []);
-  return raw.map((o) => ({
-    ...o,
-    status: normalizeOrderStatus(o.status),
-    qrImageUrl: o.qrImageUrl || (o.planId ? getQrUrlForPlan(o.planId) : undefined),
-  }));
+  return raw.map((o) => {
+    const region: PaymentRegion =
+      o.paymentRegion === 'international' ? 'international' : 'pakistan';
+    return {
+      ...o,
+      orderType: o.orderType === 'renewal' ? 'renewal' : 'new',
+      paymentRegion: region,
+      paymentMethod:
+        o.paymentMethod ||
+        (region === 'international' ? 'binance_qr' : o.provider === 'admin_assigned' ? 'admin_assigned' : 'bank_qr'),
+      currency: o.currency || (region === 'international' ? 'USD' : 'PKR'),
+      status: normalizeOrderStatus(o.status),
+      qrImageUrl:
+        o.qrImageUrl !== undefined
+          ? o.qrImageUrl
+          : o.planId
+            ? getQrUrlForPlan(o.planId, region)
+            : undefined,
+    };
+  });
+}
+
+function getMembershipDramaIds(sub: MembershipRecord): string[] {
+  if (sub.planId === 'vip') {
+    return MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id);
+  }
+  return Array.isArray(sub.selectedDramaIds) ? sub.selectedDramaIds : [];
 }
 
 export function syncMemberSubscriptions(memberId?: string): MembershipRecord[] {
@@ -1195,6 +1605,7 @@ export function syncMemberSubscriptions(memberId?: string): MembershipRecord[] {
       if (Number.isNaN(expMs) || now >= expMs) {
         sub.status = 'expired';
         changed = true;
+        mirrorMembershipServer(sub);
         appendHistory({
           memberId: sub.memberId,
           membershipId: sub.id,
@@ -1204,6 +1615,28 @@ export function syncMemberSubscriptions(memberId?: string): MembershipRecord[] {
           planName: sub.planName,
           selectedDramaIds: sub.selectedDramaIds,
           details: `${sub.planName} membership expired at ${sub.expiresAt}.`,
+        });
+
+        const dramaNames = getMembershipDramaIds(sub)
+          .map((id) => getDramaById(id)?.title || id)
+          .join(', ');
+
+        createCustomerNotificationRecord({
+          memberId: sub.memberId,
+          ownerUid: sub.ownerUid,
+          customerEmail: sub.customerEmail,
+          membershipId: sub.id,
+          planId: sub.planId,
+          dramaIds: sub.selectedDramaIds,
+          type: 'membership_expired',
+          title: `Your ${sub.planName} membership has expired`,
+          titleUr: `آپ کی ${sub.planName} ممبرشپ کی مدت ختم ہو گئی ہے`,
+          message: `Premium access for ${dramaNames || sub.planName} ended on ${new Date(sub.expiresAt).toUTCString()}. Renew anytime from My Account without losing your account history.`,
+          messageUr: `${dramaNames || sub.planName} کی پریمیم رسائی ختم ہو چکی ہے۔ آپ اپنے اکاؤنٹ سے دوبارہ رینیو کر سکتے ہیں۔`,
+          ctaLabel: 'Renew Membership',
+          ctaHref: `/membership?renew=${encodeURIComponent(sub.id)}`,
+          dedupeKey: `${sub.id}:${sub.expiresAt}:membership_expired`,
+          emailStatus: 'not_sent',
         });
       }
     }
@@ -1223,13 +1656,23 @@ export function getMemberAccountState(memberId: string) {
   if (!member) return null;
 
   const memberships = syncMemberSubscriptions(memberId);
-  const activeMembership = memberships.find((m) => m.status === 'active') || null;
+  const activeMemberships = memberships
+    .filter((m) => m.status === 'active' && Date.parse(m.expiresAt) > Date.now())
+    .sort((a, b) => Date.parse(b.expiresAt) - Date.parse(a.expiresAt));
+
+  const activeMembership = activeMemberships[0] || null;
   const latestMembership = memberships[0] || null;
   const orders = readAllOrders()
     .filter((o) => o.memberId === memberId)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, [])
     .filter((h) => h.memberId === memberId);
+
+  const notifications = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, [])
+    .filter((n) => n.memberId === memberId && !n.supersededAt)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, 60);
+  const unreadNotificationCount = notifications.filter((n) => !n.isRead).length;
 
   let remainingDays = 0;
   let remainingHours = 0;
@@ -1239,17 +1682,20 @@ export function getMemberAccountState(memberId: string) {
     remainingHours = Math.ceil(diffMs / (60 * 60 * 1000));
   }
 
-  const unlockedDramaIds = activeMembership
-    ? activeMembership.planId === 'vip'
-      ? MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id)
-      : activeMembership.selectedDramaIds
-    : [];
-
+  const unlockedSet = new Set<string>();
+  for (const m of activeMemberships) {
+    for (const dId of getMembershipDramaIds(m)) {
+      unlockedSet.add(dId);
+    }
+  }
+  const unlockedDramaIds = Array.from(unlockedSet);
   const unlockedDramas = MEMBERSHIP_DRAMAS.filter((d) => unlockedDramaIds.includes(d.id));
 
   return {
     member,
     activeMembership,
+    activeMemberships,
+    allMemberships: memberships,
     latestMembership,
     remainingDays,
     remainingHours,
@@ -1257,6 +1703,9 @@ export function getMemberAccountState(memberId: string) {
     unlockedDramas,
     orders,
     history,
+    notifications,
+    unreadNotificationCount,
+    plans: getResolvedPlans(),
     publicConfig: getPublicMembershipConfig(),
     gatewayStatus: getPaymentGatewayStatus(),
   };
@@ -1268,11 +1717,11 @@ export function validatePlanAndDramas(params: {
 }):
   | {
       valid: true;
-      plan: NonNullable<ReturnType<typeof getPlanById>>;
+      plan: MembershipPlan;
       normalizedDramaIds: string[];
     }
   | { valid: false; error: string } {
-  const plan = getPlanById(params.planId);
+  const plan = getResolvedPlans().find((p) => p.id === params.planId) || getPlanById(params.planId);
   if (!plan) {
     return { valid: false, error: 'Selected membership plan is invalid.' };
   }
@@ -1311,7 +1760,15 @@ export function validatePlanAndDramas(params: {
   return { valid: true, plan, normalizedDramaIds: uniqueIds };
 }
 
-export function getPaymentGatewayStatus(): PaymentGatewayStatus {
+export function getPaymentGatewayStatus(region: PaymentRegion = 'pakistan'): PaymentGatewayStatus {
+  if (region === 'international') {
+    return {
+      configured: true,
+      provider: 'binance_qr',
+      missingCredentials: [],
+      instructions: 'Scan the plan Binance QR code in the Binance App, pay the exact USD amount, and upload your screenshot for verification.',
+    };
+  }
   return {
     configured: true,
     provider: 'bank_qr',
@@ -1325,6 +1782,11 @@ export async function createMembershipCheckoutOrder(params: {
   planId: string;
   selectedDramaIds: unknown;
   originUrl: string;
+  paymentRegion?: PaymentRegion;
+  orderType?: OrderType;
+  targetMembershipId?: string;
+  visitorCountryCode?: string;
+  indicativeLocalDisplay?: string;
 }): Promise<
   | {
       success: true;
@@ -1335,27 +1797,60 @@ export async function createMembershipCheckoutOrder(params: {
       publicConfig: PublicMembershipConfig;
       gatewayStatus: PaymentGatewayStatus;
     }
-  | { success: false; error: string; statusCode?: number }
+  | { success: false; error: string; code?: string; statusCode?: number }
 > {
   const member = getMemberById(params.memberId);
   if (!member) {
     return { success: false, error: 'Member account not found.', statusCode: 404 };
   }
+  if (!isMemberPhoneValid(member.phone)) {
+    return {
+      success: false,
+      code: 'PHONE_REQUIRED',
+      error: 'Please add your WhatsApp / phone number first so our verification team can contact you if needed.',
+      statusCode: 400,
+    };
+  }
+
+  const orderType: OrderType = params.orderType === 'renewal' ? 'renewal' : 'new';
+  let targetMembership: MembershipRecord | undefined;
+  if (orderType === 'renewal' && params.targetMembershipId) {
+    const allSubs = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+    targetMembership = allSubs.find((m) => m.id === params.targetMembershipId);
+    if (!targetMembership) {
+      return { success: false, error: 'Target membership for renewal was not found.', statusCode: 404 };
+    }
+    if (targetMembership.memberId !== member.id) {
+      return { success: false, error: 'You cannot renew a membership belonging to another account.', statusCode: 403 };
+    }
+  }
 
   const validation = validatePlanAndDramas({
     planId: params.planId,
-    selectedDramaIds: params.selectedDramaIds,
+    selectedDramaIds:
+      params.selectedDramaIds && Array.isArray(params.selectedDramaIds) && params.selectedDramaIds.length > 0
+        ? params.selectedDramaIds
+        : targetMembership?.selectedDramaIds,
   });
   if (!('plan' in validation)) {
     return { success: false, error: validation.error, statusCode: 400 };
   }
 
   const { plan, normalizedDramaIds } = validation;
+  const paymentRegion: PaymentRegion =
+    params.paymentRegion === 'international' ? 'international' : 'pakistan';
+  const paymentMethod: PaymentMethod =
+    paymentRegion === 'international' ? 'binance_qr' : 'bank_qr';
+  const currency: PaymentCurrency =
+    paymentRegion === 'international' ? 'USD' : 'PKR';
+  const expectedAmount =
+    paymentRegion === 'international' ? plan.priceUsd : plan.pricePkr;
+
+  const qrImageUrl = getQrUrlForPlan(plan.id, paymentRegion);
   const now = new Date().toISOString();
   const orderId = `ord-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
-  const qrImageUrl = getQrUrlForPlan(plan.id);
 
-  // Security: Amount & duration always come strictly from server catalog (never from client payload)
+  // Security: Price, currency & duration ALWAYS derive strictly from server config/catalog
   const order: MembershipOrder = {
     id: orderId,
     memberId: member.id,
@@ -1363,13 +1858,22 @@ export async function createMembershipCheckoutOrder(params: {
     customerName: member.fullName,
     customerEmail: member.email,
     customerPhone: member.phone,
+    orderType,
+    targetMembershipId: targetMembership?.id,
     planId: plan.id,
     planName: plan.name,
     amountPkr: plan.pricePkr,
+    amountUsd: plan.priceUsd,
+    expectedAmount,
+    currency,
+    paymentRegion,
+    paymentMethod,
+    visitorCountryCode: params.visitorCountryCode?.trim().slice(0, 8).toUpperCase(),
+    indicativeLocalDisplay: params.indicativeLocalDisplay?.trim().slice(0, 64),
     durationDays: plan.durationDays,
     selectedDramaIds: normalizedDramaIds,
     status: 'awaiting_payment',
-    provider: 'bank_qr',
+    provider: paymentMethod,
     qrImageUrl,
     createdAt: now,
     updatedAt: now,
@@ -1380,15 +1884,21 @@ export async function createMembershipCheckoutOrder(params: {
   writeJson(ORDERS_FILE, orders);
   mirrorOrderServer(order);
 
+  const amountLabel =
+    currency === 'USD' ? `$${expectedAmount.toFixed(2)} USD` : `PKR ${expectedAmount.toLocaleString()}`;
+
   appendHistory({
     memberId: member.id,
+    membershipId: targetMembership?.id,
     orderId: order.id,
     event: 'checkout_created',
     planId: plan.id,
     planName: plan.name,
     amountPkr: plan.pricePkr,
+    amountUsd: plan.priceUsd,
+    currency,
     selectedDramaIds: normalizedDramaIds,
-    details: `Payment request ${order.id} created for ${plan.name} (${plan.priceDisplay}) — awaiting Bank QR payment.`,
+    details: `${orderType === 'renewal' ? 'Renewal' : 'New'} payment request ${order.id} created for ${plan.name} (${amountLabel} via ${paymentMethod === 'binance_qr' ? 'Binance QR' : 'Bank QR'}).`,
   });
 
   return {
@@ -1398,7 +1908,7 @@ export async function createMembershipCheckoutOrder(params: {
     paymentSetupRequired: false,
     qrImageUrl,
     publicConfig: getPublicMembershipConfig(),
-    gatewayStatus: getPaymentGatewayStatus(),
+    gatewayStatus: getPaymentGatewayStatus(paymentRegion),
   };
 }
 
@@ -1451,7 +1961,6 @@ export function submitOrderPaymentProof(params: {
   const destPath = path.join(PRIVATE_PROOFS_DIR, proofFileName);
   fs.writeFileSync(destPath, params.fileBuffer);
 
-  // Clean up prior replaced private proof if one existed
   if (order.proofFileName && order.proofFileName !== proofFileName) {
     const oldPath = path.join(PRIVATE_PROOFS_DIR, path.basename(order.proofFileName));
     if (fs.existsSync(oldPath)) {
@@ -1489,15 +1998,23 @@ export function submitOrderPaymentProof(params: {
   writeJson(ORDERS_FILE, orders);
   mirrorOrderServer(order);
 
+  const amountLabel =
+    order.currency === 'USD'
+      ? `$${(order.amountUsd ?? order.expectedAmount ?? 0).toFixed(2)} USD`
+      : `PKR ${order.amountPkr.toLocaleString()}`;
+
   appendHistory({
     memberId: member.id,
+    membershipId: order.targetMembershipId,
     orderId: order.id,
     event: 'proof_submitted',
     planId: order.planId,
     planName: order.planName,
     amountPkr: order.amountPkr,
+    amountUsd: order.amountUsd,
+    currency: order.currency,
     selectedDramaIds: order.selectedDramaIds,
-    details: `Payment proof submitted for ${order.planName} (PKR ${order.amountPkr.toLocaleString()}) — pending verification.`,
+    details: `${order.orderType === 'renewal' ? 'Renewal payment' : 'Payment'} proof submitted for ${order.planName} (${amountLabel} via ${order.paymentMethod === 'binance_qr' ? 'Binance QR' : 'Bank QR'}) — pending manual verification.`,
   });
 
   return { success: true, order, member };
@@ -1560,7 +2077,13 @@ export function approvePaymentRequest(params: {
   orderId: string;
   admin: SafeAdmin;
 }):
-  | { success: true; order: MembershipOrder; membership: MembershipRecord; member: SafeMember | null }
+  | {
+      success: true;
+      order: MembershipOrder;
+      membership: MembershipRecord;
+      member: SafeMember | null;
+      wasRenewal: boolean;
+    }
   | { success: false; error: string; statusCode: number } {
   const orders = readAllOrders();
   const idx = orders.findIndex((o) => o.id === params.orderId);
@@ -1577,7 +2100,8 @@ export function approvePaymentRequest(params: {
     };
   }
 
-  const plan = getPlanById(order.planId);
+  const resolvedPlans = getResolvedPlans();
+  const plan = resolvedPlans.find((p) => p.id === order.planId) || getPlanById(order.planId);
   if (!plan) {
     return { success: false, error: 'Order references an invalid plan.', statusCode: 400 };
   }
@@ -1595,59 +2119,136 @@ export function approvePaymentRequest(params: {
   orders[idx] = order;
   writeJson(ORDERS_FILE, orders);
 
-  // Cancel any prior active membership before activating new approved plan
-  const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
-  for (const existing of memberships) {
-    if (existing.memberId === order.memberId && existing.status === 'active') {
-      existing.status = 'cancelled';
-      existing.cancelledAt = nowIso;
-    }
-  }
-
-  const expiresAtIso = new Date(nowMs + plan.durationDays * 24 * 60 * 60 * 1000).toISOString();
   const selectedIds =
     plan.dramaLimit === 'all'
       ? MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id)
       : order.selectedDramaIds;
   const orderMember = getMemberById(order.memberId);
+  const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const durationMs = order.durationDays * 24 * 60 * 60 * 1000;
+  const paymentCurrency: PaymentCurrency = order.currency === 'USD' ? 'USD' : 'PKR';
+  const paymentRegion: PaymentRegion = order.paymentRegion === 'international' ? 'international' : 'pakistan';
+  const paymentMethod: PaymentMethod = order.paymentMethod || (paymentRegion === 'international' ? 'binance_qr' : 'bank_qr');
+  const paidAmount =
+    paymentCurrency === 'USD'
+      ? Number(order.amountUsd ?? order.expectedAmount ?? plan.priceUsd)
+      : Number(order.amountPkr ?? plan.pricePkr);
 
-  const newMembership: MembershipRecord = {
-    id: `sub-${nowMs}-${crypto.randomBytes(3).toString('hex')}`,
-    memberId: order.memberId,
-    ownerUid: order.ownerUid || orderMember?.ownerUid,
-    customerName: order.customerName || orderMember?.fullName || 'FEVIQO Member',
-    customerEmail: order.customerEmail || orderMember?.email || '',
-    customerPhone: order.customerPhone || orderMember?.phone || '',
-    orderId: order.id,
-    planId: plan.id,
-    planName: plan.name,
-    pricePkr: plan.pricePkr,
-    durationDays: plan.durationDays,
-    selectedDramaIds: selectedIds,
-    status: 'active',
-    activatedAt: nowIso,
-    expiresAt: expiresAtIso,
-    approvedByAdminEmail: params.admin.email,
-    paymentProvider: 'bank_qr',
-    paymentReference: order.paymentNote || order.id,
-    createdAt: nowIso,
-  };
+  let resultingMembership: MembershipRecord | null = null;
+  let wasRenewal = false;
 
-  memberships.unshift(newMembership);
+  if (order.orderType === 'renewal' && order.targetMembershipId) {
+    const targetIdx = memberships.findIndex(
+      (m) => m.id === order.targetMembershipId && m.memberId === order.memberId
+    );
+    if (targetIdx !== -1) {
+      const target = memberships[targetIdx];
+      const existingExpMs = Date.parse(target.expiresAt);
+      const isStillActive =
+        target.status === 'active' && !Number.isNaN(existingExpMs) && existingExpMs > nowMs;
+      const previousExpiresAt = target.expiresAt;
+      const newExpiresAtIso = isStillActive
+        ? new Date(existingExpMs + durationMs).toISOString()
+        : new Date(nowMs + durationMs).toISOString();
+
+      target.status = 'active';
+      target.activatedAt = isStillActive ? target.activatedAt : nowIso;
+      target.expiresAt = newExpiresAtIso;
+      target.cancelledAt = undefined;
+      target.revokedByAdminEmail = undefined;
+      target.revokedReason = undefined;
+      target.orderId = order.id;
+      target.planId = plan.id;
+      target.planName = plan.name;
+      target.pricePkr = plan.pricePkr;
+      target.priceUsd = order.amountUsd ?? plan.priceUsd;
+      target.durationDays = order.durationDays;
+      target.selectedDramaIds = selectedIds;
+      target.approvedByAdminEmail = params.admin.email;
+      target.paymentProvider = order.provider || paymentMethod;
+      target.paymentRegion = paymentRegion;
+      target.paymentMethod = paymentMethod;
+      target.currency = paymentCurrency;
+      target.expectedAmount = paidAmount;
+      target.paymentReference = order.paymentNote || order.id;
+      target.renewalHistory = [
+        ...(target.renewalHistory || []),
+        {
+          id: `ren-${nowMs}-${crypto.randomBytes(2).toString('hex')}`,
+          orderId: order.id,
+          renewedAt: nowIso,
+          previousExpiresAt,
+          newExpiresAt: newExpiresAtIso,
+          addedDays: order.durationDays,
+          planId: plan.id,
+          planName: plan.name,
+          paymentMethod,
+          currency: paymentCurrency,
+          amount: paidAmount,
+          approvedByAdminEmail: params.admin.email,
+          note: isStillActive ? 'Early renewal extended from previous expiry' : 'Post-expiry renewal from approval date',
+        },
+      ];
+      memberships[targetIdx] = target;
+      resultingMembership = target;
+      wasRenewal = true;
+      supersedeOldRenewalReminders(target.id, nowIso);
+    }
+  }
+
+  if (!resultingMembership) {
+    // New plan checkout: preserve existing non-expired memberships for OTHER dramas!
+    const expiresAtIso = new Date(nowMs + durationMs).toISOString();
+    resultingMembership = {
+      id: `sub-${nowMs}-${crypto.randomBytes(3).toString('hex')}`,
+      memberId: order.memberId,
+      ownerUid: order.ownerUid || orderMember?.ownerUid,
+      customerName: order.customerName || orderMember?.fullName || 'FEVIQO Member',
+      customerEmail: order.customerEmail || orderMember?.email || '',
+      customerPhone: order.customerPhone || orderMember?.phone || '',
+      orderId: order.id,
+      planId: plan.id,
+      planName: plan.name,
+      pricePkr: plan.pricePkr,
+      priceUsd: order.amountUsd ?? plan.priceUsd,
+      durationDays: order.durationDays,
+      selectedDramaIds: selectedIds,
+      status: 'active',
+      activatedAt: nowIso,
+      expiresAt: expiresAtIso,
+      approvedByAdminEmail: params.admin.email,
+      paymentProvider: order.provider || paymentMethod,
+      paymentRegion,
+      paymentMethod,
+      currency: paymentCurrency,
+      expectedAmount: paidAmount,
+      paymentReference: order.paymentNote || order.id,
+      renewalHistory: [],
+      createdAt: nowIso,
+    };
+    memberships.unshift(resultingMembership);
+  }
+
   writeJson(MEMBERSHIPS_FILE, memberships);
   mirrorOrderServer(order);
-  mirrorMembershipServer(newMembership);
+  mirrorMembershipServer(resultingMembership);
+
+  const amountLabel =
+    paymentCurrency === 'USD' ? `$${paidAmount.toFixed(2)} USD` : `PKR ${paidAmount.toLocaleString()}`;
+  const dramaNames = selectedIds.map((id) => getDramaById(id)?.title || id).join(', ');
 
   appendHistory({
     memberId: order.memberId,
-    membershipId: newMembership.id,
+    membershipId: resultingMembership.id,
     orderId: order.id,
-    event: 'payment_approved',
+    event: wasRenewal ? 'membership_renewed' : 'payment_approved',
     planId: plan.id,
     planName: plan.name,
     amountPkr: plan.pricePkr,
+    amountUsd: order.amountUsd,
+    currency: paymentCurrency,
     selectedDramaIds: selectedIds,
-    details: `${plan.name} payment approved and membership activated until ${expiresAtIso}.`,
+    details: `${plan.name} ${wasRenewal ? 'renewal' : 'payment'} approved (${amountLabel} via ${paymentMethod}) and active until ${resultingMembership.expiresAt}.`,
   });
 
   appendAdminAudit({
@@ -1655,14 +2256,38 @@ export function approvePaymentRequest(params: {
     adminEmail: params.admin.email,
     action: 'payment_approved',
     targetId: order.id,
-    details: `Approved ${plan.name} (PKR ${plan.pricePkr}) for ${order.customerEmail || order.memberId}. Membership ${newMembership.id} active until ${expiresAtIso}.`,
+    details: `Approved ${wasRenewal ? 'renewal' : 'new'} ${plan.name} (${amountLabel}) for ${order.customerEmail || order.memberId}. Membership ${resultingMembership.id} active until ${resultingMembership.expiresAt}.`,
+  });
+
+  createCustomerNotificationRecord({
+    memberId: order.memberId,
+    ownerUid: order.ownerUid || orderMember?.ownerUid,
+    customerEmail: order.customerEmail || orderMember?.email,
+    membershipId: resultingMembership.id,
+    orderId: order.id,
+    planId: plan.id,
+    dramaIds: selectedIds,
+    type: wasRenewal ? 'membership_renewed' : 'membership_approved',
+    title: wasRenewal
+      ? `${plan.name} membership renewed`
+      : `${plan.name} membership activated`,
+    titleUr: wasRenewal
+      ? `آپ کی ${plan.name} ممبرشپ کی تجدید ہو گئی`
+      : `آپ کی ${plan.name} ممبرشپ فعال ہو گئی`,
+    message: `Your payment (${amountLabel}) has been verified. ${dramaNames} ${selectedIds.length > 1 ? 'are' : 'is'} now unlocked until ${new Date(resultingMembership.expiresAt).toUTCString()}.`,
+    messageUr: `آپ کی ادائیگی (${amountLabel}) کی تصدیق ہو گئی ہے۔ اب آپ کے منتخب کردہ ڈرامے ان لاک ہو چکے ہیں۔`,
+    ctaLabel: 'Watch Unlocked Dramas',
+    ctaHref: selectedIds[0] ? `/${selectedIds[0]}` : '/dramas',
+    dedupeKey: `${order.id}:approved:${resultingMembership.expiresAt}`,
+    emailStatus: 'not_sent',
   });
 
   return {
     success: true,
     order,
-    membership: newMembership,
-    member: getMemberById(order.memberId),
+    membership: resultingMembership,
+    member: orderMember,
+    wasRenewal,
   };
 }
 
@@ -1706,11 +2331,14 @@ export function rejectPaymentRequest(params: {
 
   appendHistory({
     memberId: order.memberId,
+    membershipId: order.targetMembershipId,
     orderId: order.id,
     event: 'payment_rejected',
     planId: order.planId,
     planName: order.planName,
     amountPkr: order.amountPkr,
+    amountUsd: order.amountUsd,
+    currency: order.currency,
     selectedDramaIds: order.selectedDramaIds,
     details: `Payment submission rejected: ${order.rejectionReason}`,
   });
@@ -1723,11 +2351,130 @@ export function rejectPaymentRequest(params: {
     details: `Rejected payment ${order.id} for ${order.customerEmail || order.memberId}. Reason: ${order.rejectionReason}`,
   });
 
+  createCustomerNotificationRecord({
+    memberId: order.memberId,
+    ownerUid: order.ownerUid,
+    customerEmail: order.customerEmail,
+    membershipId: order.targetMembershipId,
+    orderId: order.id,
+    planId: order.planId,
+    dramaIds: order.selectedDramaIds,
+    type: 'payment_rejected',
+    title: `Payment proof needed for ${order.planName}`,
+    titleUr: `${order.planName} کے لیے ادائیگی کا نیا ثبوت درکار ہے`,
+    message: `Reason: ${order.rejectionReason}. Your account remains intact—you can upload a clearer screenshot in My Account.`,
+    messageUr: `وجہ: ${order.rejectionReason}۔ آپ مائی اکاؤنٹ میں جا کر نیا اسکرین شاٹ اپ لوڈ کر سکتے ہیں۔`,
+    ctaLabel: 'Open My Account',
+    ctaHref: '/membership?tab=account',
+    dedupeKey: `${order.id}:rejected:${nowIso}`,
+    emailStatus: 'not_sent',
+  });
+
   return {
     success: true,
     order,
     member: getMemberById(order.memberId),
   };
+}
+
+export function extendMembershipByAdmin(params: {
+  membershipId: string;
+  addDays: number;
+  reason?: string;
+  admin: SafeAdmin;
+}):
+  | { success: true; membership: MembershipRecord }
+  | { success: false; error: string; statusCode: number } {
+  const days = Number(params.addDays);
+  if (!Number.isFinite(days) || days < 1 || days > 3650) {
+    return { success: false, error: 'Extension days must be between 1 and 3650.', statusCode: 400 };
+  }
+  const roundedDays = Math.round(days);
+  const all = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const idx = all.findIndex((m) => m.id === params.membershipId);
+  if (idx === -1) {
+    return { success: false, error: 'Membership record not found.', statusCode: 404 };
+  }
+
+  const sub = all[idx];
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  const existingExpMs = Date.parse(sub.expiresAt);
+  const baseMs = sub.status === 'active' && !Number.isNaN(existingExpMs) && existingExpMs > nowMs ? existingExpMs : nowMs;
+  const previousExpiresAt = sub.expiresAt;
+  const nextExpiresAt = new Date(baseMs + roundedDays * 24 * 60 * 60 * 1000).toISOString();
+
+  sub.status = 'active';
+  if (baseMs === nowMs) {
+    sub.activatedAt = nowIso;
+  }
+  sub.expiresAt = nextExpiresAt;
+  sub.cancelledAt = undefined;
+  sub.revokedByAdminEmail = undefined;
+  sub.revokedReason = undefined;
+  sub.durationDays = (sub.durationDays || 0) + roundedDays;
+  sub.lastExtendedAt = nowIso;
+  sub.renewalHistory = [
+    ...(sub.renewalHistory || []),
+    {
+      id: `ext-${nowMs}-${crypto.randomBytes(2).toString('hex')}`,
+      renewedAt: nowIso,
+      previousExpiresAt,
+      newExpiresAt: nextExpiresAt,
+      addedDays: roundedDays,
+      planId: sub.planId,
+      planName: sub.planName,
+      paymentMethod: 'admin_assigned',
+      currency: sub.currency || 'PKR',
+      amount: 0,
+      approvedByAdminEmail: params.admin.email,
+      note: params.reason?.trim() || `Manual admin extension (+${roundedDays} days)`,
+    },
+  ];
+
+  all[idx] = sub;
+  writeJson(MEMBERSHIPS_FILE, all);
+  mirrorMembershipServer(sub);
+  supersedeOldRenewalReminders(sub.id, nowIso);
+
+  appendHistory({
+    memberId: sub.memberId,
+    membershipId: sub.id,
+    orderId: sub.orderId,
+    event: 'membership_extended',
+    planId: sub.planId,
+    planName: sub.planName,
+    selectedDramaIds: sub.selectedDramaIds,
+    details: `${sub.planName} extended by +${roundedDays} days by ${params.admin.email}. New expiry: ${nextExpiresAt}.`,
+  });
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'membership_extended',
+    targetId: sub.id,
+    details: `Extended ${sub.id} (${sub.customerEmail || sub.memberId}) by +${roundedDays} days until ${nextExpiresAt}. Reason: ${params.reason?.trim() || 'Admin extension'}`,
+  });
+
+  createCustomerNotificationRecord({
+    memberId: sub.memberId,
+    ownerUid: sub.ownerUid,
+    customerEmail: sub.customerEmail,
+    membershipId: sub.id,
+    planId: sub.planId,
+    dramaIds: sub.selectedDramaIds,
+    type: 'membership_extended',
+    title: `${sub.planName} extended by ${roundedDays} day${roundedDays > 1 ? 's' : ''}`,
+    titleUr: `آپ کی ${sub.planName} ممبرشپ میں ${roundedDays} دن کی توسیع کر دی گئی ہے`,
+    message: `Your membership validity has been extended by FEVIQO administration until ${new Date(nextExpiresAt).toUTCString()}.`,
+    messageUr: `ایڈمن کی جانب سے آپ کی ممبرشپ میں توسیع کر دی گئی ہے۔`,
+    ctaLabel: 'View My Account',
+    ctaHref: '/membership?tab=account',
+    dedupeKey: `${sub.id}:extended:${nextExpiresAt}`,
+    emailStatus: 'not_sent',
+  });
+
+  return { success: true, membership: sub };
 }
 
 export function revokeMembershipByAdmin(params: {
@@ -1754,6 +2501,7 @@ export function revokeMembershipByAdmin(params: {
   all[idx].revokedReason = reason;
   writeJson(MEMBERSHIPS_FILE, all);
   mirrorMembershipServer(all[idx]);
+  supersedeOldRenewalReminders(all[idx].id, nowIso);
 
   appendHistory({
     memberId: all[idx].memberId,
@@ -1814,6 +2562,291 @@ export function updateEmailNotificationLog(
   return logs[idx];
 }
 
+// --- AUTOMATED EXPIRY & RENEWAL REMINDER SCHEDULER ---
+function buildReminderEmailHtml(params: {
+  customerName: string;
+  planName: string;
+  dramaNames: string;
+  expiresAt: string;
+  title: string;
+  message: string;
+  renewUrl: string;
+}): string {
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;background:#F8FAFC;padding:24px;color:#0B0B0D;">
+      <div style="max-width:580px;margin:0 auto;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:28px;">
+        <div style="font-size:12px;font-weight:700;color:#16A34A;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+          FEVIQO Premium Membership Reminder
+        </div>
+        <h2 style="margin:0 0 12px 0;font-size:20px;color:#0B0B0D;">
+          ${params.title}
+        </h2>
+        <p style="font-size:14px;color:#475569;line-height:1.6;">
+          Hello ${params.customerName}, ${params.message}
+        </p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+          <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Plan</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${params.planName}</td></tr>
+          <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Included Dramas</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${params.dramaNames}</td></tr>
+          <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Expiry Timestamp (UTC)</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${params.expiresAt}</td></tr>
+        </table>
+        <a href="${params.renewUrl}" style="display:inline-block;padding:12px 22px;background:#0B0B0D;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:13px;border-radius:10px;">
+          Renew Membership &rarr;
+        </a>
+      </div>
+    </div>
+  `;
+}
+
+export async function runLifecycleReminderCheck(
+  triggerSource: SchedulerRunLog['triggerSource'],
+  emailDispatcher?: LifecycleEmailDispatcher
+): Promise<SchedulerRunLog> {
+  const startedMs = Date.now();
+  const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const memberById = new Map(members.map((m) => [m.id, m]));
+  const allNotifs = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+
+  let changedSubs = false;
+  let expiredCount = 0;
+  let remindersCreated = 0;
+  let emailsSent = 0;
+  let emailsFailed = 0;
+  let emailsNotConfigured = 0;
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+
+  const candidateNotifications: Array<{
+    notif: CustomerNotification;
+    emailType: 'member_renewal_reminder' | 'member_membership_expired';
+    dramaNames: string;
+    expiresAt: string;
+  }> = [];
+
+  for (const sub of memberships) {
+    const expMs = Date.parse(sub.expiresAt);
+    const dramaNames = getMembershipDramaIds(sub)
+      .map((id) => getDramaById(id)?.title || id)
+      .join(', ');
+    const member = memberById.get(sub.memberId);
+    const customerEmail = (sub.customerEmail || member?.email || '').trim();
+
+    if (sub.status === 'active') {
+      if (Number.isNaN(expMs) || nowMs >= expMs) {
+        sub.status = 'expired';
+        changedSubs = true;
+        expiredCount += 1;
+        mirrorMembershipServer(sub);
+
+        appendHistory({
+          memberId: sub.memberId,
+          membershipId: sub.id,
+          orderId: sub.orderId,
+          event: 'membership_expired',
+          planId: sub.planId,
+          planName: sub.planName,
+          selectedDramaIds: sub.selectedDramaIds,
+          details: `${sub.planName} membership expired at ${sub.expiresAt}.`,
+        });
+
+        const dedupeKey = `${sub.id}:${sub.expiresAt}:membership_expired`;
+        const { notification, created } = createCustomerNotificationRecord({
+          memberId: sub.memberId,
+          ownerUid: sub.ownerUid,
+          customerEmail,
+          membershipId: sub.id,
+          planId: sub.planId,
+          dramaIds: sub.selectedDramaIds,
+          type: 'membership_expired',
+          title: `Your ${sub.planName} membership has expired`,
+          titleUr: `آپ کی ${sub.planName} ممبرشپ کی مدت ختم ہو گئی ہے`,
+          message: `Premium access for ${dramaNames || sub.planName} ended on ${new Date(sub.expiresAt).toUTCString()}. Renew anytime from My Account without creating a new account.`,
+          messageUr: `${dramaNames || sub.planName} کی پریمیم رسائی ختم ہو چکی ہے۔ آپ بغیر نیا اکاؤنٹ بنائے مائی اکاؤنٹ سے رینیو کر سکتے ہیں۔`,
+          ctaLabel: 'Renew Membership',
+          ctaHref: `/membership?renew=${encodeURIComponent(sub.id)}`,
+          dedupeKey,
+          emailStatus: 'not_sent',
+        });
+
+        if (created) {
+          remindersCreated += 1;
+          candidateNotifications.push({
+            notif: notification,
+            emailType: 'member_membership_expired',
+            dramaNames,
+            expiresAt: sub.expiresAt,
+          });
+        }
+        continue;
+      }
+
+      // Active and not expired yet: evaluate milestone window cleanly (no stale historical spam)
+      const msLeft = expMs - nowMs;
+      const daysLeft = msLeft / (24 * 60 * 60 * 1000);
+      const totalPlanDays = Math.max(1, sub.durationDays || Math.round((expMs - Date.parse(sub.activatedAt)) / 86400000));
+
+      let milestone: 'renewal_7d' | 'renewal_3d' | 'renewal_1d' | null = null;
+      let title = '';
+      let titleUr = '';
+      let message = '';
+      let messageUr = '';
+
+      if (daysLeft <= 1) {
+        milestone = 'renewal_1d';
+        const hrs = Math.max(1, Math.ceil(msLeft / (60 * 60 * 1000)));
+        title = `Expires in ~${hrs} hour${hrs > 1 ? 's' : ''} — Renew ${sub.planName}`;
+        titleUr = `آپ کی ${sub.planName} ممبرشپ تقریباً ${hrs} گھنٹوں میں ختم ہو جائے گی`;
+        message = `Your ${sub.planName} access (${dramaNames}) expires within 24 hours (${new Date(sub.expiresAt).toUTCString()}). Renew now to add duration seamlessly onto your current expiry date.`;
+        messageUr = `آپ کی ${sub.planName} ممبرشپ اگلے 24 گھنٹوں میں ختم ہو رہی ہے۔ بغیر رکاوٹ کے جاری رکھنے کے لیے ابھی رینیو کریں۔`;
+      } else if (daysLeft <= 3 && totalPlanDays >= 4) {
+        milestone = 'renewal_3d';
+        const d = Math.ceil(daysLeft);
+        title = `${d} days left on your ${sub.planName} membership`;
+        titleUr = `آپ کی ${sub.planName} ممبرشپ کے صرف ${d} دن باقی ہیں`;
+        message = `Your access for ${dramaNames} expires on ${new Date(sub.expiresAt).toUTCString()}. Renew early and your new days will stack onto your remaining time.`;
+        messageUr = `آپ کی ${sub.planName} ممبرشپ جلد ختم ہو رہی ہے۔ قبل از وقت رینیو کرنے پر نئے دن موجودہ مدت میں جمع ہو جائیں گے۔`;
+      } else if (daysLeft <= 7 && totalPlanDays >= 10) {
+        milestone = 'renewal_7d';
+        const d = Math.ceil(daysLeft);
+        title = `${d} days remaining on ${sub.planName}`;
+        titleUr = `آپ کی ${sub.planName} ممبرشپ میں ${d} دن باقی ہیں`;
+        message = `Friendly reminder: your ${sub.planName} plan for ${dramaNames} expires in ${d} days (${new Date(sub.expiresAt).toUTCString()}). You can renew early anytime.`;
+        messageUr = `یاددہانی: آپ کا ${sub.planName} پلان ${d} دنوں میں ختم ہو جائے گا۔ آپ کسی بھی وقت پیشگی رینیو کر سکتے ہیں۔`;
+      }
+
+      if (milestone) {
+        const dedupeKey = `${sub.id}:${sub.expiresAt}:${milestone}`;
+        if (!allNotifs.some((n) => n.dedupeKey === dedupeKey)) {
+          const { notification, created } = createCustomerNotificationRecord({
+            memberId: sub.memberId,
+            ownerUid: sub.ownerUid,
+            customerEmail,
+            membershipId: sub.id,
+            planId: sub.planId,
+            dramaIds: sub.selectedDramaIds,
+            type: milestone,
+            title,
+            titleUr,
+            message,
+            messageUr,
+            ctaLabel: 'Renew Early',
+            ctaHref: `/membership?renew=${encodeURIComponent(sub.id)}`,
+            dedupeKey,
+            emailStatus: 'not_sent',
+          });
+          if (created) {
+            allNotifs.unshift(notification);
+            remindersCreated += 1;
+            candidateNotifications.push({
+              notif: notification,
+              emailType: 'member_renewal_reminder',
+              dramaNames,
+              expiresAt: sub.expiresAt,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  if (changedSubs) {
+    writeJson(MEMBERSHIPS_FILE, memberships);
+  }
+
+  if (emailDispatcher && candidateNotifications.length > 0) {
+    const latestAll = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+    let notifUpdated = false;
+    for (const item of candidateNotifications) {
+      const to = item.notif.customerEmail;
+      if (!to || !to.includes('@')) continue;
+      const memberName = memberById.get(item.notif.memberId)?.fullName || 'FEVIQO Member';
+      const baseUrl = process.env.APP_URL || 'https://feviqo.com';
+      const renewUrl = `${baseUrl}${item.notif.ctaHref || '/membership?tab=account'}`;
+      const html = buildReminderEmailHtml({
+        customerName: memberName,
+        planName: item.notif.planId ? item.notif.planId.toUpperCase() : 'FEVIQO Premium',
+        dramaNames: item.dramaNames || 'Selected Dramas',
+        expiresAt: item.expiresAt,
+        title: item.notif.title,
+        message: item.notif.message,
+        renewUrl,
+      });
+
+      const res = await emailDispatcher({
+        to,
+        subject: `FEVIQO: ${item.notif.title}`,
+        html,
+        type: item.emailType,
+        membershipId: item.notif.membershipId,
+        customerNotificationId: item.notif.id,
+      });
+
+      const nIdx = latestAll.findIndex((n) => n.id === item.notif.id);
+      if (nIdx !== -1) {
+        if (res.success) {
+          latestAll[nIdx].emailStatus = 'sent';
+          emailsSent += 1;
+        } else if (res.notConfigured) {
+          latestAll[nIdx].emailStatus = 'not_configured';
+          latestAll[nIdx].emailError = res.error || 'Email transport not configured';
+          emailsNotConfigured += 1;
+        } else {
+          latestAll[nIdx].emailStatus = 'failed';
+          latestAll[nIdx].emailError = res.error || res.smtpError || 'Email delivery failed';
+          emailsFailed += 1;
+        }
+        mirrorMemberNotificationServer(latestAll[nIdx]);
+        notifUpdated = true;
+      }
+    }
+    if (notifUpdated) {
+      writeJson(MEMBER_NOTIFS_FILE, latestAll);
+    }
+  }
+
+  const runLog: SchedulerRunLog = {
+    id: `sched-${nowMs}-${crypto.randomBytes(2).toString('hex')}`,
+    triggerSource,
+    ranAt: nowIso,
+    durationMs: Math.max(1, Date.now() - startedMs),
+    checkedMemberships: memberships.length,
+    expiredCount,
+    remindersCreated,
+    emailsSent,
+    emailsFailed,
+    emailsNotConfigured,
+    summary: `Checked ${memberships.length} membership(s): ${expiredCount} expired, ${remindersCreated} notification(s) created (emails sent: ${emailsSent}, not configured: ${emailsNotConfigured}, failed: ${emailsFailed}).`,
+  };
+
+  const runs = readJson<SchedulerRunLog[]>(SCHEDULER_RUNS_FILE, []);
+  runs.unshift(runLog);
+  if (runs.length > 200) runs.length = 200;
+  writeJson(SCHEDULER_RUNS_FILE, runs);
+  mirrorSchedulerRunServer(runLog);
+
+  return runLog;
+}
+
+export function getCustomerNotificationById(notifId: string): CustomerNotification | null {
+  const all = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+  return all.find((n) => n.id === notifId) || null;
+}
+
+export function updateCustomerNotificationEmailStatus(
+  notifId: string,
+  status: CustomerNotification['emailStatus'],
+  error?: string
+): CustomerNotification | null {
+  const all = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+  const idx = all.findIndex((n) => n.id === notifId);
+  if (idx === -1) return null;
+  all[idx].emailStatus = status;
+  all[idx].emailError = error;
+  writeJson(MEMBER_NOTIFS_FILE, all);
+  mirrorMemberNotificationServer(all[idx]);
+  return all[idx];
+}
+
 export function assignMembershipByAdmin(params: {
   fullName: string;
   email: string;
@@ -1823,6 +2856,7 @@ export function assignMembershipByAdmin(params: {
   selectedDramaIds: unknown;
   durationDays?: number;
   paymentNote?: string;
+  replaceExisting?: boolean;
   admin: SafeAdmin;
 }):
   | { success: true; member: SafeMember; order: MembershipOrder; membership: MembershipRecord }
@@ -1865,6 +2899,7 @@ export function assignMembershipByAdmin(params: {
     member = {
       id: `mem-${nowMs}-${crypto.randomBytes(3).toString('hex')}`,
       ownerUid: 'admin_assigned',
+      authMethod: 'admin_assigned',
       email: cleanEmail,
       fullName: cleanName,
       phone: cleanPhone || '—',
@@ -1910,9 +2945,15 @@ export function assignMembershipByAdmin(params: {
     customerName: member.fullName,
     customerEmail: member.email,
     customerPhone: member.phone,
+    orderType: 'new',
     planId: plan.id,
     planName: plan.name,
     amountPkr: plan.pricePkr,
+    amountUsd: plan.priceUsd,
+    expectedAmount: plan.pricePkr,
+    currency: 'PKR',
+    paymentRegion: 'pakistan',
+    paymentMethod: 'admin_assigned',
     durationDays: customDays,
     selectedDramaIds: normalizedDramaIds,
     status: 'approved',
@@ -1931,10 +2972,12 @@ export function assignMembershipByAdmin(params: {
   writeJson(ORDERS_FILE, orders);
 
   const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
-  for (const existing of memberships) {
-    if (existing.memberId === member.id && existing.status === 'active') {
-      existing.status = 'cancelled';
-      existing.cancelledAt = nowIso;
+  if (params.replaceExisting) {
+    for (const existing of memberships) {
+      if (existing.memberId === member.id && existing.status === 'active') {
+        existing.status = 'cancelled';
+        existing.cancelledAt = nowIso;
+      }
     }
   }
 
@@ -1950,6 +2993,7 @@ export function assignMembershipByAdmin(params: {
     planId: plan.id,
     planName: plan.name,
     pricePkr: plan.pricePkr,
+    priceUsd: plan.priceUsd,
     durationDays: customDays,
     selectedDramaIds: normalizedDramaIds,
     status: 'active',
@@ -1957,7 +3001,12 @@ export function assignMembershipByAdmin(params: {
     expiresAt: expiresAtIso,
     approvedByAdminEmail: params.admin.email,
     paymentProvider: 'admin_assigned',
+    paymentRegion: 'pakistan',
+    paymentMethod: 'admin_assigned',
+    currency: 'PKR',
+    expectedAmount: plan.pricePkr,
     paymentReference: order.paymentNote || order.id,
+    renewalHistory: [],
     createdAt: nowIso,
   };
 
@@ -1987,6 +3036,25 @@ export function assignMembershipByAdmin(params: {
     details: `Assigned ${plan.name} (${customDays} days) to ${member.fullName} (${member.email}). Active until ${expiresAtIso}.`,
   });
 
+  createCustomerNotificationRecord({
+    memberId: member.id,
+    ownerUid: member.ownerUid || 'admin_assigned',
+    customerEmail: member.email,
+    membershipId: newMembership.id,
+    orderId: order.id,
+    planId: plan.id,
+    dramaIds: normalizedDramaIds,
+    type: 'membership_approved',
+    title: `${plan.name} membership assigned`,
+    titleUr: `${plan.name} ممبرشپ آپ کے اکاؤنٹ میں فعال کر دی گئی ہے`,
+    message: `Your ${plan.name} membership (${customDays} days) is active until ${new Date(expiresAtIso).toUTCString()}.`,
+    messageUr: `آپ کی ${plan.name} ممبرشپ (${customDays} دن) فعال کر دی گئی ہے۔`,
+    ctaLabel: 'Watch Dramas',
+    ctaHref: normalizedDramaIds[0] ? `/${normalizedDramaIds[0]}` : '/dramas',
+    dedupeKey: `${order.id}:assigned:${expiresAtIso}`,
+    emailStatus: 'not_sent',
+  });
+
   return {
     success: true,
     member: safeMember,
@@ -2000,6 +3068,7 @@ export function mergeCloudSyncSnapshot(payload: {
   orders?: Array<Partial<MembershipOrder>>;
   memberships?: Array<Partial<MembershipRecord>>;
   history?: Array<Partial<MembershipHistoryEntry>>;
+  notifications?: Array<Partial<CustomerNotification>>;
   config?: Partial<MembershipConfig> | null;
 }) {
   const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
@@ -2036,6 +3105,7 @@ export function mergeCloudSyncSnapshot(payload: {
     if (!inc?.id || !inc?.memberId || !inc?.planId) continue;
     const existing = orderById.get(inc.id);
     if (!existing) {
+      const region: PaymentRegion = inc.paymentRegion === 'international' ? 'international' : 'pakistan';
       const created: MembershipOrder = {
         id: inc.id,
         memberId: inc.memberId,
@@ -2043,9 +3113,18 @@ export function mergeCloudSyncSnapshot(payload: {
         customerName: inc.customerName,
         customerEmail: inc.customerEmail,
         customerPhone: inc.customerPhone,
+        orderType: inc.orderType === 'renewal' ? 'renewal' : 'new',
+        targetMembershipId: inc.targetMembershipId,
         planId: inc.planId,
         planName: inc.planName || inc.planId,
         amountPkr: Number(inc.amountPkr) || 0,
+        amountUsd: inc.amountUsd !== undefined ? Number(inc.amountUsd) : undefined,
+        expectedAmount: inc.expectedAmount !== undefined ? Number(inc.expectedAmount) : undefined,
+        currency: inc.currency || (region === 'international' ? 'USD' : 'PKR'),
+        paymentRegion: region,
+        paymentMethod: inc.paymentMethod || (region === 'international' ? 'binance_qr' : 'bank_qr'),
+        visitorCountryCode: inc.visitorCountryCode,
+        indicativeLocalDisplay: inc.indicativeLocalDisplay,
         durationDays: Number(inc.durationDays) || 15,
         selectedDramaIds: Array.isArray(inc.selectedDramaIds) ? inc.selectedDramaIds : [],
         status: normalizeOrderStatus(inc.status || 'awaiting_payment'),
@@ -2105,6 +3184,7 @@ export function mergeCloudSyncSnapshot(payload: {
         planId: inc.planId,
         planName: inc.planName || inc.planId,
         pricePkr: Number(inc.pricePkr) || 0,
+        priceUsd: inc.priceUsd !== undefined ? Number(inc.priceUsd) : undefined,
         durationDays: Number(inc.durationDays) || 15,
         selectedDramaIds: Array.isArray(inc.selectedDramaIds) ? inc.selectedDramaIds : [],
         status: inc.status || 'active',
@@ -2115,12 +3195,22 @@ export function mergeCloudSyncSnapshot(payload: {
         revokedReason: inc.revokedReason,
         approvedByAdminEmail: inc.approvedByAdminEmail,
         paymentProvider: inc.paymentProvider || 'bank_qr',
+        paymentRegion: inc.paymentRegion,
+        paymentMethod: inc.paymentMethod,
+        currency: inc.currency,
+        expectedAmount: inc.expectedAmount,
         paymentReference: inc.paymentReference || '',
+        renewalHistory: Array.isArray(inc.renewalHistory) ? inc.renewalHistory : [],
+        lastExtendedAt: inc.lastExtendedAt,
         createdAt: inc.createdAt || new Date().toISOString(),
       };
       subById.set(created.id, created);
-    } else if (inc.status && existing.status === 'active' && inc.status !== 'active') {
-      subById.set(existing.id, { ...existing, ...inc });
+    } else {
+      const incExp = Date.parse(inc.expiresAt || '') || 0;
+      const extExp = Date.parse(existing.expiresAt || '') || 0;
+      if (incExp > extExp || (inc.status && existing.status === 'active' && inc.status !== 'active')) {
+        subById.set(existing.id, { ...existing, ...inc });
+      }
     }
   }
   writeJson(
@@ -2142,6 +3232,8 @@ export function mergeCloudSyncSnapshot(payload: {
         planId: inc.planId,
         planName: inc.planName,
         amountPkr: inc.amountPkr,
+        amountUsd: inc.amountUsd,
+        currency: inc.currency,
         selectedDramaIds: inc.selectedDramaIds,
         details: inc.details,
         createdAt: inc.createdAt || new Date().toISOString(),
@@ -2152,6 +3244,21 @@ export function mergeCloudSyncSnapshot(payload: {
     HISTORY_FILE,
     Array.from(histById.values()).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
   );
+
+  if (payload.notifications) {
+    const notifs = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+    const notifById = new Map(notifs.map((n) => [n.id, n]));
+    for (const inc of payload.notifications) {
+      if (!inc?.id || !inc?.memberId || !inc?.dedupeKey) continue;
+      if (!notifById.has(inc.id)) {
+        notifById.set(inc.id, inc as CustomerNotification);
+      }
+    }
+    writeJson(
+      MEMBER_NOTIFS_FILE,
+      Array.from(notifById.values()).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    );
+  }
 
   if (payload.config && payload.config.updatedAt) {
     const current = getMembershipConfig();
@@ -2171,23 +3278,35 @@ export function getAdminMembershipsOverview() {
   const orders = readAllOrders()
     .map((o) => {
       const m = memberById.get(o.memberId);
+      const targetSub = o.targetMembershipId
+        ? memberships.find((s) => s.id === o.targetMembershipId)
+        : undefined;
       return {
         ...o,
         customerName: o.customerName || m?.fullName || 'Unknown',
         customerEmail: o.customerEmail || m?.email || 'Unknown',
         customerPhone: o.customerPhone || m?.phone || '—',
         hasProof: Boolean(o.proofFileName || o.proofDataUrl),
+        targetMembershipCurrentExpiry: targetSub?.expiresAt,
+        targetMembershipStatus: targetSub?.status,
       };
     })
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 
   const enrichedMemberships = memberships.map((sub) => {
     const m = memberById.get(sub.memberId);
+    const hasPendingRenewal = orders.some(
+      (o) =>
+        o.orderType === 'renewal' &&
+        o.targetMembershipId === sub.id &&
+        (o.status === 'pending_verification' || o.status === 'awaiting_payment')
+    );
     return {
       ...sub,
       customerName: m?.fullName || sub.customerName || 'Unknown',
       customerEmail: m?.email || sub.customerEmail || 'Unknown',
       customerPhone: m?.phone || sub.customerPhone || '—',
+      hasPendingRenewal,
     };
   });
 
@@ -2195,7 +3314,15 @@ export function getAdminMembershipsOverview() {
   const emailNotifications = readJson<EmailNotificationLog[]>(EMAIL_NOTIFS_FILE, []).map(
     ({ html: _omitHtml, ...rest }) => rest
   );
+  const customerNotifications = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []).slice(0, 150);
+  const schedulerRuns = readJson<SchedulerRunLog[]>(SCHEDULER_RUNS_FILE, []).slice(0, 50);
   const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []).slice(0, 200);
+
+  const nowMs = Date.now();
+  const in7d = nowMs + 7 * 86400000;
+  const expiring7dCount = enrichedMemberships.filter(
+    (m) => m.status === 'active' && Date.parse(m.expiresAt) > nowMs && Date.parse(m.expiresAt) <= in7d
+  ).length;
 
   const metrics = {
     totalMembers: members.length,
@@ -2205,6 +3332,11 @@ export function getAdminMembershipsOverview() {
     approvedPayments: orders.filter((o) => o.status === 'approved').length,
     rejectedPayments: orders.filter((o) => o.status === 'rejected').length,
     expiredMemberships: enrichedMemberships.filter((m) => m.status === 'expired').length,
+    expiringIn7Days: expiring7dCount,
+    pendingRenewals: orders.filter(
+      (o) => o.orderType === 'renewal' && (o.status === 'pending_verification' || o.status === 'awaiting_payment')
+    ).length,
+    internationalOrders: orders.filter((o) => o.paymentRegion === 'international').length,
     failedEmails: emailNotifications.filter((n) => n.status === 'failed').length,
   };
 
@@ -2216,7 +3348,10 @@ export function getAdminMembershipsOverview() {
     history,
     auditLogs: auditLogs.slice(0, 120),
     emailNotifications: emailNotifications.slice(0, 100),
+    customerNotifications,
+    schedulerRuns,
     config: getMembershipConfig(),
+    plans: getResolvedPlans(),
     admins: listAdmins(),
     serverCloudConnected: isServerFirestoreEnabled(),
   };
@@ -2240,6 +3375,7 @@ export async function syncServerFirestoreSnapshot(): Promise<ReturnType<typeof g
     for (const m of overview.members) mirrorMemberServer(m);
     for (const o of overview.requests) mirrorOrderServer(o);
     for (const s of overview.memberships) mirrorMembershipServer(s);
+    for (const n of overview.customerNotifications) mirrorMemberNotificationServer(n);
     mirrorConfigServer(overview.config);
     return overview;
   }
@@ -2247,13 +3383,18 @@ export async function syncServerFirestoreSnapshot(): Promise<ReturnType<typeof g
 }
 
 // --- CANCEL & PLAYBACK ENTITLEMENT ---
-export function cancelMemberSubscription(memberId: string): {
+export function cancelMemberSubscription(
+  memberId: string,
+  membershipId?: string
+): {
   success: boolean;
   membership?: MembershipRecord;
   error?: string;
 } {
   const all = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
-  const idx = all.findIndex((s) => s.memberId === memberId && s.status === 'active');
+  const idx = membershipId
+    ? all.findIndex((s) => s.id === membershipId && s.memberId === memberId && s.status === 'active')
+    : all.findIndex((s) => s.memberId === memberId && s.status === 'active');
   if (idx === -1) {
     return { success: false, error: 'No active membership found to cancel.' };
   }
@@ -2263,6 +3404,7 @@ export function cancelMemberSubscription(memberId: string): {
   all[idx].cancelledAt = nowIso;
   writeJson(MEMBERSHIPS_FILE, all);
   mirrorMembershipServer(all[idx]);
+  supersedeOldRenewalReminders(all[idx].id, nowIso);
 
   appendHistory({
     memberId,
@@ -2292,6 +3434,7 @@ export function authorizeEpisodePlayback(params: {
       fallbackThumbnail: string;
       planName: string;
       expiresAt: string;
+      membershipId: string;
     }
   | {
       authorized: false;
@@ -2304,12 +3447,17 @@ export function authorizeEpisodePlayback(params: {
         | 'DRAMA_NOT_INCLUDED'
         | 'EPISODE_NOT_FOUND';
       error: string;
+      coveredDramaIds?: string[];
+      activePlanNames?: string[];
+      expiredMembershipId?: string;
+      expiredPlanId?: MembershipPlanId;
+      expiresAt?: string;
     } {
   const drama = getDramaById(params.dramaId);
-  const episode = drama?.episodes.find((e) => e.slug === params.episodeSlug);
+  const episode = getEpisodeMeta(params.dramaId, params.episodeSlug);
   const serverStreamUrl = PROTECTED_EPISODE_STREAMS[params.dramaId]?.[params.episodeSlug];
 
-  if (!drama || !episode || !serverStreamUrl) {
+  if (!drama || !episode || !episode.isPublished || !serverStreamUrl) {
     return {
       authorized: false,
       statusCode: 404,
@@ -2328,16 +3476,28 @@ export function authorizeEpisodePlayback(params: {
   }
 
   const memberships = syncMemberSubscriptions(params.memberId);
-  const active = memberships.find((m) => m.status === 'active');
+  const activeList = memberships.filter(
+    (m) => m.status === 'active' && Date.parse(m.expiresAt) > Date.now()
+  );
 
-  if (!active) {
-    const latest = memberships[0];
+  if (activeList.length === 0) {
+    // Prefer an expired membership that previously covered this drama, else latest
+    const matchingExpired = memberships.find(
+      (m) =>
+        m.status === 'expired' &&
+        ((m.planId === 'vip' && drama.vipEligible) || m.selectedDramaIds.includes(drama.id))
+    );
+    const latest = matchingExpired || memberships[0];
+
     if (latest?.status === 'cancelled') {
       return {
         authorized: false,
         statusCode: 403,
         code: 'MEMBERSHIP_CANCELLED',
         error: 'Your membership has been cancelled or revoked. Choose a plan to restore streaming access.',
+        expiredMembershipId: latest.id,
+        expiredPlanId: latest.planId,
+        expiresAt: latest.expiresAt,
       };
     }
     if (latest?.status === 'expired') {
@@ -2346,6 +3506,9 @@ export function authorizeEpisodePlayback(params: {
         statusCode: 403,
         code: 'MEMBERSHIP_EXPIRED',
         error: 'Your membership term has expired. Renew your membership to continue watching.',
+        expiredMembershipId: latest.id,
+        expiredPlanId: latest.planId,
+        expiresAt: latest.expiresAt,
       };
     }
     return {
@@ -2356,16 +3519,42 @@ export function authorizeEpisodePlayback(params: {
     };
   }
 
-  const dramaIncluded =
-    (active.planId === 'vip' && drama.vipEligible) ||
-    active.selectedDramaIds.includes(drama.id);
+  const matchingActive = activeList.find(
+    (m) => (m.planId === 'vip' && drama.vipEligible) || m.selectedDramaIds.includes(drama.id)
+  );
 
-  if (!dramaIncluded) {
+  if (!matchingActive) {
+    const coveredSet = new Set<string>();
+    const planNames = new Set<string>();
+    for (const m of activeList) {
+      planNames.add(m.planName);
+      for (const id of getMembershipDramaIds(m)) coveredSet.add(id);
+    }
+    const matchingExpired = memberships.find(
+      (m) =>
+        m.status === 'expired' &&
+        ((m.planId === 'vip' && drama.vipEligible) || m.selectedDramaIds.includes(drama.id))
+    );
+    if (matchingExpired) {
+      return {
+        authorized: false,
+        statusCode: 403,
+        code: 'MEMBERSHIP_EXPIRED',
+        error: `Your ${matchingExpired.planName} membership covering ${drama.title} has expired. Renew your membership to continue watching.`,
+        expiredMembershipId: matchingExpired.id,
+        expiredPlanId: matchingExpired.planId,
+        expiresAt: matchingExpired.expiresAt,
+        coveredDramaIds: Array.from(coveredSet),
+        activePlanNames: Array.from(planNames),
+      };
+    }
     return {
       authorized: false,
       statusCode: 403,
       code: 'DRAMA_NOT_INCLUDED',
-      error: `${drama.title} is not included in your current ${active.planName} drama selection.`,
+      error: `${drama.title} is not included in your current ${Array.from(planNames).join(' / ')} drama selection.`,
+      coveredDramaIds: Array.from(coveredSet),
+      activePlanNames: Array.from(planNames),
     };
   }
 
@@ -2376,7 +3565,8 @@ export function authorizeEpisodePlayback(params: {
     episodeTitle: episode.title,
     thumbnail: episode.thumbnail,
     fallbackThumbnail: drama.fallbackPosterUrl,
-    planName: active.planName,
-    expiresAt: active.expiresAt,
+    planName: matchingActive.planName,
+    expiresAt: matchingActive.expiresAt,
+    membershipId: matchingActive.id,
   };
 }

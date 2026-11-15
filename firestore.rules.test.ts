@@ -178,11 +178,48 @@ export const DIRTY_DOZEN_PAYLOADS: DirtyDozenCase[] = [
     },
     expectedOutcome: 'PERMISSION_DENIED',
   },
+  {
+    id: 13,
+    name: 'Customer Forging Renewal or Approval Notification',
+    collection: 'memberNotifications/notif-forged-1',
+    operation: 'create',
+    auth: { uid: 'uid-user', email: 'user@example.com', email_verified: true },
+    payload: {
+      id: 'notif-forged-1',
+      memberId: 'mem-user',
+      ownerUid: 'uid-user',
+      type: 'membership_approved',
+      title: 'Forged approval',
+      message: 'Bypassed',
+      dedupeKey: 'forged-key',
+      emailStatus: 'not_sent',
+      isRead: false,
+      createdAtIso: '2026-11-15T00:00:00.000Z',
+    },
+    expectedOutcome: 'PERMISSION_DENIED',
+  },
+  {
+    id: 14,
+    name: 'Non-Admin Writing Scheduler Execution Logs',
+    collection: 'schedulerRuns/run-fake-1',
+    operation: 'create',
+    auth: { uid: 'uid-user', email: 'user@example.com', email_verified: true },
+    payload: {
+      id: 'run-fake-1',
+      triggerSource: 'admin_manual',
+      ranAt: '2026-11-15T00:00:00.000Z',
+      checkedMemberships: 1,
+      expiredCount: 0,
+      remindersCreated: 0,
+      summary: 'Spoofed',
+    },
+    expectedOutcome: 'PERMISSION_DENIED',
+  },
 ];
 
 describe('FEVIQO Firestore Dirty Dozen Invariants', () => {
-  it('defines all 12 adversarial payloads expecting PERMISSION_DENIED', () => {
-    assert.equal(DIRTY_DOZEN_PAYLOADS.length, 12);
+  it('defines all 14 adversarial payloads expecting PERMISSION_DENIED', () => {
+    assert.equal(DIRTY_DOZEN_PAYLOADS.length, 14);
     for (const testCase of DIRTY_DOZEN_PAYLOADS) {
       assert.equal(testCase.expectedOutcome, 'PERMISSION_DENIED');
     }

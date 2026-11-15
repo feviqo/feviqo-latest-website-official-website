@@ -30,6 +30,7 @@ export interface GunesinEpisode {
   downloadUrl?: string;
   embeds: { label: string; src: string }[];
   season: number;
+  isLockedPremium?: boolean;
 }
 
 export const GUNESIN_SERIES_DATA: GunesinSeries = {
@@ -60,6 +61,19 @@ export const GUNESIN_SERIES_DATA: GunesinSeries = {
 };
 
 export const GUNESIN_EPISODES: GunesinEpisode[] = [
+  {
+    number: 8,
+    slug: "episode-8",
+    title: "Gunesin Dogdugu Yer Episode 8 Urdu Dubbed | Bolum 8 — Premium Access",
+    airDate: "2026-11-10T04:00:00.000Z",
+    thumbnail: "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
+    duration: "2h 28m",
+    shortSummary: "Gunesin Dogdugu Yer Episode 8 in Urdu Dubbed HD is exclusively unlocked for active FEVIQO Premium Members.",
+    recap: `Gunesin Dogdugu Yer Episode 8 (Bolum 8) brings an unforgettable turning point as hidden family secrets surface in full view.\n\nThis episode is available in Urdu Dubbed HD exclusively for FEVIQO Premium Membership subscribers. Sign in or subscribe to an eligible plan covering Gunesin Dogdugu Yer or VIP to unlock immediate streaming.`,
+    embeds: [],
+    season: 1,
+    isLockedPremium: true,
+  },
   {
     number: 7,
     slug: "episode-7",

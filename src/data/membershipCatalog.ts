@@ -1,10 +1,18 @@
 export type MembershipPlanId = 'starter' | 'standard' | 'plus' | 'vip';
 
+export type PaymentRegion = 'pakistan' | 'international';
+export type PaymentMethod = 'bank_qr' | 'binance_qr' | 'admin_assigned';
+export type PaymentCurrency = 'PKR' | 'USD';
+
+export type EpisodeAccessType = 'free' | 'premium';
+
 export interface MembershipPlan {
   id: MembershipPlanId;
   name: string;
   pricePkr: number;
   priceDisplay: string;
+  priceUsd: number;
+  priceUsdDisplay: string;
   durationDays: number;
   durationLabel: string;
   dramaLimit: number | 'all';
@@ -23,6 +31,9 @@ export interface CatalogEpisodeMeta {
   releaseDate: string;
   thumbnail: string;
   shortSummary: string;
+  accessType: EpisodeAccessType;
+  isPublished: boolean;
+  requiredPlanLevel?: 'any_active' | MembershipPlanId[];
 }
 
 export interface CatalogDramaMeta {
@@ -41,12 +52,21 @@ export interface CatalogDramaMeta {
   episodes: CatalogEpisodeMeta[];
 }
 
+export const DEFAULT_USD_PRICES: Record<MembershipPlanId, number> = {
+  starter: 1.2,
+  standard: 2.5,
+  plus: 3.5,
+  vip: 5,
+};
+
 export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     id: 'starter',
     name: 'Starter',
     pricePkr: 299,
     priceDisplay: 'PKR 299',
+    priceUsd: DEFAULT_USD_PRICES.starter,
+    priceUsdDisplay: `$${DEFAULT_USD_PRICES.starter.toFixed(2)} USD`,
     durationDays: 15,
     durationLabel: '15 Days',
     dramaLimit: 1,
@@ -59,6 +79,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     name: 'Standard',
     pricePkr: 599,
     priceDisplay: 'PKR 599',
+    priceUsd: DEFAULT_USD_PRICES.standard,
+    priceUsdDisplay: `$${DEFAULT_USD_PRICES.standard.toFixed(2)} USD`,
     durationDays: 30,
     durationLabel: '30 Days',
     dramaLimit: 1,
@@ -73,6 +95,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     name: 'Plus',
     pricePkr: 899,
     priceDisplay: 'PKR 899',
+    priceUsd: DEFAULT_USD_PRICES.plus,
+    priceUsdDisplay: `$${DEFAULT_USD_PRICES.plus.toFixed(2)} USD`,
     durationDays: 30,
     durationLabel: '30 Days',
     dramaLimit: 2,
@@ -85,6 +109,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     name: 'VIP',
     pricePkr: 1299,
     priceDisplay: 'PKR 1,299',
+    priceUsd: DEFAULT_USD_PRICES.vip,
+    priceUsdDisplay: `$${DEFAULT_USD_PRICES.vip.toFixed(2)} USD`,
     durationDays: 30,
     durationLabel: '30 Days',
     dramaLimit: 'all',
@@ -119,6 +145,9 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/1vvY9e1e-y0pddweoqJPPxSEEhHIXI6o2',
         shortSummary:
           'Teşkilat returns with Episode 192 in Urdu Dubbed HD as Altay and the agency confront a decisive new covert operation.',
+        accessType: 'premium',
+        isPublished: true,
+        requiredPlanLevel: 'any_active',
       },
       {
         slug: 'episode-189',
@@ -129,6 +158,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC',
         shortSummary:
           'Framed for high treason, Altay escapes custody to expose an AI conspiracy before a climactic confrontation in Switzerland.',
+        accessType: 'free',
+        isPublished: true,
       },
       {
         slug: 'episode-188',
@@ -139,6 +170,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/1FXGXBZcts9bp3XdPmqI_pGytI0GAKYDc',
         shortSummary:
           'Altay closes in on Ender as suspicion deepens around Azra and Korkut corners Yahya.',
+        accessType: 'free',
+        isPublished: true,
       },
       {
         slug: 'episode-187',
@@ -149,6 +182,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
         shortSummary:
           'Azra’s apparent betrayal leaves the team navigating new traps as Bahar faces an extreme loyalty test.',
+        accessType: 'free',
+        isPublished: true,
       },
       {
         slug: 'episode-186',
@@ -159,6 +194,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: '/images/teskialt186thumbnIL.webp',
         shortSummary:
           'Following Ender’s abduction, Altay returns to confront Tuğrul Başkan and reignite the operation.',
+        accessType: 'free',
+        isPublished: true,
       },
     ],
   },
@@ -178,6 +215,19 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
     hubPath: '/mehmed-fetihler-sultani',
     episodes: [
       {
+        slug: 'episode-91',
+        number: 91,
+        title: 'Mehmed: Fetihler Sultanı Episode 91 (Bolum 91) — Urdu Dubbed',
+        duration: '2h 34m',
+        releaseDate: '2026-11-10',
+        thumbnail: 'https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1',
+        shortSummary:
+          'Sultan Mehmed II launches a high-stakes covert siege campaign in Urdu Dubbed HD — exclusive for FEVIQO Premium Members.',
+        accessType: 'premium',
+        isPublished: true,
+        requiredPlanLevel: 'any_active',
+      },
+      {
         slug: 'episode-90',
         number: 90,
         title: 'Mehmed: Fetihler Sultanı Episode 90 (Bolum 90)',
@@ -186,6 +236,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/1Ql7rSRtgL6HfxOyO-BSfPN8CdfUooJ1p',
         shortSummary:
           'Sultan Mehmed II confronts a decisive imperial crisis as rival armies assemble and secret betrayals unfold.',
+        accessType: 'free',
+        isPublished: true,
       },
       {
         slug: 'episode-89',
@@ -196,6 +248,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/15DClk9e82Zvbxbjx4_wOMcSa298IFcR5',
         shortSummary:
           'A tactical Ottoman siege collides with shifting alliances across the frontier.',
+        accessType: 'free',
+        isPublished: true,
       },
       {
         slug: 'episode-88',
@@ -206,6 +260,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/1w3UK-ZWuESJb-S4r-J_ChUTknl-yaWSq',
         shortSummary:
           'Imperial court rivalries escalate as Mehmed prepares the next military campaign.',
+        accessType: 'free',
+        isPublished: true,
       },
       {
         slug: 'episode-87',
@@ -216,6 +272,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/1gtCE2KQ_rE4UyRLiE5NM1FpSBLVxZ9Xg',
         shortSummary:
           'Saruca comes under ambush while Gedik Ahmed Pasha faces grave peril in Tabriz.',
+        accessType: 'free',
+        isPublished: true,
       },
     ],
   },
@@ -235,6 +293,19 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
     hubPath: '/gunesin-dogdugu-yer',
     episodes: [
       {
+        slug: 'episode-8',
+        number: 8,
+        title: 'Güneşin Doğduğu Yer Episode 8 (Bolum 8) — Urdu Dubbed',
+        duration: '2h 28m',
+        releaseDate: '2026-11-10',
+        thumbnail: 'https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh',
+        shortSummary:
+          'A pivotal family confrontation changes every alliance in Episode 8 Urdu Dubbed HD — exclusive for FEVIQO Premium Members.',
+        accessType: 'premium',
+        isPublished: true,
+        requiredPlanLevel: 'any_active',
+      },
+      {
         slug: 'episode-7',
         number: 7,
         title: 'Güneşin Doğduğu Yer Episode 7 (Bolum 7)',
@@ -243,6 +314,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/137w7jkmYW4bpn4rfdipcJ4gJksnpqeL4',
         shortSummary:
           'Hidden family truths come to light as regional rivalries reach a turning point.',
+        accessType: 'free',
+        isPublished: true,
       },
       {
         slug: 'episode-5',
@@ -253,6 +326,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/1ww1YXzsV-PBId4z9g6oPZSYHVXiDOiPO',
         shortSummary:
           'High-stakes household tensions and quiet betrayals push every bond to its limit.',
+        accessType: 'free',
+        isPublished: true,
       },
       {
         slug: 'episode-4',
@@ -263,6 +338,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/1KaS-64iPUBSZ2gtZ3B2tj3bwmAUFa6gV',
         shortSummary:
           'New confrontations threaten fragile alliances across both families.',
+        accessType: 'free',
+        isPublished: true,
       },
       {
         slug: 'episode-3',
@@ -273,6 +350,8 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         thumbnail: 'https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj',
         shortSummary:
           'Lovers caught between competing family histories face an unavoidable choice.',
+        accessType: 'free',
+        isPublished: true,
       },
     ],
   },
@@ -301,7 +380,7 @@ export const MEMBERSHIP_POLICIES: MembershipPolicyItem[] = [
     id: 'personal-account',
     title: 'Personal Account',
     description:
-      'Memberships are bound to an individual FEVIQO account protected by email and password authentication for personal household viewing.',
+      'Memberships are bound to an individual FEVIQO account protected by email and password or verified Google sign-in.',
   },
   {
     id: 'cancellation',
@@ -313,7 +392,7 @@ export const MEMBERSHIP_POLICIES: MembershipPolicyItem[] = [
     id: 'renewal',
     title: 'Renewal',
     description:
-      'When your 15-day or 30-day term expires, you can renew the same plan or switch tiers and drama selections cleanly from My Account.',
+      'Renew before expiry to add duration onto your remaining days without losing continuous access, or renew any time after expiry.',
   },
   {
     id: 'drama-selection',
@@ -325,7 +404,7 @@ export const MEMBERSHIP_POLICIES: MembershipPolicyItem[] = [
     id: 'episode-availability',
     title: 'Episode Availability',
     description:
-      'All currently published episodes for your included drama(s) are immediately streamable upon activation, alongside upcoming episodes released during your term.',
+      'All currently published episodes for your included drama(s) are immediately streamable upon activation across every drama page.',
   },
 ];
 
@@ -340,49 +419,49 @@ export const MEMBERSHIP_FAQS: MembershipFaqItem[] = [
     id: 'q1',
     question: 'Q1. What is included in a FEVIQO Premium Membership?',
     answer:
-      'A FEVIQO Premium Membership gives your personal account access to Urdu-dubbed Turkish drama episodes for the dramas included in your chosen plan, with automatic access to newly added eligible episodes while your membership is active.',
+      'A FEVIQO Premium Membership gives your personal account access to Urdu-dubbed Turkish drama episodes for the dramas included in your chosen plan, unlocked directly on every drama page and in My Account.',
   },
   {
     id: 'q2',
     question: 'Q2. How do Starter, Standard, Plus, and VIP plans differ?',
     answer:
-      'Starter (PKR 299) covers 1 selected drama for 15 days. Standard (PKR 599) covers 1 selected drama for 30 days. Plus (PKR 899) lets you select any 2 dramas for 30 days. VIP (PKR 1,299) includes all eligible VIP catalogue dramas for 30 days.',
+      'Starter (PKR 299 / $1.20 USD) covers 1 selected drama for 15 days. Standard (PKR 599 / $2.50 USD) covers 1 selected drama for 30 days. Plus (PKR 899 / $3.50 USD) lets you select any 2 dramas for 30 days. VIP (PKR 1,299 / $5.00 USD) includes all eligible VIP catalogue dramas for 30 days.',
   },
   {
     id: 'q3',
-    question: 'Q3. How do I choose which dramas I want to watch?',
+    question: 'Q3. Can international viewers pay with Binance QR in USD?',
     answer:
-      'After clicking a membership plan button on this page, the interactive drama selector lets you pick exact series matching your plan limit before proceeding to account sign-in and checkout verification.',
+      'Yes. International viewers can select International — Pay in USD to pay via Binance QR in exact USD, while Pakistani viewers can pay in PKR using Bank QR.',
   },
   {
     id: 'q4',
-    question: 'Q4. Will I get new episodes released during my active membership?',
+    question: 'Q4. How do locked episodes unlock across drama pages?',
     answer:
-      'Yes. As new eligible episodes are published for the drama(s) linked to your active membership, they become available inside your My Account library right away.',
+      'Once your payment is approved by our verification team, simply sign in and click any locked episode on Teşkilat, Güneşin Doğduğu Yer, Mehmed: Fetihler Sultanı, or future series pages to stream automatically.',
   },
   {
     id: 'q5',
     question: 'Q5. When does my 15-day or 30-day countdown begin?',
     answer:
-      'Your membership duration starts from the verified activation timestamp once payment confirmation is completed—never while an order is still awaiting payment verification.',
+      'Your membership duration starts from the verified activation timestamp once payment confirmation is approved—never while an order is still awaiting verification.',
   },
   {
     id: 'q6',
-    question: 'Q6. Can I cancel my membership from my account?',
+    question: 'Q6. What happens if I renew early before my plan expires?',
     answer:
-      'Yes. Inside My Account, you can cancel your active membership immediately. Cancellation revokes protected streaming access right away and records the change in your membership history.',
+      'Early renewal keeps your existing access active while pending verification and adds the new plan duration directly onto your existing expiry date once approved.',
   },
   {
     id: 'q7',
     question: 'Q7. What happens when my membership expires or is cancelled?',
     answer:
-      'Protected episode streaming is automatically restricted once a membership expires or is cancelled. Your account and membership history remain intact so you can renew or select a new plan whenever you return.',
+      'Protected episode streaming is automatically locked once a membership expires or is cancelled. Your account, history, and renewal options remain ready in My Account.',
   },
   {
     id: 'q8',
-    question: 'Q8. Can I upgrade or change dramas when renewing?',
+    question: 'Q8. Can I hold separate drama plans or upgrade to VIP?',
     answer:
-      'Yes. When you renew or start a new membership cycle, you can pick a different tier—such as moving from Standard to Plus or VIP—or select a fresh combination of dramas.',
+      'Yes. Adding a plan for another drama preserves your existing active drama membership and remaining days without overwriting it.',
   },
 ];
 
@@ -392,4 +471,18 @@ export function getPlanById(planId: string): MembershipPlan | undefined {
 
 export function getDramaById(dramaId: string): CatalogDramaMeta | undefined {
   return MEMBERSHIP_DRAMAS.find((d) => d.id === dramaId);
+}
+
+export function getEpisodeMeta(
+  dramaId: string,
+  episodeSlug: string
+): CatalogEpisodeMeta | undefined {
+  const drama = getDramaById(dramaId);
+  if (!drama) return undefined;
+  return drama.episodes.find((e) => e.slug === episodeSlug);
+}
+
+export function isEpisodePremium(dramaId: string, episodeSlug: string): boolean {
+  const ep = getEpisodeMeta(dramaId, episodeSlug);
+  return Boolean(ep && ep.accessType === 'premium');
 }

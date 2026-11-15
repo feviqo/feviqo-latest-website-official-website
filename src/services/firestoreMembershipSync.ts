@@ -20,6 +20,8 @@ import type {
   MembershipConfig,
   AdminAuditEntry,
   AdminEmailNotification,
+  CustomerNotification,
+  SchedulerRunLog,
 } from './membershipService';
 
 const BOOTSTRAP_ADMIN_EMAILS = new Set(['rexanmedia01@gmail.com', 'partner@feviqo.com']);
@@ -49,7 +51,6 @@ export async function compressProofImageToDataUrl(file: File, maxDataUrlLength =
       reader.readAsDataURL(blob);
     });
 
-  // If file is already small enough (< 450 KB raw), return directly
   if (file.size <= 450 * 1024) {
     const raw = await readAsDataUrl(file);
     if (raw.length <= maxDataUrlLength) return raw;
@@ -210,9 +211,23 @@ export async function syncOrderToFirestore(
         customerName: clampStr(order.customerName || options?.member?.fullName || 'FEVIQO Member', 120),
         customerEmail: clampStr(order.customerEmail || options?.member?.email || user.email || '', 200),
         customerPhone: clampStr(order.customerPhone || options?.member?.phone || '', 32),
+        orderType: order.orderType === 'renewal' ? 'renewal' : 'new',
+        targetMembershipId: clampStr(order.targetMembershipId || '', 128),
         planId: order.planId,
         planName: clampStr(order.planName, 64),
         amountPkr: Number(order.amountPkr) || 0,
+        amountUsd: Number(order.amountUsd) || 0,
+        expectedAmount: Number(order.expectedAmount ?? (order.currency === 'USD' ? order.amountUsd : order.amountPkr)) || 0,
+        currency: order.currency === 'USD' ? 'USD' : 'PKR',
+        paymentRegion: order.paymentRegion === 'international' ? 'international' : 'pakistan',
+        paymentMethod:
+          order.paymentMethod === 'binance_qr'
+            ? 'binance_qr'
+            : order.paymentMethod === 'admin_assigned'
+              ? 'admin_assigned'
+              : 'bank_qr',
+        visitorCountryCode: clampStr(order.visitorCountryCode || '', 12),
+        indicativeLocalDisplay: clampStr(order.indicativeLocalDisplay || '', 64),
         durationDays: Math.max(1, Number(order.durationDays) || 15),
         selectedDramaIds: (order.selectedDramaIds || []).slice(0, 10),
         status: initialStatus,
@@ -270,7 +285,6 @@ export async function syncOrderToFirestore(
       }
       await updateDoc(ref, updatePayload);
     } else {
-      // Customer proof upload/re-upload branch matching firestore.rules allowed keys
       await updateDoc(ref, {
         status: 'pending_verification',
         proofFileName: clampStr(order.proofFileName || '', 256),
@@ -315,6 +329,7 @@ export async function syncMembershipToFirestore(
         planId: membership.planId,
         planName: clampStr(membership.planName, 64),
         pricePkr: Number(membership.pricePkr) || 0,
+        priceUsd: Number(membership.priceUsd) || 0,
         durationDays: Math.max(1, Number(membership.durationDays) || 15),
         selectedDramaIds: (membership.selectedDramaIds || []).slice(0, 10),
         status: membership.status,
@@ -325,17 +340,36 @@ export async function syncMembershipToFirestore(
         revokedReason: clampStr(membership.revokedReason || '', 500),
         approvedByAdminEmail: clampStr(membership.approvedByAdminEmail || '', 200),
         paymentProvider: clampStr(membership.paymentProvider || 'bank_qr', 40),
+        paymentRegion: membership.paymentRegion === 'international' ? 'international' : 'pakistan',
+        paymentMethod:
+          membership.paymentMethod === 'binance_qr'
+            ? 'binance_qr'
+            : membership.paymentMethod === 'admin_assigned'
+              ? 'admin_assigned'
+              : 'bank_qr',
+        currency: membership.currency === 'USD' ? 'USD' : 'PKR',
+        expectedAmount: Number(membership.expectedAmount ?? membership.pricePkr ?? 0) || 0,
         paymentReference: clampStr(membership.paymentReference || '', 400),
+        renewalHistory: Array.isArray(membership.renewalHistory) ? membership.renewalHistory.slice(0, 100) : [],
+        lastExtendedAt: clampStr(membership.lastExtendedAt || '', 64),
         createdAtIso: clampStr(membership.createdAt || new Date().toISOString(), 64),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
     } else {
       await updateDoc(ref, {
+        planId: membership.planId,
+        planName: clampStr(membership.planName, 64),
+        durationDays: Math.max(1, Number(membership.durationDays) || 15),
+        selectedDramaIds: (membership.selectedDramaIds || []).slice(0, 10),
         status: membership.status,
+        activatedAt: clampStr(membership.activatedAt, 64),
+        expiresAt: clampStr(membership.expiresAt, 64),
         cancelledAt: clampStr(membership.cancelledAt || '', 64),
         revokedByAdminEmail: clampStr(membership.revokedByAdminEmail || '', 200),
         revokedReason: clampStr(membership.revokedReason || '', 500),
+        renewalHistory: Array.isArray(membership.renewalHistory) ? membership.renewalHistory.slice(0, 100) : [],
+        lastExtendedAt: clampStr(membership.lastExtendedAt || '', 64),
         updatedAt: serverTimestamp(),
       });
     }
@@ -386,6 +420,8 @@ export async function syncHistoryEntryToFirestore(
       planId: clampStr(entry.planId || '', 32),
       planName: clampStr(entry.planName || '', 64),
       amountPkr: typeof entry.amountPkr === 'number' ? entry.amountPkr : 0,
+      amountUsd: typeof entry.amountUsd === 'number' ? entry.amountUsd : 0,
+      currency: entry.currency === 'USD' ? 'USD' : 'PKR',
       selectedDramaIds:
         entry.selectedDramaIds && entry.selectedDramaIds.length > 0
           ? entry.selectedDramaIds.slice(0, 10)
@@ -399,11 +435,68 @@ export async function syncHistoryEntryToFirestore(
   }
 }
 
+export async function syncMemberNotificationToFirestore(
+  notif: CustomerNotification,
+  ownerUidOverride?: string
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !user.emailVerified || !isFirebaseAdminUser()) return;
+  const id = sanitizeId(notif.id);
+  const path = `memberNotifications/${id}`;
+  try {
+    const ref = doc(db, 'memberNotifications', id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        id,
+        memberId: sanitizeId(notif.memberId),
+        ownerUid: sanitizeId(ownerUidOverride || notif.ownerUid || 'admin_assigned'),
+        customerEmail: clampStr(notif.customerEmail || '', 200),
+        membershipId: clampStr(notif.membershipId || '', 128),
+        orderId: clampStr(notif.orderId || '', 128),
+        planId: clampStr(notif.planId || '', 32),
+        dramaIds: (notif.dramaIds || []).slice(0, 10),
+        type: clampStr(notif.type, 64),
+        title: clampStr(notif.title, 240),
+        titleUr: clampStr(notif.titleUr || '', 240),
+        message: clampStr(notif.message, 1200),
+        messageUr: clampStr(notif.messageUr || '', 1200),
+        ctaLabel: clampStr(notif.ctaLabel || '', 100),
+        ctaHref: clampStr(notif.ctaHref || '', 240),
+        dedupeKey: clampStr(notif.dedupeKey, 240),
+        emailStatus: notif.emailStatus || 'not_sent',
+        emailError: clampStr(notif.emailError || '', 500),
+        isRead: Boolean(notif.isRead),
+        readAt: clampStr(notif.readAt || '', 64),
+        supersededAt: clampStr(notif.supersededAt || '', 64),
+        createdAtIso: clampStr(notif.createdAt || new Date().toISOString(), 64),
+        updatedAtIso: clampStr(new Date().toISOString(), 64),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await updateDoc(ref, {
+        emailStatus: notif.emailStatus || 'not_sent',
+        emailError: clampStr(notif.emailError || '', 500),
+        isRead: Boolean(notif.isRead),
+        readAt: clampStr(notif.readAt || '', 64),
+        supersededAt: clampStr(notif.supersededAt || '', 64),
+        updatedAtIso: clampStr(new Date().toISOString(), 64),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
 export interface CloudMembershipSnapshot {
   members: Array<SafeMember & { ownerUid?: string }>;
   orders: MembershipOrder[];
   memberships: AdminMembershipRecord[];
   history: MembershipHistoryEntry[];
+  customerNotifications: CustomerNotification[];
+  schedulerRuns: SchedulerRunLog[];
   config?: MembershipConfig | null;
 }
 
@@ -418,6 +511,8 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
   const orders: MembershipOrder[] = [];
   const memberships: AdminMembershipRecord[] = [];
   const history: MembershipHistoryEntry[] = [];
+  const customerNotifications: CustomerNotification[] = [];
+  const schedulerRuns: SchedulerRunLog[] = [];
   let config: MembershipConfig | null = null;
 
   try {
@@ -448,9 +543,18 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
         customerName: data.customerName,
         customerEmail: data.customerEmail,
         customerPhone: data.customerPhone,
+        orderType: data.orderType || 'new',
+        targetMembershipId: data.targetMembershipId || undefined,
         planId: data.planId,
         planName: data.planName,
         amountPkr: data.amountPkr,
+        amountUsd: data.amountUsd,
+        expectedAmount: data.expectedAmount,
+        currency: data.currency || 'PKR',
+        paymentRegion: data.paymentRegion || 'pakistan',
+        paymentMethod: data.paymentMethod || 'bank_qr',
+        visitorCountryCode: data.visitorCountryCode || undefined,
+        indicativeLocalDisplay: data.indicativeLocalDisplay || undefined,
         durationDays: data.durationDays,
         selectedDramaIds: data.selectedDramaIds || [],
         status: data.status,
@@ -491,6 +595,7 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
         planId: data.planId,
         planName: data.planName,
         pricePkr: data.pricePkr,
+        priceUsd: data.priceUsd,
         durationDays: data.durationDays,
         selectedDramaIds: data.selectedDramaIds || [],
         status: data.status,
@@ -501,7 +606,13 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
         revokedReason: data.revokedReason || undefined,
         approvedByAdminEmail: data.approvedByAdminEmail || undefined,
         paymentProvider: data.paymentProvider || 'bank_qr',
+        paymentRegion: data.paymentRegion || 'pakistan',
+        paymentMethod: data.paymentMethod || 'bank_qr',
+        currency: data.currency || 'PKR',
+        expectedAmount: data.expectedAmount,
         paymentReference: data.paymentReference || '',
+        renewalHistory: Array.isArray(data.renewalHistory) ? data.renewalHistory : [],
+        lastExtendedAt: data.lastExtendedAt || undefined,
         createdAt: toIsoString(data.createdAtIso || data.createdAt, new Date().toISOString()),
       });
     });
@@ -522,6 +633,8 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
         planId: data.planId || undefined,
         planName: data.planName || undefined,
         amountPkr: data.amountPkr,
+        amountUsd: data.amountUsd,
+        currency: data.currency,
         selectedDramaIds: data.selectedDramaIds,
         details: data.details,
         createdAt: toIsoString(data.createdAtIso || data.createdAt, new Date().toISOString()),
@@ -529,6 +642,61 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
     });
   } catch (err) {
     handleFirestoreError(err, OperationType.LIST, 'membershipHistory');
+  }
+
+  try {
+    const snap = await getDocs(collection(db, 'memberNotifications'));
+    snap.forEach((d) => {
+      const data = d.data();
+      customerNotifications.push({
+        id: data.id || d.id,
+        memberId: data.memberId,
+        ownerUid: data.ownerUid,
+        customerEmail: data.customerEmail,
+        membershipId: data.membershipId || undefined,
+        orderId: data.orderId || undefined,
+        planId: data.planId || undefined,
+        dramaIds: data.dramaIds || [],
+        type: data.type,
+        title: data.title,
+        titleUr: data.titleUr || undefined,
+        message: data.message,
+        messageUr: data.messageUr || undefined,
+        ctaLabel: data.ctaLabel || undefined,
+        ctaHref: data.ctaHref || undefined,
+        dedupeKey: data.dedupeKey,
+        emailStatus: data.emailStatus || 'not_sent',
+        emailError: data.emailError || undefined,
+        isRead: Boolean(data.isRead),
+        readAt: data.readAt || undefined,
+        supersededAt: data.supersededAt || undefined,
+        createdAt: toIsoString(data.createdAtIso || data.createdAt, new Date().toISOString()),
+      });
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.LIST, 'memberNotifications');
+  }
+
+  try {
+    const snap = await getDocs(collection(db, 'schedulerRuns'));
+    snap.forEach((d) => {
+      const data = d.data();
+      schedulerRuns.push({
+        id: data.id || d.id,
+        triggerSource: data.triggerSource,
+        ranAt: data.ranAt,
+        durationMs: Number(data.durationMs) || 0,
+        checkedMemberships: Number(data.checkedMemberships) || 0,
+        expiredCount: Number(data.expiredCount) || 0,
+        remindersCreated: Number(data.remindersCreated) || 0,
+        emailsSent: Number(data.emailsSent) || 0,
+        emailsFailed: Number(data.emailsFailed) || 0,
+        emailsNotConfigured: Number(data.emailsNotConfigured) || 0,
+        summary: data.summary || '',
+      });
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.LIST, 'schedulerRuns');
   }
 
   try {
@@ -540,6 +708,13 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
         standardQrImage: data.standardQrImage,
         plusQrImage: data.plusQrImage,
         vipQrImage: data.vipQrImage,
+        starterBinanceQrImage: data.starterBinanceQrImage || '',
+        standardBinanceQrImage: data.standardBinanceQrImage || '',
+        plusBinanceQrImage: data.plusBinanceQrImage || '',
+        vipBinanceQrImage: data.vipBinanceQrImage || '',
+        usdPrices: data.usdPrices || undefined,
+        internationalInstructionsEn: data.internationalInstructionsEn || '',
+        internationalInstructionsUr: data.internationalInstructionsUr || '',
         whatsappNumber: data.whatsappNumber || '',
         adminEmail: data.adminEmail,
         supportEmail: data.supportEmail,
@@ -552,7 +727,15 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
     handleFirestoreError(err, OperationType.GET, 'membershipConfig/public');
   }
 
-  return { members, orders, memberships, history, config };
+  return {
+    members,
+    orders,
+    memberships,
+    history,
+    customerNotifications,
+    schedulerRuns,
+    config,
+  };
 }
 
 export async function pushAdminSnapshotToFirestore(snapshot: {
@@ -560,6 +743,7 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
   orders: MembershipOrder[];
   memberships: AdminMembershipRecord[];
   history?: MembershipHistoryEntry[];
+  customerNotifications?: CustomerNotification[];
   config?: MembershipConfig;
   auditLogs?: AdminAuditEntry[];
   emailNotifications?: AdminEmailNotification[];
@@ -591,6 +775,13 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
     }
   }
 
+  if (snapshot.customerNotifications) {
+    for (const n of snapshot.customerNotifications.slice(0, 150)) {
+      const ownerUid = sanitizeId(n.ownerUid || memberOwnerMap.get(n.memberId) || 'admin_assigned');
+      await syncMemberNotificationToFirestore(n, ownerUid);
+    }
+  }
+
   if (snapshot.config) {
     try {
       await setDoc(doc(db, 'membershipConfig', 'public'), {
@@ -598,6 +789,13 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
         standardQrImage: clampStr(snapshot.config.standardQrImage, 512),
         plusQrImage: clampStr(snapshot.config.plusQrImage, 512),
         vipQrImage: clampStr(snapshot.config.vipQrImage, 512),
+        starterBinanceQrImage: clampStr(snapshot.config.starterBinanceQrImage || '', 512),
+        standardBinanceQrImage: clampStr(snapshot.config.standardBinanceQrImage || '', 512),
+        plusBinanceQrImage: clampStr(snapshot.config.plusBinanceQrImage || '', 512),
+        vipBinanceQrImage: clampStr(snapshot.config.vipBinanceQrImage || '', 512),
+        usdPrices: snapshot.config.usdPrices || { starter: 1.2, standard: 2.5, plus: 3.5, vip: 5 },
+        internationalInstructionsEn: clampStr(snapshot.config.internationalInstructionsEn || '', 1500),
+        internationalInstructionsUr: clampStr(snapshot.config.internationalInstructionsUr || '', 1500),
         whatsappNumber: clampStr(snapshot.config.whatsappNumber || '', 40),
         adminEmail: clampStr(snapshot.config.adminEmail, 200),
         supportEmail: clampStr(snapshot.config.supportEmail, 200),
@@ -633,9 +831,18 @@ export async function fetchMemberCloudOrders(memberId: string): Promise<Membersh
           customerName: data.customerName,
           customerEmail: data.customerEmail,
           customerPhone: data.customerPhone,
+          orderType: data.orderType || 'new',
+          targetMembershipId: data.targetMembershipId || undefined,
           planId: data.planId,
           planName: data.planName,
           amountPkr: data.amountPkr,
+          amountUsd: data.amountUsd,
+          expectedAmount: data.expectedAmount,
+          currency: data.currency || 'PKR',
+          paymentRegion: data.paymentRegion || 'pakistan',
+          paymentMethod: data.paymentMethod || 'bank_qr',
+          visitorCountryCode: data.visitorCountryCode || undefined,
+          indicativeLocalDisplay: data.indicativeLocalDisplay || undefined,
           durationDays: data.durationDays,
           selectedDramaIds: data.selectedDramaIds || [],
           status: data.status,
