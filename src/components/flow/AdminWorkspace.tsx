@@ -56,6 +56,7 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
 }) => {
   const [adminTab, setAdminTab] = useState<'clients' | 'projects' | 'leads' | 'emails' | 'editors' | 'assets'>('clients');
   const [clientStatusFilter, setClientStatusFilter] = useState<'All' | 'Active' | 'Paused' | 'Archived' | 'Disabled'>('All');
+  const [deletingLeadId, setDeletingLeadId] = useState<string | null>(null);
   const [isOnboardModalOpen, setIsOnboardModalOpen] = useState(false);
   const [isOnboardEditorModalOpen, setIsOnboardEditorModalOpen] = useState(false);
   const [editingEditor, setEditingEditor] = useState<any | null>(null);
@@ -793,20 +794,39 @@ export const AdminWorkspace: React.FC<AdminWorkspaceProps> = ({
                       Convert to Client
                     </button>
 
-                    {/* Delete Lead Button */}
+                    {/* Delete Lead Button (inline two-step confirm so iframe never blocks it) */}
                     {onDeleteLead && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (confirm(`Remove lead ${l.firstName} ${l.lastName}?`)) {
-                            onDeleteLead(l.id);
-                          }
-                        }}
-                        className="px-2.5 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 font-bold text-xs transition cursor-pointer"
-                        title="Delete Lead"
-                      >
-                        Delete
-                      </button>
+                      deletingLeadId === l.id ? (
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onDeleteLead(l.id);
+                              setDeletingLeadId(null);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer"
+                          >
+                            Confirm Delete
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingLeadId(null)}
+                            className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 font-semibold text-xs transition cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setDeletingLeadId(l.id)}
+                          className="px-2.5 py-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 font-bold text-xs inline-flex items-center gap-1 transition cursor-pointer"
+                          title="Delete Lead"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      )
                     )}
                   </div>
                 </div>

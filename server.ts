@@ -68,6 +68,9 @@ import {
   rejectPaymentRequest,
   extendMembershipByAdmin,
   revokeMembershipByAdmin,
+  deleteOrderByAdmin,
+  deleteMemberByAdmin,
+  deleteMembershipRecordByAdmin,
   assignMembershipByAdmin,
   mergeCloudSyncSnapshot,
   hydrateStoreFromFirestore,
@@ -4006,6 +4009,59 @@ app.post('/api/admin/memberships/:membershipId/revoke', requireAdmin, (req: any,
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to revoke membership.' });
+  }
+});
+
+app.delete('/api/admin/memberships/requests/:orderId', requireAdmin, (req: any, res) => {
+  try {
+    const { orderId } = req.params;
+    const result = deleteOrderByAdmin({ orderId, admin: req.admin });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      deletedOrderId: result.deletedOrderId,
+      deletedNotificationIds: result.deletedNotificationIds,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to delete payment request.' });
+  }
+});
+
+app.delete('/api/admin/memberships/accounts/:memberId', requireAdmin, (req: any, res) => {
+  try {
+    const { memberId } = req.params;
+    const result = deleteMemberByAdmin({ memberId, admin: req.admin });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      deletedIds: result.deletedIds,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to delete customer account.' });
+  }
+});
+
+app.delete('/api/admin/memberships/:membershipId', requireAdmin, (req: any, res) => {
+  try {
+    const { membershipId } = req.params;
+    const result = deleteMembershipRecordByAdmin({ membershipId, admin: req.admin });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      deletedMembershipId: result.deletedMembershipId,
+      deletedNotificationIds: result.deletedNotificationIds,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to delete membership record.' });
   }
 });
 

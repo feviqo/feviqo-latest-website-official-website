@@ -17,6 +17,7 @@ import {
 import {
   isServerFirestoreEnabled,
   mirrorDocToFirestoreServer,
+  deleteDocFromFirestoreServer,
   pullSnapshotFromFirestoreServer,
 } from './firestoreAdmin';
 
@@ -337,6 +338,9 @@ export interface AdminAuditEntry {
     | 'membership_assigned'
     | 'membership_extended'
     | 'membership_revoked'
+    | 'order_deleted'
+    | 'member_deleted'
+    | 'membership_deleted'
     | 'config_updated'
     | 'qr_image_updated'
     | 'email_retried'
@@ -2523,6 +2527,255 @@ export function revokeMembershipByAdmin(params: {
   });
 
   return { success: true, membership: all[idx] };
+}
+
+function unlinkOrderProofFile(order: MembershipOrder): void {
+  if (!order.proofFileName) return;
+  const proofPath = path.join(PRIVATE_PROOFS_DIR, path.basename(order.proofFileName));
+  if (fs.existsSync(proofPath)) {
+    try {
+      fs.unlinkSync(proofPath);
+    } catch {}
+  }
+}
+
+export function deleteOrderByAdmin(params: {
+  orderId: string;
+  admin: SafeAdmin;
+}):
+  | { success: true; deletedOrderId: string; deletedNotificationIds: string[] }
+  | { success: false; error: string; statusCode: number } {
+  syncMemberSubscriptions();
+  const orders = readAllOrders();
+  const idx = orders.findIndex((o) => o.id === params.orderId);
+  if (idx === -1) {
+    return { success: false, error: 'Payment request not found.', statusCode: 404 };
+  }
+
+  const order = orders[idx];
+  const nowMs = Date.now();
+  const allMemberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const hasActiveLinkedMembership = allMemberships.some(
+    (m) =>
+      m.status === 'active' &&
+      Date.parse(m.expiresAt) > nowMs &&
+      (m.orderId === order.id ||
+        (order.status === 'approved' && Boolean(order.targetMembershipId) && m.id === order.targetMembershipId))
+  );
+
+  if (order.status === 'approved' && hasActiveLinkedMembership) {
+    return {
+      success: false,
+      error: 'Cannot delete an approved payment request linked to an active membership. Revoke the active membership first.',
+      statusCode: 409,
+    };
+  }
+
+  orders.splice(idx, 1);
+  writeJson(ORDERS_FILE, orders);
+  unlinkOrderProofFile(order);
+
+  const notifs = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+  const deletedNotificationIds: string[] = [];
+  const remainingNotifs = notifs.filter((n) => {
+    if (n.orderId === order.id) {
+      deletedNotificationIds.push(n.id);
+      return false;
+    }
+    return true;
+  });
+  if (deletedNotificationIds.length > 0) {
+    writeJson(MEMBER_NOTIFS_FILE, remainingNotifs);
+  }
+
+  if (isServerFirestoreEnabled()) {
+    void deleteDocFromFirestoreServer('membershipOrders', order.id);
+    for (const notifId of deletedNotificationIds) {
+      void deleteDocFromFirestoreServer('memberNotifications', notifId);
+    }
+  }
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'order_deleted',
+    targetId: order.id,
+    details: `Deleted payment request ${order.id} (${order.planName}, status: ${order.status}) for ${order.customerEmail || order.memberId}.`,
+  });
+
+  return { success: true, deletedOrderId: order.id, deletedNotificationIds };
+}
+
+export function deleteMemberByAdmin(params: {
+  memberId: string;
+  admin: SafeAdmin;
+}):
+  | {
+      success: true;
+      deletedIds: {
+        memberId: string;
+        orderIds: string[];
+        membershipIds: string[];
+        historyIds: string[];
+        notificationIds: string[];
+      };
+    }
+  | { success: false; error: string; statusCode: number } {
+  syncMemberSubscriptions(params.memberId);
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const memberIdx = members.findIndex((m) => m.id === params.memberId);
+  if (memberIdx === -1) {
+    return { success: false, error: 'Member account not found.', statusCode: 404 };
+  }
+
+  const member = members[memberIdx];
+  const nowMs = Date.now();
+  const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const hasActiveMembership = memberships.some(
+    (s) => s.memberId === member.id && s.status === 'active' && Date.parse(s.expiresAt) > nowMs
+  );
+
+  if (hasActiveMembership) {
+    return {
+      success: false,
+      error: 'Cannot delete an account that has an active membership. Revoke the active membership first.',
+      statusCode: 409,
+    };
+  }
+
+  members.splice(memberIdx, 1);
+  writeJson(MEMBERS_FILE, members);
+
+  const orders = readAllOrders();
+  const deletedOrderIds: string[] = [];
+  const remainingOrders = orders.filter((o) => {
+    if (o.memberId === member.id) {
+      deletedOrderIds.push(o.id);
+      unlinkOrderProofFile(o);
+      return false;
+    }
+    return true;
+  });
+  writeJson(ORDERS_FILE, remainingOrders);
+
+  const deletedMembershipIds: string[] = [];
+  const remainingMemberships = memberships.filter((s) => {
+    if (s.memberId === member.id) {
+      deletedMembershipIds.push(s.id);
+      return false;
+    }
+    return true;
+  });
+  writeJson(MEMBERSHIPS_FILE, remainingMemberships);
+
+  const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []);
+  const deletedHistoryIds: string[] = [];
+  const remainingHistory = history.filter((h) => {
+    if (h.memberId === member.id) {
+      deletedHistoryIds.push(h.id);
+      return false;
+    }
+    return true;
+  });
+  writeJson(HISTORY_FILE, remainingHistory);
+
+  const notifs = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+  const deletedNotificationIds: string[] = [];
+  const remainingNotifs = notifs.filter((n) => {
+    if (n.memberId === member.id) {
+      deletedNotificationIds.push(n.id);
+      return false;
+    }
+    return true;
+  });
+  writeJson(MEMBER_NOTIFS_FILE, remainingNotifs);
+
+  if (isServerFirestoreEnabled()) {
+    void deleteDocFromFirestoreServer('members', member.id);
+    for (const id of deletedOrderIds) void deleteDocFromFirestoreServer('membershipOrders', id);
+    for (const id of deletedMembershipIds) void deleteDocFromFirestoreServer('memberships', id);
+    for (const id of deletedHistoryIds) void deleteDocFromFirestoreServer('membershipHistory', id);
+    for (const id of deletedNotificationIds) void deleteDocFromFirestoreServer('memberNotifications', id);
+  }
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'member_deleted',
+    targetId: member.id,
+    details: `Deleted customer account ${member.email} (${member.fullName}) along with ${deletedOrderIds.length} request(s) and ${deletedMembershipIds.length} past membership(s).`,
+  });
+
+  return {
+    success: true,
+    deletedIds: {
+      memberId: member.id,
+      orderIds: deletedOrderIds,
+      membershipIds: deletedMembershipIds,
+      historyIds: deletedHistoryIds,
+      notificationIds: deletedNotificationIds,
+    },
+  };
+}
+
+export function deleteMembershipRecordByAdmin(params: {
+  membershipId: string;
+  admin: SafeAdmin;
+}):
+  | { success: true; deletedMembershipId: string; deletedNotificationIds: string[] }
+  | { success: false; error: string; statusCode: number } {
+  syncMemberSubscriptions();
+  const all = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const idx = all.findIndex((m) => m.id === params.membershipId);
+  if (idx === -1) {
+    return { success: false, error: 'Membership record not found.', statusCode: 404 };
+  }
+
+  const sub = all[idx];
+  if (sub.status === 'active' && Date.parse(sub.expiresAt) > Date.now()) {
+    return {
+      success: false,
+      error: 'Cannot delete an active membership. Revoke access first before deleting the record.',
+      statusCode: 409,
+    };
+  }
+
+  all.splice(idx, 1);
+  writeJson(MEMBERSHIPS_FILE, all);
+
+  const notifs = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+  const deletedNotificationIds: string[] = [];
+  const remainingNotifs = notifs.filter((n) => {
+    if (n.membershipId === sub.id) {
+      deletedNotificationIds.push(n.id);
+      return false;
+    }
+    return true;
+  });
+  if (deletedNotificationIds.length > 0) {
+    writeJson(MEMBER_NOTIFS_FILE, remainingNotifs);
+  }
+
+  if (isServerFirestoreEnabled()) {
+    void deleteDocFromFirestoreServer('memberships', sub.id);
+    for (const id of deletedNotificationIds) {
+      void deleteDocFromFirestoreServer('memberNotifications', id);
+    }
+  }
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'membership_deleted',
+    targetId: sub.id,
+    details: `Deleted ${sub.status} membership record ${sub.id} (${sub.planName}) for ${sub.customerEmail || sub.memberId}.`,
+  });
+
+  return {
+    success: true,
+    deletedMembershipId: sub.id,
+    deletedNotificationIds,
+  };
 }
 
 // --- EMAIL NOTIFICATION TRACKING ---

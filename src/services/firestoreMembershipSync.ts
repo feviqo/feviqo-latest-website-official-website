@@ -7,6 +7,7 @@ import {
   where,
   setDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
@@ -487,6 +488,62 @@ export async function syncMemberNotificationToFirestore(
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+async function deleteFirestoreDocSafely(collectionName: string, docId: string): Promise<void> {
+  if (!docId || !isFirebaseAdminUser()) return;
+  const cleanId = sanitizeId(docId);
+  const path = `${collectionName}/${cleanId}`;
+  try {
+    await deleteDoc(doc(db, collectionName, cleanId));
+  } catch (err) {
+    handleFirestoreError(err, OperationType.DELETE, path);
+  }
+}
+
+export async function deleteOrderInFirestore(
+  orderId: string,
+  notificationIds: string[] = []
+): Promise<void> {
+  if (!isFirebaseAdminUser()) return;
+  await deleteFirestoreDocSafely('membershipOrders', orderId);
+  for (const notifId of notificationIds) {
+    await deleteFirestoreDocSafely('memberNotifications', notifId);
+  }
+}
+
+export async function deleteMemberCascadeInFirestore(deletedIds: {
+  memberId: string;
+  orderIds?: string[];
+  membershipIds?: string[];
+  historyIds?: string[];
+  notificationIds?: string[];
+}): Promise<void> {
+  if (!isFirebaseAdminUser()) return;
+  await deleteFirestoreDocSafely('members', deletedIds.memberId);
+  for (const id of deletedIds.orderIds || []) {
+    await deleteFirestoreDocSafely('membershipOrders', id);
+  }
+  for (const id of deletedIds.membershipIds || []) {
+    await deleteFirestoreDocSafely('memberships', id);
+  }
+  for (const id of deletedIds.historyIds || []) {
+    await deleteFirestoreDocSafely('membershipHistory', id);
+  }
+  for (const id of deletedIds.notificationIds || []) {
+    await deleteFirestoreDocSafely('memberNotifications', id);
+  }
+}
+
+export async function deleteMembershipInFirestore(
+  membershipId: string,
+  notificationIds: string[] = []
+): Promise<void> {
+  if (!isFirebaseAdminUser()) return;
+  await deleteFirestoreDocSafely('memberships', membershipId);
+  for (const id of notificationIds) {
+    await deleteFirestoreDocSafely('memberNotifications', id);
   }
 }
 

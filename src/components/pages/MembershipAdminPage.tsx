@@ -21,6 +21,7 @@ import {
   Bell,
   Clock,
   Globe,
+  Trash2,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
@@ -52,6 +53,9 @@ import {
   retryCustomerNotificationEmail,
   syncAdminCloudState,
   revokeMembershipAccess,
+  deletePaymentOrderByAdmin,
+  deleteMemberAccountByAdmin,
+  deleteMembershipRecordByAdmin,
   updateMembershipSettings,
   uploadPlanQrImage,
   retryEmailNotification,
@@ -66,6 +70,9 @@ import {
   isFirebaseAdminUser,
   pullAllCloudDataFromFirestore,
   pushAdminSnapshotToFirestore,
+  deleteOrderInFirestore,
+  deleteMemberCascadeInFirestore,
+  deleteMembershipInFirestore,
 } from '../../services/firestoreMembershipSync';
 
 interface MembershipAdminPageProps {
@@ -121,12 +128,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const [rejectReasonInput, setRejectReasonInput] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
 
-  // Revoke / Extend membership state
+  // Revoke / Extend / Delete membership & lead state
   const [revokingMembershipId, setRevokingMembershipId] = useState<string | null>(null);
   const [revokeReasonInput, setRevokeReasonInput] = useState('');
   const [extendingMembershipId, setExtendingMembershipId] = useState<string | null>(null);
   const [extendDaysInput, setExtendDaysInput] = useState('30');
   const [extendReasonInput, setExtendReasonInput] = useState('');
+  const [deletingRequestId, setDeletingRequestId] = useState<string | null>(null);
+  const [deletingMembershipId, setDeletingMembershipId] = useState<string | null>(null);
+  const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
 
   // Lifecycle Scheduler & Customer Notifications state
   const [runningScheduler, setRunningScheduler] = useState(false);
@@ -585,6 +595,90 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       }
     } catch {
       setFeedbackBanner({ type: 'error', text: 'Failed to revoke membership.' });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleDeleteRequest = async (orderId: string) => {
+    setActionBusy(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await deletePaymentOrderByAdmin(orderId);
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setDeletingRequestId(null);
+        if (selectedRequestId === orderId) {
+          setSelectedRequestId(null);
+        }
+        if (isFirebaseAdminUser()) {
+          deleteOrderInFirestore(res.deletedOrderId, res.deletedNotificationIds || [])
+            .then(() => setCloudSyncedAt(new Date().toISOString()))
+            .catch(() => {});
+        }
+        setFeedbackBanner({
+          type: 'success',
+          text: `Payment request ${orderId} deleted permanently.`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to delete payment request.' });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleDeleteMembership = async (membershipId: string) => {
+    setActionBusy(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await deleteMembershipRecordByAdmin(membershipId);
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setDeletingMembershipId(null);
+        if (isFirebaseAdminUser()) {
+          deleteMembershipInFirestore(res.deletedMembershipId, res.deletedNotificationIds || [])
+            .then(() => setCloudSyncedAt(new Date().toISOString()))
+            .catch(() => {});
+        }
+        setFeedbackBanner({
+          type: 'success',
+          text: `Membership record ${membershipId} deleted permanently.`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to delete membership record.' });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleDeleteAccount = async (memberId: string, label: string) => {
+    setActionBusy(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await deleteMemberAccountByAdmin(memberId);
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setDeletingAccountId(null);
+        if (isFirebaseAdminUser()) {
+          deleteMemberCascadeInFirestore(res.deletedIds)
+            .then(() => setCloudSyncedAt(new Date().toISOString()))
+            .catch(() => {});
+        }
+        setFeedbackBanner({
+          type: 'success',
+          text: `Account ${label} and its associated unpaid/inactive records were deleted.`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to delete customer account.' });
     } finally {
       setActionBusy(false);
     }
@@ -1480,18 +1574,64 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                 </span>
                               </td>
                               <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedRequestId(req.id);
-                                    setConfirmApproveId(null);
-                                    setRejectReasonInput('');
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                  <span>Inspect</span>
-                                </button>
+                                {(() => {
+                                  const linkedToActive =
+                                    req.status === 'approved' &&
+                                    overview.memberships.some(
+                                      (s) =>
+                                        s.status === 'active' &&
+                                        (s.orderId === req.id ||
+                                          (Boolean(req.targetMembershipId) && s.id === req.targetMembershipId))
+                                    );
+                                  return (
+                                    <div className="inline-flex items-center justify-end gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedRequestId(req.id);
+                                          setConfirmApproveId(null);
+                                          setDeletingRequestId(null);
+                                          setRejectReasonInput('');
+                                        }}
+                                        className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                                      >
+                                        <Eye className="w-3.5 h-3.5" />
+                                        <span>Inspect</span>
+                                      </button>
+                                      {!linkedToActive && (
+                                        deletingRequestId === req.id ? (
+                                          <div className="inline-flex items-center gap-1">
+                                            <button
+                                              type="button"
+                                              disabled={actionBusy}
+                                              onClick={() => handleDeleteRequest(req.id)}
+                                              className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+                                            >
+                                              {actionBusy ? 'Deleting...' : 'Confirm'}
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setDeletingRequestId(null)}
+                                              className="px-2 py-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-xs font-semibold cursor-pointer"
+                                            >
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => setDeletingRequestId(req.id)}
+                                            className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                            title="Delete unnecessary or unpaid request"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                            <span>Delete</span>
+                                          </button>
+                                        )
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                               </td>
                             </tr>
                           );
@@ -1705,7 +1845,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                       >
                                         Extend +Days
                                       </button>
-                                      {m.status === 'active' && (
+                                       {m.status === 'active' ? (
                                         revokingMembershipId === m.id ? (
                                           <div className="inline-flex items-center gap-1.5">
                                             <input
@@ -1737,6 +1877,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                             onClick={() => {
                                               setRevokingMembershipId(m.id);
                                               setExtendingMembershipId(null);
+                                              setDeletingMembershipId(null);
                                               setRevokeReasonInput('');
                                             }}
                                             className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 font-semibold cursor-pointer"
@@ -1744,6 +1885,38 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                             Revoke
                                           </button>
                                         )
+                                      ) : deletingMembershipId === m.id ? (
+                                        <div className="inline-flex items-center gap-1">
+                                          <button
+                                            type="button"
+                                            disabled={actionBusy}
+                                            onClick={() => handleDeleteMembership(m.id)}
+                                            className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+                                          >
+                                            {actionBusy ? 'Deleting...' : 'Confirm'}
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => setDeletingMembershipId(null)}
+                                            className="px-2 py-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-xs font-semibold cursor-pointer"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setDeletingMembershipId(m.id);
+                                            setExtendingMembershipId(null);
+                                            setRevokingMembershipId(null);
+                                          }}
+                                          className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                          title="Delete expired or cancelled membership record"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          <span>Delete</span>
+                                        </button>
                                       )}
                                     </div>
                                   )}
@@ -1856,14 +2029,47 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                 {formatDateTime(member.createdAt)}
                               </td>
                               <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenAssignModal(member)}
-                                  className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  <span>Assign Plan</span>
-                                </button>
+                                <div className="inline-flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenAssignModal(member)}
+                                    className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>Assign Plan</span>
+                                  </button>
+                                  {!activeSub && (
+                                    deletingAccountId === member.id ? (
+                                      <div className="inline-flex items-center gap-1">
+                                        <button
+                                          type="button"
+                                          disabled={actionBusy}
+                                          onClick={() => handleDeleteAccount(member.id, member.email || member.fullName)}
+                                          className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+                                        >
+                                          {actionBusy ? 'Deleting...' : 'Confirm'}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setDeletingAccountId(null)}
+                                          className="px-2 py-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-xs font-semibold cursor-pointer"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => setDeletingAccountId(member.id)}
+                                        className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                        title="Delete unnecessary or unpaid customer lead"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <span>Delete</span>
+                                      </button>
+                                    )
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
@@ -2837,6 +3043,57 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     )}
                   </div>
                 )}
+
+                {(() => {
+                  const linkedToActive =
+                    selectedRequest.status === 'approved' &&
+                    Boolean(
+                      overview?.memberships.some(
+                        (s) =>
+                          s.status === 'active' &&
+                          (s.orderId === selectedRequest.id ||
+                            (Boolean(selectedRequest.targetMembershipId) && s.id === selectedRequest.targetMembershipId))
+                      )
+                    );
+                  if (linkedToActive) return null;
+                  return (
+                    <div className="pt-2 border-t border-zinc-200">
+                      {deletingRequestId === selectedRequest.id ? (
+                        <div className="p-3 rounded-xl bg-red-50 border border-red-200 space-y-2">
+                          <p className="text-xs font-semibold text-red-900">
+                            Permanently delete this payment request and any uploaded screenshot?
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={actionBusy}
+                              onClick={() => handleDeleteRequest(selectedRequest.id)}
+                              className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+                            >
+                              {actionBusy ? 'Deleting...' : 'Yes, Delete Request'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeletingRequestId(null)}
+                              className="px-3 py-2 rounded-lg border border-zinc-300 bg-white text-xs font-semibold cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setDeletingRequestId(selectedRequest.id)}
+                          className="w-full py-2.5 px-4 rounded-xl border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete Unnecessary Request</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>

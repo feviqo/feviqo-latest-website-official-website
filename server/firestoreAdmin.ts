@@ -150,6 +150,23 @@ export async function mirrorDocToFirestoreServer(
   }
 }
 
+export async function deleteDocFromFirestoreServer(
+  collectionName: string,
+  docId: string
+): Promise<void> {
+  const db = getAdminFirestoreDb();
+  if (!db || !docId) return;
+  try {
+    await db.collection(collectionName).doc(docId).delete();
+  } catch (err: any) {
+    if (err?.code === 7 || String(err?.message || '').includes('PERMISSION_DENIED')) {
+      firestoreWriteDisabled = true;
+    } else {
+      console.warn(`[FirestoreAdmin] Delete failed for ${collectionName}/${docId}:`, err?.message || err);
+    }
+  }
+}
+
 export async function pullSnapshotFromFirestoreServer(): Promise<{
   members: any[];
   orders: any[];

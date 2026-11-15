@@ -878,6 +878,68 @@ export async function revokeMembershipAccess(
   return parseJsonSafe(res);
 }
 
+export async function deletePaymentOrderByAdmin(
+  orderId: string
+): Promise<
+  | {
+      success: true;
+      deletedOrderId: string;
+      deletedNotificationIds?: string[];
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch(`/api/admin/memberships/requests/${encodeURIComponent(orderId)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function deleteMemberAccountByAdmin(
+  memberId: string
+): Promise<
+  | {
+      success: true;
+      deletedIds: {
+        memberId: string;
+        orderIds: string[];
+        membershipIds: string[];
+        historyIds: string[];
+        notificationIds: string[];
+      };
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch(`/api/admin/memberships/accounts/${encodeURIComponent(memberId)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function deleteMembershipRecordByAdmin(
+  membershipId: string
+): Promise<
+  | {
+      success: true;
+      deletedMembershipId: string;
+      deletedNotificationIds?: string[];
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch(`/api/admin/memberships/${encodeURIComponent(membershipId)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
 export async function updateMembershipSettings(
   updates: Partial<MembershipConfig>
 ): Promise<{ success: true; config: MembershipConfig; overview: AdminMembershipsOverview } | { success: false; error: string }> {
