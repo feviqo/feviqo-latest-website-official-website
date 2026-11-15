@@ -316,16 +316,40 @@ export const Footer: React.FC<FooterProps> = ({
           <div>
             {t(MEMBERSHIP_COPY.footer.copyright)}
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-5 sm:gap-6">
             <button onClick={onNavigateFlow} className="text-[#22C55E] hover:underline font-bold transition cursor-pointer">
               {t(MEMBERSHIP_COPY.footer.adminFlowPortal)}
             </button>
-            <button onClick={() => nav('privacy')} className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer">
+            <a
+              href="/privacy"
+              onClick={(e) => {
+                if (!e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  nav('privacy');
+                }
+              }}
+              className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer"
+            >
               {t(MEMBERSHIP_COPY.footer.privacyPolicy)}
-            </button>
-            <button onClick={() => nav('terms')} className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer">
+            </a>
+            <a
+              href="/terms"
+              onClick={(e) => {
+                if (!e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  nav('terms');
+                }
+              }}
+              className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer"
+            >
               {t(MEMBERSHIP_COPY.footer.termsOfService)}
-            </button>
+            </a>
+            <a
+              href="/sitemap.xml"
+              className="hover:text-[#22C55E] hover:underline font-semibold transition"
+            >
+              Sitemap
+            </a>
             <button onClick={() => onNavigateSection('faq')} className="hover:text-white transition cursor-pointer">
               Cookie Preferences
             </button>

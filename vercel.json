@@ -3,7 +3,7 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/((?!assets/|images/|logos/|videos/|uploads/|favicon|robots\\.txt|sitemap\\.xml).*)",
+      "source": "/((?!assets/|images/|logos/|videos/|uploads/|favicon|robots\\.txt|sitemap\\.xml|llms\\.txt|ai-catalog\\.json|ads\\.txt|feviqo-indexnow-key-2026\\.txt).*)",
       "destination": "/index.html"
     }
   ],

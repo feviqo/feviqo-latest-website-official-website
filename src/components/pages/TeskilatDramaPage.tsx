@@ -861,20 +861,35 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   </div>
 
                   {/* Right button panel */}
-                  <div className="lg:col-span-4 flex items-center lg:justify-end gap-3 flex-wrap sm:flex-nowrap w-full">
-                    <button
-                      onClick={() => handleOpenEpisode(EPISODE_189)}
-                      className="w-full lg:w-auto px-8 py-3.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:scale-[1.02]"
-                    >
-                      <Play className="w-4 h-4 fill-current text-slate-950" />
-                      <span>Watch Episode 189</span>
-                    </button>
+                  <div className="lg:col-span-4 flex flex-col items-stretch lg:items-end gap-2.5 w-full">
+                    <div className="flex items-center lg:justify-end gap-3 flex-wrap sm:flex-nowrap w-full">
+                      <button
+                        onClick={() => handleOpenEpisode(EPISODE_189)}
+                        className="w-full lg:w-auto px-8 py-3.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:scale-[1.02]"
+                      >
+                        <Play className="w-4 h-4 fill-current text-slate-950" />
+                        <span>Watch Episode 189</span>
+                      </button>
 
+                      <a
+                        href="#episode-directory"
+                        className="w-full lg:w-auto px-6 py-3.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-white font-bold text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 cursor-pointer text-center"
+                      >
+                        <span>Browse Episodes</span>
+                      </a>
+                    </div>
                     <a
-                      href="#episode-directory"
-                      className="w-full lg:w-auto px-6 py-3.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-white font-bold text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 cursor-pointer text-center font-bold"
+                      href="/membership"
+                      onClick={(e) => {
+                        if (!e.metaKey && !e.ctrlKey) {
+                          e.preventDefault();
+                          onNavigatePage('membership');
+                        }
+                      }}
+                      className="w-full lg:w-auto px-5 py-2.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
                     >
-                      <span>Browse Episodes</span>
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>FEVIQO Premium Membership — Unlock Urdu Episodes</span>
                     </a>
                   </div>
 

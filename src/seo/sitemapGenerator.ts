@@ -104,8 +104,14 @@ export function generateSitemapXml(): string {
     xml += formatUrlNode(normalizedPath, priority, changefreq, lastmod, imageLoc, imageTitle, videoInfo);
   };
 
-  // 1. Core pages from DEFAULT_PAGE_SEO
-  Object.keys(DEFAULT_PAGE_SEO).forEach((routeKey) => {
+  // 1. Core pages from DEFAULT_PAGE_SEO (prioritize homepage, /membership, and /dramas at top)
+  const priorityFirstRoutes = ['/', '/membership', '/dramas', '/teskilat', '/mehmed-fetihler-sultani', '/gunesin-dogdugu-yer'];
+  const allRouteKeys = [
+    ...priorityFirstRoutes.filter((r) => Boolean(DEFAULT_PAGE_SEO[r])),
+    ...Object.keys(DEFAULT_PAGE_SEO).filter((r) => !priorityFirstRoutes.includes(r)),
+  ];
+
+  allRouteKeys.forEach((routeKey) => {
     if (routeKey.startsWith('/trending')) return;
 
     const config = DEFAULT_PAGE_SEO[routeKey];

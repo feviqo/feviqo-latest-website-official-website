@@ -366,6 +366,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             )}
           </div>
+
+          {/* Direct crawlable Membership link in always-visible top nav */}
+          <a
+            href="/membership"
+            onClick={(e) => {
+              if (!e.metaKey && !e.ctrlKey) {
+                e.preventDefault();
+                onNavigatePage('membership');
+              }
+            }}
+            className="px-3 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-emerald-300 hover:text-white font-semibold whitespace-nowrap shrink-0"
+          >
+            {t(MEMBERSHIP_COPY.nav.membership)}
+          </a>
         </nav>
 
         {/* Right CTA & Access */}

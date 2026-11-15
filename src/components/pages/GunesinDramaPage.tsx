@@ -400,6 +400,18 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                             : `Watch Episode ${latestEpisode.number} Now`}
                         </span>
                       </button>
+                      <a
+                        href="/membership"
+                        onClick={(e) => {
+                          if (!e.metaKey && !e.ctrlKey) {
+                            e.preventDefault();
+                            onNavigatePage('membership');
+                          }
+                        }}
+                        className="w-full lg:w-auto px-5 py-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
+                      >
+                        <span>Explore FEVIQO Premium Plans</span>
+                      </a>
                     </div>
 
                   </div>

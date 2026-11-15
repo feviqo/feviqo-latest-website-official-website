@@ -33,6 +33,7 @@ import {
   MembershipPlanId,
   PaymentRegion,
   getDramaById,
+  getPlanById,
 } from '../../data/membershipCatalog';
 import {
   AdminMembershipsOverview,
@@ -991,6 +992,27 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     };
   }, [selectedRequest?.id, selectedRequest?.proofDataUrl, selectedRequest?.hasProof, selectedRequest?.updatedAt]);
 
+  const resolvePackageDramaNames = (planId?: string, selectedDramaIds?: string[]): string[] => {
+    const ids = Array.isArray(selectedDramaIds) ? [...selectedDramaIds] : [];
+    if (planId === 'vip') {
+      for (const d of MEMBERSHIP_DRAMAS) {
+        if (d.vipEligible && !ids.includes(d.id)) {
+          ids.push(d.id);
+        }
+      }
+    }
+    const seen = new Set<string>();
+    const titles: string[] = [];
+    for (const id of ids) {
+      const title = getDramaById(id)?.title || id;
+      if (title && !seen.has(title)) {
+        seen.add(title);
+        titles.push(title);
+      }
+    }
+    return titles;
+  };
+
   const formatOrderAmount = (req: Pick<MembershipOrder, 'currency' | 'paymentMethod' | 'expectedAmount' | 'amountUsd' | 'amountPkr'>) => {
     if (req.currency === 'USD' || req.paymentMethod === 'binance_qr') {
       const usd = Number(req.expectedAmount ?? req.amountUsd ?? 0);
@@ -1030,12 +1052,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     if (requestMethodFilter !== 'all' && effectiveMethod !== requestMethodFilter) return false;
     if (!requestSearch.trim()) return true;
     const q = requestSearch.toLowerCase();
+    const dramaText = resolvePackageDramaNames(req.planId, req.selectedDramaIds).join(' ').toLowerCase();
     return (
       req.id.toLowerCase().includes(q) ||
       (req.customerName || '').toLowerCase().includes(q) ||
       (req.customerEmail || '').toLowerCase().includes(q) ||
       (req.customerPhone || '').toLowerCase().includes(q) ||
-      req.planName.toLowerCase().includes(q)
+      req.planName.toLowerCase().includes(q) ||
+      dramaText.includes(q)
     );
   });
 
@@ -1048,11 +1072,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     if (membershipStatusFilter === 'history' && (!m.renewalHistory || m.renewalHistory.length === 0)) return false;
     if (!membershipSearch.trim()) return true;
     const q = membershipSearch.toLowerCase();
+    const dramaText = resolvePackageDramaNames(m.planId, m.selectedDramaIds).join(' ').toLowerCase();
     return (
       m.customerName.toLowerCase().includes(q) ||
       m.customerEmail.toLowerCase().includes(q) ||
       m.customerPhone.toLowerCase().includes(q) ||
-      m.planName.toLowerCase().includes(q)
+      m.planName.toLowerCase().includes(q) ||
+      dramaText.includes(q)
     );
   });
 
@@ -1072,10 +1098,21 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     if (accountAuthFilter !== 'all' && method !== accountAuthFilter) return false;
     if (!accountSearch.trim()) return true;
     const q = accountSearch.toLowerCase();
+    const memberPlanDramas = [
+      ...(overview?.memberships || [])
+        .filter((s) => s.memberId === member.id)
+        .map((s) => `${s.planName} ${resolvePackageDramaNames(s.planId, s.selectedDramaIds).join(' ')}`),
+      ...(overview?.requests || [])
+        .filter((r) => r.memberId === member.id)
+        .map((r) => `${r.planName} ${resolvePackageDramaNames(r.planId, r.selectedDramaIds).join(' ')}`),
+    ]
+      .join(' ')
+      .toLowerCase();
     return (
       member.fullName.toLowerCase().includes(q) ||
       member.email.toLowerCase().includes(q) ||
-      (member.phone || '').toLowerCase().includes(q)
+      (member.phone || '').toLowerCase().includes(q) ||
+      memberPlanDramas.includes(q)
     );
   });
 
@@ -1539,21 +1576,33 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                   </div>
                                 )}
                               </td>
-                              <td className="py-3.5 px-4 whitespace-nowrap">
-                                <div className="font-semibold text-[#0B0B0D]">
+                              <td className="py-3.5 px-4 space-y-1">
+                                <div className="font-semibold text-[#0B0B0D] whitespace-nowrap">
                                   {req.planName} ({req.durationDays}d)
                                 </div>
-                                <div className="text-[#16A34A] font-bold tabular-nums">
+                                <div className="text-[#16A34A] font-bold tabular-nums whitespace-nowrap">
                                   {formatOrderAmount(req)}
                                 </div>
                                 {req.indicativeLocalDisplay && (
-                                  <div className="text-[10px] text-zinc-400">
+                                  <div className="text-[10px] text-zinc-400 whitespace-nowrap">
                                     Ref: {req.indicativeLocalDisplay}
                                   </div>
                                 )}
+                                <div className="text-[11px] font-medium text-zinc-700 leading-snug max-w-[240px]">
+                                  {resolvePackageDramaNames(req.planId, req.selectedDramaIds).join(', ') || '—'}
+                                </div>
                               </td>
-                              <td className="py-3.5 px-4 max-w-[220px]">
-                                {req.selectedDramaIds.map((id) => getDramaById(id)?.title || id).join(', ')}
+                              <td className="py-3.5 px-4 max-w-[260px]">
+                                <div className="flex flex-wrap gap-1">
+                                  {resolvePackageDramaNames(req.planId, req.selectedDramaIds).map((title) => (
+                                    <span
+                                      key={title}
+                                      className="px-2 py-0.5 rounded-md bg-zinc-100 border border-zinc-200 text-[11px] font-semibold text-[#0B0B0D]"
+                                    >
+                                      {title}
+                                    </span>
+                                  ))}
+                                </div>
                               </td>
                               <td className="py-3.5 px-4 text-zinc-500 whitespace-nowrap">
                                 {formatDateTime(req.proofSubmittedAt || req.createdAt)}
@@ -1743,10 +1792,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                 <div className="text-zinc-500">{m.customerEmail}</div>
                                 {m.customerPhone && <div className="text-zinc-400">{m.customerPhone}</div>}
                               </td>
-                              <td className="py-3.5 px-4 whitespace-nowrap space-y-1">
-                                <div className="font-semibold">{m.planName}</div>
-                                <div className="text-zinc-600 font-semibold tabular-nums">
+                              <td className="py-3.5 px-4 space-y-1">
+                                <div className="font-semibold text-[#0B0B0D] whitespace-nowrap">{m.planName}</div>
+                                <div className="text-zinc-600 font-semibold tabular-nums whitespace-nowrap">
                                   {formatMembershipAmount(m)}
+                                </div>
+                                <div className="text-[11px] font-medium text-zinc-700 leading-snug max-w-[240px]">
+                                  {resolvePackageDramaNames(m.planId, m.selectedDramaIds).join(', ') || '—'}
                                 </div>
                                 <div className="flex flex-wrap gap-1">
                                   <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-semibold uppercase">
@@ -1763,8 +1815,17 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                   )}
                                 </div>
                               </td>
-                              <td className="py-3.5 px-4 max-w-[220px]">
-                                {m.selectedDramaIds.map((id) => getDramaById(id)?.title || id).join(', ')}
+                              <td className="py-3.5 px-4 max-w-[260px]">
+                                <div className="flex flex-wrap gap-1">
+                                  {resolvePackageDramaNames(m.planId, m.selectedDramaIds).map((title) => (
+                                    <span
+                                      key={title}
+                                      className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-950"
+                                    >
+                                      {title}
+                                    </span>
+                                  ))}
+                                </div>
                               </td>
                               <td className="py-3.5 px-4 whitespace-nowrap text-zinc-600">
                                 <div>Start: {formatDateTime(m.activatedAt)}</div>
@@ -1991,9 +2052,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       ) : (
                         filteredAccounts.map((member) => {
                           const method = getMemberAuthMethod(member);
-                          const activeSub = overview.memberships.find(
+                          const activeSubs = overview.memberships.filter(
                             (s) => s.memberId === member.id && s.status === 'active'
                           );
+                          const activeSub = activeSubs[0];
+                          const latestSub = overview.memberships.find((s) => s.memberId === member.id);
+                          const latestReq = overview.requests.find((r) => r.memberId === member.id);
                           return (
                             <tr key={member.id} className="hover:bg-zinc-50/70">
                               <td className="py-3.5 px-4">
@@ -2016,11 +2080,62 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                   </span>
                                 )}
                               </td>
-                              <td className="py-3.5 px-4 whitespace-nowrap">
-                                {activeSub ? (
-                                  <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700">
-                                    {activeSub.planName} (Active)
-                                  </span>
+                              <td className="py-3.5 px-4 max-w-[280px] space-y-1.5">
+                                {activeSubs.length > 0 ? (
+                                  activeSubs.map((sub) => {
+                                    const dramaNames = resolvePackageDramaNames(sub.planId, sub.selectedDramaIds);
+                                    return (
+                                      <div key={sub.id} className="space-y-1">
+                                        <span className="inline-block px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700">
+                                          {sub.planName} (Active)
+                                        </span>
+                                        {dramaNames.length > 0 && (
+                                          <div className="flex flex-wrap gap-1">
+                                            {dramaNames.map((title) => (
+                                              <span
+                                                key={title}
+                                                className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-[#0B0B0D]"
+                                              >
+                                                {title}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })
+                                ) : latestReq ? (
+                                  <div className="space-y-1">
+                                    <span className="inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                      {latestReq.planName} ({latestReq.status.replace('_', ' ')})
+                                    </span>
+                                    <div className="flex flex-wrap gap-1">
+                                      {resolvePackageDramaNames(latestReq.planId, latestReq.selectedDramaIds).map((title) => (
+                                        <span
+                                          key={title}
+                                          className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-zinc-700"
+                                        >
+                                          {title}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : latestSub ? (
+                                  <div className="space-y-1">
+                                    <span className="inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold bg-zinc-100 text-zinc-700">
+                                      {latestSub.planName} ({latestSub.status})
+                                    </span>
+                                    <div className="flex flex-wrap gap-1">
+                                      {resolvePackageDramaNames(latestSub.planId, latestSub.selectedDramaIds).map((title) => (
+                                        <span
+                                          key={title}
+                                          className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-zinc-700"
+                                        >
+                                          {title}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
                                 ) : (
                                   <span className="text-zinc-400">No active plan</span>
                                 )}
@@ -2181,6 +2296,23 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                               </div>
                             </div>
                             <p className="text-zinc-700">{notif.message}</p>
+                            {(notif.planId || (notif.dramaIds && notif.dramaIds.length > 0)) && (
+                              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                                {notif.planId && (
+                                  <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 font-semibold text-emerald-900">
+                                    {getPlanById(notif.planId)?.name || notif.planId}
+                                  </span>
+                                )}
+                                {resolvePackageDramaNames(notif.planId, notif.dramaIds).map((title) => (
+                                  <span
+                                    key={title}
+                                    className="px-2 py-0.5 rounded bg-white border border-zinc-200 font-medium text-zinc-700"
+                                  >
+                                    {title}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500">
                               <span>
                                 To: {notif.customerEmail || notif.memberId} · {formatDateTime(notif.createdAt)}
@@ -2857,7 +2989,17 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 <h3 className="text-xl font-bold text-[#0B0B0D] mt-1">
                   {selectedRequest.planName} — {formatOrderAmount(selectedRequest)} ({selectedRequest.durationDays} Days)
                 </h3>
-                <div className="text-xs font-mono text-zinc-500 mt-0.5">{selectedRequest.id}</div>
+                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                  {resolvePackageDramaNames(selectedRequest.planId, selectedRequest.selectedDramaIds).map((title) => (
+                    <span
+                      key={title}
+                      className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-950"
+                    >
+                      {title}
+                    </span>
+                  ))}
+                </div>
+                <div className="text-xs font-mono text-zinc-500 mt-1">{selectedRequest.id}</div>
               </div>
               <button
                 type="button"
@@ -2928,7 +3070,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   <div>
                     <span className="text-zinc-500">Selected Dramas:</span>{' '}
                     <strong className="text-[#0B0B0D]">
-                      {selectedRequest.selectedDramaIds.map((d) => getDramaById(d)?.title || d).join(', ')}
+                      {resolvePackageDramaNames(selectedRequest.planId, selectedRequest.selectedDramaIds).join(', ')}
                     </strong>
                   </div>
                   {selectedRequest.orderType === 'renewal' && (
