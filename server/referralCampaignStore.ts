@@ -1879,6 +1879,19 @@ export function exportMonthlyCommissionReportCsv(monthKey: string): string {
   return lines.join('\n');
 }
 
+export function getFullReferralCampaignStoreSnapshot() {
+  return {
+    referralCampaigns: ensureDefaultReferralCampaigns(),
+    referralVisits: readJson<ReferralVisitRecord[]>(VISITS_FILE, []),
+    referralUniqueVisitors: readJson<ReferralUniqueVisitorRecord[]>(UNIQUE_VISITORS_FILE, []),
+    userCampaignAttributions: readJson<UserCampaignAttribution[]>(USER_ATTRIBUTIONS_FILE, []),
+    orderCampaignAttributions: readJson<OrderCampaignAttribution[]>(ORDER_ATTRIBUTIONS_FILE, []),
+    campaignCommissions: readJson<CampaignCommissionRecord[]>(COMMISSIONS_FILE, []),
+    commissionPayments: readJson<CommissionPaymentRecord[]>(PAYMENTS_FILE, []),
+    monthlyCommissionReports: readJson<MonthlyCommissionReportSnapshot[]>(MONTHLY_REPORTS_FILE, []),
+  };
+}
+
 export function getReferralCampaignsAdminOverview(monthKey?: string) {
   const campaigns = ensureDefaultReferralCampaigns().map((c) => ({
     ...c,
@@ -1898,6 +1911,7 @@ export function getReferralCampaignsAdminOverview(monthKey?: string) {
     payments: payments.slice(0, 200),
     monthlyReport: currentMonthlyReport,
     savedMonthlyReports: savedMonthlyReports.slice(0, 36),
+    fullSnapshot: getFullReferralCampaignStoreSnapshot(),
     summary: {
       totalCampaigns: campaigns.length,
       activeCampaigns: campaigns.filter((c) => c.status === 'active').length,
@@ -1939,26 +1953,102 @@ export function mergeCampaignCloudSnapshot(payload: {
   commissionPayments?: CommissionPaymentRecord[];
   monthlyCommissionReports?: MonthlyCommissionReportSnapshot[];
 }): void {
-  const mergeById = <T extends { id: string }>(filePath: string, incoming?: T[]) => {
+  if (!payload || typeof payload !== 'object') return;
+
+  if (Array.isArray(payload.referralCampaigns) && payload.referralCampaigns.length > 0) {
+    const current = ensureDefaultReferralCampaigns();
+    const byId = new Map(current.map((c) => [c.id, c]));
+    const bySlug = new Map(current.map((c) => [String(c.slug || '').toLowerCase(), c]));
+
+    for (const inc of payload.referralCampaigns) {
+      if (!inc?.id || !inc?.slug) continue;
+      const slugLower = String(inc.slug).toLowerCase();
+      const existing = byId.get(inc.id) || bySlug.get(slugLower);
+      const normalizedInc: ReferralCampaign = {
+        ...inc,
+        referralUrl: buildCampaignReferralUrl(inc.slug),
+        description: inc.description || '',
+        commissionRatePercent: Number(inc.commissionRatePercent) || 2,
+        attributionWindowDays: Number(inc.attributionWindowDays) || 30,
+        status: inc.status || 'active',
+        createdAt: inc.createdAt || new Date().toISOString(),
+        updatedAt: inc.updatedAt || inc.createdAt || new Date().toISOString(),
+        createdByAdminEmail: inc.createdByAdminEmail || 'partner@feviqo.com',
+        activityHistory: Array.isArray(inc.activityHistory) ? inc.activityHistory : [],
+      };
+      if (!existing) {
+        byId.set(normalizedInc.id, normalizedInc);
+        bySlug.set(slugLower, normalizedInc);
+      } else {
+        const incUpdated = Date.parse(normalizedInc.updatedAt || '') || 0;
+        const extUpdated = Date.parse(existing.updatedAt || '') || 0;
+        if (incUpdated >= extUpdated) {
+          const merged = {
+            ...existing,
+            ...normalizedInc,
+            id: existing.id,
+            referralUrl: buildCampaignReferralUrl(normalizedInc.slug),
+            activityHistory:
+              normalizedInc.activityHistory.length >= (existing.activityHistory?.length || 0)
+                ? normalizedInc.activityHistory
+                : existing.activityHistory,
+          };
+          byId.set(existing.id, merged);
+          bySlug.set(String(merged.slug).toLowerCase(), merged);
+        }
+      }
+    }
+    writeJson(CAMPAIGNS_FILE, Array.from(byId.values()));
+  }
+
+  if (Array.isArray(payload.referralUniqueVisitors) && payload.referralUniqueVisitors.length > 0) {
+    const current = readJson<ReferralUniqueVisitorRecord[]>(UNIQUE_VISITORS_FILE, []);
+    const map = new Map(current.map((item) => [item.id, item]));
+    for (const inc of payload.referralUniqueVisitors) {
+      if (!inc?.id) continue;
+      const existing = map.get(inc.id);
+      if (!existing) {
+        map.set(inc.id, inc);
+      } else if ((Number(inc.visitCount) || 0) > (Number(existing.visitCount) || 0)) {
+        map.set(inc.id, {
+          ...existing,
+          ...inc,
+          visitCount: Math.max(Number(existing.visitCount) || 1, Number(inc.visitCount) || 1),
+        });
+      }
+    }
+    writeJson(UNIQUE_VISITORS_FILE, Array.from(map.values()));
+  }
+
+  const mergeByIdWithTimestamp = <T extends { id: string; updatedAt?: string; createdAt?: string }>(
+    filePath: string,
+    incoming?: T[]
+  ) => {
     if (!Array.isArray(incoming) || incoming.length === 0) return;
     const current = readJson<T[]>(filePath, []);
     const map = new Map(current.map((item) => [item.id, item]));
     for (const inc of incoming) {
-      if (inc?.id && !map.has(inc.id)) {
+      if (!inc?.id) continue;
+      const existing = map.get(inc.id);
+      if (!existing) {
         map.set(inc.id, inc);
+      } else {
+        const incTs = Date.parse(inc.updatedAt || inc.createdAt || '') || 0;
+        const extTs = Date.parse(existing.updatedAt || existing.createdAt || '') || 0;
+        if (incTs > extTs) {
+          map.set(inc.id, { ...existing, ...inc });
+        }
       }
     }
     writeJson(filePath, Array.from(map.values()));
   };
 
-  mergeById(CAMPAIGNS_FILE, payload.referralCampaigns);
-  mergeById(VISITS_FILE, payload.referralVisits);
-  mergeById(UNIQUE_VISITORS_FILE, payload.referralUniqueVisitors);
-  mergeById(USER_ATTRIBUTIONS_FILE, payload.userCampaignAttributions);
-  mergeById(ORDER_ATTRIBUTIONS_FILE, payload.orderCampaignAttributions);
-  mergeById(COMMISSIONS_FILE, payload.campaignCommissions);
-  mergeById(PAYMENTS_FILE, payload.commissionPayments);
-  mergeById(MONTHLY_REPORTS_FILE, payload.monthlyCommissionReports);
+  mergeByIdWithTimestamp(VISITS_FILE, payload.referralVisits);
+  mergeByIdWithTimestamp(USER_ATTRIBUTIONS_FILE, payload.userCampaignAttributions as any);
+  mergeByIdWithTimestamp(ORDER_ATTRIBUTIONS_FILE, payload.orderCampaignAttributions);
+  mergeByIdWithTimestamp(COMMISSIONS_FILE, payload.campaignCommissions);
+  mergeByIdWithTimestamp(PAYMENTS_FILE, payload.commissionPayments);
+  mergeByIdWithTimestamp(MONTHLY_REPORTS_FILE, payload.monthlyCommissionReports as any);
 }
 
 export function syncCampaignDocsToFirestore(): void {

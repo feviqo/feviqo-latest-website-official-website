@@ -79,6 +79,7 @@ import {
   deleteAdminPromoCode,
   updateAdminReferralConfig,
   updateAdminReferralStatus,
+  getStoredReferralCampaignsVault,
 } from '../../services/membershipService';
 import { auth, googleProvider } from '../../firebase';
 import {
@@ -326,9 +327,18 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
           customerNotifications: cloudSnap.customerNotifications,
           schedulerRuns: cloudSnap.schedulerRuns,
           config: cloudSnap.config,
+          referralCampaigns: cloudSnap.referralCampaigns,
+          referralVisits: cloudSnap.referralVisits,
+          referralUniqueVisitors: cloudSnap.referralUniqueVisitors,
+          userCampaignAttributions: cloudSnap.userCampaignAttributions,
+          orderCampaignAttributions: cloudSnap.orderCampaignAttributions,
+          campaignCommissions: cloudSnap.campaignCommissions,
+          commissionPayments: cloudSnap.commissionPayments,
+          monthlyCommissionReports: cloudSnap.monthlyCommissionReports,
         });
         let latestOverview = 'overview' in mergeRes ? mergeRes.overview : opts?.seedOverview || null;
         if (latestOverview) {
+          const vault = getStoredReferralCampaignsVault();
           await pushAdminSnapshotToFirestore({
             members: latestOverview.members,
             orders: latestOverview.requests,
@@ -336,6 +346,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             history: latestOverview.history,
             customerNotifications: latestOverview.customerNotifications,
             config: latestOverview.config,
+            referralCampaigns: vault?.referralCampaigns || cloudSnap.referralCampaigns,
+            referralVisits: vault?.referralVisits || cloudSnap.referralVisits,
+            referralUniqueVisitors: vault?.referralUniqueVisitors || cloudSnap.referralUniqueVisitors,
+            userCampaignAttributions: vault?.userCampaignAttributions || cloudSnap.userCampaignAttributions,
+            orderCampaignAttributions: vault?.orderCampaignAttributions || cloudSnap.orderCampaignAttributions,
+            campaignCommissions: vault?.campaignCommissions || cloudSnap.campaignCommissions,
+            commissionPayments: vault?.commissionPayments || cloudSnap.commissionPayments,
+            monthlyCommissionReports: vault?.monthlyCommissionReports || cloudSnap.monthlyCommissionReports,
           });
           setOverview(latestOverview);
           syncSettingsFromOverview(latestOverview);
@@ -593,6 +611,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
   const mirrorToCloudQuietly = (ov: AdminMembershipsOverview) => {
     if (isFirebaseAdminUser()) {
+      const vault = getStoredReferralCampaignsVault();
       pushAdminSnapshotToFirestore({
         members: ov.members,
         orders: ov.requests,
@@ -600,6 +619,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         history: ov.history,
         customerNotifications: ov.customerNotifications,
         config: ov.config,
+        referralCampaigns: vault?.referralCampaigns,
+        referralVisits: vault?.referralVisits,
+        referralUniqueVisitors: vault?.referralUniqueVisitors,
+        userCampaignAttributions: vault?.userCampaignAttributions,
+        orderCampaignAttributions: vault?.orderCampaignAttributions,
+        campaignCommissions: vault?.campaignCommissions,
+        commissionPayments: vault?.commissionPayments,
+        monthlyCommissionReports: vault?.monthlyCommissionReports,
       })
         .then(() => setCloudSyncedAt(new Date().toISOString()))
         .catch(() => {});

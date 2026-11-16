@@ -100,7 +100,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "name": "FEVIQO Unlimited Video Editing Showreel",
         "description": "High-converting creator hooks, luxury villa walkthroughs, performance ad creative samples, and motion graphics edited by FEVIQO dedicated editors.",
         "thumbnailUrl": [
-          "https://feviqo.com/images/feviqo-hero-poster.jpg"
+          "https://feviqo.com/HEADER-removebg-preview.png"
         ],
         "uploadDate": "2026-01-15T08:00:00+00:00",
         "contentUrl": "https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8",
@@ -316,7 +316,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
           "name": "Season 7"
         }
       });
-    } else if (pathname === '/membership') {
+    } else if (pathname === '/membership' || pathname.startsWith('/membership/')) {
       schemaGraph.push(
         {
           "@type": "WebPage",

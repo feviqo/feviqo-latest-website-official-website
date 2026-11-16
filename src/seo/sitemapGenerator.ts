@@ -40,34 +40,35 @@ function formatUrlNode(
   }
   const fullLoc = `${SITE_ORIGIN}${normalizedPath}`;
   
-  let node = `  <url>\r\n`;
-  node += `    <loc>${escapeXml(fullLoc)}</loc>\r\n`;
-  node += `    <lastmod>${lastmod}</lastmod>\r\n`;
-  node += `    <changefreq>${changefreq}</changefreq>\r\n`;
-  node += `    <priority>${priority}</priority>\r\n`;
+  let node = `  <url>\n`;
+  node += `    <loc>${escapeXml(fullLoc)}</loc>\n`;
+  node += `    <lastmod>${lastmod}</lastmod>\n`;
+  node += `    <changefreq>${changefreq}</changefreq>\n`;
+  node += `    <priority>${priority}</priority>\n`;
 
   if (imageLoc) {
-    node += `    <image:image>\r\n`;
-    node += `      <image:loc>${escapeXml(imageLoc)}</image:loc>\r\n`;
+    node += `    <image:image>\n`;
+    node += `      <image:loc>${escapeXml(imageLoc)}</image:loc>\n`;
     if (imageTitle) {
-      node += `      <image:title>${escapeXml(imageTitle)}</image:title>\r\n`;
+      node += `      <image:title>${escapeXml(imageTitle)}</image:title>\n`;
     }
-    node += `    </image:image>\r\n`;
+    node += `    </image:image>\n`;
   }
 
   if (videoInfo) {
-    node += `    <video:video>\r\n`;
-    node += `      <video:thumbnail_loc>${escapeXml(videoInfo.thumbnail)}</video:thumbnail_loc>\r\n`;
-    node += `      <video:title>${escapeXml(videoInfo.title)}</video:title>\r\n`;
-    node += `      <video:description>${escapeXml(videoInfo.description)}</video:description>\r\n`;
-    node += `      <video:content_loc>${escapeXml(videoInfo.contentLoc)}</video:content_loc>\r\n`;
-    node += `      <video:duration>${videoInfo.duration || '8700'}</video:duration>\r\n`;
-    node += `      <video:publication_date>${videoInfo.pubDate || '2026-10-08T18:00:00+00:00'}</video:publication_date>\r\n`;
-    node += `      <video:family_friendly>YES</video:family_friendly>\r\n`;
-    node += `    </video:video>\r\n`;
+    node += `    <video:video>\n`;
+    node += `      <video:thumbnail_loc>${escapeXml(videoInfo.thumbnail)}</video:thumbnail_loc>\n`;
+    node += `      <video:title>${escapeXml(videoInfo.title)}</video:title>\n`;
+    node += `      <video:description>${escapeXml(videoInfo.description)}</video:description>\n`;
+    node += `      <video:player_loc>${escapeXml(fullLoc)}</video:player_loc>\n`;
+    node += `      <video:content_loc>${escapeXml(videoInfo.contentLoc)}</video:content_loc>\n`;
+    node += `      <video:duration>${videoInfo.duration || '8700'}</video:duration>\n`;
+    node += `      <video:publication_date>${videoInfo.pubDate || '2026-10-08T18:00:00+00:00'}</video:publication_date>\n`;
+    node += `      <video:family_friendly>YES</video:family_friendly>\n`;
+    node += `    </video:video>\n`;
   }
 
-  node += `  </url>\r\n`;
+  node += `  </url>\n`;
   return node;
 }
 
@@ -81,10 +82,10 @@ export function generateSitemapXml(): string {
   const seenUrls = new Set<string>();
   const defaultLastmod = DEFAULT_SITE_LASTMOD;
 
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>\r\n`;
-  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\r\n`;
-  xml += `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"\r\n`;
-  xml += `        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\r\n`;
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n`;
+  xml += `        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"\n`;
+  xml += `        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n`;
 
   const addNode = (
     urlPath: string,
@@ -216,7 +217,7 @@ export function generateSitemapXml(): string {
       };
     } else if (routeKey === '/') {
       videoInfo = {
-        thumbnail: 'https://feviqo.com/images/feviqo-hero-poster.jpg',
+        thumbnail: 'https://feviqo.com/HEADER-removebg-preview.png',
         title: 'FEVIQO Unlimited Video Editing Showreel',
         description: 'High-converting creator hooks, luxury villa walkthroughs, and performance ad creative samples.',
         contentLoc: 'https://stream.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M.m3u8',

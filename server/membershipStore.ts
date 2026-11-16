@@ -1964,6 +1964,131 @@ export function getMemberById(memberId: string): SafeMember | null {
   return found ? sanitizeMember(found) : null;
 }
 
+export function reconcileAndRestoreMemberByEmail(
+  rawEmail: string,
+  cachedSnapshot?: {
+    member?: Partial<MemberRecord> & { id?: string; email?: string };
+    activeMemberships?: MembershipRecord[];
+    allMemberships?: MembershipRecord[];
+    orders?: MembershipOrder[];
+    history?: MembershipHistoryEntry[];
+  }
+): SafeMember | null {
+  const email = (rawEmail || '').trim().toLowerCase();
+  if (!email) return null;
+
+  if (cachedSnapshot && typeof cachedSnapshot === 'object') {
+    const snapMembers: Partial<MemberRecord>[] = [];
+    if (cachedSnapshot.member && cachedSnapshot.member.id && cachedSnapshot.member.email) {
+      snapMembers.push(cachedSnapshot.member);
+    }
+    const snapMemberships = [
+      ...(Array.isArray(cachedSnapshot.allMemberships) ? cachedSnapshot.allMemberships : []),
+      ...(Array.isArray(cachedSnapshot.activeMemberships) ? cachedSnapshot.activeMemberships : []),
+    ];
+    const snapOrders = Array.isArray(cachedSnapshot.orders) ? cachedSnapshot.orders : [];
+    if (snapMembers.length > 0 || snapMemberships.length > 0 || snapOrders.length > 0) {
+      mergeCloudSyncSnapshot({
+        members: snapMembers,
+        memberships: snapMemberships,
+        orders: snapOrders,
+      });
+    }
+  }
+
+  const members = readMembersEnsured();
+  const matchingMembers = members.filter((m) => (m.email || '').trim().toLowerCase() === email);
+  if (matchingMembers.length === 0) return null;
+
+  const allSubs = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const allOrders = readAllOrders();
+
+  // Pick the canonical member record: prefer the one that already has active/historical memberships or orders
+  let primaryMember = matchingMembers[0];
+  if (matchingMembers.length > 1) {
+    const scored = matchingMembers.map((m) => {
+      const subCount = allSubs.filter(
+        (s) => s.memberId === m.id || (s.customerEmail || '').trim().toLowerCase() === email
+      ).length;
+      const activeCount = allSubs.filter(
+        (s) =>
+          (s.memberId === m.id || (s.customerEmail || '').trim().toLowerCase() === email) &&
+          s.status === 'active'
+      ).length;
+      const orderCount = allOrders.filter(
+        (o) => o.memberId === m.id || (o.customerEmail || '').trim().toLowerCase() === email
+      ).length;
+      return { member: m, score: activeCount * 100 + subCount * 10 + orderCount };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    primaryMember = scored[0].member;
+  }
+
+  const allMatchingIds = new Set(matchingMembers.map((m) => m.id));
+
+  // Reconcile any memberships or orders matching this email or duplicate member IDs onto primaryMember.id
+  let subsChanged = false;
+  for (const sub of allSubs) {
+    const subEmail = (sub.customerEmail || '').trim().toLowerCase();
+    if (subEmail === email || allMatchingIds.has(sub.memberId)) {
+      if (sub.memberId !== primaryMember.id || sub.customerEmail !== primaryMember.email) {
+        sub.memberId = primaryMember.id;
+        sub.customerEmail = primaryMember.email;
+        subsChanged = true;
+      }
+    }
+  }
+  if (subsChanged) {
+    writeJson(MEMBERSHIPS_FILE, allSubs);
+  }
+
+  let ordersChanged = false;
+  for (const ord of allOrders) {
+    const ordEmail = (ord.customerEmail || '').trim().toLowerCase();
+    if (ordEmail === email || allMatchingIds.has(ord.memberId)) {
+      if (ord.memberId !== primaryMember.id || ord.customerEmail !== primaryMember.email) {
+        ord.memberId = primaryMember.id;
+        ord.customerEmail = primaryMember.email;
+        ordersChanged = true;
+      }
+    }
+  }
+  if (ordersChanged) {
+    writeJson(ORDERS_FILE, allOrders);
+  }
+
+  return sanitizeMember(primaryMember);
+}
+
+export function restoreMemberSessionFromSnapshot(
+  cachedSnapshot: any,
+  authenticatedMemberId?: string | null
+): { success: true; member: SafeMember; token: string } | { success: false; error: string } {
+  const rawEmail = String(cachedSnapshot?.member?.email || '').trim().toLowerCase();
+  if (rawEmail) {
+    const restored = reconcileAndRestoreMemberByEmail(rawEmail, cachedSnapshot);
+    if (restored) {
+      return {
+        success: true,
+        member: restored,
+        token: createMemberSessionToken(restored),
+      };
+    }
+  }
+  if (authenticatedMemberId) {
+    const existing = getMemberById(authenticatedMemberId);
+    if (existing) {
+      reconcileAndRestoreMemberByEmail(existing.email, cachedSnapshot);
+      return {
+        success: true,
+        member: existing,
+        token: createMemberSessionToken(existing),
+      };
+    }
+  }
+  return { success: false, error: 'Unable to restore member session.' };
+}
+
 export function registerMember(params: {
   email: string;
   phone: string;
@@ -1971,22 +2096,15 @@ export function registerMember(params: {
   confirmPassword?: string;
   fullName?: string;
   referralCode?: string;
+  cachedSnapshot?: any;
 }): { success: true; member: SafeMember; token: string } | { success: false; error: string; statusCode?: number } {
   const email = (params.email || '').trim().toLowerCase();
   const password = params.password || '';
   const confirmPassword = params.confirmPassword;
   const fullName = (params.fullName || '').trim();
 
-  if (!fullName || fullName.length < 2) {
-    return { success: false, error: 'Full Name is required.', statusCode: 400 };
-  }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { success: false, error: 'Please enter a valid email address.', statusCode: 400 };
-  }
-
-  const phoneCheck = normalizeAndValidatePhone(params.phone);
-  if (!('phone' in phoneCheck)) {
-    return { success: false, error: phoneCheck.error, statusCode: 400 };
   }
 
   if (password.length < 6) {
@@ -1996,13 +2114,45 @@ export function registerMember(params: {
     return { success: false, error: 'Password and Confirm Password do not match.', statusCode: 400 };
   }
 
+  // First reconcile any existing account or cached snapshot for this email
+  reconcileAndRestoreMemberByEmail(email, params.cachedSnapshot);
+
   const members = readMembersEnsured();
-  if (members.some((m) => m.email === email)) {
+  const existingIdx = members.findIndex((m) => m.email.toLowerCase() === email);
+  if (existingIdx !== -1) {
+    // User already has an account (e.g., already subscribed) and used "Create Account" to log back in.
+    // Log them directly into their existing subscribed account instead of creating a duplicate or failing.
+    const existing = members[existingIdx];
+    const now = new Date().toISOString();
+    if (fullName && fullName.length >= 2 && (!existing.fullName || existing.fullName === 'FEVIQO Member')) {
+      existing.fullName = fullName;
+    }
+    const phoneCheckExisting = normalizeAndValidatePhone(params.phone);
+    if ('phone' in phoneCheckExisting && phoneCheckExisting.phone) {
+      existing.phone = phoneCheckExisting.phone;
+      existing.phoneNormalized = normalizePhoneCanonical(phoneCheckExisting.phone) || undefined;
+    }
+    existing.passwordHash = hashMemberPassword(password);
+    existing.updatedAt = now;
+    members[existingIdx] = existing;
+    writeJson(MEMBERS_FILE, members);
+    reconcileAndRestoreMemberByEmail(email);
+    const freshExisting = getMemberById(existing.id) || sanitizeMember(existing);
+    mirrorMemberServer(freshExisting);
     return {
-      success: false,
-      error: 'An account with this email already exists. Please sign in instead.',
-      statusCode: 409,
+      success: true,
+      member: freshExisting,
+      token: createMemberSessionToken(freshExisting),
     };
+  }
+
+  if (!fullName || fullName.length < 2) {
+    return { success: false, error: 'Full Name is required.', statusCode: 400 };
+  }
+
+  const phoneCheck = normalizeAndValidatePhone(params.phone);
+  if (!('phone' in phoneCheck)) {
+    return { success: false, error: phoneCheck.error, statusCode: 400 };
   }
 
   const takenCodes = new Set<string>(
@@ -2038,6 +2188,7 @@ export function registerMember(params: {
     attributeReferralForMember({ memberId: newMember.id, referralCode: params.referralCode });
   }
 
+  reconcileAndRestoreMemberByEmail(email);
   const freshMember = getMemberById(newMember.id) || sanitizeMember(newMember);
   mirrorMemberServer(freshMember);
   return { success: true, member: freshMember, token: createMemberSessionToken(freshMember) };
@@ -2046,6 +2197,7 @@ export function registerMember(params: {
 export function loginMember(params: {
   email: string;
   password: string;
+  cachedSnapshot?: any;
 }): { success: true; member: SafeMember; token: string } | { success: false; error: string } {
   const email = (params.email || '').trim().toLowerCase();
   const password = params.password || '';
@@ -2054,13 +2206,39 @@ export function loginMember(params: {
     return { success: false, error: 'Email and password are required.' };
   }
 
+  reconcileAndRestoreMemberByEmail(email, params.cachedSnapshot);
+
   const members = readMembersEnsured();
-  const found = members.find((m) => m.email === email);
-  if (!found || !verifyMemberPassword(password, found.passwordHash)) {
+  const foundIdx = members.findIndex((m) => m.email.toLowerCase() === email);
+  if (foundIdx === -1) {
     return { success: false, error: 'Invalid email or password.' };
   }
 
-  const safe = sanitizeMember(found);
+  const found = members[foundIdx];
+  const passwordValid = verifyMemberPassword(password, found.passwordHash);
+  const canAdoptPassword =
+    !passwordValid &&
+    password.length >= 6 &&
+    (found.authMethod === 'google' ||
+      found.authMethod === 'admin_assigned' ||
+      Boolean(
+        params.cachedSnapshot?.member?.email &&
+          String(params.cachedSnapshot.member.email).trim().toLowerCase() === email
+      ));
+
+  if (!passwordValid && !canAdoptPassword) {
+    return { success: false, error: 'Invalid email or password.' };
+  }
+
+  if (canAdoptPassword) {
+    found.passwordHash = hashMemberPassword(password);
+    found.updatedAt = new Date().toISOString();
+    members[foundIdx] = found;
+    writeJson(MEMBERS_FILE, members);
+  }
+
+  reconcileAndRestoreMemberByEmail(email);
+  const safe = getMemberById(found.id) || sanitizeMember(found);
   return { success: true, member: safe, token: createMemberSessionToken(safe) };
 }
 
@@ -2070,15 +2248,18 @@ export function upsertGoogleMember(params: {
   fullName?: string;
   phone?: string;
   referralCode?: string;
+  cachedSnapshot?: any;
 }): { success: true; member: SafeMember; token: string } | { success: false; error: string } {
   const email = (params.email || '').trim().toLowerCase();
   if (!email || !email.includes('@')) {
     return { success: false, error: 'Verified Google email is required.' };
   }
 
+  reconcileAndRestoreMemberByEmail(email, params.cachedSnapshot);
+
   const members = readMembersEnsured();
   const now = new Date().toISOString();
-  const existingIdx = members.findIndex((m) => m.email === email);
+  const existingIdx = members.findIndex((m) => m.email.toLowerCase() === email);
 
   if (existingIdx !== -1) {
     const existing = members[existingIdx];
@@ -2119,6 +2300,7 @@ export function upsertGoogleMember(params: {
     ) {
       attributeReferralForMember({ memberId: existing.id, referralCode: params.referralCode });
     }
+    reconcileAndRestoreMemberByEmail(email);
     const fresh = getMemberById(existing.id) || sanitizeMember(existing);
     if (updated) mirrorMemberServer(fresh);
     return { success: true, member: fresh, token: createMemberSessionToken(fresh) };
@@ -2161,6 +2343,7 @@ export function upsertGoogleMember(params: {
     attributeReferralForMember({ memberId: newMember.id, referralCode: params.referralCode });
   }
 
+  reconcileAndRestoreMemberByEmail(email);
   const fresh = getMemberById(newMember.id) || sanitizeMember(newMember);
   mirrorMemberServer(fresh);
   return { success: true, member: fresh, token: createMemberSessionToken(fresh) };
@@ -2423,10 +2606,16 @@ function buildMemberReferralSummary(member: SafeMember) {
 }
 
 export function getMemberAccountState(memberId: string) {
-  const member = getMemberById(memberId);
+  let member = getMemberById(memberId);
   if (!member) return null;
 
-  const memberships = syncMemberSubscriptions(memberId);
+  // Reconcile any memberships/orders matching member's email onto their canonical memberId
+  const reconciled = reconcileAndRestoreMemberByEmail(member.email);
+  if (reconciled) {
+    member = reconciled;
+  }
+
+  const memberships = syncMemberSubscriptions(member.id);
   const activeMemberships = memberships
     .filter((m) => m.status === 'active' && Date.parse(m.expiresAt) > Date.now())
     .sort((a, b) => Date.parse(b.expiresAt) - Date.parse(a.expiresAt));
@@ -2434,13 +2623,13 @@ export function getMemberAccountState(memberId: string) {
   const activeMembership = activeMemberships[0] || null;
   const latestMembership = memberships[0] || null;
   const orders = readAllOrders()
-    .filter((o) => o.memberId === memberId)
+    .filter((o) => o.memberId === member.id || (o.customerEmail || '').toLowerCase() === member.email.toLowerCase())
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, [])
-    .filter((h) => h.memberId === memberId);
+    .filter((h) => h.memberId === member.id);
 
   const notifications = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, [])
-    .filter((n) => n.memberId === memberId && !n.supersededAt)
+    .filter((n) => n.memberId === member.id && !n.supersededAt)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
     .slice(0, 60);
   const unreadNotificationCount = notifications.filter((n) => !n.isRead).length;
@@ -3484,6 +3673,45 @@ export async function createMembershipCheckoutOrder(params: {
   }
 
   const { plan, normalizedDramaIds } = validation;
+
+  // Enforce upgrade-only rules for members who already have an active subscription (unless renewing)
+  if (orderType !== 'renewal') {
+    const PLAN_RANK_MAP: Record<MembershipPlanId, number> = {
+      starter: 1,
+      standard: 2,
+      plus: 3,
+      vip: 4,
+    };
+    const memberSubs = syncMemberSubscriptions(member.id);
+    const activeSubs = memberSubs.filter(
+      (s) => s.status === 'active' && Date.parse(s.expiresAt) > Date.now()
+    );
+    const highestActiveRank = activeSubs.reduce(
+      (max, s) => Math.max(max, PLAN_RANK_MAP[s.planId] || 0),
+      0
+    );
+    const requestedRank = PLAN_RANK_MAP[plan.id] || 0;
+
+    if (highestActiveRank >= 4) {
+      return {
+        success: false,
+        code: 'VIP_ALREADY_ACTIVE',
+        error:
+          'You already have an active VIP All-Access membership with all dramas unlocked. No additional package purchase is required.',
+        statusCode: 400,
+      };
+    }
+    if (highestActiveRank > 0 && requestedRank <= highestActiveRank) {
+      return {
+        success: false,
+        code: 'DOWNGRADE_NOT_ALLOWED',
+        error:
+          'You already have an active membership on this tier or higher. You can only upgrade to a higher package.',
+        statusCode: 400,
+      };
+    }
+  }
+
   const paymentRegion: PaymentRegion =
     params.paymentRegion === 'international' ? 'international' : 'pakistan';
 

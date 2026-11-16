@@ -250,6 +250,34 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },
+  '/teskilat/episode-193': {
+    path: '/teskilat/episode-193',
+    pageName: 'Teskilat Episode 193 Urdu Subtitles',
+    seoTitle: 'Teşkilat Season 7 Episode 193 Urdu Subtitles (Bolum 193) | FEVIQO',
+    metaDescription: 'Watch Teşkilat Season 7 Episode 193 (Bolum 193) in 1080p HD with Urdu subtitles exclusively on FEVIQO Premium.',
+    focusKeyword: 'Teskilat Episode 193 Urdu Subtitles',
+    secondaryKeywords: ['Teskilat 193 Urdu', 'Teskilat Bolum 193', 'Teskilat Season 7 Episode 193'],
+    canonicalUrl: 'https://feviqo.com/teskilat/episode-193',
+    ogTitle: 'Teşkilat Season 7 Episode 193 Urdu Subtitles (Bolum 193) | FEVIQO',
+    ogDescription: 'Watch Teşkilat Season 7 Episode 193 (Bolum 193) in 1080p HD with Urdu subtitles exclusively on FEVIQO Premium.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1pDs3oj0h6eOP64xO10eYp6TMqcGs2AqP',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
+  '/teskilat/episode-192': {
+    path: '/teskilat/episode-192',
+    pageName: 'Teskilat Episode 192 Urdu Subtitles',
+    seoTitle: 'Teşkilat Season 7 Episode 192 Urdu Subtitles (Bolum 192) | FEVIQO',
+    metaDescription: 'Watch Teşkilat Season 7 Episode 192 (Bolum 192) in 1080p HD with Urdu subtitles exclusively on FEVIQO Premium.',
+    focusKeyword: 'Teskilat Episode 192 Urdu Subtitles',
+    secondaryKeywords: ['Teskilat 192 Urdu', 'Teskilat Bolum 192', 'Teskilat Season 7 Episode 192'],
+    canonicalUrl: 'https://feviqo.com/teskilat/episode-192',
+    ogTitle: 'Teşkilat Season 7 Episode 192 Urdu Subtitles (Bolum 192) | FEVIQO',
+    ogDescription: 'Watch Teşkilat Season 7 Episode 192 (Bolum 192) in 1080p HD with Urdu subtitles exclusively on FEVIQO Premium.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1Yuogsbnt87ZRWK28sOju1Mx5n2bz9ztw',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
   '/teskilat/episode-189': {
     path: '/teskilat/episode-189',
     pageName: 'Teskilat Episode 189 Watch Page',
@@ -390,7 +418,7 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     canonicalUrl: 'https://feviqo.com/membership',
     ogTitle: 'FEVIQO Premium Membership – Turkish Dramas in Urdu Plans',
     ogDescription: 'Watch Teşkilat, Mehmed & Güneşin Doğduğu Yer in Urdu HD. Flexible Starter, Standard, Plus, and VIP plans starting at PKR 299 or $1.20 USD.',
-    ogImage: 'https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2',
+    ogImage: 'https://feviqo.com/images/MEHMED.png',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'Service'
   },

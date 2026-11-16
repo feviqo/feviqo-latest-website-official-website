@@ -584,6 +584,14 @@ export interface CloudMembershipSnapshot {
   customerNotifications: CustomerNotification[];
   schedulerRuns: SchedulerRunLog[];
   config?: MembershipConfig | null;
+  referralCampaigns?: any[];
+  referralVisits?: any[];
+  referralUniqueVisitors?: any[];
+  userCampaignAttributions?: any[];
+  orderCampaignAttributions?: any[];
+  campaignCommissions?: any[];
+  commissionPayments?: any[];
+  monthlyCommissionReports?: any[];
 }
 
 export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSnapshot> {
@@ -597,9 +605,17 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
   const orders: MembershipOrder[] = [];
   const memberships: AdminMembershipRecord[] = [];
   const history: MembershipHistoryEntry[] = [];
-  const customerNotifications: CustomerNotification[] = [];
+  const customerNotificationsList: CustomerNotification[] = [];
   const schedulerRuns: SchedulerRunLog[] = [];
   let config: MembershipConfig | null = null;
+  const referralCampaigns: any[] = [];
+  const referralVisits: any[] = [];
+  const referralUniqueVisitors: any[] = [];
+  const userCampaignAttributions: any[] = [];
+  const orderCampaignAttributions: any[] = [];
+  const campaignCommissions: any[] = [];
+  const commissionPayments: any[] = [];
+  const monthlyCommissionReports: any[] = [];
 
   try {
     const snap = await getDocs(collection(db, 'members'));
@@ -752,7 +768,7 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
     const snap = await getDocs(collection(db, 'memberNotifications'));
     snap.forEach((d) => {
       const data = d.data();
-      customerNotifications.push({
+      customerNotificationsList.push({
         id: data.id || d.id,
         memberId: data.memberId,
         ownerUid: data.ownerUid,
@@ -803,6 +819,29 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
     handleFirestoreError(err, OperationType.LIST, 'schedulerRuns');
   }
 
+  const readCampaignCollectionSafely = async (colName: string, target: any[]) => {
+    try {
+      const snap = await getDocs(collection(db, colName));
+      snap.forEach((d) => {
+        const data = d.data();
+        target.push({ ...data, id: data.id || d.id });
+      });
+    } catch {
+      // Non-fatal if collection empty or rules pending
+    }
+  };
+
+  await Promise.all([
+    readCampaignCollectionSafely('referralCampaigns', referralCampaigns),
+    readCampaignCollectionSafely('referralVisits', referralVisits),
+    readCampaignCollectionSafely('referralUniqueVisitors', referralUniqueVisitors),
+    readCampaignCollectionSafely('userCampaignAttributions', userCampaignAttributions),
+    readCampaignCollectionSafely('orderCampaignAttributions', orderCampaignAttributions),
+    readCampaignCollectionSafely('campaignCommissions', campaignCommissions),
+    readCampaignCollectionSafely('commissionPayments', commissionPayments),
+    readCampaignCollectionSafely('monthlyCommissionReports', monthlyCommissionReports),
+  ]);
+
   try {
     const cfgSnap = await getDoc(doc(db, 'membershipConfig', 'public'));
     if (cfgSnap.exists()) {
@@ -836,9 +875,17 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
     orders,
     memberships,
     history,
-    customerNotifications,
+    customerNotifications: customerNotificationsList,
     schedulerRuns,
     config,
+    referralCampaigns,
+    referralVisits,
+    referralUniqueVisitors,
+    userCampaignAttributions,
+    orderCampaignAttributions,
+    campaignCommissions,
+    commissionPayments,
+    monthlyCommissionReports,
   };
 }
 
@@ -851,6 +898,14 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
   config?: MembershipConfig;
   auditLogs?: AdminAuditEntry[];
   emailNotifications?: AdminEmailNotification[];
+  referralCampaigns?: any[];
+  referralVisits?: any[];
+  referralUniqueVisitors?: any[];
+  userCampaignAttributions?: any[];
+  orderCampaignAttributions?: any[];
+  campaignCommissions?: any[];
+  commissionPayments?: any[];
+  monthlyCommissionReports?: any[];
 }): Promise<void> {
   if (!isFirebaseAdminUser()) return;
   await ensureAdminProfileInFirestore();
@@ -885,6 +940,32 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
       await syncMemberNotificationToFirestore(n, ownerUid);
     }
   }
+
+  const pushCampaignColSafely = async (colName: string, items?: any[]) => {
+    if (!Array.isArray(items)) return;
+    for (const item of items.slice(0, 200)) {
+      if (!item || !item.id) continue;
+      try {
+        await setDoc(doc(db, colName, sanitizeId(String(item.id))), {
+          ...item,
+          updatedAt: serverTimestamp(),
+        });
+      } catch {
+        // Non-fatal
+      }
+    }
+  };
+
+  await Promise.all([
+    pushCampaignColSafely('referralCampaigns', snapshot.referralCampaigns),
+    pushCampaignColSafely('referralVisits', snapshot.referralVisits),
+    pushCampaignColSafely('referralUniqueVisitors', snapshot.referralUniqueVisitors),
+    pushCampaignColSafely('userCampaignAttributions', snapshot.userCampaignAttributions),
+    pushCampaignColSafely('orderCampaignAttributions', snapshot.orderCampaignAttributions),
+    pushCampaignColSafely('campaignCommissions', snapshot.campaignCommissions),
+    pushCampaignColSafely('commissionPayments', snapshot.commissionPayments),
+    pushCampaignColSafely('monthlyCommissionReports', snapshot.monthlyCommissionReports),
+  ]);
 
   if (snapshot.config) {
     try {

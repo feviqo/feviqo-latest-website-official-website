@@ -794,17 +794,126 @@ export async function fetchMembershipCatalog(): Promise<{
   return parseJsonSafe(res);
 }
 
+const MEMBER_ACCOUNT_BACKUP_KEY = 'feviqo_member_account_backup_v1';
+
+interface CachedMemberAccountSnapshot {
+  member: SafeMember;
+  activeMemberships: AdminMembershipRecord[];
+  allMemberships: AdminMembershipRecord[];
+  orders: MembershipOrder[];
+  updatedAt: string;
+}
+
+function readMemberAccountBackupMap(): {
+  byEmail: Record<string, CachedMemberAccountSnapshot>;
+  latestEmail?: string;
+} {
+  try {
+    if (typeof window === 'undefined') return { byEmail: {} };
+    const raw = window.localStorage.getItem(MEMBER_ACCOUNT_BACKUP_KEY);
+    if (!raw) return { byEmail: {} };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return { byEmail: {} };
+    return {
+      byEmail: parsed.byEmail && typeof parsed.byEmail === 'object' ? parsed.byEmail : {},
+      latestEmail: typeof parsed.latestEmail === 'string' ? parsed.latestEmail : undefined,
+    };
+  } catch {
+    return { byEmail: {} };
+  }
+}
+
+export function saveCachedMemberAccountState(state?: Partial<MemberAccountState> | null): void {
+  try {
+    if (typeof window === 'undefined' || !state || !state.member?.email) return;
+    const email = state.member.email.trim().toLowerCase();
+    if (!email) return;
+    const store = readMemberAccountBackupMap();
+    const prev = store.byEmail[email];
+    const incomingAllSubs = Array.isArray(state.allMemberships) ? state.allMemberships : [];
+    const incomingActiveSubs = Array.isArray(state.activeMemberships) ? state.activeMemberships : [];
+    const incomingOrders = Array.isArray(state.orders) ? state.orders : [];
+
+    // Preserve existing subscriptions/orders if incoming state is unexpectedly empty after a transient reset
+    const mergedAllSubs =
+      incomingAllSubs.length > 0 ? incomingAllSubs : prev?.allMemberships || [];
+    const mergedActiveSubs =
+      incomingActiveSubs.length > 0 ? incomingActiveSubs : prev?.activeMemberships || [];
+    const mergedOrders =
+      incomingOrders.length > 0 ? incomingOrders : prev?.orders || [];
+
+    store.byEmail[email] = {
+      member: state.member,
+      activeMemberships: mergedActiveSubs as AdminMembershipRecord[],
+      allMemberships: mergedAllSubs as AdminMembershipRecord[],
+      orders: mergedOrders,
+      updatedAt: new Date().toISOString(),
+    };
+    store.latestEmail = email;
+    window.localStorage.setItem(MEMBER_ACCOUNT_BACKUP_KEY, JSON.stringify(store));
+  } catch {}
+}
+
+export function getCachedMemberSnapshotForEmail(
+  rawEmail?: string | null
+): CachedMemberAccountSnapshot | undefined {
+  const store = readMemberAccountBackupMap();
+  const email = (rawEmail || '').trim().toLowerCase();
+  if (email && store.byEmail[email]) {
+    return store.byEmail[email];
+  }
+  if (!email && store.latestEmail && store.byEmail[store.latestEmail]) {
+    return store.byEmail[store.latestEmail];
+  }
+  return undefined;
+}
+
 export async function fetchMemberAccount(): Promise<
   ({ success: true } & MemberAccountState) | { success: false; code?: string; error?: string }
 > {
+  const hadToken = Boolean(getMemberToken());
   const res = await fetch('/api/membership/account', {
     credentials: 'include',
     headers: memberHeaders(),
   });
+  const data = await parseJsonSafe(res);
+
+  // If the server restarted while the user had an active token/session, or if the user's cached snapshot has subscriptions that the fresh server lacks, restore automatically
+  const latestCached = getCachedMemberSnapshotForEmail(data?.member?.email);
+  const needsRestoreOn401 = res.status === 401 && hadToken && Boolean(latestCached?.member?.email);
+  const needsRestoreMissingSubs =
+    data?.success &&
+    latestCached &&
+    (latestCached.activeMemberships?.length > 0 || latestCached.allMemberships?.length > 0) &&
+    (!Array.isArray(data.allMemberships) || data.allMemberships.length === 0);
+
+  if ((needsRestoreOn401 || needsRestoreMissingSubs) && latestCached) {
+    try {
+      const restoreRes = await fetch('/api/membership/restore-session', {
+        method: 'POST',
+        credentials: 'include',
+        headers: memberHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ cachedSnapshot: latestCached }),
+      });
+      if (restoreRes.ok) {
+        const restoredData = await parseJsonSafe(restoreRes);
+        if (restoredData?.success) {
+          if (restoredData.token) {
+            writeStoredToken(MEMBER_TOKEN_KEY, restoredData.token);
+          }
+          saveCachedMemberAccountState(restoredData);
+          return restoredData;
+        }
+      }
+    } catch {}
+  }
+
   if (res.status === 401) {
     writeStoredToken(MEMBER_TOKEN_KEY, null);
+  } else if (data?.success) {
+    saveCachedMemberAccountState(data);
   }
-  return parseJsonSafe(res);
+  return data;
 }
 
 export async function registerMemberAccount(payload: {
@@ -818,6 +927,7 @@ export async function registerMemberAccount(payload: {
   ({ success: true } & MemberAccountState) | { success: false; error: string }
 > {
   const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
+  const cachedSnapshot = getCachedMemberSnapshotForEmail(payload.email);
   const res = await fetch('/api/membership/register', {
     method: 'POST',
     headers: memberHeaders({ 'Content-Type': 'application/json' }),
@@ -827,11 +937,13 @@ export async function registerMemberAccount(payload: {
       referralCode: ref || undefined,
       campaignVisitorToken: getStoredCampaignVisitorToken() || undefined,
       campaignAttrToken: getStoredCampaignAttrToken() || undefined,
+      cachedSnapshot,
     }),
   });
   const data = await parseJsonSafe(res);
   if (data?.success && data?.token) {
     writeStoredToken(MEMBER_TOKEN_KEY, data.token);
+    saveCachedMemberAccountState(data);
     if (ref) clearStoredReferralCode();
   }
   return data;
@@ -843,15 +955,20 @@ export async function loginMemberAccount(payload: {
 }): Promise<
   ({ success: true } & MemberAccountState) | { success: false; error: string }
 > {
+  const cachedSnapshot = getCachedMemberSnapshotForEmail(payload.email);
   const res = await fetch('/api/membership/login', {
     method: 'POST',
     headers: memberHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      cachedSnapshot,
+    }),
   });
   const data = await parseJsonSafe(res);
   if (data?.success && data?.token) {
     writeStoredToken(MEMBER_TOKEN_KEY, data.token);
+    saveCachedMemberAccountState(data);
   }
   return data;
 }
@@ -861,10 +978,12 @@ export async function authenticateMemberWithGoogle(payload: {
   fullName?: string;
   phone?: string;
   referralCode?: string;
+  email?: string;
 }): Promise<
   ({ success: true } & MemberAccountState) | { success: false; error: string }
 > {
   const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
+  const cachedSnapshot = getCachedMemberSnapshotForEmail(payload.email);
   const res = await fetch('/api/membership/google-auth', {
     method: 'POST',
     headers: memberHeaders({ 'Content-Type': 'application/json' }),
@@ -874,11 +993,13 @@ export async function authenticateMemberWithGoogle(payload: {
       referralCode: ref || undefined,
       campaignVisitorToken: getStoredCampaignVisitorToken() || undefined,
       campaignAttrToken: getStoredCampaignAttrToken() || undefined,
+      cachedSnapshot,
     }),
   });
   const data = await parseJsonSafe(res);
   if (data?.success && data?.token) {
     writeStoredToken(MEMBER_TOKEN_KEY, data.token);
+    saveCachedMemberAccountState(data);
   }
   return data;
 }
@@ -895,8 +1016,11 @@ export async function updateMemberPhone(
     body: JSON.stringify({ phone, referralCode: ref || undefined }),
   });
   const data = await parseJsonSafe(res);
-  if (data?.success && ref) {
-    clearStoredReferralCode();
+  if (data?.success) {
+    saveCachedMemberAccountState(data);
+    if (ref) {
+      clearStoredReferralCode();
+    }
   }
   return data;
 }
@@ -962,7 +1086,11 @@ export async function createMembershipCheckout(payload: {
       campaignAttrToken: getStoredCampaignAttrToken() || undefined,
     }),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.account) {
+    saveCachedMemberAccountState(data.account);
+  }
+  return data;
 }
 
 export async function confirmZeroBalanceOrder(payload: {
@@ -986,7 +1114,11 @@ export async function confirmZeroBalanceOrder(payload: {
       body: JSON.stringify({ paymentNote: payload.paymentNote || '' }),
     }
   );
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.account) {
+    saveCachedMemberAccountState(data.account);
+  }
+  return data;
 }
 
 export async function submitOrderPaymentProofFile(payload: {
@@ -1017,7 +1149,11 @@ export async function submitOrderPaymentProofFile(payload: {
     headers: memberHeaders(),
     body: form,
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.account) {
+    saveCachedMemberAccountState(data.account);
+  }
+  return data;
 }
 
 export async function markMemberNotificationRead(notifId: string): Promise<
@@ -1517,12 +1653,32 @@ export async function syncAdminCloudState(snapshot: {
   customerNotifications?: CustomerNotification[];
   schedulerRuns?: SchedulerRunLog[];
   config?: MembershipConfig | null;
+  referralCampaigns?: any[];
+  referralVisits?: any[];
+  referralUniqueVisitors?: any[];
+  userCampaignAttributions?: any[];
+  orderCampaignAttributions?: any[];
+  campaignCommissions?: any[];
+  commissionPayments?: any[];
+  monthlyCommissionReports?: any[];
 }): Promise<{ success: true; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+  const vault = getStoredReferralCampaignsVault();
+  const payload = {
+    ...snapshot,
+    referralCampaigns: snapshot.referralCampaigns ?? vault?.referralCampaigns,
+    referralVisits: snapshot.referralVisits ?? vault?.referralVisits,
+    referralUniqueVisitors: snapshot.referralUniqueVisitors ?? vault?.referralUniqueVisitors,
+    userCampaignAttributions: snapshot.userCampaignAttributions ?? vault?.userCampaignAttributions,
+    orderCampaignAttributions: snapshot.orderCampaignAttributions ?? vault?.orderCampaignAttributions,
+    campaignCommissions: snapshot.campaignCommissions ?? vault?.campaignCommissions,
+    commissionPayments: snapshot.commissionPayments ?? vault?.commissionPayments,
+    monthlyCommissionReports: snapshot.monthlyCommissionReports ?? vault?.monthlyCommissionReports,
+  };
   const res = await fetch('/api/admin/memberships/sync', {
     method: 'POST',
     headers: adminHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
-    body: JSON.stringify(snapshot),
+    body: JSON.stringify(payload),
   });
   return parseJsonSafe(res);
 }
@@ -2010,22 +2166,123 @@ export interface AdminReferralCampaignsOverview {
   commissions: CampaignCommissionRecord[];
   payments: CommissionPaymentRecord[];
   savedMonthlyReports: MonthlyCommissionReportSnapshot[];
+  fullSnapshot?: {
+    referralCampaigns?: ReferralCampaign[];
+    referralVisits?: any[];
+    referralUniqueVisitors?: any[];
+    userCampaignAttributions?: any[];
+    orderCampaignAttributions?: any[];
+    campaignCommissions?: CampaignCommissionRecord[];
+    commissionPayments?: CommissionPaymentRecord[];
+    monthlyCommissionReports?: MonthlyCommissionReportSnapshot[];
+  };
+}
+
+const REFERRAL_CAMPAIGNS_VAULT_KEY = 'feviqo_referral_campaigns_vault_v1';
+
+export function getStoredReferralCampaignsVault(): Record<string, any> | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage.getItem(REFERRAL_CAMPAIGNS_VAULT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function mergeByIdArray(existing: any[] = [], incoming: any[] = []): any[] {
+  const map = new Map<string, any>();
+  for (const item of existing) {
+    if (item && item.id) map.set(String(item.id), item);
+  }
+  for (const item of incoming) {
+    if (item && item.id) {
+      const prev = map.get(String(item.id));
+      map.set(String(item.id), prev ? { ...prev, ...item } : item);
+    }
+  }
+  return Array.from(map.values());
+}
+
+export function saveReferralCampaignsVaultFromOverview(
+  overview?: Partial<AdminReferralCampaignsOverview> | null,
+  extraCampaign?: ReferralCampaign | null
+): void {
+  try {
+    if (typeof window === 'undefined') return;
+    const existing = getStoredReferralCampaignsVault() || {};
+    const snap = overview?.fullSnapshot || {};
+    const overviewCampaigns = Array.isArray(overview?.campaigns)
+      ? overview!.campaigns.map((c) => c.campaign).filter(Boolean)
+      : [];
+    const incomingCampaigns = [
+      ...(Array.isArray(snap.referralCampaigns) ? snap.referralCampaigns : []),
+      ...overviewCampaigns,
+      ...(extraCampaign ? [extraCampaign] : []),
+    ];
+
+    const updatedVault = {
+      referralCampaigns: mergeByIdArray(existing.referralCampaigns, incomingCampaigns),
+      referralVisits: mergeByIdArray(existing.referralVisits, snap.referralVisits || []),
+      referralUniqueVisitors: mergeByIdArray(
+        existing.referralUniqueVisitors,
+        snap.referralUniqueVisitors || []
+      ),
+      userCampaignAttributions: mergeByIdArray(
+        existing.userCampaignAttributions,
+        snap.userCampaignAttributions || []
+      ),
+      orderCampaignAttributions: mergeByIdArray(
+        existing.orderCampaignAttributions,
+        snap.orderCampaignAttributions || []
+      ),
+      campaignCommissions: mergeByIdArray(
+        existing.campaignCommissions,
+        snap.campaignCommissions || overview?.commissions || []
+      ),
+      commissionPayments: mergeByIdArray(
+        existing.commissionPayments,
+        snap.commissionPayments || overview?.payments || []
+      ),
+      monthlyCommissionReports: mergeByIdArray(
+        existing.monthlyCommissionReports,
+        snap.monthlyCommissionReports || overview?.savedMonthlyReports || []
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+    window.localStorage.setItem(REFERRAL_CAMPAIGNS_VAULT_KEY, JSON.stringify(updatedVault));
+  } catch {}
 }
 
 export async function fetchAdminReferralCampaignsOverview(): Promise<
   ({ success: true } & AdminReferralCampaignsOverview) | { success: false; error: string }
 > {
   const localVisits = getStoredLocalReferralVisits();
-  if (localVisits.length > 0) {
+  const vaultSnapshot = getStoredReferralCampaignsVault();
+  const hasVaultData =
+    vaultSnapshot &&
+    ((Array.isArray(vaultSnapshot.referralCampaigns) && vaultSnapshot.referralCampaigns.length > 0) ||
+      (Array.isArray(vaultSnapshot.referralVisits) && vaultSnapshot.referralVisits.length > 0));
+
+  if (localVisits.length > 0 || hasVaultData) {
     try {
       const syncRes = await fetch('/api/admin/referral-campaigns/sync-visits', {
         method: 'POST',
         credentials: 'include',
         headers: adminHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ visits: localVisits }),
+        body: JSON.stringify({
+          visits: localVisits,
+          snapshot: vaultSnapshot || undefined,
+        }),
       });
       if (syncRes.ok) {
-        return parseJsonSafe(syncRes);
+        const syncedData = await parseJsonSafe(syncRes);
+        if (syncedData?.success) {
+          saveReferralCampaignsVaultFromOverview(syncedData);
+        }
+        return syncedData;
       }
     } catch {}
   }
@@ -2033,7 +2290,11 @@ export async function fetchAdminReferralCampaignsOverview(): Promise<
     credentials: 'include',
     headers: adminHeaders(),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success) {
+    saveReferralCampaignsVaultFromOverview(data);
+  }
+  return data;
 }
 
 export async function createAdminReferralCampaign(payload: {
@@ -2057,21 +2318,35 @@ export async function createAdminReferralCampaign(payload: {
     headers: adminHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success) {
+    saveReferralCampaignsVaultFromOverview(data.overview, data.campaign);
+  }
+  return data;
 }
 
 export async function fetchAdminReferralCampaignDetail(
   campaignId: string
 ): Promise<({ success: true } & ReferralCampaignDetail) | { success: false; error: string }> {
   const localVisits = getStoredLocalReferralVisits();
-  if (localVisits.length > 0) {
+  const vaultSnapshot = getStoredReferralCampaignsVault();
+  if (localVisits.length > 0 || vaultSnapshot) {
     try {
-      await fetch('/api/admin/referral-campaigns/sync-visits', {
+      const syncRes = await fetch('/api/admin/referral-campaigns/sync-visits', {
         method: 'POST',
         credentials: 'include',
         headers: adminHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ visits: localVisits }),
+        body: JSON.stringify({
+          visits: localVisits,
+          snapshot: vaultSnapshot || undefined,
+        }),
       });
+      if (syncRes.ok) {
+        const syncedData = await parseJsonSafe(syncRes);
+        if (syncedData?.success) {
+          saveReferralCampaignsVaultFromOverview(syncedData);
+        }
+      }
     } catch {}
   }
   const res = await fetch(`/api/admin/referral-campaigns/${encodeURIComponent(campaignId)}`, {
@@ -2105,7 +2380,11 @@ export async function updateAdminReferralCampaign(
     headers: adminHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(updates),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success) {
+    saveReferralCampaignsVaultFromOverview(data.overview, data.campaign);
+  }
+  return data;
 }
 
 export async function approveAdminCampaignCommission(
@@ -2122,7 +2401,11 @@ export async function approveAdminCampaignCommission(
       headers: adminHeaders(),
     }
   );
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success) {
+    saveReferralCampaignsVaultFromOverview(data.overview);
+  }
+  return data;
 }
 
 export async function markAdminCampaignCommissionsPaid(payload: {
@@ -2141,7 +2424,11 @@ export async function markAdminCampaignCommissionsPaid(payload: {
     headers: adminHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success) {
+    saveReferralCampaignsVaultFromOverview(data.overview);
+  }
+  return data;
 }
 
 export async function reverseAdminCampaignCommission(
@@ -2160,7 +2447,11 @@ export async function reverseAdminCampaignCommission(
       body: JSON.stringify({ reason }),
     }
   );
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success) {
+    saveReferralCampaignsVaultFromOverview(data.overview);
+  }
+  return data;
 }
 
 export async function fetchAdminMonthlyCommissionReport(monthKey: string): Promise<{
@@ -2192,7 +2483,11 @@ export async function saveAdminMonthlyCommissionReportSnapshot(monthKey: string)
     headers: adminHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ month: monthKey }),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success && data.overview) {
+    saveReferralCampaignsVaultFromOverview(data.overview);
+  }
+  return data;
 }
 
 export async function downloadAdminMonthlyCommissionCsv(monthKey: string): Promise<boolean> {

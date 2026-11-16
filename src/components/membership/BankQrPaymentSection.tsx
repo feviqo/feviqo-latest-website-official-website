@@ -592,12 +592,31 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
             </form>
           ) : !isApproved && !isZeroBalance && (
             <form
+              id="payment-screenshot-upload-box"
               onSubmit={handleSubmitProof}
-              className="rounded-2xl border border-zinc-200 bg-[#F8FAFC] p-5 sm:p-6 space-y-4"
+              className="rounded-2xl border-2 border-[#22C55E] bg-[#F8FAFC] p-5 sm:p-6 space-y-4 shadow-xs"
             >
+              {order.status === 'awaiting_payment' && (
+                <div className="rounded-xl bg-amber-50 border border-amber-300 px-3.5 py-2.5 flex items-start gap-2.5 text-xs text-amber-950">
+                  <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <div className="font-bold">
+                      {isUrdu
+                        ? 'ادائیگی کا اسکرین شاٹ اپ لوڈ کرنا لازمی ہے'
+                        : 'Payment Screenshot Required to Continue'}
+                    </div>
+                    <p className="text-amber-900 leading-relaxed">
+                      {isUrdu
+                        ? 'براہ کرم ادائیگی مکمل کریں اور آگے بڑھنے کے لیے نیچے ادائیگی کا اسکرین شاٹ لازمی جمع کروائیں۔ اسکرین شاٹ اپ لوڈ کیے بغیر آرڈر مکمل نہیں ہوگا۔'
+                        : 'Please complete your payment via the QR code and upload your payment confirmation screenshot below. You must submit your screenshot at this step to continue.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <h4 className="text-base font-bold text-[#0B0B0D]">
-                  {t(MEMBERSHIP_COPY.payment.proofHeading)}
+                  {t(MEMBERSHIP_COPY.payment.proofHeading)} <span className="text-red-600">*</span>
                 </h4>
                 <p className="text-xs text-zinc-700 leading-relaxed">
                   {MEMBERSHIP_COPY.payment.uploadInstructionEn}
@@ -650,7 +669,7 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
                   <span className="text-sm font-semibold text-[#0B0B0D]">
                     {t(MEMBERSHIP_COPY.payment.chooseScreenshot)}
                   </span>
-                  <span className="text-xs text-zinc-500">JPG, JPEG, PNG, WebP</span>
+                  <span className="text-xs text-zinc-500">JPG, JPEG, PNG, WebP (Required)</span>
                 </button>
               )}
 
@@ -679,7 +698,18 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
 
               <button
                 type="submit"
-                disabled={uploading || !selectedFile}
+                disabled={uploading}
+                onClick={(e) => {
+                  if (!selectedFile) {
+                    e.preventDefault();
+                    setUploadError(
+                      isUrdu
+                        ? 'آگے بڑھنے سے پہلے براہ کرم ادائیگی کا اسکرین شاٹ منتخب اور اپ لوڈ کریں۔'
+                        : 'Please select and upload your payment confirmation screenshot before continuing.'
+                    );
+                    fileInputRef.current?.click();
+                  }
+                }}
                 className="w-full py-3.5 px-5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white disabled:opacity-50 text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 <Upload className="w-4 h-4" />
@@ -692,46 +722,48 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
             </form>
           )}
 
-          {/* Optional Secondary WhatsApp Option */}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-3">
-            <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
-              {t(MEMBERSHIP_COPY.payment.whatsappAltHeading)}
-            </div>
-
-            {whatsappUrl ? (
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-3 px-4 rounded-xl border border-zinc-300 hover:border-[#22C55E] hover:bg-emerald-50 text-[#0B0B0D] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition"
-              >
-                <MessageCircle className="w-4 h-4 text-[#16A34A]" />
-                <span>{t(MEMBERSHIP_COPY.payment.whatsappButton)}</span>
-              </a>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setWhatsappNotice(t(MEMBERSHIP_COPY.payment.whatsappUnconfigured))}
-                className="w-full py-3 px-4 rounded-xl border border-zinc-300 hover:border-[#22C55E] hover:bg-emerald-50 text-[#0B0B0D] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4 text-[#16A34A]" />
-                <span>{t(MEMBERSHIP_COPY.payment.whatsappButton)}</span>
-              </button>
-            )}
-
-            <p className="text-[11px] text-zinc-600 leading-relaxed">
-              {MEMBERSHIP_COPY.payment.whatsappNoteEn}
-            </p>
-            <p dir="rtl" className="font-urdu-slim text-xs text-zinc-600 leading-relaxed">
-              {MEMBERSHIP_COPY.payment.whatsappNoteUr}
-            </p>
-
-            {whatsappNotice && (
-              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
-                {whatsappNotice}
+          {/* Optional Secondary WhatsApp Option (only after proof is uploaded or for zero-balance orders) */}
+          {(isPendingVerification || isApproved || isZeroBalance || Boolean(order.proofFileName || order.proofDataUrl)) && (
+            <div className="rounded-2xl border border-zinc-200 bg-white p-5 space-y-3">
+              <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+                {t(MEMBERSHIP_COPY.payment.whatsappAltHeading)}
               </div>
-            )}
-          </div>
+
+              {whatsappUrl ? (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-xl border border-zinc-300 hover:border-[#22C55E] hover:bg-emerald-50 text-[#0B0B0D] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition"
+                >
+                  <MessageCircle className="w-4 h-4 text-[#16A34A]" />
+                  <span>{t(MEMBERSHIP_COPY.payment.whatsappButton)}</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setWhatsappNotice(t(MEMBERSHIP_COPY.payment.whatsappUnconfigured))}
+                  className="w-full py-3 px-4 rounded-xl border border-zinc-300 hover:border-[#22C55E] hover:bg-emerald-50 text-[#0B0B0D] text-xs sm:text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4 text-[#16A34A]" />
+                  <span>{t(MEMBERSHIP_COPY.payment.whatsappButton)}</span>
+                </button>
+              )}
+
+              <p className="text-[11px] text-zinc-600 leading-relaxed">
+                {MEMBERSHIP_COPY.payment.whatsappNoteEn}
+              </p>
+              <p dir="rtl" className="font-urdu-slim text-xs text-zinc-600 leading-relaxed">
+                {MEMBERSHIP_COPY.payment.whatsappNoteUr}
+              </p>
+
+              {whatsappNotice && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                  {whatsappNotice}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

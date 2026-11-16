@@ -109,6 +109,7 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
       const idToken = await cred.user.getIdToken();
       const result = await authenticateMemberWithGoogle({
         idToken,
+        email: cred.user.email || undefined,
         fullName: cred.user.displayName || undefined,
         referralCode: normalizeReferralInput(referralCodeInput) || undefined,
       });
@@ -120,7 +121,10 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
       await syncMemberAccountToFirestore(result.member, cred.user.uid).catch(() => {});
       notifyMembershipAuthChanged();
 
-      if (!hasValidPhoneNumber(result.member.phone)) {
+      const hasActiveSubscription = Boolean(
+        result.activeMembership || (result.activeMemberships && result.activeMemberships.length > 0)
+      );
+      if (!hasValidPhoneNumber(result.member.phone) && !hasActiveSubscription) {
         setPendingGoogleAccount(result);
         setPendingGoogleUid(cred.user.uid);
         setPhoneCompletionValue(result.member.phone || '');
@@ -211,19 +215,19 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
     setError(null);
 
     if (mode === 'signup') {
-      if (!fullName.trim() || fullName.trim().length < 2) {
-        setError(
-          isUrdu
-            ? 'براہ کرم اپنا مکمل نام درج کریں۔'
-            : 'Please enter your full name.'
-        );
-        return;
-      }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         setError(
           isUrdu
             ? 'براہ کرم درست ای میل ایڈریس درج کریں۔'
             : 'Please enter a valid email address.'
+        );
+        return;
+      }
+      if (!fullName.trim() || fullName.trim().length < 2) {
+        setError(
+          isUrdu
+            ? 'براہ کرم اپنا مکمل نام درج کریں۔'
+            : 'Please enter your full name.'
         );
         return;
       }

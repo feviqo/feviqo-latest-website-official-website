@@ -104,6 +104,7 @@ import {
   updateReferralConfig,
   updateReferralStatusByAdmin,
   getProtectedStreamsSecurityOverview,
+  restoreMemberSessionFromSnapshot,
   LifecycleEmailDispatcher,
   SafeAdmin,
 } from './server/membershipStore';
@@ -140,6 +141,7 @@ import {
   saveMonthlyCommissionReportSnapshot,
   exportMonthlyCommissionReportCsv,
   syncClientReferralVisits,
+  mergeCampaignCloudSnapshot,
 } from './server/referralCampaignStore';
 
 const app = express();
@@ -409,20 +411,26 @@ app.get('/robots.txt', (_req, res) => {
   return res.status(200).send(robotsText);
 });
 
-// Single Master Sitemap Endpoint (Directly serves clean public/sitemap.xml)
-app.get('/sitemap.xml', (_req, res) => {
+// Single Master Sitemap Endpoint (In-memory cached XML with ETag & edge-friendly caching)
+let cachedMasterSitemapXml: string | null = null;
+function getCachedMasterSitemapXml(): string {
+  if (cachedMasterSitemapXml) return cachedMasterSitemapXml;
+  const generated = generateSitemapXml();
+  cachedMasterSitemapXml = generated;
+  return generated;
+}
+
+app.get('/sitemap.xml', (req, res) => {
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+  res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=86400, stale-while-revalidate=86400');
   try {
-    const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
-    if (fs.existsSync(sitemapPath)) {
-      return res.status(200).send(fs.readFileSync(sitemapPath, 'utf-8'));
+    const xml = getCachedMasterSitemapXml();
+    const etag = `"feviqo-sitemap-${Buffer.byteLength(xml, 'utf8')}"`;
+    res.setHeader('ETag', etag);
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).end();
     }
-    const distSitemapPath = path.join(process.cwd(), 'dist', 'sitemap.xml');
-    if (fs.existsSync(distSitemapPath)) {
-      return res.status(200).send(fs.readFileSync(distSitemapPath, 'utf-8'));
-    }
-    return res.status(200).send(generateSitemapXml());
+    return res.status(200).send(xml);
   } catch (err: any) {
     console.error('Error generating master sitemap:', err);
     return res.status(500).send('<?xml version="1.0" encoding="UTF-8"?><error>Error generating master sitemap</error>');
@@ -3403,8 +3411,8 @@ app.get('/api/membership/qr/:planId/download', (req, res) => {
 
 app.post('/api/membership/register', (req, res) => {
   try {
-    const { email, password, confirmPassword, fullName, phone, referralCode } = req.body || {};
-    const result = registerMember({ email, phone, password, confirmPassword, fullName, referralCode });
+    const { email, password, confirmPassword, fullName, phone, referralCode, cachedSnapshot } = req.body || {};
+    const result = registerMember({ email, phone, password, confirmPassword, fullName, referralCode, cachedSnapshot });
     if ('error' in result) {
       return res.status(result.statusCode || 400).json({ success: false, error: result.error });
     }
@@ -3428,8 +3436,8 @@ app.post('/api/membership/register', (req, res) => {
 
 app.post('/api/membership/login', (req, res) => {
   try {
-    const { email, password } = req.body || {};
-    const result = loginMember({ email, password });
+    const { email, password, cachedSnapshot } = req.body || {};
+    const result = loginMember({ email, password, cachedSnapshot });
     if ('error' in result) {
       return res.status(401).json({ success: false, error: result.error });
     }
@@ -3447,7 +3455,7 @@ app.post('/api/membership/login', (req, res) => {
 
 app.post('/api/membership/google-auth', async (req, res) => {
   try {
-    const { idToken, fullName, phone, referralCode } = req.body || {};
+    const { idToken, fullName, phone, referralCode, cachedSnapshot } = req.body || {};
     const decoded = await verifyFirebaseIdToken(idToken);
     if (!decoded || !decoded.email || !decoded.email_verified) {
       return res.status(401).json({
@@ -3461,6 +3469,7 @@ app.post('/api/membership/google-auth', async (req, res) => {
       fullName: decoded.name || fullName,
       phone,
       referralCode,
+      cachedSnapshot,
     });
     if ('error' in result) {
       return res.status(400).json({ success: false, error: result.error });
@@ -3500,6 +3509,29 @@ app.get('/api/membership/account', (req, res) => {
     return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Account not found.' });
   }
   return res.json({ success: true, ...account });
+});
+
+app.post('/api/membership/restore-session', (req, res) => {
+  try {
+    const memberId = getAuthenticatedMemberId(req);
+    const cachedSnapshot = req.body?.cachedSnapshot;
+    const restored = restoreMemberSessionFromSnapshot(cachedSnapshot, memberId);
+    if ('error' in restored) {
+      return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: restored.error });
+    }
+    setMemberSessionCookie(req, res, restored.token);
+    const account = getMemberAccountState(restored.member.id);
+    if (!account) {
+      return res.status(404).json({ success: false, error: 'Restored account not found.' });
+    }
+    return res.json({
+      success: true,
+      token: restored.token,
+      ...account,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to restore member session.' });
+  }
 });
 
 app.post('/api/membership/profile/phone', (req, res) => {
@@ -5062,6 +5094,7 @@ function formatCampaignsOverviewForClient(month?: string) {
       generatedByAdminEmail: snap.generatedByAdminEmail,
       rows: mapMonthlyRowsForClient(snap.monthKey, snap.rows),
     })),
+    fullSnapshot: raw.fullSnapshot,
   };
 }
 
@@ -5119,6 +5152,9 @@ app.get('/api/admin/referral-campaigns/overview', requireAdmin, (req, res) => {
 
 app.post('/api/admin/referral-campaigns/sync-visits', requireAdmin, (req, res) => {
   try {
+    if (req.body?.snapshot && typeof req.body.snapshot === 'object') {
+      mergeCampaignCloudSnapshot(req.body.snapshot);
+    }
     const { ip, ua } = extractSecurityRequestMeta(req);
     const rawVisits = Array.isArray(req.body?.visits) ? req.body.visits : [];
     const enriched = rawVisits.map((v: any) => ({
@@ -5666,25 +5702,30 @@ app.patch('/api/admin/roles/:adminId', requireAdmin, (req: any, res) => {
 if (!process.env.CONTROL_PLANE_PORT) {
   try {
     updateSitemapFiles();
+    cachedMasterSitemapXml = generateSitemapXml();
     pingSearchEnginesForReindexing({
       urls: [
         'https://feviqo.com/',
         'https://feviqo.com/teskilat',
+        'https://feviqo.com/teskilat/episode-193',
         'https://feviqo.com/teskilat/episode-189',
         'https://feviqo.com/teskilat/episode-188',
         'https://feviqo.com/teskilat/episode-187',
         'https://feviqo.com/teskilat/episode-186',
         'https://feviqo.com/mehmed-fetihler-sultani',
+        'https://feviqo.com/mehmed-fetihler-sultani/episode-91',
+        'https://feviqo.com/mehmed-fetihler-sultani/episode-90',
+        'https://feviqo.com/mehmed-fetihler-sultani/episode-89',
         'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
         'https://feviqo.com/mehmed-fetihler-sultani/episode-87',
         'https://feviqo.com/gunesin-dogdugu-yer',
+        'https://feviqo.com/gunesin-dogdugu-yer/episode-8',
         'https://feviqo.com/gunesin-dogdugu-yer/episode-7',
         'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
         'https://feviqo.com/dramas',
-        'https://feviqo.com/membership',
-        'https://feviqo.com/sitemap.xml'
+        'https://feviqo.com/membership'
       ],
-      reason: 'Server startup / IndexNow automated episode ping'
+      reason: 'Server startup / IndexNow automated page & episode ping'
     }).catch((e) => console.error('Auto ping error:', e));
   } catch (e) {
     console.error('Initial sitemap sync error:', e);

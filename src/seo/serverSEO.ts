@@ -138,7 +138,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
       "name": "FEVIQO Unlimited Video Editing Showreel",
       "description": "High-converting creator hooks, luxury villa walkthroughs, performance ad creative samples, and motion graphics edited by FEVIQO dedicated editors.",
       "thumbnailUrl": [
-        "https://feviqo.com/images/feviqo-hero-poster.jpg"
+        "https://feviqo.com/HEADER-removebg-preview.png"
       ],
       "uploadDate": "2026-01-15T08:00:00+00:00",
       "contentUrl": "https://stream.mux.com/hQglpqXvqnXLQq57m01p5dRGsGT3JQjUxJZX4sc02pfWs.m3u8",
@@ -953,11 +953,26 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   const jsonLdScript = `<script type="application/ld+json" id="feviqo-server-jsonld">${JSON.stringify(schemaObj)}</script>`;
   transformed = transformed.replace('</head>', `  ${jsonLdScript}\n  </head>`);
 
-  // Strip any legacy visible unstyled #feviqo-ssr-shell or duplicate noscript block
+  // Strip any legacy visible unstyled #feviqo-ssr-shell, previous .feviqo-boot-seo block, or duplicate noscript block
   transformed = transformed.replace(/<div id="feviqo-ssr-shell"[\s\S]*?<\/main><\/div>/gi, '');
+  transformed = transformed.replace(/<!--FEVIQO_BOOT_SEO_START-->[\s\S]*?<!--FEVIQO_BOOT_SEO_END-->/gi, '');
+  transformed = transformed.replace(/<div class="feviqo-boot-seo">[\s\S]*?<\/nav><\/div>/gi, '');
   transformed = transformed.replace(/<noscript id="feviqo-noscript-fallback">[\s\S]*?<\/noscript>/gi, '');
 
-  const noscriptFallback = `<noscript id="feviqo-noscript-fallback"><div style="max-width:960px;margin:0 auto;padding:32px 20px;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;"><h1>${escapeHtmlText(config.seoTitle)}</h1><p>${escapeHtmlText(config.metaDescription)}</p><nav aria-label="FEVIQO Sitemap Navigation"><a href="https://feviqo.com/">FEVIQO Home</a> · <a href="https://feviqo.com/membership">FEVIQO Premium Membership</a> · <a href="https://feviqo.com/dramas">Turkish Dramas</a> · <a href="https://feviqo.com/teskilat">Teşkilat Season 7</a> · <a href="https://feviqo.com/mehmed-fetihler-sultani">Mehmed: Fetihler Sultanı</a> · <a href="https://feviqo.com/gunesin-dogdugu-yer">Güneşin Doğduğu Yer</a> · <a href="https://feviqo.com/pricing">Agency Pricing</a> · <a href="https://feviqo.com/sitemap.xml">Sitemap</a></nav></div></noscript>`;
+  const isMembershipRoute = cleanPath === '/membership' || cleanPath.startsWith('/membership/');
+  const routeDetailsParagraph = isMembershipRoute
+    ? 'Starter (PKR 299 / $1.20 USD, 15 days, 1 drama) · Standard (PKR 599 / $2.50 USD, 30 days, 1 drama) · Plus (PKR 899 / $3.50 USD, 30 days, 2 dramas) · VIP (PKR 1,299 / $5.00 USD, 30 days, All VIP Dramas including Teşkilat, Mehmed: Fetihler Sultanı & Güneşin Doğduğu Yer in Urdu HD).'
+    : config.metaDescription;
+
+  const bootSeoSection = `<!--FEVIQO_BOOT_SEO_START--><div class="feviqo-boot-seo"><h1>${escapeHtmlText(config.seoTitle)}</h1><p>${escapeHtmlText(routeDetailsParagraph)}</p><nav class="feviqo-boot-links" aria-label="FEVIQO Navigation"><a href="https://feviqo.com/">Home</a><a href="https://feviqo.com/membership">FEVIQO Premium Membership</a><a href="https://feviqo.com/dramas">Turkish Dramas</a><a href="https://feviqo.com/teskilat">Teşkilat Season 7</a><a href="https://feviqo.com/mehmed-fetihler-sultani">Mehmed: Fetihler Sultanı</a><a href="https://feviqo.com/gunesin-dogdugu-yer">Güneşin Doğduğu Yer</a><a href="https://feviqo.com/pricing">Agency Pricing</a></nav></div><!--FEVIQO_BOOT_SEO_END-->`;
+
+  // Inject styled semantic summary + referring links inside #feviqo-boot-loader so Googlebot discovers /membership on every page
+  transformed = transformed.replace(
+    /<div id="feviqo-boot-retry">/,
+    `${bootSeoSection}<div id="feviqo-boot-retry">`
+  );
+
+  const noscriptFallback = `<noscript id="feviqo-noscript-fallback"><div style="max-width:960px;margin:0 auto;padding:32px 20px;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;"><h1>${escapeHtmlText(config.seoTitle)}</h1><p>${escapeHtmlText(routeDetailsParagraph)}</p><nav aria-label="FEVIQO Sitemap Navigation"><a href="https://feviqo.com/">FEVIQO Home</a> · <a href="https://feviqo.com/membership">FEVIQO Premium Membership</a> · <a href="https://feviqo.com/dramas">Turkish Dramas</a> · <a href="https://feviqo.com/teskilat">Teşkilat Season 7</a> · <a href="https://feviqo.com/mehmed-fetihler-sultani">Mehmed: Fetihler Sultanı</a> · <a href="https://feviqo.com/gunesin-dogdugu-yer">Güneşin Doğduğu Yer</a> · <a href="https://feviqo.com/pricing">Agency Pricing</a> · <a href="https://feviqo.com/sitemap.xml">Sitemap</a></nav></div></noscript>`;
 
   transformed = transformed.replace('</body>', `  ${noscriptFallback}\n  </body>`);
 

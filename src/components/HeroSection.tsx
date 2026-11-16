@@ -122,13 +122,40 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
         </p>
 
         {/* Exact Get Started Button in brand color green */}
-        <div className="flex justify-center mb-10 sm:mb-14">
+        <div className="flex flex-col items-center gap-3.5 mb-10 sm:mb-14">
           <button
             onClick={onBookCall}
             className="px-10 py-4 rounded-xl sm:rounded-2xl bg-[#22C55E] hover:bg-[#16A34A] text-slate-950 font-black text-base sm:text-lg tracking-normal shadow-lg shadow-[#22C55E]/25 hover:shadow-xl hover:scale-[1.03] active:scale-[0.99] transition-all duration-200 cursor-pointer"
           >
             Get Started!
           </button>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs sm:text-sm font-semibold text-slate-600">
+            <a
+              href="/membership"
+              onClick={(e) => {
+                if (!e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: '/membership' }));
+                }
+              }}
+              className="text-[#16a34a] hover:underline font-bold"
+            >
+              FEVIQO Premium Membership (Turkish Dramas in Urdu) &rarr;
+            </a>
+            <span className="text-slate-300 hidden sm:inline">•</span>
+            <a
+              href="/dramas"
+              onClick={(e) => {
+                if (!e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: '/dramas' }));
+                }
+              }}
+              className="text-slate-700 hover:text-[#16a34a] hover:underline"
+            >
+              Explore Urdu Dramas
+            </a>
+          </div>
         </div>
 
         {/* 

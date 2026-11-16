@@ -36,10 +36,6 @@ import {
   createMembershipCheckout,
   validateCheckoutPromoQuote,
   normalizeReferralInput,
-  extractReferralSlugFromLocation,
-  getStoredReferralPartnerMeta,
-  formatReferralPartnerDisplayName,
-  ReferralPartnerMeta,
   CheckoutPricingQuote,
   MemberAccountState,
   MembershipOrder,
@@ -102,6 +98,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [activePaymentOrder, setActivePaymentOrder] = useState<MembershipOrder | null>(null);
+  const [screenshotLockWarning, setScreenshotLockWarning] = useState<string | null>(null);
 
   // Promo code, referral welcome discount & wallet credit state
   const [promoCodeInput, setPromoCodeInput] = useState('');
@@ -121,25 +118,6 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     episodeSlug?: string;
   } | null>(null);
 
-  const [referralPartner, setReferralPartner] = useState<ReferralPartnerMeta | null>(() => {
-    if (typeof window === 'undefined') return null;
-    const urlSlug = extractReferralSlugFromLocation(window.location.pathname, window.location.search);
-    const stored = getStoredReferralPartnerMeta();
-    if (urlSlug) {
-      const clean = urlSlug.toLowerCase();
-      if (stored && stored.slug === clean) return stored;
-      const formatted = formatReferralPartnerDisplayName(clean);
-      return {
-        slug: clean,
-        campaignName: formatted,
-        partnerName: formatted,
-        referralPath: `/membership/${clean}`,
-        updatedAt: new Date().toISOString(),
-      };
-    }
-    return stored;
-  });
-
   const pricingRef = useRef<HTMLElement | null>(null);
   const dramaSelectionRef = useRef<HTMLElement | null>(null);
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
@@ -147,37 +125,6 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
   useEffect(() => {
     setShowAccountSection(initialViewAccount);
   }, [initialViewAccount]);
-
-  useEffect(() => {
-    const syncPartnerMeta = () => {
-      const urlSlug = extractReferralSlugFromLocation(window.location.pathname, window.location.search);
-      const stored = getStoredReferralPartnerMeta();
-      if (urlSlug) {
-        const clean = urlSlug.toLowerCase();
-        if (stored && stored.slug === clean) {
-          setReferralPartner(stored);
-          return;
-        }
-        const formatted = formatReferralPartnerDisplayName(clean);
-        setReferralPartner({
-          slug: clean,
-          campaignName: formatted,
-          partnerName: formatted,
-          referralPath: `/membership/${clean}`,
-          updatedAt: new Date().toISOString(),
-        });
-      } else if (stored) {
-        setReferralPartner(stored);
-      }
-    };
-    syncPartnerMeta();
-    window.addEventListener('feviqo-referral-partner-updated', syncPartnerMeta);
-    window.addEventListener('popstate', syncPartnerMeta);
-    return () => {
-      window.removeEventListener('feviqo-referral-partner-updated', syncPartnerMeta);
-      window.removeEventListener('popstate', syncPartnerMeta);
-    };
-  }, []);
 
   const applyUrlContextFromLocation = React.useCallback((currentAccount?: MemberAccountState | null) => {
     if (typeof window === 'undefined') return;
@@ -284,8 +231,108 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     };
   }, []);
 
+  const PLAN_RANK_MAP: Record<MembershipPlanId, number> = {
+    starter: 1,
+    standard: 2,
+    plus: 3,
+    vip: 4,
+  };
+
+  const activeSubs = React.useMemo(() => {
+    if (!account) return [];
+    const list =
+      account.activeMemberships && account.activeMemberships.length > 0
+        ? account.activeMemberships
+        : account.activeMembership
+        ? [account.activeMembership]
+        : [];
+    return list.filter((m) => m.status === 'active' && Date.parse(m.expiresAt) > Date.now());
+  }, [account]);
+
+  const highestActiveRank = React.useMemo(
+    () => activeSubs.reduce((max, m) => Math.max(max, PLAN_RANK_MAP[m.planId] || 0), 0),
+    [activeSubs]
+  );
+  const hasActiveVip = highestActiveRank >= 4;
+  const highestActiveSub = activeSubs[0] || null;
+
+  const availablePlans = React.useMemo(() => {
+    if (renewMembershipId) return MEMBERSHIP_PLANS;
+    if (hasActiveVip) return [];
+    if (highestActiveRank > 0) {
+      return MEMBERSHIP_PLANS.filter((p) => (PLAN_RANK_MAP[p.id] || 0) > highestActiveRank);
+    }
+    return MEMBERSHIP_PLANS;
+  }, [renewMembershipId, hasActiveVip, highestActiveRank]);
+
+  // Ensure selectedPlanId is never a downgraded/same-tier plan or shown to an active VIP member
+  useEffect(() => {
+    if (renewMembershipId) return;
+    if (hasActiveVip) {
+      if (selectedPlanId !== null) setSelectedPlanId(null);
+      return;
+    }
+    if (selectedPlanId && highestActiveRank > 0) {
+      const rank = PLAN_RANK_MAP[selectedPlanId] || 0;
+      if (rank <= highestActiveRank) {
+        setSelectedPlanId(availablePlans[0]?.id || null);
+      }
+    }
+  }, [hasActiveVip, highestActiveRank, selectedPlanId, renewMembershipId, availablePlans]);
+
+  const isPaymentScreenshotLocked = Boolean(
+    activePaymentOrder &&
+      activePaymentOrder.status === 'awaiting_payment' &&
+      Number(activePaymentOrder.expectedAmount ?? activePaymentOrder.amountPkr ?? 0) > 0 &&
+      !activePaymentOrder.proofFileName &&
+      !activePaymentOrder.proofDataUrl
+  );
+
+  useEffect(() => {
+    if (!isPaymentScreenshotLocked) {
+      setScreenshotLockWarning(null);
+      return;
+    }
+    setShowAccountSection(false);
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+
+    const handleCaptureClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const lockContainer = document.getElementById('payment-lock-container');
+      if (lockContainer && lockContainer.contains(target)) {
+        return;
+      }
+      const interactive = target.closest('a, button');
+      if (!interactive) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setScreenshotLockWarning(
+        isUrdu
+          ? 'آگے بڑھنے یا صفحہ چھوڑنے سے پہلے براہ کرم ادائیگی مکمل کریں اور نیچے ادائیگی کا اسکرین شاٹ اپ لوڈ کریں۔'
+          : 'Please complete your payment and upload your payment screenshot below before leaving this step.'
+      );
+      const uploadBox =
+        document.getElementById('payment-screenshot-upload-box') ||
+        document.getElementById('bank-qr-payment-section');
+      uploadBox?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleCaptureClick, true);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('click', handleCaptureClick, true);
+    };
+  }, [isPaymentScreenshotLocked, isUrdu]);
+
   const selectedPlan: MembershipPlan | undefined = selectedPlanId
-    ? MEMBERSHIP_PLANS.find((p) => p.id === selectedPlanId)
+    ? availablePlans.find((p) => p.id === selectedPlanId)
     : undefined;
 
   useEffect(() => {
@@ -605,7 +652,30 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     setAuthModalOpen(false);
     notifyMembershipAuthChanged();
 
-    if (pendingCheckoutAfterAuth && selectedPlan) {
+    const loggedActiveSubs = (
+      enrichedAccount.activeMemberships && enrichedAccount.activeMemberships.length > 0
+        ? enrichedAccount.activeMemberships
+        : enrichedAccount.activeMembership
+        ? [enrichedAccount.activeMembership]
+        : []
+    ).filter((m) => m.status === 'active' && Date.parse(m.expiresAt) > Date.now());
+    const loggedMaxRank = loggedActiveSubs.reduce(
+      (max, m) => Math.max(max, PLAN_RANK_MAP[m.planId] || 0),
+      0
+    );
+
+    if (loggedMaxRank >= 4 && !renewMembershipId) {
+      setPendingCheckoutAfterAuth(false);
+      setSelectedPlanId(null);
+      setShowAccountSection(true);
+      return;
+    }
+
+    if (
+      pendingCheckoutAfterAuth &&
+      selectedPlan &&
+      (renewMembershipId || (PLAN_RANK_MAP[selectedPlan.id] || 0) > loggedMaxRank)
+    ) {
       setPendingCheckoutAfterAuth(false);
       const finalIds =
         selectedPlan.dramaLimit === 'all'
@@ -614,7 +684,8 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
       await runServerCheckout(selectedPlan, finalIds);
     } else if (returnEpisodeContext?.dramaId && enrichedAccount.unlockedDramaIds.includes(returnEpisodeContext.dramaId)) {
       setShowAccountSection(false);
-    } else if (!selectedPlan) {
+    } else {
+      setPendingCheckoutAfterAuth(false);
       setShowAccountSection(true);
     }
   };
@@ -664,18 +735,33 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           }`}
         >
           <div className="flex items-center gap-5 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => {
-                setShowAccountSection(false);
-                scrollToSection(pricingRef.current);
-              }}
-              className={`cursor-pointer transition-colors ${
-                !showAccountSection ? 'text-[#16A34A]' : 'text-zinc-600 hover:text-[#0B0B0D]'
-              }`}
-            >
-              {t(MEMBERSHIP_COPY.subbar.membershipTab)}
-            </button>
+            {hasActiveVip && !renewMembershipId ? (
+              <button
+                type="button"
+                onClick={() => onNavigatePage('dramas')}
+                className="cursor-pointer transition-colors text-[#16A34A] hover:text-[#0B0B0D] inline-flex items-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>{isUrdu ? 'ڈرامے دیکھیں' : 'Explore Dramas'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAccountSection(false);
+                  scrollToSection(pricingRef.current);
+                }}
+                className={`cursor-pointer transition-colors ${
+                  !showAccountSection ? 'text-[#16A34A]' : 'text-zinc-600 hover:text-[#0B0B0D]'
+                }`}
+              >
+                {highestActiveRank > 0 && !renewMembershipId
+                  ? isUrdu
+                    ? 'پلان اپ گریڈ کریں'
+                    : 'Upgrade Plan'
+                  : t(MEMBERSHIP_COPY.subbar.membershipTab)}
+              </button>
+            )}
             <button
               type="button"
               onClick={handleOpenMyAccount}
@@ -713,48 +799,6 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Partner Referral Trust & Invitation Banner (/membership/<partner-slug>) */}
-      {referralPartner && !showAccountSection && (
-        <div
-          dir={dir}
-          data-testid="referral-partner-banner"
-          className="bg-[#0B0B0D] text-white border-b border-zinc-800"
-        >
-          <div
-            className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
-              isUrdu ? 'font-urdu-slim' : ''
-            }`}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#22C55E] shrink-0" />
-              <span className="text-zinc-300">
-                {isUrdu ? 'آفیشل پارٹنر دعوت نامہ:' : 'Official Partner Invitation:'}
-              </span>
-              <strong className="text-white font-bold">
-                {referralPartner.partnerName &&
-                referralPartner.campaignName &&
-                referralPartner.partnerName.toLowerCase() !== referralPartner.campaignName.toLowerCase()
-                  ? `${referralPartner.campaignName} (${referralPartner.partnerName})`
-                  : referralPartner.partnerName ||
-                    referralPartner.campaignName ||
-                    formatReferralPartnerDisplayName(referralPartner.slug)}
-              </strong>
-              <span className="hidden md:inline text-zinc-500">·</span>
-              <code className="hidden md:inline font-mono text-[11px] text-[#22C55E]">
-                feviqo.com/membership/{referralPartner.slug}
-              </code>
-            </div>
-            <button
-              type="button"
-              onClick={() => scrollToSection(pricingRef.current)}
-              className="px-3 py-1 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] font-bold text-xs self-start sm:self-auto transition cursor-pointer"
-            >
-              {isUrdu ? 'پلان منتخب کریں' : 'Select Membership Plan'}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Continue Watching Return Banner when visitor arrived from a gated episode */}
       {returnEpisodeContext && (() => {
@@ -835,7 +879,17 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={handleOpenMyAccount}
+                  onClick={() => {
+                    if (isPending) {
+                      handleOpenMyAccount();
+                    } else {
+                      setActivePaymentOrder(pendingOrd);
+                      setShowAccountSection(false);
+                      setTimeout(() => {
+                        scrollToSection(paymentSectionRef.current);
+                      }, 80);
+                    }
+                  }}
                   className="px-3 py-1 rounded-lg bg-[#0B0B0D] hover:bg-zinc-800 text-white text-xs font-semibold self-start sm:self-auto cursor-pointer"
                 >
                   {isPending ? t(MEMBERSHIP_COPY.subbar.myAccountTab) : t(MEMBERSHIP_COPY.payment.proofHeading)}
@@ -884,24 +938,52 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
               </p>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-3.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => scrollToSection(pricingRef.current)}
-                  className="px-6 py-3.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
-                >
-                  <span>{t(MEMBERSHIP_COPY.hero.exploreMemberships)}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                <a
-                  href="/dramas"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onNavigatePage('dramas');
-                  }}
-                  className="px-6 py-3.5 rounded-xl border border-zinc-300 hover:border-[#0B0B0D] text-[#0B0B0D] text-sm font-semibold inline-flex items-center justify-center transition"
-                >
-                  {t(MEMBERSHIP_COPY.hero.exploreDramas)}
-                </a>
+                {hasActiveVip ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onNavigatePage('dramas')}
+                      className="px-6 py-3.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
+                    >
+                      <Play className="w-4 h-4 fill-current" />
+                      <span>{t(MEMBERSHIP_COPY.hero.exploreDramas)}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenMyAccount}
+                      className="px-6 py-3.5 rounded-xl border border-zinc-300 hover:border-[#0B0B0D] text-[#0B0B0D] text-sm font-semibold inline-flex items-center justify-center transition cursor-pointer"
+                    >
+                      {t(MEMBERSHIP_COPY.subbar.myAccountTab)}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection(pricingRef.current)}
+                      className="px-6 py-3.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer"
+                    >
+                      <span>
+                        {highestActiveRank > 0
+                          ? isUrdu
+                            ? 'اپنی ممبرشپ اپ گریڈ کریں'
+                            : 'Upgrade Your Membership'
+                          : t(MEMBERSHIP_COPY.hero.exploreMemberships)}
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <a
+                      href="/dramas"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onNavigatePage('dramas');
+                      }}
+                      className="px-6 py-3.5 rounded-xl border border-zinc-300 hover:border-[#0B0B0D] text-[#0B0B0D] text-sm font-semibold inline-flex items-center justify-center transition"
+                    >
+                      {t(MEMBERSHIP_COPY.hero.exploreDramas)}
+                    </a>
+                  </>
+                )}
               </div>
             </div>
 
@@ -1026,193 +1108,257 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </section>
 
-        {/* Membership Pricing */}
-        <section
-          id="membership-pricing"
-          ref={pricingRef}
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-22 space-y-10"
-        >
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-            <div className="max-w-2xl space-y-3">
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0B0B0D]">
-                {t(MEMBERSHIP_COPY.plans.heading)}
-              </h2>
-              <p className="text-base text-zinc-600">{t(MEMBERSHIP_COPY.plans.subheading)}</p>
-            </div>
-
-            {/* Payment Region Selector: Pakistan (PKR Bank QR) vs International (USD Binance QR) */}
-            <div className="space-y-2">
-              <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-500 flex items-center gap-2">
-                <Globe className="w-3.5 h-3.5 text-[#16A34A]" />
-                <span>{t(MEMBERSHIP_COPY.plans.regionLabel)}</span>
-                {geoInfo && (
-                  <span className="text-zinc-700 font-semibold" dir="ltr">
-                    · {geoInfo.countryName || geoInfo.countryCode}
-                  </span>
-                )}
+        {/* Membership Pricing (Hidden during mandatory screenshot lock; VIP active users see VIP status instead of packages) */}
+        {!isPaymentScreenshotLocked && (
+          <section
+            id="membership-pricing"
+            ref={pricingRef}
+            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-22 space-y-10"
+          >
+            {hasActiveVip && !renewMembershipId ? (
+              <div className="rounded-3xl bg-[#0B0B0D] text-white border border-zinc-800 p-8 sm:p-12 flex flex-col lg:flex-row lg:items-center justify-between gap-8 shadow-xl">
+                <div className="space-y-3 max-w-2xl">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#22C55E]/15 text-[#22C55E] text-xs font-bold uppercase tracking-[0.14em]">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>{isUrdu ? 'VIP آل ایکسیس فعال ہے' : 'VIP All-Access Active'}</span>
+                  </div>
+                  <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-white">
+                    {isUrdu
+                      ? 'آپ کے پاس پہلے سے ہی مکمل VIP ممبرشپ موجود ہے'
+                      : 'You Have Full VIP All-Access Membership'}
+                  </h2>
+                  <p className="text-sm sm:text-base text-zinc-300 leading-relaxed">
+                    {isUrdu
+                      ? 'آپ کے اکاؤنٹ پر تمام دستیاب اردو ڈب ترکی ڈرامے اور پریمیئم اقساط پہلے سے ہی ان لاک ہیں۔ کسی اضافی پیکج کی ضرورت نہیں ہے۔'
+                      : 'All eligible Urdu-dubbed Turkish dramas and protected HD episodes are already unlocked on your VIP account. You do not need to subscribe to any other package.'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => onNavigatePage('dramas')}
+                    className="px-6 py-3.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-bold inline-flex items-center gap-2 transition cursor-pointer"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>{isUrdu ? 'ڈرامے دیکھیں' : 'Explore Dramas'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleOpenMyAccount}
+                    className="px-5 py-3.5 rounded-xl border border-zinc-700 hover:border-zinc-500 text-white text-sm font-semibold transition cursor-pointer"
+                  >
+                    {t(MEMBERSHIP_COPY.subbar.myAccountTab)}
+                  </button>
+                </div>
               </div>
-              <div className="inline-flex flex-wrap gap-2 p-1 rounded-xl bg-zinc-100 border border-zinc-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentRegion('pakistan');
-                    setRegionManuallySet(true);
-                    setActivePaymentOrder(null);
-                  }}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    paymentRegion === 'pakistan'
-                      ? 'bg-[#0B0B0D] text-white shadow-xs'
-                      : 'text-zinc-600 hover:text-[#0B0B0D]'
-                  }`}
-                >
-                  {t(MEMBERSHIP_COPY.plans.regionPakistan)}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentRegion('international');
-                    setRegionManuallySet(true);
-                    setActivePaymentOrder(null);
-                  }}
-                  className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
-                    paymentRegion === 'international'
-                      ? 'bg-[#0B0B0D] text-white shadow-xs'
-                      : 'text-zinc-600 hover:text-[#0B0B0D]'
-                  }`}
-                >
-                  {t(MEMBERSHIP_COPY.plans.regionInternational)}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {paymentRegion === 'international' && (
-            <div className="rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-xs text-zinc-700 flex items-start gap-2.5">
-              <Globe className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
-              <span>{t(MEMBERSHIP_COPY.plans.indicativeNotice)}</span>
-            </div>
-          )}
-
-          {renewMembershipId && (() => {
-            const targetM = account?.allMemberships?.find((m) => m.id === renewMembershipId)
-              || account?.activeMemberships?.find((m) => m.id === renewMembershipId)
-              || account?.latestMembership;
-            const isTargetActive = targetM?.status === 'active';
-            return (
-              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <RefreshCw className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <div className="text-sm font-bold text-emerald-950">
-                      {t(MEMBERSHIP_COPY.plans.renewalBannerTitle)}
-                      {targetM ? ` — ${targetM.planName}` : ''}
-                    </div>
-                    <p className="text-xs text-emerald-900 leading-relaxed">
-                      {isTargetActive
-                        ? t(MEMBERSHIP_COPY.plans.renewalBannerActiveNote)
-                        : t(MEMBERSHIP_COPY.plans.renewalBannerExpiredNote)}
+            ) : (
+              <>
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                  <div className="max-w-2xl space-y-3">
+                    <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0B0B0D]">
+                      {highestActiveRank > 0 && !renewMembershipId
+                        ? isUrdu
+                          ? 'اپنی ممبرشپ اپ گریڈ کریں'
+                          : 'Upgrade Your Membership'
+                        : t(MEMBERSHIP_COPY.plans.heading)}
+                    </h2>
+                    <p className="text-base text-zinc-600">
+                      {highestActiveRank > 0 && !renewMembershipId && highestActiveSub
+                        ? isUrdu
+                          ? `آپ کے پاس اس وقت ${highestActiveSub.planName} پلان فعال ہے۔ آپ صرف اوپر والے اعلیٰ پیکجز میں اپ گریڈ کر سکتے ہیں۔`
+                          : `You currently have an active ${highestActiveSub.planName} membership. Only higher-tier upgrade packages are shown below.`
+                        : t(MEMBERSHIP_COPY.plans.subheading)}
                     </p>
                   </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setRenewMembershipId(null)}
-                  className="px-3.5 py-2 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-100 text-emerald-950 text-xs font-semibold cursor-pointer shrink-0 self-start sm:self-auto"
-                >
-                  {t(MEMBERSHIP_COPY.plans.cancelRenewalMode)}
-                </button>
-              </div>
-            );
-          })()}
 
-          {account &&
-            !renewMembershipId &&
-            (account.activeMemberships?.length || (account.activeMembership ? 1 : 0)) > 0 &&
-            returnEpisodeContext?.dramaId &&
-            !account.unlockedDramaIds.includes(returnEpisodeContext.dramaId) && (
-              <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4 text-xs text-zinc-700 flex items-start gap-2.5">
-                <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
-                <span>{t(MEMBERSHIP_COPY.plans.additionalDramaNote)}</span>
-              </div>
-            )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {MEMBERSHIP_PLANS.map((plan) => {
-              const isSelected = selectedPlanId === plan.id;
-              const isPopular = Boolean(plan.isFeatured);
-              const copy = MEMBERSHIP_COPY.plans.items[plan.id];
-              const displayPrice = getPlanDisplayPrice(plan);
-              const approxLocal =
-                paymentRegion === 'international' ? getPlanIndicativeLocal(plan) : undefined;
-
-              return (
-                <div
-                  key={plan.id}
-                  className={`rounded-2xl p-6 sm:p-7 flex flex-col justify-between transition-colors ${
-                    isPopular
-                      ? 'bg-[#0B0B0D] text-white border border-[#0B0B0D]'
-                      : isSelected
-                      ? 'bg-white text-[#0B0B0D] border-2 border-[#22C55E]'
-                      : 'bg-white text-[#0B0B0D] border border-zinc-200 hover:border-zinc-400'
-                  }`}
-                >
-                  <div className="space-y-5">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="text-lg font-bold tracking-tight">{t(copy.name)}</h3>
-                      {plan.featuredLabel && (
-                        <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#22C55E]">
-                          {t(MEMBERSHIP_COPY.plans.mostPopular)}
+                  {/* Payment Region Selector: Pakistan (PKR Bank QR) vs International (USD Binance QR) */}
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-zinc-500 flex items-center gap-2">
+                      <Globe className="w-3.5 h-3.5 text-[#16A34A]" />
+                      <span>{t(MEMBERSHIP_COPY.plans.regionLabel)}</span>
+                      {geoInfo && (
+                        <span className="text-zinc-700 font-semibold" dir="ltr">
+                          · {geoInfo.countryName || geoInfo.countryCode}
                         </span>
                       )}
                     </div>
-
-                    <div className="space-y-1">
-                      <div className="text-3xl font-bold tracking-tight tabular-nums" dir="ltr">
-                        {displayPrice}
-                      </div>
-                      {approxLocal && (
-                        <div className={`text-xs font-medium ${isPopular ? 'text-[#22C55E]' : 'text-[#16A34A]'}`} dir="ltr">
-                          {t(MEMBERSHIP_COPY.plans.approxLocalPrefix)} {approxLocal}
-                        </div>
-                      )}
-                      <div className={`text-xs font-medium ${isPopular ? 'text-zinc-400' : 'text-zinc-500'}`}>
-                        {t(copy.durationLabel)}
-                      </div>
+                    <div className="inline-flex flex-wrap gap-2 p-1 rounded-xl bg-zinc-100 border border-zinc-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentRegion('pakistan');
+                          setRegionManuallySet(true);
+                          setActivePaymentOrder(null);
+                        }}
+                        className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          paymentRegion === 'pakistan'
+                            ? 'bg-[#0B0B0D] text-white shadow-xs'
+                            : 'text-zinc-600 hover:text-[#0B0B0D]'
+                        }`}
+                      >
+                        {t(MEMBERSHIP_COPY.plans.regionPakistan)}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentRegion('international');
+                          setRegionManuallySet(true);
+                          setActivePaymentOrder(null);
+                        }}
+                        className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
+                          paymentRegion === 'international'
+                            ? 'bg-[#0B0B0D] text-white shadow-xs'
+                            : 'text-zinc-600 hover:text-[#0B0B0D]'
+                        }`}
+                      >
+                        {t(MEMBERSHIP_COPY.plans.regionInternational)}
+                      </button>
                     </div>
-
-                    <div
-                      className={`pt-4 border-t text-sm font-semibold ${
-                        isPopular ? 'border-zinc-800 text-white' : 'border-zinc-100 text-[#0B0B0D]'
-                      }`}
-                    >
-                      {t(copy.inclusionText)}
-                    </div>
-
-                    <p className={`text-xs leading-relaxed ${isPopular ? 'text-zinc-300' : 'text-zinc-600'}`}>
-                      {t(copy.summary)}
-                    </p>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSelectPlan(plan)}
-                    className={`mt-8 w-full py-3 px-4 rounded-xl text-sm font-semibold transition cursor-pointer ${
-                      isPopular
-                        ? 'bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white'
-                        : isSelected
-                        ? 'bg-[#0B0B0D] text-white'
-                        : 'bg-[#F4F4F5] hover:bg-[#0B0B0D] text-[#0B0B0D] hover:text-white'
-                    }`}
-                  >
-                    {isSelected
-                      ? `${t(copy.name)} · ${t(MEMBERSHIP_COPY.plans.selectedSuffix)}`
-                      : t(copy.ctaLabel)}
-                  </button>
                 </div>
-              );
-            })}
-          </div>
-        </section>
+
+                {paymentRegion === 'international' && (
+                  <div className="rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-xs text-zinc-700 flex items-start gap-2.5">
+                    <Globe className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
+                    <span>{t(MEMBERSHIP_COPY.plans.indicativeNotice)}</span>
+                  </div>
+                )}
+
+                {renewMembershipId && (() => {
+                  const targetM = account?.allMemberships?.find((m) => m.id === renewMembershipId)
+                    || account?.activeMemberships?.find((m) => m.id === renewMembershipId)
+                    || account?.latestMembership;
+                  const isTargetActive = targetM?.status === 'active';
+                  return (
+                    <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <RefreshCw className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" />
+                        <div className="space-y-1">
+                          <div className="text-sm font-bold text-emerald-950">
+                            {t(MEMBERSHIP_COPY.plans.renewalBannerTitle)}
+                            {targetM ? ` — ${targetM.planName}` : ''}
+                          </div>
+                          <p className="text-xs text-emerald-900 leading-relaxed">
+                            {isTargetActive
+                              ? t(MEMBERSHIP_COPY.plans.renewalBannerActiveNote)
+                              : t(MEMBERSHIP_COPY.plans.renewalBannerExpiredNote)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setRenewMembershipId(null)}
+                        className="px-3.5 py-2 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-100 text-emerald-950 text-xs font-semibold cursor-pointer shrink-0 self-start sm:self-auto"
+                      >
+                        {t(MEMBERSHIP_COPY.plans.cancelRenewalMode)}
+                      </button>
+                    </div>
+                  );
+                })()}
+
+                {account &&
+                  !renewMembershipId &&
+                  (account.activeMemberships?.length || (account.activeMembership ? 1 : 0)) > 0 &&
+                  returnEpisodeContext?.dramaId &&
+                  !account.unlockedDramaIds.includes(returnEpisodeContext.dramaId) && (
+                    <div className="rounded-2xl bg-zinc-50 border border-zinc-200 p-4 text-xs text-zinc-700 flex items-start gap-2.5">
+                      <ShieldCheck className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
+                      <span>{t(MEMBERSHIP_COPY.plans.additionalDramaNote)}</span>
+                    </div>
+                  )}
+
+                <div
+                  className={`grid grid-cols-1 sm:grid-cols-2 ${
+                    availablePlans.length >= 4
+                      ? 'lg:grid-cols-4'
+                      : availablePlans.length === 3
+                      ? 'lg:grid-cols-3'
+                      : availablePlans.length === 2
+                      ? 'lg:grid-cols-2'
+                      : 'lg:grid-cols-1 max-w-md'
+                  } gap-5`}
+                >
+                  {availablePlans.map((plan) => {
+                    const isSelected = selectedPlanId === plan.id;
+                    const isPopular = Boolean(plan.isFeatured);
+                    const copy = MEMBERSHIP_COPY.plans.items[plan.id];
+                    const displayPrice = getPlanDisplayPrice(plan);
+                    const approxLocal =
+                      paymentRegion === 'international' ? getPlanIndicativeLocal(plan) : undefined;
+
+                    return (
+                      <div
+                        key={plan.id}
+                        className={`rounded-2xl p-6 sm:p-7 flex flex-col justify-between transition-colors ${
+                          isPopular
+                            ? 'bg-[#0B0B0D] text-white border border-[#0B0B0D]'
+                            : isSelected
+                            ? 'bg-white text-[#0B0B0D] border-2 border-[#22C55E]'
+                            : 'bg-white text-[#0B0B0D] border border-zinc-200 hover:border-zinc-400'
+                        }`}
+                      >
+                        <div className="space-y-5">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <h3 className="text-lg font-bold tracking-tight">{t(copy.name)}</h3>
+                            {plan.featuredLabel && (
+                              <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#22C55E]">
+                                {t(MEMBERSHIP_COPY.plans.mostPopular)}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="text-3xl font-bold tracking-tight tabular-nums" dir="ltr">
+                              {displayPrice}
+                            </div>
+                            {approxLocal && (
+                              <div className={`text-xs font-medium ${isPopular ? 'text-[#22C55E]' : 'text-[#16A34A]'}`} dir="ltr">
+                                {t(MEMBERSHIP_COPY.plans.approxLocalPrefix)} {approxLocal}
+                              </div>
+                            )}
+                            <div className={`text-xs font-medium ${isPopular ? 'text-zinc-400' : 'text-zinc-500'}`}>
+                              {t(copy.durationLabel)}
+                            </div>
+                          </div>
+
+                          <div
+                            className={`pt-4 border-t text-sm font-semibold ${
+                              isPopular ? 'border-zinc-800 text-white' : 'border-zinc-100 text-[#0B0B0D]'
+                            }`}
+                          >
+                            {t(copy.inclusionText)}
+                          </div>
+
+                          <p className={`text-xs leading-relaxed ${isPopular ? 'text-zinc-300' : 'text-zinc-600'}`}>
+                            {t(copy.summary)}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSelectPlan(plan)}
+                          className={`mt-8 w-full py-3 px-4 rounded-xl text-sm font-semibold transition cursor-pointer ${
+                            isPopular
+                              ? 'bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white'
+                              : isSelected
+                              ? 'bg-[#0B0B0D] text-white'
+                              : 'bg-[#F4F4F5] hover:bg-[#0B0B0D] text-[#0B0B0D] hover:text-white'
+                          }`}
+                        >
+                          {isSelected
+                            ? `${t(copy.name)} · ${t(MEMBERSHIP_COPY.plans.selectedSuffix)}`
+                            : highestActiveRank > 0 && !renewMembershipId
+                            ? `${isUrdu ? 'اپ گریڈ کریں:' : 'Upgrade to'} ${t(copy.name)}`
+                            : t(copy.ctaLabel)}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </section>
+        )}
 
         {/* Always-visible Supported Turkish Dramas Catalogue & Coverage Overview */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-6">
@@ -1294,7 +1440,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         </section>
 
         {/* Drama Selection & Bank QR Payment Flow */}
-        {selectedPlan && (
+        {(selectedPlan || (activePaymentOrder && account)) && (
           <section
             id="drama-selection"
             ref={dramaSelectionRef}
@@ -1302,356 +1448,370 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
             aria-labelledby="drama-selection-heading"
           >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-zinc-200">
-                <div className="space-y-1.5">
-                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
-                    {t(MEMBERSHIP_COPY.dramaSelection.stepEyebrow)} · {selectedPlan.name} (
-                    <span dir="ltr">{getPlanDisplayPrice(selectedPlan)}</span> /{' '}
-                    {t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})
+              {!isPaymentScreenshotLocked && selectedPlan && (
+                <>
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-zinc-200">
+                    <div className="space-y-1.5">
+                      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
+                        {t(MEMBERSHIP_COPY.dramaSelection.stepEyebrow)} · {selectedPlan.name} (
+                        <span dir="ltr">{getPlanDisplayPrice(selectedPlan)}</span> /{' '}
+                        {t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})
+                      </div>
+                      <h2 id="drama-selection-heading" className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0B0B0D]">
+                        {selectedPlan.dramaLimit === 'all'
+                          ? t(MEMBERSHIP_COPY.dramaSelection.allVipHeading)
+                          : selectedPlan.dramaLimit === 2
+                          ? t(MEMBERSHIP_COPY.dramaSelection.selectTwoHeading)
+                          : t(MEMBERSHIP_COPY.dramaSelection.selectOneHeading)}
+                      </h2>
+                      <p className="text-sm text-zinc-600">
+                        {selectedPlan.dramaLimit === 'all'
+                          ? t(MEMBERSHIP_COPY.dramaSelection.vipDesc)
+                          : t(MEMBERSHIP_COPY.dramaSelection.chooseCountDesc)}
+                      </p>
+                    </div>
+
+                    <div className="text-sm font-semibold text-[#0B0B0D] tabular-nums shrink-0" dir="ltr">
+                      {selectedPlan.dramaLimit === 'all'
+                        ? `${MEMBERSHIP_DRAMAS.length} / ${MEMBERSHIP_DRAMAS.length}`
+                        : `${selectedDramaIds.length} / ${selectedPlan.dramaLimit}`}
+                    </div>
                   </div>
-                  <h2 id="drama-selection-heading" className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0B0B0D]">
-                    {selectedPlan.dramaLimit === 'all'
-                      ? t(MEMBERSHIP_COPY.dramaSelection.allVipHeading)
-                      : selectedPlan.dramaLimit === 2
-                      ? t(MEMBERSHIP_COPY.dramaSelection.selectTwoHeading)
-                      : t(MEMBERSHIP_COPY.dramaSelection.selectOneHeading)}
-                  </h2>
-                  <p className="text-sm text-zinc-600">
-                    {selectedPlan.dramaLimit === 'all'
-                      ? t(MEMBERSHIP_COPY.dramaSelection.vipDesc)
-                      : t(MEMBERSHIP_COPY.dramaSelection.chooseCountDesc)}
-                  </p>
-                </div>
 
-                <div className="text-sm font-semibold text-[#0B0B0D] tabular-nums shrink-0" dir="ltr">
-                  {selectedPlan.dramaLimit === 'all'
-                    ? `${MEMBERSHIP_DRAMAS.length} / ${MEMBERSHIP_DRAMAS.length}`
-                    : `${selectedDramaIds.length} / ${selectedPlan.dramaLimit}`}
-                </div>
-              </div>
-
-              {selectionWarning && (
-                <div
-                  role="alert"
-                  className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-900 flex items-start gap-2.5"
-                >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-700" />
-                  <span>{selectionWarning}</span>
-                </div>
-              )}
-
-              {/* Real FEVIQO 3-Drama Selection Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {MEMBERSHIP_DRAMAS.map((drama) => {
-                  const isVipAuto = selectedPlan.dramaLimit === 'all' && drama.vipEligible;
-                  const isChosen = isVipAuto || selectedDramaIds.includes(drama.id);
-
-                  return (
-                    <button
-                      key={drama.id}
-                      type="button"
-                      onClick={() => handleToggleDrama(drama)}
-                      className={`text-left rounded-2xl overflow-hidden bg-white transition flex flex-col cursor-pointer ${
-                        isChosen ? 'border-2 border-[#22C55E]' : 'border border-zinc-200 hover:border-zinc-400'
-                      }`}
+                  {selectionWarning && (
+                    <div
+                      role="alert"
+                      className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-900 flex items-start gap-2.5"
                     >
-                      <div className="relative aspect-video w-full bg-[#0B0B0D]">
-                        <img
-                          src={drama.posterUrl}
-                          referrerPolicy="no-referrer"
-                          alt={drama.title}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            if (e.currentTarget.src !== window.location.origin + drama.fallbackPosterUrl) {
-                              e.currentTarget.src = drama.fallbackPosterUrl;
-                            }
-                          }}
-                        />
-                        {isChosen && (
-                          <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-[#22C55E] text-[#0B0B0D] flex items-center justify-center shadow-sm">
-                            <Check className="w-4 h-4 stroke-[2.5]" />
-                          </div>
-                        )}
-                      </div>
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-700" />
+                      <span>{selectionWarning}</span>
+                    </div>
+                  )}
 
-                      <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                        <div className="space-y-2">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <h3 className="text-lg font-bold text-[#0B0B0D]">{drama.title}</h3>
-                            <span className="font-urdu-slim text-base text-zinc-700" dir="rtl">
-                              {drama.urduTitle}
-                            </span>
-                          </div>
-                          <div className="text-xs font-medium text-zinc-500">
-                            {drama.seasonLabel} · {drama.genreLabel} · {drama.episodes.length}{' '}
-                            {t(MEMBERSHIP_COPY.dramaSelection.episodes)}
-                          </div>
-                          <p className="text-xs text-zinc-600 leading-relaxed">{drama.synopsis}</p>
-                        </div>
+                  {/* Real FEVIQO 3-Drama Selection Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {MEMBERSHIP_DRAMAS.map((drama) => {
+                      const isVipAuto = selectedPlan.dramaLimit === 'all' && drama.vipEligible;
+                      const isChosen = isVipAuto || selectedDramaIds.includes(drama.id);
 
-                        <div className="pt-3 border-t border-zinc-100 text-xs font-semibold flex items-center justify-between">
-                          <span className={isChosen ? 'text-[#16A34A]' : 'text-zinc-600'}>
-                            {isVipAuto
-                              ? t(MEMBERSHIP_COPY.dramaSelection.includedVip)
-                              : isChosen
-                              ? t(MEMBERSHIP_COPY.dramaSelection.selectedForMembership)
-                              : t(MEMBERSHIP_COPY.dramaSelection.selectDrama)}
-                          </span>
-                          <span className="text-zinc-500">{t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)}</span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {checkoutError && (
-                <div
-                  role="alert"
-                  className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2.5"
-                >
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{checkoutError}</span>
-                </div>
-              )}
-
-              {/* Promo Code, Referral Welcome Discount & Credit Wallet Summary */}
-              {(() => {
-                const availableCredits = account
-                  ? paymentRegion === 'international'
-                    ? Number(account.member.creditBalanceUsd || 0)
-                    : Number(account.member.creditBalancePkr || 0)
-                  : 0;
-                const origVal = pricingQuote
-                  ? pricingQuote.originalAmount
-                  : paymentRegion === 'international'
-                  ? getPlanUsdAmount(selectedPlan)
-                  : selectedPlan.pricePkr;
-                const finalVal = pricingQuote ? pricingQuote.finalAmount : origVal;
-                const hasAnyDiscount = Boolean(
-                  pricingQuote &&
-                    (pricingQuote.promoDiscount > 0 ||
-                      pricingQuote.referralDiscount > 0 ||
-                      pricingQuote.creditsUsed > 0)
-                );
-
-                return (
-                  <div className="rounded-2xl bg-white border border-zinc-200 p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    <div className="lg:col-span-7 space-y-4">
-                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#16A34A]">
-                        <Tag className="w-3.5 h-3.5" />
-                        <span>{t(MEMBERSHIP_COPY.promo.sectionTitle)}</span>
-                      </div>
-
-                      <form onSubmit={handleApplyPromoCode} className="space-y-2">
-                        <label htmlFor="checkout-promo-input" className="block text-xs font-semibold text-zinc-700">
-                          {t(MEMBERSHIP_COPY.promo.inputLabel)}
-                        </label>
-                        <div className="flex flex-col sm:flex-row gap-2.5">
-                          <input
-                            id="checkout-promo-input"
-                            type="text"
-                            dir="ltr"
-                            value={promoCodeInput}
-                            onChange={(e) => {
-                              setPromoCodeInput(normalizeReferralInput(e.target.value));
-                              setPromoError(null);
-                            }}
-                            placeholder={t(MEMBERSHIP_COPY.promo.inputPlaceholder)}
-                            className="flex-1 px-3.5 py-2.5 text-sm font-mono uppercase bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="submit"
-                              disabled={promoLoading || !promoCodeInput.trim()}
-                              className="px-4 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] disabled:opacity-50 text-xs font-semibold transition cursor-pointer whitespace-nowrap"
-                            >
-                              {promoLoading
-                                ? t(MEMBERSHIP_COPY.promo.applyingBtn)
-                                : t(MEMBERSHIP_COPY.promo.applyBtn)}
-                            </button>
-                            {appliedPromoCode && (
-                              <button
-                                type="button"
-                                onClick={handleRemovePromoCode}
-                                className="px-3 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-xs font-semibold text-zinc-700 inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                                <span>{t(MEMBERSHIP_COPY.promo.removeBtn)}</span>
-                              </button>
+                      return (
+                        <button
+                          key={drama.id}
+                          type="button"
+                          onClick={() => handleToggleDrama(drama)}
+                          className={`text-left rounded-2xl overflow-hidden bg-white transition flex flex-col cursor-pointer ${
+                            isChosen ? 'border-2 border-[#22C55E]' : 'border border-zinc-200 hover:border-zinc-400'
+                          }`}
+                        >
+                          <div className="relative aspect-video w-full bg-[#0B0B0D]">
+                            <img
+                              src={drama.posterUrl}
+                              referrerPolicy="no-referrer"
+                              alt={drama.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                if (e.currentTarget.src !== window.location.origin + drama.fallbackPosterUrl) {
+                                  e.currentTarget.src = drama.fallbackPosterUrl;
+                                }
+                              }}
+                            />
+                            {isChosen && (
+                              <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-[#22C55E] text-[#0B0B0D] flex items-center justify-center shadow-sm">
+                                <Check className="w-4 h-4 stroke-[2.5]" />
+                              </div>
                             )}
                           </div>
-                        </div>
-                      </form>
 
-                      {promoError && (
-                        <div
-                          role="alert"
-                          className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2"
-                        >
-                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span>{promoError}</span>
-                        </div>
-                      )}
+                          <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                            <div className="space-y-2">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <h3 className="text-lg font-bold text-[#0B0B0D]">{drama.title}</h3>
+                                <span className="font-urdu-slim text-base text-zinc-700" dir="rtl">
+                                  {drama.urduTitle}
+                                </span>
+                              </div>
+                              <div className="text-xs font-medium text-zinc-500">
+                                {drama.seasonLabel} · {drama.genreLabel} · {drama.episodes.length}{' '}
+                                {t(MEMBERSHIP_COPY.dramaSelection.episodes)}
+                              </div>
+                              <p className="text-xs text-zinc-600 leading-relaxed">{drama.synopsis}</p>
+                            </div>
 
-                      {pricingQuote?.promoApplied && (
-                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
-                          <div className="font-semibold">
-                            {t(MEMBERSHIP_COPY.promo.appliedBadge)}:{' '}
-                            <span className="font-mono font-bold text-[#16A34A]" dir="ltr">
-                              {pricingQuote.promoApplied.code}
+                            <div className="pt-3 border-t border-zinc-100 text-xs font-semibold flex items-center justify-between">
+                              <span className={isChosen ? 'text-[#16A34A]' : 'text-zinc-600'}>
+                                {isVipAuto
+                                  ? t(MEMBERSHIP_COPY.dramaSelection.includedVip)
+                                  : isChosen
+                                  ? t(MEMBERSHIP_COPY.dramaSelection.selectedForMembership)
+                                  : t(MEMBERSHIP_COPY.dramaSelection.selectDrama)}
+                              </span>
+                              <span className="text-zinc-500">{t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)}</span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {checkoutError && (
+                    <div
+                      role="alert"
+                      className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 flex items-start gap-2.5"
+                    >
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{checkoutError}</span>
+                    </div>
+                  )}
+
+                  {/* Promo Code, Referral Welcome Discount & Credit Wallet Summary */}
+                  {(() => {
+                    const availableCredits = account
+                      ? paymentRegion === 'international'
+                        ? Number(account.member.creditBalanceUsd || 0)
+                        : Number(account.member.creditBalancePkr || 0)
+                      : 0;
+                    const origVal = pricingQuote
+                      ? pricingQuote.originalAmount
+                      : paymentRegion === 'international'
+                      ? getPlanUsdAmount(selectedPlan)
+                      : selectedPlan.pricePkr;
+                    const finalVal = pricingQuote ? pricingQuote.finalAmount : origVal;
+                    const hasAnyDiscount = Boolean(
+                      pricingQuote &&
+                        (pricingQuote.promoDiscount > 0 ||
+                          pricingQuote.referralDiscount > 0 ||
+                          pricingQuote.creditsUsed > 0)
+                    );
+
+                    return (
+                      <div className="rounded-2xl bg-white border border-zinc-200 p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        <div className="lg:col-span-7 space-y-4">
+                          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#16A34A]">
+                            <Tag className="w-3.5 h-3.5" />
+                            <span>{t(MEMBERSHIP_COPY.promo.sectionTitle)}</span>
+                          </div>
+
+                          <form onSubmit={handleApplyPromoCode} className="space-y-2">
+                            <label htmlFor="checkout-promo-input" className="block text-xs font-semibold text-zinc-700">
+                              {t(MEMBERSHIP_COPY.promo.inputLabel)}
+                            </label>
+                            <div className="flex flex-col sm:flex-row gap-2.5">
+                              <input
+                                id="checkout-promo-input"
+                                type="text"
+                                dir="ltr"
+                                value={promoCodeInput}
+                                onChange={(e) => {
+                                  setPromoCodeInput(normalizeReferralInput(e.target.value));
+                                  setPromoError(null);
+                                }}
+                                placeholder={t(MEMBERSHIP_COPY.promo.inputPlaceholder)}
+                                className="flex-1 px-3.5 py-2.5 text-sm font-mono uppercase bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="submit"
+                                  disabled={promoLoading || !promoCodeInput.trim()}
+                                  className="px-4 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] disabled:opacity-50 text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+                                >
+                                  {promoLoading
+                                    ? t(MEMBERSHIP_COPY.promo.applyingBtn)
+                                    : t(MEMBERSHIP_COPY.promo.applyBtn)}
+                                </button>
+                                {appliedPromoCode && (
+                                  <button
+                                    type="button"
+                                    onClick={handleRemovePromoCode}
+                                    className="px-3 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-xs font-semibold text-zinc-700 inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    <span>{t(MEMBERSHIP_COPY.promo.removeBtn)}</span>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </form>
+
+                          {promoError && (
+                            <div
+                              role="alert"
+                              className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2"
+                            >
+                              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                              <span>{promoError}</span>
+                            </div>
+                          )}
+
+                          {pricingQuote?.promoApplied && (
+                            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
+                              <div className="font-semibold">
+                                {t(MEMBERSHIP_COPY.promo.appliedBadge)}:{' '}
+                                <span className="font-mono font-bold text-[#16A34A]" dir="ltr">
+                                  {pricingQuote.promoApplied.code}
+                                </span>
+                                {pricingQuote.promoApplied.description ? ` · ${pricingQuote.promoApplied.description}` : ''}
+                              </div>
+                              <span className="font-bold text-[#16A34A]" dir="ltr">
+                                -{formatQuoteAmount(pricingQuote.promoDiscount)}
+                              </span>
+                            </div>
+                          )}
+
+                          {pricingQuote?.referralDiscountApplied && (
+                            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-semibold">
+                                {t(MEMBERSHIP_COPY.promo.referralFirstOrderBadge)}
+                              </span>
+                              <span className="font-bold text-[#16A34A]" dir="ltr">
+                                -{formatQuoteAmount(pricingQuote.referralDiscount)}
+                              </span>
+                            </div>
+                          )}
+
+                          {account && availableCredits > 0 && (
+                            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-[#F8FAFC] cursor-pointer hover:border-[#22C55E] transition">
+                              <input
+                                type="checkbox"
+                                checked={applyCredits}
+                                onChange={(e) => setApplyCredits(e.target.checked)}
+                                className="mt-0.5 h-4 w-4 accent-[#16A34A] rounded cursor-pointer"
+                              />
+                              <div className="text-xs space-y-0.5">
+                                <div className="font-bold text-[#0B0B0D] flex items-center gap-1.5">
+                                  <Wallet className="w-3.5 h-3.5 text-[#16A34A]" />
+                                  <span>{t(MEMBERSHIP_COPY.promo.applyCreditsLabel)}</span>
+                                </div>
+                                <div className="text-zinc-600">
+                                  {t(MEMBERSHIP_COPY.promo.availableCreditsLabel)}{' '}
+                                  <strong className="text-[#0B0B0D]" dir="ltr">
+                                    {formatQuoteAmount(availableCredits)}
+                                  </strong>
+                                </div>
+                              </div>
+                            </label>
+                          )}
+                        </div>
+
+                        {/* Itemized Checkout Price Summary */}
+                        <div className="lg:col-span-5 rounded-xl border border-zinc-200 bg-[#F8FAFC] p-4 sm:p-5 space-y-2.5 text-xs">
+                          <div className="flex items-center justify-between text-zinc-600">
+                            <span>
+                              {t(MEMBERSHIP_COPY.promo.originalPrice)} ({selectedPlan.name})
                             </span>
-                            {pricingQuote.promoApplied.description ? ` · ${pricingQuote.promoApplied.description}` : ''}
+                            <span className="font-semibold text-[#0B0B0D] tabular-nums" dir="ltr">
+                              {formatQuoteAmount(origVal)}
+                            </span>
                           </div>
-                          <span className="font-bold text-[#16A34A]" dir="ltr">
-                            -{formatQuoteAmount(pricingQuote.promoDiscount)}
-                          </span>
-                        </div>
-                      )}
-
-                      {pricingQuote?.referralDiscountApplied && (
-                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-semibold">
-                            {t(MEMBERSHIP_COPY.promo.referralFirstOrderBadge)}
-                          </span>
-                          <span className="font-bold text-[#16A34A]" dir="ltr">
-                            -{formatQuoteAmount(pricingQuote.referralDiscount)}
-                          </span>
-                        </div>
-                      )}
-
-                      {account && availableCredits > 0 && (
-                        <label className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-[#F8FAFC] cursor-pointer hover:border-[#22C55E] transition">
-                          <input
-                            type="checkbox"
-                            checked={applyCredits}
-                            onChange={(e) => setApplyCredits(e.target.checked)}
-                            className="mt-0.5 h-4 w-4 accent-[#16A34A] rounded cursor-pointer"
-                          />
-                          <div className="text-xs space-y-0.5">
-                            <div className="font-bold text-[#0B0B0D] flex items-center gap-1.5">
-                              <Wallet className="w-3.5 h-3.5 text-[#16A34A]" />
-                              <span>{t(MEMBERSHIP_COPY.promo.applyCreditsLabel)}</span>
+                          {pricingQuote && pricingQuote.promoDiscount > 0 && (
+                            <div className="flex items-center justify-between text-[#16A34A] font-semibold">
+                              <span>
+                                {t(MEMBERSHIP_COPY.promo.promoDiscount)} ({pricingQuote.promoApplied?.code})
+                              </span>
+                              <span className="tabular-nums" dir="ltr">
+                                -{formatQuoteAmount(pricingQuote.promoDiscount)}
+                              </span>
                             </div>
-                            <div className="text-zinc-600">
-                              {t(MEMBERSHIP_COPY.promo.availableCreditsLabel)}{' '}
-                              <strong className="text-[#0B0B0D]" dir="ltr">
-                                {formatQuoteAmount(availableCredits)}
-                              </strong>
+                          )}
+                          {pricingQuote && pricingQuote.referralDiscount > 0 && (
+                            <div className="flex items-center justify-between text-[#16A34A] font-semibold">
+                              <span>{t(MEMBERSHIP_COPY.promo.referralDiscount)}</span>
+                              <span className="tabular-nums" dir="ltr">
+                                -{formatQuoteAmount(pricingQuote.referralDiscount)}
+                              </span>
                             </div>
+                          )}
+                          {pricingQuote && pricingQuote.creditsUsed > 0 && (
+                            <div className="flex items-center justify-between text-[#16A34A] font-semibold">
+                              <span>{t(MEMBERSHIP_COPY.promo.walletCredits)}</span>
+                              <span className="tabular-nums" dir="ltr">
+                                -{formatQuoteAmount(pricingQuote.creditsUsed)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="pt-2.5 border-t border-zinc-200 flex items-center justify-between text-sm font-bold text-[#0B0B0D]">
+                            <span>{t(MEMBERSHIP_COPY.promo.netPayable)}</span>
+                            <span className="text-lg text-[#16A34A] tabular-nums" dir="ltr">
+                              {formatQuoteAmount(finalVal)}
+                            </span>
                           </div>
-                        </label>
-                      )}
+                          {hasAnyDiscount && finalVal === 0 && (
+                            <div className="pt-1 text-[11px] font-semibold text-[#16A34A]">
+                              {t(MEMBERSHIP_COPY.promo.zeroBalanceTitle)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Checkout Action Bar */}
+                  <div className="rounded-2xl bg-white border border-zinc-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="text-sm font-bold text-[#0B0B0D] flex flex-wrap items-center gap-2">
+                        <span>{selectedPlan.name} ·</span>
+                        {pricingQuote && pricingQuote.finalAmount < pricingQuote.originalAmount ? (
+                          <>
+                            <span dir="ltr" className="text-zinc-400 line-through font-normal">
+                              {formatQuoteAmount(pricingQuote.originalAmount)}
+                            </span>
+                            <span dir="ltr" className="text-[#16A34A] font-bold">
+                              {formatQuoteAmount(pricingQuote.finalAmount)}
+                            </span>
+                          </>
+                        ) : (
+                          <span dir="ltr">{getPlanDisplayPrice(selectedPlan)}</span>
+                        )}
+                        <span>({t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})</span>
+                        {renewMembershipId ? ` · ${t(MEMBERSHIP_COPY.payment.orderTypeRenewal)}` : ''}
+                      </div>
+                      <div className="text-xs text-zinc-600">
+                        {account
+                          ? `${t(MEMBERSHIP_COPY.dramaSelection.signedInAs)} ${account.member.email}`
+                          : t(MEMBERSHIP_COPY.dramaSelection.guestCheckoutNote)}
+                      </div>
                     </div>
 
-                    {/* Itemized Checkout Price Summary */}
-                    <div className="lg:col-span-5 rounded-xl border border-zinc-200 bg-[#F8FAFC] p-4 sm:p-5 space-y-2.5 text-xs">
-                      <div className="flex items-center justify-between text-zinc-600">
-                        <span>
-                          {t(MEMBERSHIP_COPY.promo.originalPrice)} ({selectedPlan.name})
-                        </span>
-                        <span className="font-semibold text-[#0B0B0D] tabular-nums" dir="ltr">
-                          {formatQuoteAmount(origVal)}
-                        </span>
-                      </div>
-                      {pricingQuote && pricingQuote.promoDiscount > 0 && (
-                        <div className="flex items-center justify-between text-[#16A34A] font-semibold">
-                          <span>
-                            {t(MEMBERSHIP_COPY.promo.promoDiscount)} ({pricingQuote.promoApplied?.code})
-                          </span>
-                          <span className="tabular-nums" dir="ltr">
-                            -{formatQuoteAmount(pricingQuote.promoDiscount)}
-                          </span>
-                        </div>
-                      )}
-                      {pricingQuote && pricingQuote.referralDiscount > 0 && (
-                        <div className="flex items-center justify-between text-[#16A34A] font-semibold">
-                          <span>{t(MEMBERSHIP_COPY.promo.referralDiscount)}</span>
-                          <span className="tabular-nums" dir="ltr">
-                            -{formatQuoteAmount(pricingQuote.referralDiscount)}
-                          </span>
-                        </div>
-                      )}
-                      {pricingQuote && pricingQuote.creditsUsed > 0 && (
-                        <div className="flex items-center justify-between text-[#16A34A] font-semibold">
-                          <span>{t(MEMBERSHIP_COPY.promo.walletCredits)}</span>
-                          <span className="tabular-nums" dir="ltr">
-                            -{formatQuoteAmount(pricingQuote.creditsUsed)}
-                          </span>
-                        </div>
-                      )}
-                      <div className="pt-2.5 border-t border-zinc-200 flex items-center justify-between text-sm font-bold text-[#0B0B0D]">
-                        <span>{t(MEMBERSHIP_COPY.promo.netPayable)}</span>
-                        <span className="text-lg text-[#16A34A] tabular-nums" dir="ltr">
-                          {formatQuoteAmount(finalVal)}
-                        </span>
-                      </div>
-                      {hasAnyDiscount && finalVal === 0 && (
-                        <div className="pt-1 text-[11px] font-semibold text-[#16A34A]">
-                          {t(MEMBERSHIP_COPY.promo.zeroBalanceTitle)}
-                        </div>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      disabled={checkingOut}
+                      onClick={handleCheckoutSubmit}
+                      className="px-6 py-3.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] disabled:opacity-60 text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer shrink-0"
+                    >
+                      <span>
+                        {checkingOut
+                          ? t(MEMBERSHIP_COPY.dramaSelection.preparingCheckout)
+                          : account
+                          ? pricingQuote && pricingQuote.finalAmount <= 0
+                            ? t(MEMBERSHIP_COPY.promo.zeroBalanceBtn)
+                            : paymentRegion === 'international'
+                            ? t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentUsd)
+                            : t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentPkr)
+                          : t(MEMBERSHIP_COPY.dramaSelection.continueSignInCheckout)}
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
                   </div>
-                );
-              })()}
-
-              {/* Checkout Action Bar */}
-              <div className="rounded-2xl bg-white border border-zinc-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="text-sm font-bold text-[#0B0B0D] flex flex-wrap items-center gap-2">
-                    <span>{selectedPlan.name} ·</span>
-                    {pricingQuote && pricingQuote.finalAmount < pricingQuote.originalAmount ? (
-                      <>
-                        <span dir="ltr" className="text-zinc-400 line-through font-normal">
-                          {formatQuoteAmount(pricingQuote.originalAmount)}
-                        </span>
-                        <span dir="ltr" className="text-[#16A34A] font-bold">
-                          {formatQuoteAmount(pricingQuote.finalAmount)}
-                        </span>
-                      </>
-                    ) : (
-                      <span dir="ltr">{getPlanDisplayPrice(selectedPlan)}</span>
-                    )}
-                    <span>({t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})</span>
-                    {renewMembershipId ? ` · ${t(MEMBERSHIP_COPY.payment.orderTypeRenewal)}` : ''}
-                  </div>
-                  <div className="text-xs text-zinc-600">
-                    {account
-                      ? `${t(MEMBERSHIP_COPY.dramaSelection.signedInAs)} ${account.member.email}`
-                      : t(MEMBERSHIP_COPY.dramaSelection.guestCheckoutNote)}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={checkingOut}
-                  onClick={handleCheckoutSubmit}
-                  className="px-6 py-3.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] disabled:opacity-60 text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer shrink-0"
-                >
-                  <span>
-                    {checkingOut
-                      ? t(MEMBERSHIP_COPY.dramaSelection.preparingCheckout)
-                      : account
-                      ? pricingQuote && pricingQuote.finalAmount <= 0
-                        ? t(MEMBERSHIP_COPY.promo.zeroBalanceBtn)
-                        : paymentRegion === 'international'
-                        ? t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentUsd)
-                        : t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentPkr)
-                      : t(MEMBERSHIP_COPY.dramaSelection.continueSignInCheckout)}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
+                </>
+              )}
 
               {/* Manual Bank QR Payment & Proof Upload Section */}
               {activePaymentOrder && account && (
-                <div ref={paymentSectionRef}>
+                <div id="payment-lock-container" ref={paymentSectionRef} className="space-y-4">
+                  {screenshotLockWarning && (
+                    <div
+                      role="alert"
+                      className="p-4 rounded-2xl bg-red-50 border-2 border-red-300 text-sm font-semibold text-red-900 flex items-start gap-3 shadow-sm"
+                    >
+                      <AlertCircle className="w-5 h-5 text-red-700 shrink-0 mt-0.5" />
+                      <span>{screenshotLockWarning}</span>
+                    </div>
+                  )}
                   <BankQrPaymentSection
                     order={activePaymentOrder}
                     member={account.member}
                     publicConfig={publicConfig}
                     onProofSubmitted={(updatedAcc, updatedOrd) => {
+                      setScreenshotLockWarning(null);
                       setAccount(updatedAcc);
                       setActivePaymentOrder(updatedOrd);
                     }}
@@ -1731,24 +1891,36 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         </section>
 
         {/* Final CTA */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-18 sm:py-24 text-center space-y-6">
-          <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#0B0B0D] max-w-2xl mx-auto leading-tight">
-            {t(MEMBERSHIP_COPY.finalCta.heading)}
-          </h2>
-          <p className="text-base sm:text-lg text-zinc-600 max-w-xl mx-auto">
-            {t(MEMBERSHIP_COPY.finalCta.subtitle)}
-          </p>
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => scrollToSection(pricingRef.current)}
-              className="px-7 py-3.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-semibold inline-flex items-center gap-2 transition cursor-pointer"
-            >
-              <span>{t(MEMBERSHIP_COPY.finalCta.cta)}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </section>
+        {!hasActiveVip && !isPaymentScreenshotLocked && (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-18 sm:py-24 text-center space-y-6">
+            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#0B0B0D] max-w-2xl mx-auto leading-tight">
+              {highestActiveRank > 0
+                ? isUrdu
+                  ? 'مزید ڈرامے ان لاک کرنے کے لیے اپنا پلان اپ گریڈ کریں'
+                  : 'Upgrade Your Plan to Unlock More Dramas'
+                : t(MEMBERSHIP_COPY.finalCta.heading)}
+            </h2>
+            <p className="text-base sm:text-lg text-zinc-600 max-w-xl mx-auto">
+              {t(MEMBERSHIP_COPY.finalCta.subtitle)}
+            </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => scrollToSection(pricingRef.current)}
+                className="px-7 py-3.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-semibold inline-flex items-center gap-2 transition cursor-pointer"
+              >
+                <span>
+                  {highestActiveRank > 0
+                    ? isUrdu
+                      ? 'اپ گریڈ پلان دیکھیں'
+                      : 'View Upgrade Packages'
+                    : t(MEMBERSHIP_COPY.finalCta.cta)}
+                </span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Shared Website Footer */}

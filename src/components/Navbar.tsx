@@ -268,13 +268,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             onMouseEnter={() => setDramasOpen(true)}
             onMouseLeave={() => setDramasOpen(false)}
           >
-            <button 
-              onClick={() => onNavigatePage('dramas')}
+            <a
+              href="/dramas"
+              onClick={(e) => {
+                if (!e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  onNavigatePage('dramas');
+                }
+              }}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300 whitespace-nowrap shrink-0"
             >
               <span>{t(MEMBERSHIP_COPY.nav.dramas)}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${dramasOpen ? 'rotate-180 text-white' : ''}`} />
-            </button>
+            </a>
 
             {dramasOpen && (
               <div className="absolute top-full right-0 w-80 bg-slate-900/60 backdrop-blur-3xl border border-white/20 rounded-2xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-top-1 duration-150 z-50 text-white ring-1 ring-white/10">
@@ -435,6 +441,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Lock className="w-3.5 h-3.5 text-emerald-300" />
             <span>{t(MEMBERSHIP_COPY.nav.login)}</span>
           </button>
+
+          {/* Mobile-visible direct crawlable Membership link (for mobile visitors & mobile-first Googlebot) */}
+          <a
+            href="/membership"
+            onClick={(e) => {
+              if (!e.metaKey && !e.ctrlKey) {
+                e.preventDefault();
+                onNavigatePage('membership');
+              }
+            }}
+            className="lg:hidden px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-emerald-400/35 text-emerald-300 text-[11px] font-bold transition whitespace-nowrap shrink-0"
+          >
+            {t(MEMBERSHIP_COPY.nav.membership)}
+          </a>
 
           {/* Primary Action */}
           <button

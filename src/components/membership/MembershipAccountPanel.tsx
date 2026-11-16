@@ -315,6 +315,9 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
     ? orders.find((o) => o.status === 'rejected')
     : undefined;
 
+  const hasActiveVip = activeMembershipsList.some((m) => m.planId === 'vip');
+  const hasAnyActivePlan = activeMembershipsList.length > 0;
+
   const formatDate = (iso?: string) => {
     if (!iso) return '—';
     try {
@@ -407,13 +410,28 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onChoosePlanClick}
-            className="px-4 py-2 text-xs font-semibold rounded-lg border border-zinc-300 text-[#0B0B0D] hover:bg-zinc-100 transition cursor-pointer whitespace-nowrap"
-          >
-            {t(MEMBERSHIP_COPY.account.viewPlans)}
-          </button>
+          {hasActiveVip ? (
+            <button
+              type="button"
+              onClick={() => triggerMembershipUrl('/dramas')}
+              className="px-4 py-2 text-xs font-semibold rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white inline-flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>{isUrdu ? 'ڈرامے دیکھیں' : 'Explore Dramas'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onChoosePlanClick}
+              className="px-4 py-2 text-xs font-semibold rounded-lg border border-zinc-300 text-[#0B0B0D] hover:bg-zinc-100 transition cursor-pointer whitespace-nowrap"
+            >
+              {hasAnyActivePlan
+                ? isUrdu
+                  ? 'پلان اپ گریڈ کریں'
+                  : 'Upgrade Plan'
+                : t(MEMBERSHIP_COPY.account.viewPlans)}
+            </button>
+          )}
           <button
             type="button"
             onClick={onSignOut}
@@ -733,13 +751,28 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
             <h3 className="text-base font-bold text-[#0B0B0D]">
               {t(MEMBERSHIP_COPY.account.activeMembershipsHeading)}
             </h3>
-            <button
-              type="button"
-              onClick={onChoosePlanClick}
-              className="text-xs font-semibold text-[#16A34A] hover:underline cursor-pointer"
-            >
-              + {t(MEMBERSHIP_COPY.account.addAnotherDrama)}
-            </button>
+            {hasActiveVip ? (
+              <button
+                type="button"
+                onClick={() => triggerMembershipUrl('/dramas')}
+                className="text-xs font-semibold text-[#16A34A] hover:underline inline-flex items-center gap-1 cursor-pointer"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                <span>{isUrdu ? 'ڈرامے دیکھیں' : 'Explore Dramas'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onChoosePlanClick}
+                className="text-xs font-semibold text-[#16A34A] hover:underline cursor-pointer"
+              >
+                {hasAnyActivePlan
+                  ? isUrdu
+                    ? '+ پلان اپ گریڈ کریں'
+                    : '+ Upgrade Plan'
+                  : `+ ${t(MEMBERSHIP_COPY.account.addAnotherDrama)}`}
+              </button>
+            )}
           </div>
 
           {allMembershipsList.length > 0 ? (
@@ -836,14 +869,26 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
                     )}
 
                     <div className="pt-3 border-t border-zinc-200 flex flex-wrap items-center justify-between gap-3">
-                      <button
-                        type="button"
-                        onClick={() => triggerMembershipUrl(renewHref)}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold transition cursor-pointer"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>{t(MEMBERSHIP_COPY.account.renewMembership)}</span>
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        {!isExpiredNow && (
+                          <button
+                            type="button"
+                            onClick={() => triggerMembershipUrl('/dramas')}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-bold transition cursor-pointer"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <span>{isUrdu ? 'ڈرامے دیکھیں' : 'Explore Dramas'}</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => triggerMembershipUrl(renewHref)}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold transition cursor-pointer"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>{t(MEMBERSHIP_COPY.account.renewMembership)}</span>
+                        </button>
+                      </div>
 
                       {!isExpiredNow && (
                         confirmCancelId !== m.id ? (
@@ -1015,13 +1060,15 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
                   {Number(referralSummary.creditBalanceUsd || 0).toFixed(2)} USD
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={onChoosePlanClick}
-                className="px-3.5 py-2 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold transition cursor-pointer whitespace-nowrap"
-              >
-                {t(MEMBERSHIP_COPY.referral.useCreditsCheckoutBtn)}
-              </button>
+              {!hasActiveVip && (
+                <button
+                  type="button"
+                  onClick={onChoosePlanClick}
+                  className="px-3.5 py-2 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold transition cursor-pointer whitespace-nowrap"
+                >
+                  {t(MEMBERSHIP_COPY.referral.useCreditsCheckoutBtn)}
+                </button>
+              )}
             </div>
           </div>
 
