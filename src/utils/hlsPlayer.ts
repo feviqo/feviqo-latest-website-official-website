@@ -101,6 +101,9 @@ export function attachHlsStream(
         maxMaxBufferLength: 60,
         capLevelToPlayerSize: true,
         startLevel: -1,
+        xhrSetup: (xhr) => {
+          xhr.withCredentials = true;
+        },
       });
 
       hls.loadSource(src);

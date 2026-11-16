@@ -103,11 +103,42 @@ import {
   deletePromoCode,
   updateReferralConfig,
   updateReferralStatusByAdmin,
+  getProtectedStreamsSecurityOverview,
   LifecycleEmailDispatcher,
   SafeAdmin,
 } from './server/membershipStore';
 import { resolveGeoPricing } from './server/geoCurrency';
 import { verifyFirebaseIdToken } from './server/firestoreAdmin';
+import {
+  getMuxSecurityStatus,
+  detectDownloaderUserAgent,
+  isAllowedPlaybackRequestOrigin,
+  checkPlaybackRateLimit,
+  appendMuxSecurityEvent,
+  createPlaybackSession,
+  getPlaybackSessionByToken,
+  getPlaybackSessionById,
+  touchPlaybackSession,
+  revokePlaybackSessionById,
+  attachMuxJwtIfConfigured,
+  verifyProxyTarget,
+  rewriteM3u8Manifest,
+} from './server/muxSecurity';
+import {
+  trackCampaignVisit,
+  attachCampaignAttributionToUser,
+  recordCheckoutAttemptForMember,
+  createReferralCampaign,
+  updateReferralCampaign,
+  getReferralCampaignsAdminOverview,
+  getCampaignDetailAnalytics,
+  approveCommissionByAdmin,
+  markCommissionsPaidByAdmin,
+  reverseCommissionForOrder,
+  buildMonthlyCommissionReport,
+  saveMonthlyCommissionReportSnapshot,
+  exportMonthlyCommissionReportCsv,
+} from './server/referralCampaignStore';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -234,7 +265,10 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
   }
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Authorization');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Authorization, X-Feviqo-Visitor-Token, X-Feviqo-Campaign-Attr'
+  );
   
   // Explicitly clear QUIC/UDP advertisement so mobile browsers use stable TCP/TLS HTTP/2
   res.setHeader('Alt-Svc', 'clear');
@@ -3037,6 +3071,63 @@ app.delete('/api/editors/:id', (req, res) => {
 // 7. FEVIQO Premium Membership, Bank QR Payment, Proof Verification & Admin RBAC API
 const MEMBER_COOKIE_NAME = 'feviqo_member_session';
 const ADMIN_COOKIE_NAME = 'feviqo_admin_session';
+const CAMPAIGN_VISITOR_COOKIE = 'feviqo_vid';
+const CAMPAIGN_ATTR_COOKIE = 'feviqo_ref_attr';
+
+function extractSecurityRequestMeta(req: express.Request): { ip: string; ua: string } {
+  const xff = req.headers['x-forwarded-for'];
+  let ip = '';
+  if (typeof xff === 'string') ip = xff.split(',')[0].trim();
+  else if (Array.isArray(xff)) ip = String(xff[0] || '').trim();
+  else ip = (req.headers['x-real-ip'] as string) || req.socket?.remoteAddress || '127.0.0.1';
+  ip = ip.replace(/^::ffff:/, '').trim() || '127.0.0.1';
+  const ua = String(req.headers['user-agent'] || '').trim();
+  return { ip, ua };
+}
+
+function setCampaignTrackingCookie(
+  req: express.Request,
+  res: express.Response,
+  name: string,
+  value: string,
+  maxAgeMs: number
+): void {
+  const isHttps = isHttpsRequest(req);
+  res.cookie(name, value, {
+    httpOnly: true,
+    sameSite: isHttps ? 'none' : 'lax',
+    secure: isHttps,
+    maxAge: maxAgeMs,
+    path: '/',
+  });
+}
+
+function extractCampaignAttributionFromRequest(req: express.Request): {
+  visitorToken?: string;
+  attributionToken?: string;
+  campaignSlug?: string;
+} {
+  const cookies = parseCookiesMap(req);
+  const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, any>;
+  const visitorHeader = req.headers['x-feviqo-visitor-token'];
+  const attrHeader = req.headers['x-feviqo-campaign-attr'];
+  return {
+    visitorToken:
+      (typeof visitorHeader === 'string' && visitorHeader.trim()) ||
+      (typeof body.campaignVisitorToken === 'string' && body.campaignVisitorToken.trim()) ||
+      cookies[CAMPAIGN_VISITOR_COOKIE] ||
+      undefined,
+    attributionToken:
+      (typeof attrHeader === 'string' && attrHeader.trim()) ||
+      (typeof body.campaignAttributionToken === 'string' && body.campaignAttributionToken.trim()) ||
+      cookies[CAMPAIGN_ATTR_COOKIE] ||
+      undefined,
+    campaignSlug:
+      (typeof body.campaignSlug === 'string' && body.campaignSlug.trim()) ||
+      (typeof req.query.ref === 'string' && req.query.ref.trim()) ||
+      undefined,
+  };
+}
 
 const memoryImageUpload = multer({
   storage: multer.memoryStorage(),
@@ -3312,6 +3403,12 @@ app.post('/api/membership/register', (req, res) => {
     if ('error' in result) {
       return res.status(result.statusCode || 400).json({ success: false, error: result.error });
     }
+    const campCtx = extractCampaignAttributionFromRequest(req);
+    attachCampaignAttributionToUser({
+      member: result.member,
+      attributionToken: campCtx.attributionToken,
+      campaignSlug: campCtx.campaignSlug,
+    });
     setMemberSessionCookie(req, res, result.token);
     const account = getMemberAccountState(result.member.id);
     return res.status(201).json({
@@ -3362,6 +3459,14 @@ app.post('/api/membership/google-auth', async (req, res) => {
     });
     if ('error' in result) {
       return res.status(400).json({ success: false, error: result.error });
+    }
+    if (Date.now() - Date.parse(result.member.createdAt) < 10 * 60 * 1000) {
+      const campCtx = extractCampaignAttributionFromRequest(req);
+      attachCampaignAttributionToUser({
+        member: result.member,
+        attributionToken: campCtx.attributionToken,
+        campaignSlug: campCtx.campaignSlug,
+      });
     }
     setMemberSessionCookie(req, res, result.token);
     const account = getMemberAccountState(result.member.id);
@@ -3488,6 +3593,15 @@ app.post('/api/membership/checkout', async (req, res) => {
     }
 
     const account = getMemberAccountState(memberId);
+    if (account?.member) {
+      const campCtx = extractCampaignAttributionFromRequest(req);
+      recordCheckoutAttemptForMember({
+        member: account.member,
+        order: result.order,
+        attributionToken: campCtx.attributionToken,
+        campaignSlug: campCtx.campaignSlug,
+      });
+    }
     return res.json({
       success: true,
       order: result.order,
@@ -3749,10 +3863,69 @@ app.post('/api/membership/cancel', (req, res) => {
   }
 });
 
-// Server-enforced protected episode access endpoint
+// Server-enforced protected episode access endpoint (issues short-lived session + proxied HLS stream; never raw Mux URL)
 app.get('/api/membership/watch/:dramaId/:episodeSlug', (req, res) => {
-  const memberId = getAuthenticatedMemberId(req);
+  const { ip, ua } = extractSecurityRequestMeta(req);
   const { dramaId, episodeSlug } = req.params;
+  const memberId = getAuthenticatedMemberId(req);
+
+  const downloaderHit = detectDownloaderUserAgent(ua);
+  if (downloaderHit) {
+    appendMuxSecurityEvent({
+      type: 'downloader_ua_blocked',
+      severity: 'warning',
+      memberId: memberId || undefined,
+      dramaId,
+      episodeSlug,
+      userAgent: ua.slice(0, 140),
+      details: `${downloaderHit} on /api/membership/watch/${dramaId}/${episodeSlug}`,
+    });
+    return res.status(403).json({
+      success: false,
+      code: 'DOWNLOADER_BLOCKED',
+      error: 'Playback authorization is only available in a standard web browser.',
+    });
+  }
+
+  if (
+    !isAllowedPlaybackRequestOrigin(
+      req.headers.origin as string | undefined,
+      req.headers.referer as string | undefined,
+      req.headers.host as string | undefined
+    )
+  ) {
+    appendMuxSecurityEvent({
+      type: 'domain_mismatch_blocked',
+      severity: 'warning',
+      memberId: memberId || undefined,
+      dramaId,
+      episodeSlug,
+      details: `Blocked disallowed playback origin/referer (${req.headers.origin || req.headers.referer})`,
+    });
+    return res.status(403).json({
+      success: false,
+      code: 'DOMAIN_RESTRICTED',
+      error: 'Playback requests are restricted to authorized FEVIQO domains.',
+    });
+  }
+
+  const rl = checkPlaybackRateLimit(`watch:${memberId || ip}`, 30, 60_000);
+  if (!rl.allowed) {
+    appendMuxSecurityEvent({
+      type: 'rate_limit_blocked',
+      severity: 'warning',
+      memberId: memberId || undefined,
+      dramaId,
+      episodeSlug,
+      details: 'Exceeded playback authorization rate limit (30/min).',
+    });
+    return res.status(429).json({
+      success: false,
+      code: 'RATE_LIMITED',
+      error: 'Too many playback requests. Please wait a moment and try again.',
+    });
+  }
+
   const auth = authorizeEpisodePlayback({ memberId, dramaId, episodeSlug });
   if ('error' in auth) {
     return res.status(auth.statusCode).json({
@@ -3766,9 +3939,44 @@ app.get('/api/membership/watch/:dramaId/:episodeSlug', (req, res) => {
       expiresAt: auth.expiresAt,
     });
   }
+
+  const session = createPlaybackSession({
+    memberId: memberId!,
+    memberEmail: auth.memberEmail,
+    membershipId: auth.membershipId,
+    membershipExpiresAt: auth.expiresAt,
+    planName: auth.planName,
+    dramaId,
+    episodeSlug,
+    playbackId: auth.playbackId,
+    ip,
+    ua,
+  });
+
+  const muxStatus = getMuxSecurityStatus();
+  const proxiedStreamUrl = `/api/membership/stream/${encodeURIComponent(session.sessionToken)}/master.m3u8`;
+
+  res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+
   return res.json({
     success: true,
-    streamUrl: auth.streamUrl,
+    streamUrl: proxiedStreamUrl,
+    playbackSessionId: session.id,
+    playbackSessionExpiresAt: session.expiresAt,
+    watermark: {
+      text: session.watermarkText,
+      subtext: session.watermarkSubtext,
+    },
+    protection: {
+      signedPlaybackPolicy: muxStatus.signedUrlsEnabled,
+      playbackRestriction: muxStatus.playbackRestrictionConfigured,
+      drmReady: muxStatus.drmConfigured,
+      drmSystems: muxStatus.drmSystems,
+      watermarkEnabled: muxStatus.watermarkingEnabled,
+      maxConcurrentSessions: muxStatus.maxConcurrentSessionsPerMember,
+      directMp4Blocked: true,
+    },
     dramaTitle: auth.dramaTitle,
     episodeTitle: auth.episodeTitle,
     thumbnail: auth.thumbnail,
@@ -3777,6 +3985,254 @@ app.get('/api/membership/watch/:dramaId/:episodeSlug', (req, res) => {
     expiresAt: auth.expiresAt,
     membershipId: auth.membershipId,
   });
+});
+
+// Mid-stream membership & session validation heartbeat
+app.post('/api/membership/watch/:dramaId/:episodeSlug/heartbeat', (req, res) => {
+  const memberId = getAuthenticatedMemberId(req);
+  const { dramaId, episodeSlug } = req.params;
+  const sessionId = String(req.body?.sessionId || req.body?.playbackSessionId || '').trim();
+  if (sessionId) {
+    const sess = getPlaybackSessionById(sessionId);
+    if (!sess || sess.revoked || Date.parse(sess.expiresAt) <= Date.now()) {
+      return res.status(403).json({
+        success: false,
+        allowed: false,
+        code: sess?.revoked ? 'PLAYBACK_SESSION_REVOKED' : 'PLAYBACK_SESSION_EXPIRED',
+        error: sess?.revoked
+          ? sess.revokedReason || 'This playback session was revoked.'
+          : 'Playback session expired. Refresh to re-authorize.',
+      });
+    }
+    if (memberId && sess.memberId !== memberId) {
+      return res.status(403).json({
+        success: false,
+        allowed: false,
+        code: 'PLAYBACK_SESSION_MISMATCH',
+        error: 'Session does not belong to current member.',
+      });
+    }
+  }
+  const auth = authorizeEpisodePlayback({ memberId, dramaId, episodeSlug });
+  if ('error' in auth) {
+    return res.status(auth.statusCode).json({
+      success: false,
+      allowed: false,
+      code: auth.code,
+      error: auth.error,
+    });
+  }
+  if (sessionId) touchPlaybackSession(sessionId);
+  return res.json({
+    success: true,
+    allowed: true,
+    sessionId,
+    planName: auth.planName,
+    expiresAt: auth.expiresAt,
+  });
+});
+
+// Block any attempt to request direct progressive MP4s on protected session stream endpoints
+app.get('/api/membership/stream/:sessionToken/*.mp4', (req, res) => {
+  appendMuxSecurityEvent({
+    type: 'mp4_direct_blocked',
+    severity: 'warning',
+    userAgent: String(req.headers['user-agent'] || '').slice(0, 140),
+    details: `Blocked direct MP4 download attempt on protected stream (${req.originalUrl}).`,
+  });
+  return res.status(403).json({
+    success: false,
+    code: 'MP4_DIRECT_ACCESS_BLOCKED',
+    error: 'Direct progressive MP4 access is disabled for premium streams.',
+  });
+});
+
+async function handleProtectedStreamProxy(
+  req: express.Request,
+  res: express.Response,
+  kind: 'master' | 'variant' | 'seg'
+) {
+  const { ip, ua } = extractSecurityRequestMeta(req);
+  const downloaderHit = detectDownloaderUserAgent(ua);
+  if (downloaderHit) {
+    appendMuxSecurityEvent({
+      type: 'downloader_ua_blocked',
+      severity: 'warning',
+      userAgent: ua.slice(0, 140),
+      details: `${downloaderHit} on ${req.path}`,
+    });
+    return res.status(403).json({ success: false, code: 'DOWNLOADER_BLOCKED', error: 'Blocked client.' });
+  }
+
+  const rl = checkPlaybackRateLimit(`stream:${ip}`, 420, 60_000);
+  if (!rl.allowed) {
+    appendMuxSecurityEvent({
+      type: 'rate_limit_blocked',
+      severity: 'warning',
+      details: 'Exceeded segment/manifest proxy rate limit.',
+    });
+    return res.status(429).json({ success: false, code: 'RATE_LIMITED', error: 'Too many requests.' });
+  }
+
+  const sessionToken = String(req.params.sessionToken || '').trim();
+  const session = getPlaybackSessionByToken(sessionToken);
+  if (!session) {
+    appendMuxSecurityEvent({
+      type: 'invalid_proxy_signature',
+      severity: 'warning',
+      details: 'Attempted stream access with unknown or malformed session token.',
+    });
+    return res.status(401).json({ success: false, code: 'INVALID_SESSION', error: 'Playback session not found.' });
+  }
+
+  if (session.revoked || Date.parse(session.expiresAt) <= Date.now()) {
+    return res.status(403).json({
+      success: false,
+      code: 'SESSION_REVOKED_OR_EXPIRED',
+      error: session.revokedReason || 'Playback session revoked or expired.',
+    });
+  }
+
+  // Real-time membership re-verification (enforces immediate revocation or expiry mid-stream)
+  const entitlement = authorizeEpisodePlayback({
+    memberId: session.memberId,
+    dramaId: session.dramaId,
+    episodeSlug: session.episodeSlug,
+  });
+  if ('error' in entitlement) {
+    revokePlaybackSessionById(session.id, `Entitlement lost (${entitlement.code})`);
+    appendMuxSecurityEvent({
+      type: 'entitlement_lost_mid_stream',
+      severity: 'warning',
+      memberId: session.memberId,
+      memberEmail: session.memberEmail,
+      dramaId: session.dramaId,
+      episodeSlug: session.episodeSlug,
+      details: `Stream stopped immediately: ${entitlement.code}`,
+    });
+    return res.status(403).json({
+      success: false,
+      code: entitlement.code,
+      error: entitlement.error,
+    });
+  }
+
+  let upstreamUrl = '';
+  if (kind === 'master') {
+    upstreamUrl = entitlement.streamUrl;
+  } else {
+    const u = String(req.query.u || '');
+    const exp = String(req.query.exp || '');
+    const sig = String(req.query.sig || '');
+    const verified = verifyProxyTarget(session.id, u, exp, sig);
+    if (!verified) {
+      appendMuxSecurityEvent({
+        type: 'invalid_proxy_signature',
+        severity: 'warning',
+        memberId: session.memberId,
+        dramaId: session.dramaId,
+        episodeSlug: session.episodeSlug,
+        details: `Invalid or expired HMAC URL signature on /${kind}`,
+      });
+      return res.status(403).json({
+        success: false,
+        code: 'INVALID_STREAM_SIGNATURE',
+        error: 'Expired or invalid segment signature.',
+      });
+    }
+    upstreamUrl = verified;
+  }
+
+  touchPlaybackSession(session.id);
+
+  const signedUpstream = attachMuxJwtIfConfigured(upstreamUrl, entitlement.playbackId);
+  try {
+    const upstreamRes = await fetch(signedUpstream, {
+      headers: {
+        'User-Agent': ua || 'FEVIQO-Stream-Proxy/1.0',
+        Accept: '*/*',
+      },
+    });
+
+    if (!upstreamRes.ok) {
+      return res.status(upstreamRes.status).json({
+        success: false,
+        error: `Upstream Mux media response ${upstreamRes.status}`,
+      });
+    }
+
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('X-Feviqo-Protected', '1');
+
+    if (kind === 'master' || kind === 'variant') {
+      const text = await upstreamRes.text();
+      const rewritten = rewriteM3u8Manifest({
+        manifestText: text,
+        baseManifestUrl: upstreamUrl,
+        sessionId: session.id,
+        sessionToken: session.sessionToken,
+      });
+      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl; charset=utf-8');
+      return res.send(rewritten);
+    }
+
+    const ct = upstreamRes.headers.get('content-type') || 'video/mp2t';
+    res.setHeader('Content-Type', ct);
+    const arrayBuf = await upstreamRes.arrayBuffer();
+    return res.send(Buffer.from(arrayBuf));
+  } catch {
+    return res.status(502).json({ success: false, error: 'Failed to proxy protected Mux media stream.' });
+  }
+}
+
+app.get('/api/membership/stream/:sessionToken/master.m3u8', (req, res) => {
+  void handleProtectedStreamProxy(req, res, 'master');
+});
+
+app.get('/api/membership/stream/:sessionToken/variant.m3u8', (req, res) => {
+  void handleProtectedStreamProxy(req, res, 'variant');
+});
+
+app.get('/api/membership/stream/:sessionToken/seg', (req, res) => {
+  void handleProtectedStreamProxy(req, res, 'seg');
+});
+
+// Public Partner Referral Campaign Visit Tracking (?ref=slug)
+app.post('/api/referral-campaigns/track', (req, res) => {
+  try {
+    const { ip, ua } = extractSecurityRequestMeta(req);
+    const { slug, landingPage, referrer } = req.body || {};
+    const cookies = parseCookiesMap(req);
+    const headerVisitor = req.headers['x-feviqo-visitor-token'];
+    const existingVisitorToken =
+      (typeof headerVisitor === 'string' && headerVisitor.trim()) ||
+      (typeof req.body?.visitorToken === 'string' && req.body.visitorToken.trim()) ||
+      cookies[CAMPAIGN_VISITOR_COOKIE] ||
+      undefined;
+
+    const tracked = trackCampaignVisit({
+      slug: String(slug || ''),
+      landingPage: typeof landingPage === 'string' ? landingPage : '/',
+      referrerHeader: typeof referrer === 'string' ? referrer : (req.headers.referer as string | undefined),
+      ip,
+      userAgent: ua,
+      existingVisitorToken,
+    });
+
+    if (tracked.tracked && tracked.visitorToken && tracked.attributionToken) {
+      const expMs = tracked.attributionExpiresAt
+        ? Math.max(60_000, Date.parse(tracked.attributionExpiresAt) - Date.now())
+        : 30 * 24 * 60 * 60 * 1000;
+      setCampaignTrackingCookie(req, res, CAMPAIGN_VISITOR_COOKIE, tracked.visitorToken, 365 * 24 * 60 * 60 * 1000);
+      setCampaignTrackingCookie(req, res, CAMPAIGN_ATTR_COOKIE, tracked.attributionToken, expMs);
+    }
+
+    return res.json({ success: true, ...tracked });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to record referral campaign visit.' });
+  }
 });
 
 // --- ADMIN PANEL AUTHENTICATION & MEMBERSHIP MANAGEMENT ROUTES ---
@@ -4351,6 +4807,527 @@ app.post('/api/admin/memberships/referrals/:referralId/status', requireAdmin, (r
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to update referral status.' });
+  }
+});
+
+// --- ADMIN MUX VIDEO SECURITY & ASSET AUDIT ROUTES ---
+function formatMuxSecurityForClient(raw: ReturnType<typeof getProtectedStreamsSecurityOverview>) {
+  return {
+    posture: {
+      signingConfigured: raw.configStatus.signedUrlsEnabled,
+      signingKeyIdMasked: raw.configStatus.signingKeyIdMasked || null,
+      playbackRestrictionConfigured: raw.configStatus.playbackRestrictionConfigured,
+      drmConfigured: raw.configStatus.drmConfigured,
+      drmNote: raw.configStatus.drmNote,
+      allowedDomains: raw.configStatus.allowedDomains,
+      proxyProtectionActive: true,
+      directMp4Blocked: true,
+      dynamicWatermarkingActive: true,
+      maxConcurrentSessionsPerMember: raw.configStatus.maxConcurrentSessionsPerMember,
+      sessionTtlSeconds: raw.configStatus.sessionTtlSeconds,
+    },
+    assetAudit: raw.assetsAudit.map((a) => ({
+      dramaId: a.dramaId,
+      dramaTitle: a.dramaTitle,
+      episodeSlug: a.episodeSlug,
+      episodeTitle: a.episodeTitle,
+      playbackId: a.playbackId,
+      playbackIdOverrideActive: a.playbackIdSource === 'env_override',
+      sharesPlaybackIdWithFreeEpisode: a.sharesPlaybackIdWithFreeEpisode,
+      sharedFreeEpisodeSlug: a.sharedWithFreeSlugs?.[0] || null,
+      playbackPolicyMode:
+        a.signedPolicyStatus === 'active_rs256_signed'
+          ? ('signed_jwt' as const)
+          : ('proxy_token_only' as const),
+      drmReady: a.drmStatus === 'configured',
+      restrictionApplied: a.playbackRestrictionConfigured,
+      auditStatus: a.sharesPlaybackIdWithFreeEpisode
+        ? ('warning_shared_playback_id' as const)
+        : a.signedPolicyStatus === 'active_rs256_signed'
+        ? ('protected' as const)
+        : ('warning_missing_signing_keys' as const),
+      auditNote: a.sharesPlaybackIdWithFreeEpisode
+        ? `Playback ID currently shared with free episode (${a.sharedWithFreeSlugs.join(', ')}). Configure an isolated signed Mux asset via MUX_PREMIUM_PLAYBACK_IDS_JSON.`
+        : a.signedPolicyStatus === 'active_rs256_signed'
+        ? 'Isolated asset protected by RS256 Mux playback JWT and backend HLS proxy.'
+        : 'Protected by backend membership HLS proxy. Add MUX_SIGNING_KEY_ID & MUX_SIGNING_PRIVATE_KEY to enforce Mux signed playback policy.',
+    })),
+    activeSessions: raw.activeSessions.map((s) => ({
+      id: s.id,
+      memberId: s.memberId,
+      memberEmail: s.memberEmail,
+      dramaId: s.dramaId,
+      episodeSlug: s.episodeSlug,
+      membershipId: s.membershipId,
+      playbackId: s.playbackId,
+      issuedAt: s.createdAt,
+      expiresAt: s.expiresAt,
+      lastHeartbeatAt: s.lastActivityAt,
+      revokedAt: s.revokedAt,
+      revokedReason: s.revokedReason,
+      ip: s.ipHash,
+      userAgent: s.uaHash,
+      watermarkText: s.watermarkText,
+    })),
+    recentSecurityEvents: raw.securityEvents.map((e) => ({
+      id: e.id,
+      type: e.type,
+      memberId: e.memberId,
+      memberEmail: e.memberEmail,
+      dramaId: e.dramaId,
+      episodeSlug: e.episodeSlug,
+      sessionId: undefined,
+      ip: e.ipHash || '',
+      userAgent: e.userAgent || '',
+      reason: e.details,
+      createdAt: e.createdAt,
+    })),
+  };
+}
+
+function mapActivityForClient(items: any[]) {
+  return (items || []).map((a) => ({
+    id: a.id,
+    at: a.timestamp || a.at || '',
+    actorEmail: a.actorEmail || 'system',
+    action: a.action,
+    summary: a.details || a.summary || '',
+  }));
+}
+
+function mapCampaignForClient(c: any) {
+  return {
+    id: c.id,
+    name: c.name,
+    partnerName: c.partnerName,
+    partnerEmail: c.partnerEmail,
+    description: c.description || '',
+    slug: c.slug,
+    referralUrl: c.referralUrl,
+    commissionRatePercent: c.commissionRatePercent,
+    attributionWindowDays: c.attributionWindowDays,
+    startDate: c.startDate,
+    endDate: c.endDate,
+    status: c.status,
+    createdAt: c.createdAt,
+    updatedAt: c.updatedAt,
+    createdByAdminEmail: c.createdByAdminEmail,
+    activityHistory: mapActivityForClient(c.activityHistory),
+  };
+}
+
+function mapAnalyticsForClient(c: any, stats: any) {
+  return {
+    campaignId: c.id,
+    campaignName: c.name,
+    partnerName: c.partnerName,
+    slug: c.slug,
+    referralUrl: c.referralUrl,
+    status: c.status,
+    commissionRatePercent: c.commissionRatePercent,
+    attributionWindowDays: c.attributionWindowDays,
+    totalClicks: stats.totalClicks,
+    uniqueVisitors: stats.uniqueVisitors,
+    registeredUsers: stats.registeredUsers,
+    checkoutAttempts: stats.checkoutAttempts,
+    successfulPaidMemberships: stats.successfulPaidMemberships,
+    conversionRatePercent: stats.conversionRate ?? stats.conversionRatePercent ?? 0,
+    revenueGeneratedPkr: stats.revenueGeneratedPkr,
+    revenueGeneratedUsd: stats.revenueGeneratedUsd,
+    totalCommissionEarnedPkr: stats.totalCommissionEarnedPkr,
+    pendingCommissionPkr: stats.pendingCommissionPkr,
+    paidCommissionPkr: stats.paidCommissionPkr,
+    totalCommissionEarnedUsd: stats.totalCommissionEarnedUsd,
+    pendingCommissionUsd: stats.pendingCommissionUsd,
+    paidCommissionUsd: stats.paidCommissionUsd,
+  };
+}
+
+function mapMonthlyRowsForClient(monthKey: string, rows: any[]) {
+  return (rows || []).map((r) => ({
+    monthKey,
+    campaignId: r.campaignId,
+    campaignName: r.campaignName,
+    partnerName: r.partnerName,
+    slug: r.campaignSlug || r.slug,
+    successfulPaidMemberships: r.successfulMemberships ?? r.successfulPaidMemberships ?? 0,
+    revenuePkr: r.totalRevenuePkr ?? r.revenuePkr ?? 0,
+    revenueUsd: r.totalRevenueUsd ?? r.revenueUsd ?? 0,
+    commissionRatePercent: r.currentCommissionRatePercent ?? r.commissionRatePercent ?? 0,
+    totalCommissionEarnedPkr: r.totalCommissionEarnedPkr ?? 0,
+    pendingCommissionPkr: r.pendingCommissionPkr ?? 0,
+    approvedCommissionPkr: r.approvedUnpaidCommissionPkr ?? r.approvedCommissionPkr ?? 0,
+    paidCommissionPkr: r.paidCommissionPkr ?? 0,
+    totalCommissionEarnedUsd: r.totalCommissionEarnedUsd ?? 0,
+    pendingCommissionUsd: r.pendingCommissionUsd ?? 0,
+    approvedCommissionUsd: r.approvedUnpaidCommissionUsd ?? r.approvedCommissionUsd ?? 0,
+    paidCommissionUsd: r.paidCommissionUsd ?? 0,
+  }));
+}
+
+function formatCampaignsOverviewForClient(month?: string) {
+  const raw = getReferralCampaignsAdminOverview(month);
+  return {
+    campaigns: raw.campaigns.map((c) => ({
+      campaign: mapCampaignForClient(c),
+      analytics: mapAnalyticsForClient(c, c.stats),
+    })),
+    totals: {
+      totalCampaigns: raw.summary.totalCampaigns,
+      activeCampaigns: raw.summary.activeCampaigns,
+      totalClicks: raw.summary.totalClicks,
+      uniqueVisitors: raw.summary.totalUniqueVisitors,
+      registeredUsers: raw.summary.totalRegisteredUsers,
+      checkoutAttempts: raw.campaigns.reduce((s, c) => s + (c.stats.checkoutAttempts || 0), 0),
+      successfulPaidMemberships: raw.summary.totalPaidMemberships,
+      revenueGeneratedPkr: raw.summary.totalRevenuePkr,
+      totalCommissionEarnedPkr: raw.summary.totalCommissionEarnedPkr,
+      pendingCommissionPkr: raw.summary.totalPendingCommissionPkr,
+      paidCommissionPkr: raw.summary.totalPaidCommissionPkr,
+    },
+    commissions: raw.commissions,
+    payments: raw.payments,
+    savedMonthlyReports: raw.savedMonthlyReports.map((snap) => ({
+      id: snap.id,
+      monthKey: snap.monthKey,
+      generatedAt: snap.generatedAt,
+      generatedByAdminEmail: snap.generatedByAdminEmail,
+      rows: mapMonthlyRowsForClient(snap.monthKey, snap.rows),
+    })),
+  };
+}
+
+app.get('/api/admin/mux-security/overview', requireAdmin, (_req, res) => {
+  try {
+    const raw = getProtectedStreamsSecurityOverview();
+    return res.json({
+      success: true,
+      ...formatMuxSecurityForClient(raw),
+      security: raw,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to load Mux video security audit.' });
+  }
+});
+
+app.post('/api/admin/mux-security/sessions/:sessionId/revoke', requireAdmin, (req: any, res) => {
+  try {
+    const reason = String(req.body?.reason || '').trim() || `Revoked by ${req.admin.email}`;
+    const revoked = revokePlaybackSessionById(req.params.sessionId, reason);
+    if (!revoked) {
+      return res.status(404).json({ success: false, error: 'Playback session not found.' });
+    }
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'mux_session_revoked',
+      targetId: revoked.id,
+      details: `Revoked Mux playback session ${revoked.id} for ${revoked.memberEmail}: ${reason}`,
+    });
+    const raw = getProtectedStreamsSecurityOverview();
+    return res.json({
+      success: true,
+      session: revoked,
+      ...formatMuxSecurityForClient(raw),
+      security: raw,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to revoke playback session.' });
+  }
+});
+
+// --- ADMIN REFERRAL CAMPAIGNS, COMMISSION ENGINE & MONTHLY REPORTING ROUTES ---
+app.get('/api/admin/referral-campaigns/overview', requireAdmin, (req, res) => {
+  try {
+    const month = typeof req.query.month === 'string' ? req.query.month : undefined;
+    return res.json({
+      success: true,
+      ...formatCampaignsOverviewForClient(month),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to load referral campaign analytics.' });
+  }
+});
+
+app.post('/api/admin/referral-campaigns', requireAdmin, (req: any, res) => {
+  try {
+    const body = req.body || {};
+    const result = createReferralCampaign({
+      name: body.name,
+      partnerName: body.partnerName,
+      partnerEmail: body.partnerEmail,
+      description: body.description,
+      slug: body.slug,
+      commissionRatePercent:
+        body.commissionRatePercent !== undefined ? Number(body.commissionRatePercent) : 2,
+      attributionWindowDays:
+        body.attributionWindowDays !== undefined ? Number(body.attributionWindowDays) : 30,
+      startDate: body.startDate,
+      endDate: body.endDate,
+      status: body.status,
+      admin: req.admin,
+    });
+    if (!result.success) {
+      const errRes = result as { success: false; error: string; statusCode: number };
+      return res.status(errRes.statusCode).json({ success: false, error: errRes.error });
+    }
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'referral_campaign_created',
+      targetId: result.campaign.id,
+      details: `Created referral campaign "${result.campaign.name}" (${result.campaign.referralUrl})`,
+    });
+    const overview = formatCampaignsOverviewForClient();
+    return res.status(201).json({
+      success: true,
+      campaign: mapCampaignForClient(result.campaign),
+      overview,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to create referral campaign.' });
+  }
+});
+
+app.get('/api/admin/referral-campaigns/reports/monthly', requireAdmin, (req, res) => {
+  try {
+    const month =
+      typeof req.query.month === 'string' && /^\d{4}-\d{2}$/.test(req.query.month)
+        ? req.query.month
+        : new Date().toISOString().slice(0, 7);
+    const report = buildMonthlyCommissionReport(month);
+    const rawOverview = getReferralCampaignsAdminOverview(month);
+    const savedSnap = rawOverview.savedMonthlyReports.find((r) => r.monthKey === month) || null;
+    return res.json({
+      success: true,
+      monthKey: month,
+      rows: mapMonthlyRowsForClient(month, report.rows),
+      snapshot: savedSnap
+        ? {
+            id: savedSnap.id,
+            monthKey: savedSnap.monthKey,
+            generatedAt: savedSnap.generatedAt,
+            generatedByAdminEmail: savedSnap.generatedByAdminEmail,
+            rows: mapMonthlyRowsForClient(savedSnap.monthKey, savedSnap.rows),
+          }
+        : null,
+      report,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to generate monthly commission report.' });
+  }
+});
+
+app.post('/api/admin/referral-campaigns/reports/monthly/save', requireAdmin, (req: any, res) => {
+  try {
+    const monthKey = String(
+      req.body?.month || req.body?.monthKey || new Date().toISOString().slice(0, 7)
+    );
+    const snapshot = saveMonthlyCommissionReportSnapshot(monthKey, req.admin);
+    return res.json({
+      success: true,
+      snapshot: {
+        id: snapshot.id,
+        monthKey: snapshot.monthKey,
+        generatedAt: snapshot.generatedAt,
+        generatedByAdminEmail: snapshot.generatedByAdminEmail,
+        rows: mapMonthlyRowsForClient(snapshot.monthKey, snapshot.rows),
+      },
+      overview: formatCampaignsOverviewForClient(monthKey),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to save monthly commission snapshot.' });
+  }
+});
+
+app.get(
+  [
+    '/api/admin/referral-campaigns/reports/monthly/export',
+    '/api/admin/referral-campaigns/reports/monthly/export.csv',
+  ],
+  requireAdmin,
+  (req, res) => {
+    try {
+      const month =
+        typeof req.query.month === 'string' && /^\d{4}-\d{2}$/.test(req.query.month)
+          ? req.query.month
+          : new Date().toISOString().slice(0, 7);
+      const csv = exportMonthlyCommissionReportCsv(month);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="feviqo-commission-report-${month}.csv"`
+      );
+      res.setHeader('Cache-Control', 'private, no-store');
+      return res.send(csv);
+    } catch {
+      return res.status(500).json({ success: false, error: 'Failed to export monthly CSV.' });
+    }
+  }
+);
+
+app.get('/api/admin/referral-campaigns/:campaignId', requireAdmin, (req, res) => {
+  try {
+    const rawDetail = getCampaignDetailAnalytics(req.params.campaignId);
+    if (!rawDetail) {
+      return res.status(404).json({ success: false, error: 'Referral campaign not found.' });
+    }
+    const commByOrder = new Map(rawDetail.commissions.map((c) => [c.orderId, c]));
+    return res.json({
+      success: true,
+      campaign: mapCampaignForClient(rawDetail.campaign),
+      analytics: mapAnalyticsForClient(rawDetail.campaign, rawDetail.stats),
+      customers: rawDetail.referredCustomers.map((c) => {
+        const comm = c.latestOrderId ? commByOrder.get(c.latestOrderId) : undefined;
+        return {
+          memberId: c.memberId,
+          customerName: c.customerName,
+          maskedEmail: c.customerEmailMasked,
+          attributedAt: c.attributedAt,
+          lastOrderId: c.latestOrderId,
+          lastOrderPlan: c.latestPlanName,
+          lastOrderStatus: c.latestOrderStatus,
+          lastOrderAmountDisplay:
+            c.latestOrderAmountPkr !== undefined
+              ? `${c.latestCurrency || 'PKR'} ${Number(
+                  c.latestCurrency === 'USD' ? c.latestOrderAmountUsd : c.latestOrderAmountPkr
+                ).toLocaleString()}`
+              : undefined,
+          commissionStatus: comm?.status,
+          commissionAmountPkr: comm?.commissionAmountPkr,
+        };
+      }),
+      commissions: rawDetail.commissions,
+      payments: rawDetail.payments,
+      recentVisits: rawDetail.recentVisits.map((v) => ({
+        id: v.id,
+        landingPage: v.landingPage,
+        isUniqueVisitor: v.isUniqueFirstVisit,
+        createdAt: v.createdAt,
+      })),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to load campaign details.' });
+  }
+});
+
+app.put('/api/admin/referral-campaigns/:campaignId', requireAdmin, (req: any, res) => {
+  try {
+    const result = updateReferralCampaign({
+      campaignId: req.params.campaignId,
+      updates: req.body || {},
+      admin: req.admin,
+    });
+    if (!result.success) {
+      const errRes = result as { success: false; error: string; statusCode: number };
+      return res.status(errRes.statusCode).json({ success: false, error: errRes.error });
+    }
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'referral_campaign_updated',
+      targetId: result.campaign.id,
+      details: `Updated campaign "${result.campaign.name}" (${result.campaign.status})`,
+    });
+    return res.json({
+      success: true,
+      campaign: mapCampaignForClient(result.campaign),
+      overview: formatCampaignsOverviewForClient(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to update referral campaign.' });
+  }
+});
+
+app.post('/api/admin/referral-campaigns/commissions/:commissionId/approve', requireAdmin, (req: any, res) => {
+  try {
+    const result = approveCommissionByAdmin({
+      commissionId: req.params.commissionId,
+      admin: req.admin,
+    });
+    if (!result.success) {
+      const errRes = result as { success: false; error: string; statusCode: number };
+      return res.status(errRes.statusCode).json({ success: false, error: errRes.error });
+    }
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'referral_commission_approved',
+      targetId: result.commission.id,
+      details: `Approved commission ${result.commission.id} for order ${result.commission.orderId}`,
+    });
+    return res.json({
+      success: true,
+      commission: result.commission,
+      overview: formatCampaignsOverviewForClient(result.commission.monthKey),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to approve commission.' });
+  }
+});
+
+app.post('/api/admin/referral-campaigns/commissions/:commissionId/reverse', requireAdmin, (req: any, res) => {
+  try {
+    const orderId = String(req.body?.orderId || req.params.commissionId.replace(/^comm-/, ''));
+    const reason = String(req.body?.reason || '').trim() || `Reversed by ${req.admin.email}`;
+    const reversed = reverseCommissionForOrder({
+      orderId,
+      orderStatus: 'reversed',
+      reason,
+      actorEmail: req.admin.email,
+    });
+    if (!reversed) {
+      return res.status(404).json({ success: false, error: 'Commission record not found.' });
+    }
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'referral_commission_reversed',
+      targetId: reversed.id,
+      details: `Reversed commission ${reversed.id} for order ${reversed.orderId}: ${reason}`,
+    });
+    return res.json({
+      success: true,
+      commission: reversed,
+      overview: formatCampaignsOverviewForClient(reversed.monthKey),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to reverse commission.' });
+  }
+});
+
+app.post('/api/admin/referral-campaigns/commissions/mark-paid', requireAdmin, (req: any, res) => {
+  try {
+    const body = req.body || {};
+    const result = markCommissionsPaidByAdmin({
+      commissionIds: Array.isArray(body.commissionIds) ? body.commissionIds : undefined,
+      campaignId: body.campaignId,
+      monthKey: body.monthKey,
+      paymentDate: body.paymentDate,
+      paymentMethod: body.paymentMethod,
+      paymentReference: body.paymentReference,
+      notes: body.notes,
+      admin: req.admin,
+    });
+    if (!result.success) {
+      const errRes = result as { success: false; error: string; statusCode: number };
+      return res.status(errRes.statusCode).json({ success: false, error: errRes.error });
+    }
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'referral_commission_paid',
+      targetId: result.payment.id,
+      details: `Marked ${result.updatedCount} commission(s) paid for ${result.payment.campaignName}`,
+    });
+    return res.json({
+      success: true,
+      payment: result.payment,
+      updatedCount: result.updatedCount,
+      overview: formatCampaignsOverviewForClient(body.monthKey),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to mark commissions as paid.' });
   }
 });
 

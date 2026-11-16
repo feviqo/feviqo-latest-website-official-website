@@ -53,7 +53,9 @@ import { initializeAssetSync } from './services/assetService';
 import { findVideoItem } from './data/videoRegistry';
 import SEOHead from './seo/SEOHead';
 import { testFirestoreConnection } from './firebase';
-import { setStoredReferralCode } from './services/membershipService';
+import { setStoredReferralCode, trackReferralCampaignVisit } from './services/membershipService';
+
+const lastCampaignTrackAt = new Map<string, number>();
 
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
@@ -112,6 +114,16 @@ export default function App() {
       const refCodeParam = params.get('ref');
       if (refCodeParam) {
         setStoredReferralCode(refCodeParam);
+        const cleanSlug = refCodeParam.trim().toLowerCase();
+        const nowTs = Date.now();
+        const lastTracked = lastCampaignTrackAt.get(cleanSlug) || 0;
+        if (nowTs - lastTracked > 1500) {
+          lastCampaignTrackAt.set(cleanSlug, nowTs);
+          trackReferralCampaignVisit(
+            refCodeParam,
+            `${window.location.pathname}${window.location.search}`
+          );
+        }
       }
       videoQueryParam = params.get('v') || params.get('video') || params.get('watch');
 

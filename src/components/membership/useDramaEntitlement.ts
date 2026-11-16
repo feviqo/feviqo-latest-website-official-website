@@ -7,8 +7,10 @@ import {
 import {
   MemberAccountState,
   MembershipRecord,
+  WatermarkInfo,
   fetchMemberAccount,
   requestProtectedEpisodeStream,
+  sendPlaybackHeartbeat,
 } from '../../services/membershipService';
 
 export type EpisodeGateCase = 'A' | 'B' | 'D' | 'E';
@@ -39,6 +41,8 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
   const [loadingAccount, setLoadingAccount] = useState(true);
   const [checkingEpisodeKey, setCheckingEpisodeKey] = useState<string | null>(null);
   const [unlockedStreams, setUnlockedStreams] = useState<Record<string, string>>({});
+  const [playbackSessionIds, setPlaybackSessionIds] = useState<Record<string, string>>({});
+  const [playbackWatermarks, setPlaybackWatermarks] = useState<Record<string, WatermarkInfo>>({});
   const [gateState, setGateState] = useState<EpisodeGateState | null>(null);
 
   const refreshEntitlement = useCallback(async () => {
@@ -64,6 +68,8 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
     };
     const onAuthChanged = () => {
       setUnlockedStreams({});
+      setPlaybackSessionIds({});
+      setPlaybackWatermarks({});
       refreshEntitlement();
     };
     window.addEventListener('focus', onFocus);
@@ -73,6 +79,43 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
       window.removeEventListener('feviqo-member-auth-changed', onAuthChanged);
     };
   }, [refreshEntitlement]);
+
+  // Mid-stream session & membership revocation heartbeat check every 30s
+  useEffect(() => {
+    const entries = Object.entries(unlockedStreams).filter(([, url]) => Boolean(url));
+    if (entries.length === 0) return;
+
+    const timer = window.setInterval(async () => {
+      for (const [key] of entries) {
+        const idx = key.indexOf(':');
+        if (idx <= 0) continue;
+        const dramaId = key.slice(0, idx);
+        const episodeSlug = key.slice(idx + 1);
+        const sessionId = playbackSessionIds[key];
+        const hb = await sendPlaybackHeartbeat(dramaId, episodeSlug, sessionId);
+        if (!hb.allowed) {
+          setUnlockedStreams((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+          setPlaybackSessionIds((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+          setPlaybackWatermarks((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+          refreshEntitlement();
+        }
+      }
+    }, 30000);
+
+    return () => window.clearInterval(timer);
+  }, [unlockedStreams, playbackSessionIds, refreshEntitlement]);
 
   const activeMemberships: MembershipRecord[] = (() => {
     if (!account) return [];
@@ -106,6 +149,13 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
     [unlockedStreams]
   );
 
+  const getWatermarkForEpisode = useCallback(
+    (dramaId: string, episodeSlug: string): WatermarkInfo | undefined => {
+      return playbackWatermarks[`${dramaId}:${episodeSlug}`];
+    },
+    [playbackWatermarks]
+  );
+
   const closeGateModal = useCallback(() => {
     setGateState(null);
   }, []);
@@ -117,6 +167,7 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
     ): Promise<{
       allowed: boolean;
       streamUrl?: string;
+      watermark?: WatermarkInfo;
       caseType?: EpisodeGateCase;
       coveredDramaIds?: string[];
       activePlanNames?: string[];
@@ -126,7 +177,11 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
     }> => {
       const key = `${dramaId}:${episodeSlug}`;
       if (unlockedStreams[key] && hasDramaAccess(dramaId)) {
-        return { allowed: true, streamUrl: unlockedStreams[key] };
+        return {
+          allowed: true,
+          streamUrl: unlockedStreams[key],
+          watermark: playbackWatermarks[key],
+        };
       }
 
       setCheckingEpisodeKey(key);
@@ -134,7 +189,19 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
         const res = await requestProtectedEpisodeStream(dramaId, episodeSlug);
         if ('streamUrl' in res && res.success) {
           setUnlockedStreams((prev) => ({ ...prev, [key]: res.streamUrl }));
-          return { allowed: true, streamUrl: res.streamUrl };
+          if (res.playbackSessionId) {
+            const sid = res.playbackSessionId;
+            setPlaybackSessionIds((prev) => ({ ...prev, [key]: sid }));
+          }
+          if (res.watermark) {
+            const wm = res.watermark;
+            setPlaybackWatermarks((prev) => ({ ...prev, [key]: wm }));
+          }
+          return {
+            allowed: true,
+            streamUrl: res.streamUrl,
+            watermark: res.watermark,
+          };
         }
 
         const errRes = res as {
@@ -174,7 +241,7 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
         setCheckingEpisodeKey((prev) => (prev === key ? null : prev));
       }
     },
-    [unlockedStreams, hasDramaAccess, account?.member]
+    [unlockedStreams, playbackWatermarks, hasDramaAccess, account?.member]
   );
 
   const attemptWatchEpisode = useCallback(
@@ -227,9 +294,11 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
     loadingAccount,
     checkingEpisodeKey,
     unlockedStreams,
+    playbackWatermarks,
     gateState,
     hasDramaAccess,
     getUnlockedStreamUrl,
+    getWatermarkForEpisode,
     verifyAndUnlockEpisode,
     attemptWatchEpisode,
     closeGateModal,

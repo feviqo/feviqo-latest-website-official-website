@@ -34,6 +34,7 @@ import { isEpisodePremium } from '../../data/membershipCatalog';
 import { attachHlsStream, extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
+import { ProtectedPlayerWatermark } from '../membership/ProtectedPlayerWatermark';
 
 interface GunesinDramaPageProps {
   onBackToHome: () => void;
@@ -93,6 +94,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
     unlockedStreams,
     gateState,
     hasDramaAccess,
+    getWatermarkForEpisode,
     verifyAndUnlockEpisode,
     attemptWatchEpisode,
     closeGateModal,
@@ -205,6 +207,9 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
   const resolvedStreamUrl = isSelectedPremium
     ? unlockedStreams[`gunesin-dogdugu-yer:${selectedEpSlug}`] || ''
     : selectedEpisode.embeds[0]?.src || '';
+  const activeWatermark = isSelectedPremium
+    ? getWatermarkForEpisode('gunesin-dogdugu-yer', selectedEpSlug)
+    : undefined;
 
   useEffect(() => {
     if (activeView === 'episode-detail' && isSelectedPremium) {
@@ -829,6 +834,9 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                           playback-id={extractMuxPlaybackId(resolvedStreamUrl) || undefined}
                           crossorigin="anonymous"
                           playsinline
+                          controlsList={isSelectedPremium ? 'nodownload noremoteplayback' : undefined}
+                          disablePictureInPicture={isSelectedPremium ? true : undefined}
+                          disableRemotePlayback={isSelectedPremium ? true : undefined}
                           poster={selectedEpisode.thumbnail}
                           onContextMenu={(e: any) => e.preventDefault()}
                           style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -836,13 +844,16 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                         <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.title}></mux-data>
                       </video-skin>
                     </video-player>
+                    {isSelectedPremium && resolvedStreamUrl && (
+                      <ProtectedPlayerWatermark watermark={activeWatermark} />
+                    )}
                   </div>
                 )}
               </div>
 
               {/* Actions Row: Download & Share Buttons (Guaranteed same line on phones) */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-3 flex flex-row items-center justify-between gap-2 w-full">
-                {selectedEpisode.downloadUrl ? (
+                {!isSelectedPremium && selectedEpisode.downloadUrl ? (
                   <a
                     href={selectedEpisode.downloadUrl}
                     target="_blank"

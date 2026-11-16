@@ -25,8 +25,11 @@ import {
   Tag,
   Gift,
   Edit2,
+  Link2,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
+import { ReferralCampaignsPanel } from '../admin/ReferralCampaignsPanel';
+import { MuxSecurityPanel } from '../admin/MuxSecurityPanel';
 import { AppRoute } from '../../types';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
@@ -95,7 +98,17 @@ interface MembershipAdminPageProps {
   onNavigatePage: (route: AppRoute) => void;
 }
 
-type AdminTab = 'requests' | 'memberships' | 'promos' | 'accounts' | 'notifications' | 'config' | 'audit' | 'roles';
+type AdminTab =
+  | 'requests'
+  | 'memberships'
+  | 'promos'
+  | 'campaigns'
+  | 'security'
+  | 'accounts'
+  | 'notifications'
+  | 'config'
+  | 'audit'
+  | 'roles';
 
 export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   onBookCall,
@@ -1750,6 +1763,8 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   { id: 'requests', label: 'Payment Verification', icon: CheckCircle2 },
                   { id: 'memberships', label: 'Memberships', icon: Users },
                   { id: 'promos', label: 'Promo & Referrals', icon: Tag },
+                  { id: 'campaigns', label: 'Referral Campaigns & Link Analytics', icon: Link2 },
+                  { id: 'security', label: 'Mux Video Security', icon: Lock },
                   { id: 'accounts', label: 'Registered Accounts', icon: UserPlus },
                   { id: 'notifications', label: 'Reminders & Scheduler', icon: Bell },
                   { id: 'config', label: 'QR & USD Settings', icon: Settings },
@@ -4003,6 +4018,22 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   </button>
                 </form>
               </div>
+            )}
+
+            {/* TAB: REFERRAL CAMPAIGNS & LINK ANALYTICS */}
+            {overview && activeTab === 'campaigns' && (
+              <ReferralCampaignsPanel
+                onSuccessMessage={(msg) => setFeedbackBanner({ type: 'success', text: msg })}
+                onErrorMessage={(msg) => setFeedbackBanner({ type: 'error', text: msg })}
+              />
+            )}
+
+            {/* TAB: MUX VIDEO SECURITY */}
+            {overview && activeTab === 'security' && (
+              <MuxSecurityPanel
+                onSuccessMessage={(msg) => setFeedbackBanner({ type: 'success', text: msg })}
+                onErrorMessage={(msg) => setFeedbackBanner({ type: 'error', text: msg })}
+              />
             )}
           </>
         )}

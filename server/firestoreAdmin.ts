@@ -176,23 +176,56 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
   promoCodes: any[];
   referrals: any[];
   referralCredits: any[];
+  referralCampaigns: any[];
+  referralVisits: any[];
+  referralUniqueVisitors: any[];
+  userCampaignAttributions: any[];
+  orderCampaignAttributions: any[];
+  campaignCommissions: any[];
+  commissionPayments: any[];
+  monthlyCommissionReports: any[];
   config: Record<string, any> | null;
 } | null> {
   const db = getAdminFirestoreDb();
   if (!db) return null;
   try {
-    const [membersSnap, ordersSnap, subsSnap, histSnap, notifSnap, promoSnap, refSnap, creditSnap, cfgSnap] =
-      await Promise.all([
-        db.collection('members').get(),
-        db.collection('membershipOrders').get(),
-        db.collection('memberships').get(),
-        db.collection('membershipHistory').get(),
-        db.collection('memberNotifications').get(),
-        db.collection('promoCodes').get(),
-        db.collection('referrals').get(),
-        db.collection('referralCredits').get(),
-        db.collection('membershipConfig').doc('public').get(),
-      ]);
+    const [
+      membersSnap,
+      ordersSnap,
+      subsSnap,
+      histSnap,
+      notifSnap,
+      promoSnap,
+      refSnap,
+      creditSnap,
+      campaignsSnap,
+      visitsSnap,
+      uvSnap,
+      userAttrSnap,
+      orderAttrSnap,
+      commSnap,
+      paySnap,
+      reportSnap,
+      cfgSnap,
+    ] = await Promise.all([
+      db.collection('members').get(),
+      db.collection('membershipOrders').get(),
+      db.collection('memberships').get(),
+      db.collection('membershipHistory').get(),
+      db.collection('memberNotifications').get(),
+      db.collection('promoCodes').get(),
+      db.collection('referrals').get(),
+      db.collection('referralCredits').get(),
+      db.collection('referralCampaigns').get(),
+      db.collection('referralVisits').get(),
+      db.collection('referralUniqueVisitors').get(),
+      db.collection('userCampaignAttributions').get(),
+      db.collection('orderCampaignAttributions').get(),
+      db.collection('campaignCommissions').get(),
+      db.collection('commissionPayments').get(),
+      db.collection('monthlyCommissionReports').get(),
+      db.collection('membershipConfig').doc('public').get(),
+    ]);
 
     const members = membersSnap.docs.map((d) => {
       const data = d.data();
@@ -278,6 +311,26 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       };
     });
 
+    const normalizeGeneric = (snap: { docs: Array<{ id: string; data: () => Record<string, any> }> }) =>
+      snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          ...data,
+          id: data.id || d.id,
+          createdAt: toIso(data.createdAtIso || data.createdAt) || data.createdAt || new Date().toISOString(),
+          updatedAt: toIso(data.updatedAtIso || data.updatedAt) || data.updatedAt || new Date().toISOString(),
+        };
+      });
+
+    const referralCampaigns = normalizeGeneric(campaignsSnap);
+    const referralVisits = normalizeGeneric(visitsSnap);
+    const referralUniqueVisitors = normalizeGeneric(uvSnap);
+    const userCampaignAttributions = normalizeGeneric(userAttrSnap);
+    const orderCampaignAttributions = normalizeGeneric(orderAttrSnap);
+    const campaignCommissions = normalizeGeneric(commSnap);
+    const commissionPayments = normalizeGeneric(paySnap);
+    const monthlyCommissionReports = normalizeGeneric(reportSnap);
+
     let config: Record<string, any> | null = null;
     if (cfgSnap.exists) {
       const data = cfgSnap.data() || {};
@@ -287,7 +340,25 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       };
     }
 
-    return { members, orders, memberships, history, notifications, promoCodes, referrals, referralCredits, config };
+    return {
+      members,
+      orders,
+      memberships,
+      history,
+      notifications,
+      promoCodes,
+      referrals,
+      referralCredits,
+      referralCampaigns,
+      referralVisits,
+      referralUniqueVisitors,
+      userCampaignAttributions,
+      orderCampaignAttributions,
+      campaignCommissions,
+      commissionPayments,
+      monthlyCommissionReports,
+      config,
+    };
   } catch (err: any) {
     if (err?.code === 7 || String(err?.message || '').includes('PERMISSION_DENIED')) {
       firestoreWriteDisabled = true;

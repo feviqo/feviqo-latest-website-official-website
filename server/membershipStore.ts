@@ -20,6 +20,17 @@ import {
   deleteDocFromFirestoreServer,
   pullSnapshotFromFirestoreServer,
 } from './firestoreAdmin';
+import {
+  resolveEpisodePlaybackOverride,
+  getMuxSecurityAdminOverview,
+  revokePlaybackSessionsForMember,
+} from './muxSecurity';
+import {
+  recordCommissionForVerifiedOrder,
+  reverseCommissionForOrder,
+  mergeCampaignCloudSnapshot,
+  syncCampaignDocsToFirestore,
+} from './referralCampaignStore';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const PRIVATE_PROOFS_DIR = path.join(DATA_DIR, 'private_proofs');
@@ -522,7 +533,13 @@ export interface AdminAuditEntry {
     | 'promo_updated'
     | 'promo_deleted'
     | 'referral_config_updated'
-    | 'referral_status_updated';
+    | 'referral_status_updated'
+    | 'mux_session_revoked'
+    | 'referral_campaign_created'
+    | 'referral_campaign_updated'
+    | 'referral_commission_approved'
+    | 'referral_commission_paid'
+    | 'referral_commission_reversed';
   targetId?: string;
   details: string;
   createdAt: string;
@@ -3944,6 +3961,8 @@ export function approvePaymentRequest(params: {
 
   // Issue referral reward to referrer ONLY upon verified admin approval of qualifying purchase
   processReferralConversionReward(order, params.admin);
+  // Record affiliate / referral campaign commission snapshot upon verified admin payment approval
+  recordCommissionForVerifiedOrder({ order, admin: params.admin });
 
   const amountLabel =
     paymentCurrency === 'USD' ? `$${paidAmount.toFixed(2)} USD` : `PKR ${paidAmount.toLocaleString()}`;
@@ -4038,6 +4057,12 @@ export function rejectPaymentRequest(params: {
   order.reviewedAt = nowIso;
   order.updatedAt = nowIso;
   refundOrderCreditsIfNeeded(order, 'rejected');
+  reverseCommissionForOrder({
+    orderId: order.id,
+    orderStatus: 'rejected',
+    reason: `Payment rejected: ${order.rejectionReason}`,
+    actorEmail: params.admin.email,
+  });
   orders[idx] = order;
   writeJson(ORDERS_FILE, orders);
   mirrorOrderServer(order);
@@ -4215,6 +4240,15 @@ export function revokeMembershipByAdmin(params: {
   writeJson(MEMBERSHIPS_FILE, all);
   mirrorMembershipServer(all[idx]);
   supersedeOldRenewalReminders(all[idx].id, nowIso);
+  revokePlaybackSessionsForMember(all[idx].memberId, `Membership revoked: ${reason}`);
+  if (all[idx].orderId) {
+    reverseCommissionForOrder({
+      orderId: all[idx].orderId,
+      orderStatus: 'reversed',
+      reason: `Membership revoked: ${reason}`,
+      actorEmail: params.admin.email,
+    });
+  }
 
   appendHistory({
     memberId: all[idx].memberId,
@@ -4281,6 +4315,12 @@ export function deleteOrderByAdmin(params: {
   }
 
   refundOrderCreditsIfNeeded(order, 'deleted');
+  reverseCommissionForOrder({
+    orderId: order.id,
+    orderStatus: 'deleted',
+    reason: 'Order deleted by administrator.',
+    actorEmail: params.admin.email,
+  });
   orders.splice(idx, 1);
   writeJson(ORDERS_FILE, orders);
   unlinkOrderProofFile(order);
@@ -5059,6 +5099,14 @@ export function mergeCloudSyncSnapshot(payload: {
   promoCodes?: Array<Partial<PromoCode>>;
   referrals?: Array<Partial<ReferralRecord>>;
   referralCredits?: Array<Partial<ReferralCreditEntry>>;
+  referralCampaigns?: Array<any>;
+  referralVisits?: Array<any>;
+  referralUniqueVisitors?: Array<any>;
+  userCampaignAttributions?: Array<any>;
+  orderCampaignAttributions?: Array<any>;
+  campaignCommissions?: Array<any>;
+  commissionPayments?: Array<any>;
+  monthlyCommissionReports?: Array<any>;
   config?: Partial<MembershipConfig> | null;
 }) {
   const members = readMembersEnsured();
@@ -5315,6 +5363,17 @@ export function mergeCloudSyncSnapshot(payload: {
     }
   }
 
+  mergeCampaignCloudSnapshot({
+    referralCampaigns: payload.referralCampaigns,
+    referralVisits: payload.referralVisits,
+    referralUniqueVisitors: payload.referralUniqueVisitors,
+    userCampaignAttributions: payload.userCampaignAttributions,
+    orderCampaignAttributions: payload.orderCampaignAttributions,
+    campaignCommissions: payload.campaignCommissions,
+    commissionPayments: payload.commissionPayments,
+    monthlyCommissionReports: payload.monthlyCommissionReports,
+  });
+
   return getAdminMembershipsOverview();
 }
 
@@ -5471,6 +5530,7 @@ export async function syncServerFirestoreSnapshot(): Promise<ReturnType<typeof g
     for (const r of overview.referrals) mirrorReferralServer(r);
     for (const c of overview.creditLedger) mirrorCreditEntryServer(c);
     mirrorConfigServer(overview.config);
+    syncCampaignDocsToFirestore();
     return overview;
   }
   return getAdminMembershipsOverview();
@@ -5499,6 +5559,7 @@ export function cancelMemberSubscription(
   writeJson(MEMBERSHIPS_FILE, all);
   mirrorMembershipServer(all[idx]);
   supersedeOldRenewalReminders(all[idx].id, nowIso);
+  revokePlaybackSessionsForMember(memberId, 'Membership cancelled by member request.');
 
   appendHistory({
     memberId,
@@ -5522,6 +5583,8 @@ export function authorizeEpisodePlayback(params: {
   | {
       authorized: true;
       streamUrl: string;
+      playbackId: string;
+      playbackIdSource: 'env_override' | 'default_catalog';
       dramaTitle: string;
       episodeTitle: string;
       thumbnail: string;
@@ -5529,6 +5592,7 @@ export function authorizeEpisodePlayback(params: {
       planName: string;
       expiresAt: string;
       membershipId: string;
+      memberEmail: string;
     }
   | {
       authorized: false;
@@ -5549,9 +5613,9 @@ export function authorizeEpisodePlayback(params: {
     } {
   const drama = getDramaById(params.dramaId);
   const episode = getEpisodeMeta(params.dramaId, params.episodeSlug);
-  const serverStreamUrl = PROTECTED_EPISODE_STREAMS[params.dramaId]?.[params.episodeSlug];
+  const rawServerStreamUrl = PROTECTED_EPISODE_STREAMS[params.dramaId]?.[params.episodeSlug];
 
-  if (!drama || !episode || !episode.isPublished || !serverStreamUrl) {
+  if (!drama || !episode || !episode.isPublished || !rawServerStreamUrl) {
     return {
       authorized: false,
       statusCode: 404,
@@ -5559,6 +5623,12 @@ export function authorizeEpisodePlayback(params: {
       error: 'Requested episode was not found in the FEVIQO catalogue.',
     };
   }
+  const resolvedOverride = resolveEpisodePlaybackOverride(
+    params.dramaId,
+    params.episodeSlug,
+    rawServerStreamUrl
+  );
+  const serverStreamUrl = resolvedOverride.streamUrl;
 
   if (!params.memberId) {
     return {
@@ -5652,9 +5722,13 @@ export function authorizeEpisodePlayback(params: {
     };
   }
 
+  const member = getMemberById(params.memberId);
+
   return {
     authorized: true,
     streamUrl: serverStreamUrl,
+    playbackId: resolvedOverride.playbackId,
+    playbackIdSource: resolvedOverride.source,
     dramaTitle: drama.title,
     episodeTitle: episode.title,
     thumbnail: episode.thumbnail,
@@ -5662,5 +5736,10 @@ export function authorizeEpisodePlayback(params: {
     planName: matchingActive.planName,
     expiresAt: matchingActive.expiresAt,
     membershipId: matchingActive.id,
+    memberEmail: member?.email || matchingActive.customerEmail || 'member@feviqo.com',
   };
+}
+
+export function getProtectedStreamsSecurityOverview() {
+  return getMuxSecurityAdminOverview(PROTECTED_EPISODE_STREAMS, MEMBERSHIP_DRAMAS);
 }

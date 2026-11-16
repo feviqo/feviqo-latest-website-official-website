@@ -1056,6 +1056,215 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "memberId", "type", "currency", "details", "createdAtIso", "createdAt"]
+    },
+    "ReferralCampaign": {
+      "title": "ReferralCampaign",
+      "description": "Partner / influencer referral tracking campaign independent of promo codes.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "partnerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "partnerEmail": { "type": "string", "minLength": 0, "maxLength": 200 },
+        "description": { "type": "string", "minLength": 0, "maxLength": 600 },
+        "slug": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "referralUrl": { "type": "string", "minLength": 10, "maxLength": 300 },
+        "commissionRatePercent": { "type": "number" },
+        "attributionWindowDays": { "type": "number" },
+        "startDate": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "endDate": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "status": { "type": "string", "enum": ["active", "paused", "disabled"] },
+        "createdByAdminEmail": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "activityHistory": { "type": "array" },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "updatedAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "partnerName", "slug", "referralUrl", "commissionRatePercent", "attributionWindowDays", "status", "createdAt", "updatedAt"]
+    },
+    "ReferralVisit": {
+      "title": "ReferralVisit",
+      "description": "Individual click/visit logged from a partner referral link.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignSlug": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "visitorId": { "type": "string", "minLength": 3, "maxLength": 128 },
+        "isUniqueFirstVisit": { "type": "boolean" },
+        "landingPage": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "referrerHeader": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "ipHash": { "type": "string", "minLength": 4, "maxLength": 64 },
+        "uaHash": { "type": "string", "minLength": 4, "maxLength": 64 },
+        "userAgentSummary": { "type": "string", "minLength": 0, "maxLength": 200 },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "campaignId", "campaignSlug", "visitorId", "landingPage", "createdAt"]
+    },
+    "ReferralUniqueVisitor": {
+      "title": "ReferralUniqueVisitor",
+      "description": "Deduplicated unique visitor record per referral campaign.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignSlug": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "visitorId": { "type": "string", "minLength": 3, "maxLength": 128 },
+        "ipHash": { "type": "string", "minLength": 4, "maxLength": 64 },
+        "uaHash": { "type": "string", "minLength": 4, "maxLength": 64 },
+        "firstLandingPage": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "firstSeenAt": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "lastSeenAt": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "visitCount": { "type": "number" },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "campaignId", "campaignSlug", "visitorId", "visitCount", "createdAt"]
+    },
+    "UserCampaignAttribution": {
+      "title": "UserCampaignAttribution",
+      "description": "Persistent user account attribution to a referral campaign.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberEmail": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "memberName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "campaignId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignSlug": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "campaignName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "visitorId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "landingPage": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "attributedAt": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "attributionExpiresAt": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "source": { "type": "string", "enum": ["cookie", "token", "slug"] },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "memberId", "campaignId", "campaignSlug", "attributedAt", "attributionExpiresAt", "createdAt"]
+    },
+    "OrderCampaignAttribution": {
+      "title": "OrderCampaignAttribution",
+      "description": "Checkout order attribution linking membership purchases to a referral campaign.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "orderId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberEmailMasked": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "memberName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "campaignId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignSlug": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "campaignName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "planId": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "planName": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "currency": { "type": "string", "enum": ["PKR", "USD"] },
+        "orderAmountPkr": { "type": "number" },
+        "orderAmountUsd": { "type": "number" },
+        "orderStatus": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "commissionRatePercent": { "type": "number" },
+        "attributedAt": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "updatedAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "orderId", "memberId", "campaignId", "campaignSlug", "currency", "orderStatus", "commissionRatePercent", "createdAt", "updatedAt"]
+    },
+    "CampaignCommission": {
+      "title": "CampaignCommission",
+      "description": "Snapshotted partner commission record generated only after verified membership payment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "campaignSlug": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "partnerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "orderId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberEmailMasked": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "memberName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "planId": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "planName": { "type": "string", "minLength": 2, "maxLength": 64 },
+        "currency": { "type": "string", "enum": ["PKR", "USD"] },
+        "orderAmountPkr": { "type": "number" },
+        "orderAmountUsd": { "type": "number" },
+        "commissionRatePercent": { "type": "number" },
+        "commissionAmountPkr": { "type": "number" },
+        "commissionAmountUsd": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "paid", "reversed"] },
+        "monthKey": { "type": "string", "minLength": 7, "maxLength": 7 },
+        "verifiedAt": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "approvedAt": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "approvedByAdminEmail": { "type": "string", "minLength": 0, "maxLength": 200 },
+        "paidAt": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "paymentId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "paymentDate": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "paymentNotes": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "reversedAt": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "reversalReason": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "updatedAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "campaignId", "orderId", "memberId", "currency", "commissionRatePercent", "commissionAmountPkr", "commissionAmountUsd", "status", "monthKey", "createdAt", "updatedAt"]
+    },
+    "CommissionPayment": {
+      "title": "CommissionPayment",
+      "description": "Immutable partner commission payout batch history.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "campaignName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "partnerName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "monthKey": { "type": "string", "minLength": 7, "maxLength": 7 },
+        "commissionIds": { "type": "array" },
+        "totalAmountPkr": { "type": "number" },
+        "totalAmountUsd": { "type": "number" },
+        "paymentDate": { "type": "string", "minLength": 8, "maxLength": 64 },
+        "paymentMethod": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "paymentReference": { "type": "string", "minLength": 0, "maxLength": 120 },
+        "notes": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "paidByAdminEmail": { "type": "string", "minLength": 5, "maxLength": 200 },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "campaignId", "monthKey", "totalAmountPkr", "totalAmountUsd", "paymentDate", "paidByAdminEmail", "createdAt"]
+    },
+    "MonthlyCommissionReport": {
+      "title": "MonthlyCommissionReport",
+      "description": "Permanent monthly referral commission report snapshot keyed by YYYY-MM.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "monthKey": { "type": "string", "minLength": 7, "maxLength": 7 },
+        "generatedAt": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "generatedByAdminEmail": { "type": "string", "minLength": 5, "maxLength": 200 },
+        "totalMemberships": { "type": "number" },
+        "totalRevenuePkr": { "type": "number" },
+        "totalRevenueUsd": { "type": "number" },
+        "totalCommissionEarnedPkr": { "type": "number" },
+        "totalCommissionEarnedUsd": { "type": "number" },
+        "totalPendingPkr": { "type": "number" },
+        "totalPendingUsd": { "type": "number" },
+        "totalPaidPkr": { "type": "number" },
+        "totalPaidUsd": { "type": "number" },
+        "rows": { "type": "array" },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "updatedAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "monthKey", "generatedAt", "generatedByAdminEmail", "totalMemberships", "rows", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -1110,6 +1319,38 @@
     "/referralCredits/{entryId}": {
       "schema": { "$ref": "#/entities/ReferralCreditEntry" },
       "description": "Immutable member referral wallet credit ledger entries."
+    },
+    "/referralCampaigns/{campaignId}": {
+      "schema": { "$ref": "#/entities/ReferralCampaign" },
+      "description": "Partner referral campaigns with independent editable slugs and commission rates."
+    },
+    "/referralVisits/{visitId}": {
+      "schema": { "$ref": "#/entities/ReferralVisit" },
+      "description": "Timestamped referral campaign click/visit events."
+    },
+    "/referralUniqueVisitors/{visitorKey}": {
+      "schema": { "$ref": "#/entities/ReferralUniqueVisitor" },
+      "description": "Deduplicated unique visitors per referral campaign."
+    },
+    "/userCampaignAttributions/{attrId}": {
+      "schema": { "$ref": "#/entities/UserCampaignAttribution" },
+      "description": "Persistent user account attribution within the configured campaign window."
+    },
+    "/orderCampaignAttributions/{orderAttrId}": {
+      "schema": { "$ref": "#/entities/OrderCampaignAttribution" },
+      "description": "Checkout order attribution records linking membership orders to referral campaigns."
+    },
+    "/campaignCommissions/{commissionId}": {
+      "schema": { "$ref": "#/entities/CampaignCommission" },
+      "description": "Snapshotted partner commission records computed on verified membership payments."
+    },
+    "/commissionPayments/{paymentId}": {
+      "schema": { "$ref": "#/entities/CommissionPayment" },
+      "description": "Immutable partner commission payment payout records."
+    },
+    "/monthlyCommissionReports/{reportId}": {
+      "schema": { "$ref": "#/entities/MonthlyCommissionReport" },
+      "description": "Permanent monthly referral commission report snapshots."
     }
   }
 }

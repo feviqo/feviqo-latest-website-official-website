@@ -560,6 +560,42 @@ export interface AdminMembershipsOverview {
 const MEMBER_TOKEN_KEY = 'feviqo_member_token';
 const ADMIN_TOKEN_KEY = 'feviqo_admin_token';
 const REFERRAL_CODE_KEY = 'feviqo_ref_code';
+const CAMPAIGN_VISITOR_KEY = 'feviqo_campaign_visitor';
+const CAMPAIGN_ATTR_KEY = 'feviqo_campaign_attr';
+
+export function getStoredCampaignVisitorToken(): string {
+  try {
+    return typeof window !== 'undefined' ? (window.localStorage.getItem(CAMPAIGN_VISITOR_KEY) || '') : '';
+  } catch {
+    return '';
+  }
+}
+
+export function setStoredCampaignVisitorToken(token?: string | null): void {
+  if (!token) return;
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CAMPAIGN_VISITOR_KEY, token);
+    }
+  } catch {}
+}
+
+export function getStoredCampaignAttrToken(): string {
+  try {
+    return typeof window !== 'undefined' ? (window.localStorage.getItem(CAMPAIGN_ATTR_KEY) || '') : '';
+  } catch {
+    return '';
+  }
+}
+
+export function setStoredCampaignAttrToken(token?: string | null): void {
+  if (!token) return;
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(CAMPAIGN_ATTR_KEY, token);
+    }
+  } catch {}
+}
 
 export function normalizeReferralInput(raw?: string | null): string {
   return (raw || '')
@@ -628,6 +664,10 @@ function memberHeaders(extra?: Record<string, string>): Record<string, string> {
   const headers: Record<string, string> = { ...(extra || {}) };
   const token = getMemberToken();
   if (token) headers.Authorization = `Bearer ${token}`;
+  const visitorToken = getStoredCampaignVisitorToken();
+  if (visitorToken) headers['X-Feviqo-Visitor-Token'] = visitorToken;
+  const attrToken = getStoredCampaignAttrToken();
+  if (attrToken) headers['X-Feviqo-Campaign-Attr'] = attrToken;
   return headers;
 }
 
@@ -693,9 +733,14 @@ export async function registerMemberAccount(payload: {
   const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
   const res = await fetch('/api/membership/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: memberHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
-    body: JSON.stringify({ ...payload, referralCode: ref || undefined }),
+    body: JSON.stringify({
+      ...payload,
+      referralCode: ref || undefined,
+      campaignVisitorToken: getStoredCampaignVisitorToken() || undefined,
+      campaignAttrToken: getStoredCampaignAttrToken() || undefined,
+    }),
   });
   const data = await parseJsonSafe(res);
   if (data?.success && data?.token) {
@@ -713,7 +758,7 @@ export async function loginMemberAccount(payload: {
 > {
   const res = await fetch('/api/membership/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: memberHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify(payload),
   });
@@ -735,9 +780,14 @@ export async function authenticateMemberWithGoogle(payload: {
   const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
   const res = await fetch('/api/membership/google-auth', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: memberHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
-    body: JSON.stringify({ ...payload, referralCode: ref || undefined }),
+    body: JSON.stringify({
+      ...payload,
+      referralCode: ref || undefined,
+      campaignVisitorToken: getStoredCampaignVisitorToken() || undefined,
+      campaignAttrToken: getStoredCampaignAttrToken() || undefined,
+    }),
   });
   const data = await parseJsonSafe(res);
   if (data?.success && data?.token) {
@@ -819,7 +869,11 @@ export async function createMembershipCheckout(payload: {
     method: 'POST',
     headers: memberHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      campaignVisitorToken: getStoredCampaignVisitorToken() || undefined,
+      campaignAttrToken: getStoredCampaignAttrToken() || undefined,
+    }),
   });
   return parseJsonSafe(res);
 }
@@ -913,6 +967,23 @@ export async function cancelActiveMembership(membershipId?: string): Promise<
   return parseJsonSafe(res);
 }
 
+export interface WatermarkInfo {
+  text: string;
+  subtext: string;
+  memberId: string;
+  sessionShortId: string;
+  issuedAt: string;
+}
+
+export interface WatchProtectionMeta {
+  signedMuxToken: boolean;
+  proxiedHls: boolean;
+  directMp4Blocked: boolean;
+  drmConfigured: boolean;
+  playbackRestrictionConfigured: boolean;
+  sessionExpiresAt: string;
+}
+
 export async function requestProtectedEpisodeStream(
   dramaId: string,
   episodeSlug: string
@@ -920,6 +991,9 @@ export async function requestProtectedEpisodeStream(
   | {
       success: true;
       streamUrl: string;
+      playbackSessionId?: string;
+      watermark?: WatermarkInfo;
+      protection?: WatchProtectionMeta;
       dramaTitle: string;
       episodeTitle: string;
       thumbnail?: string;
@@ -947,6 +1021,83 @@ export async function requestProtectedEpisodeStream(
     }
   );
   return parseJsonSafe(res);
+}
+
+export async function sendPlaybackHeartbeat(
+  dramaId: string,
+  episodeSlug: string,
+  playbackSessionId?: string
+): Promise<{
+  success: boolean;
+  allowed: boolean;
+  code?: string;
+  error?: string;
+  expiresAt?: string;
+}> {
+  try {
+    const res = await fetch(
+      `/api/membership/watch/${encodeURIComponent(dramaId)}/${encodeURIComponent(episodeSlug)}/heartbeat`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: memberHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ playbackSessionId }),
+      }
+    );
+    const data = await parseJsonSafe(res);
+    if (!res.ok) {
+      return {
+        success: false,
+        allowed: false,
+        code: data?.code || 'PLAYBACK_DENIED',
+        error: data?.error || `HTTP ${res.status}`,
+      };
+    }
+    return {
+      success: true,
+      allowed: Boolean(data?.allowed ?? data?.success),
+      expiresAt: data?.expiresAt,
+    };
+  } catch {
+    return { success: true, allowed: true };
+  }
+}
+
+export async function trackReferralCampaignVisit(
+  slug: string,
+  landingPage?: string
+): Promise<{
+  success: boolean;
+  tracked?: boolean;
+  campaignId?: string;
+  campaignSlug?: string;
+  isNewUniqueVisitor?: boolean;
+  ignoredReason?: string;
+}> {
+  try {
+    const res = await fetch('/api/referral-campaigns/track', {
+      method: 'POST',
+      credentials: 'include',
+      headers: memberHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        slug,
+        landingPage:
+          landingPage ||
+          (typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/'),
+        visitorToken: getStoredCampaignVisitorToken() || undefined,
+      }),
+    });
+    const data = await parseJsonSafe(res);
+    if (data?.visitorToken) {
+      setStoredCampaignVisitorToken(data.visitorToken);
+    }
+    if (data?.attributionToken) {
+      setStoredCampaignAttrToken(data.attributionToken);
+    }
+    return data;
+  } catch {
+    return { success: false };
+  }
 }
 
 export async function fetchAuthenticatedProofObjectUrl(
@@ -1460,3 +1611,484 @@ export async function updateAdminReferralStatus(
   });
   return parseJsonSafe(res);
 }
+
+// =========================================================================
+// PART 2: PARTNER REFERRAL CAMPAIGNS & LINK ANALYTICS CLIENT
+// =========================================================================
+
+export type ReferralCampaignStatus = 'active' | 'paused' | 'disabled';
+
+export interface ReferralCampaignActivityEntry {
+  id: string;
+  at: string;
+  actorEmail: string;
+  action:
+    | 'created'
+    | 'updated'
+    | 'paused'
+    | 'reactivated'
+    | 'disabled'
+    | 'commission_rate_changed'
+    | 'commission_approved'
+    | 'commission_paid'
+    | 'commission_reversed';
+  summary: string;
+}
+
+export interface ReferralCampaign {
+  id: string;
+  name: string;
+  partnerName: string;
+  partnerEmail?: string;
+  description: string;
+  slug: string;
+  referralUrl: string;
+  commissionRatePercent: number;
+  attributionWindowDays: number;
+  startDate?: string;
+  endDate?: string;
+  status: ReferralCampaignStatus;
+  createdAt: string;
+  updatedAt: string;
+  createdByAdminEmail: string;
+  activityHistory: ReferralCampaignActivityEntry[];
+}
+
+export interface ReferralCampaignAnalytics {
+  campaignId: string;
+  campaignName: string;
+  partnerName: string;
+  slug: string;
+  referralUrl: string;
+  status: ReferralCampaignStatus;
+  commissionRatePercent: number;
+  attributionWindowDays: number;
+  totalClicks: number;
+  uniqueVisitors: number;
+  registeredUsers: number;
+  checkoutAttempts: number;
+  successfulPaidMemberships: number;
+  conversionRatePercent: number;
+  revenueGeneratedPkr: number;
+  revenueGeneratedUsd: number;
+  totalCommissionEarnedPkr: number;
+  pendingCommissionPkr: number;
+  paidCommissionPkr: number;
+  totalCommissionEarnedUsd: number;
+  pendingCommissionUsd: number;
+  paidCommissionUsd: number;
+}
+
+export interface CampaignCommissionRecord {
+  id: string;
+  campaignId: string;
+  campaignSlug: string;
+  campaignName: string;
+  partnerName: string;
+  orderId: string;
+  memberId: string;
+  customerName: string;
+  maskedCustomerEmail: string;
+  planId: string;
+  planName: string;
+  currency: 'PKR' | 'USD';
+  orderAmount: number;
+  orderAmountPkr: number;
+  orderAmountUsd: number;
+  commissionRatePercent: number;
+  commissionAmount: number;
+  commissionAmountPkr: number;
+  commissionAmountUsd: number;
+  monthKey: string;
+  status: 'pending' | 'approved' | 'paid' | 'reversed';
+  verifiedAt: string;
+  approvedAt?: string;
+  approvedByAdminEmail?: string;
+  paidAt?: string;
+  paymentId?: string;
+  paymentDate?: string;
+  paymentNotes?: string;
+  reversedAt?: string;
+  reversedReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommissionPaymentRecord {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  partnerName: string;
+  monthKey: string;
+  commissionIds: string[];
+  currency: 'PKR' | 'USD';
+  totalAmountPkr: number;
+  totalAmountUsd: number;
+  paymentDate: string;
+  paymentMethod?: string;
+  paymentReference?: string;
+  notes: string;
+  recordedByAdminEmail: string;
+  createdAt: string;
+}
+
+export interface ReferralCampaignCustomerRow {
+  memberId: string;
+  customerName: string;
+  maskedEmail: string;
+  attributedAt: string;
+  lastOrderId?: string;
+  lastOrderPlan?: string;
+  lastOrderStatus?: string;
+  lastOrderAmountDisplay?: string;
+  commissionStatus?: string;
+  commissionAmountPkr?: number;
+}
+
+export interface ReferralCampaignDetail {
+  campaign: ReferralCampaign;
+  analytics: ReferralCampaignAnalytics;
+  customers: ReferralCampaignCustomerRow[];
+  commissions: CampaignCommissionRecord[];
+  payments: CommissionPaymentRecord[];
+  recentVisits: Array<{
+    id: string;
+    landingPage: string;
+    isUniqueVisitor: boolean;
+    createdAt: string;
+  }>;
+}
+
+export interface MonthlyCommissionReportRow {
+  monthKey: string;
+  campaignId: string;
+  campaignName: string;
+  partnerName: string;
+  slug: string;
+  successfulPaidMemberships: number;
+  revenuePkr: number;
+  revenueUsd: number;
+  commissionRatePercent: number;
+  totalCommissionEarnedPkr: number;
+  pendingCommissionPkr: number;
+  approvedCommissionPkr: number;
+  paidCommissionPkr: number;
+  totalCommissionEarnedUsd: number;
+  pendingCommissionUsd: number;
+  approvedCommissionUsd: number;
+  paidCommissionUsd: number;
+}
+
+export interface MonthlyCommissionReportSnapshot {
+  id: string;
+  monthKey: string;
+  generatedAt: string;
+  generatedByAdminEmail: string;
+  rows: MonthlyCommissionReportRow[];
+}
+
+export interface AdminReferralCampaignsOverview {
+  campaigns: Array<{
+    campaign: ReferralCampaign;
+    analytics: ReferralCampaignAnalytics;
+  }>;
+  totals: {
+    totalCampaigns: number;
+    activeCampaigns: number;
+    totalClicks: number;
+    uniqueVisitors: number;
+    registeredUsers: number;
+    checkoutAttempts: number;
+    successfulPaidMemberships: number;
+    revenueGeneratedPkr: number;
+    totalCommissionEarnedPkr: number;
+    pendingCommissionPkr: number;
+    paidCommissionPkr: number;
+  };
+  commissions: CampaignCommissionRecord[];
+  payments: CommissionPaymentRecord[];
+  savedMonthlyReports: MonthlyCommissionReportSnapshot[];
+}
+
+export async function fetchAdminReferralCampaignsOverview(): Promise<
+  ({ success: true } & AdminReferralCampaignsOverview) | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/referral-campaigns/overview', {
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function createAdminReferralCampaign(payload: {
+  name: string;
+  partnerName: string;
+  partnerEmail?: string;
+  description?: string;
+  slug: string;
+  commissionRatePercent?: number;
+  attributionWindowDays?: number;
+  startDate?: string;
+  endDate?: string;
+  status?: ReferralCampaignStatus;
+}): Promise<
+  | { success: true; campaign: ReferralCampaign; overview: AdminReferralCampaignsOverview }
+  | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/referral-campaigns', {
+    method: 'POST',
+    credentials: 'include',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function fetchAdminReferralCampaignDetail(
+  campaignId: string
+): Promise<({ success: true } & ReferralCampaignDetail) | { success: false; error: string }> {
+  const res = await fetch(`/api/admin/referral-campaigns/${encodeURIComponent(campaignId)}`, {
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function updateAdminReferralCampaign(
+  campaignId: string,
+  updates: Partial<{
+    name: string;
+    partnerName: string;
+    partnerEmail: string;
+    description: string;
+    slug: string;
+    commissionRatePercent: number;
+    attributionWindowDays: number;
+    startDate: string;
+    endDate: string;
+    status: ReferralCampaignStatus;
+  }>
+): Promise<
+  | { success: true; campaign: ReferralCampaign; overview: AdminReferralCampaignsOverview }
+  | { success: false; error: string }
+> {
+  const res = await fetch(`/api/admin/referral-campaigns/${encodeURIComponent(campaignId)}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(updates),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function approveAdminCampaignCommission(
+  commissionId: string
+): Promise<
+  | { success: true; commission: CampaignCommissionRecord; overview: AdminReferralCampaignsOverview }
+  | { success: false; error: string }
+> {
+  const res = await fetch(
+    `/api/admin/referral-campaigns/commissions/${encodeURIComponent(commissionId)}/approve`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: adminHeaders(),
+    }
+  );
+  return parseJsonSafe(res);
+}
+
+export async function markAdminCampaignCommissionsPaid(payload: {
+  commissionIds: string[];
+  paymentDate: string;
+  paymentMethod?: string;
+  paymentReference?: string;
+  notes?: string;
+}): Promise<
+  | { success: true; payment: CommissionPaymentRecord; overview: AdminReferralCampaignsOverview }
+  | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/referral-campaigns/commissions/mark-paid', {
+    method: 'POST',
+    credentials: 'include',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function reverseAdminCampaignCommission(
+  commissionId: string,
+  reason: string
+): Promise<
+  | { success: true; commission: CampaignCommissionRecord; overview: AdminReferralCampaignsOverview }
+  | { success: false; error: string }
+> {
+  const res = await fetch(
+    `/api/admin/referral-campaigns/commissions/${encodeURIComponent(commissionId)}/reverse`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ reason }),
+    }
+  );
+  return parseJsonSafe(res);
+}
+
+export async function fetchAdminMonthlyCommissionReport(monthKey: string): Promise<{
+  success: boolean;
+  monthKey?: string;
+  rows?: MonthlyCommissionReportRow[];
+  snapshot?: MonthlyCommissionReportSnapshot | null;
+  error?: string;
+}> {
+  const res = await fetch(
+    `/api/admin/referral-campaigns/reports/monthly?month=${encodeURIComponent(monthKey)}`,
+    {
+      credentials: 'include',
+      headers: adminHeaders(),
+    }
+  );
+  return parseJsonSafe(res);
+}
+
+export async function saveAdminMonthlyCommissionReportSnapshot(monthKey: string): Promise<{
+  success: boolean;
+  snapshot?: MonthlyCommissionReportSnapshot;
+  overview?: AdminReferralCampaignsOverview;
+  error?: string;
+}> {
+  const res = await fetch('/api/admin/referral-campaigns/reports/monthly/save', {
+    method: 'POST',
+    credentials: 'include',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ month: monthKey }),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function downloadAdminMonthlyCommissionCsv(monthKey: string): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `/api/admin/referral-campaigns/reports/monthly/export.csv?month=${encodeURIComponent(monthKey)}`,
+      {
+        credentials: 'include',
+        headers: adminHeaders(),
+      }
+    );
+    if (!res.ok) return false;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `feviqo-commission-report-${monthKey}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// =========================================================================
+// PART 1: MUX PREMIUM VIDEO SECURITY ADMIN CLIENT
+// =========================================================================
+
+export interface MuxAssetAuditEntry {
+  dramaId: string;
+  dramaTitle: string;
+  episodeSlug: string;
+  episodeTitle: string;
+  playbackId: string;
+  playbackIdOverrideActive: boolean;
+  sharesPlaybackIdWithFreeEpisode: boolean;
+  sharedFreeEpisodeSlug: string | null;
+  playbackPolicyMode: 'signed_jwt' | 'proxy_token_only';
+  drmReady: boolean;
+  restrictionApplied: boolean;
+  auditStatus: 'protected' | 'warning_shared_playback_id' | 'warning_missing_signing_keys';
+  auditNote: string;
+}
+
+export interface MuxPlaybackSessionEntry {
+  id: string;
+  memberId: string;
+  memberEmail: string;
+  dramaId: string;
+  episodeSlug: string;
+  membershipId: string;
+  playbackId: string;
+  issuedAt: string;
+  expiresAt: string;
+  lastHeartbeatAt: string;
+  revokedAt?: string;
+  revokedReason?: string;
+  ip: string;
+  userAgent: string;
+  watermarkText: string;
+}
+
+export interface MuxSecurityEventEntry {
+  id: string;
+  type: string;
+  memberId?: string;
+  memberEmail?: string;
+  dramaId?: string;
+  episodeSlug?: string;
+  sessionId?: string;
+  ip: string;
+  userAgent: string;
+  reason: string;
+  createdAt: string;
+}
+
+export interface MuxSecurityPosture {
+  signingConfigured: boolean;
+  signingKeyIdMasked: string | null;
+  playbackRestrictionConfigured: boolean;
+  drmConfigured: boolean;
+  drmNote: string;
+  allowedDomains: string[];
+  proxyProtectionActive: boolean;
+  directMp4Blocked: boolean;
+  dynamicWatermarkingActive: boolean;
+  maxConcurrentSessionsPerMember: number;
+  sessionTtlSeconds: number;
+}
+
+export interface MuxSecurityOverview {
+  posture: MuxSecurityPosture;
+  assetAudit: MuxAssetAuditEntry[];
+  activeSessions: MuxPlaybackSessionEntry[];
+  recentSecurityEvents: MuxSecurityEventEntry[];
+}
+
+export async function fetchAdminMuxSecurityOverview(): Promise<
+  ({ success: true } & MuxSecurityOverview) | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/mux-security/overview', {
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function revokeAdminMuxPlaybackSession(
+  sessionId: string,
+  reason = 'Revoked by administrator'
+): Promise<({ success: true } & MuxSecurityOverview) | { success: false; error: string }> {
+  const res = await fetch(
+    `/api/admin/mux-security/sessions/${encodeURIComponent(sessionId)}/revoke`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ reason }),
+    }
+  );
+  return parseJsonSafe(res);
+}
+

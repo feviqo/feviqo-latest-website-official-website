@@ -39,6 +39,7 @@ import { isEpisodePremium } from '../../data/membershipCatalog';
 import { attachHlsStream, extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
+import { ProtectedPlayerWatermark } from '../membership/ProtectedPlayerWatermark';
 
 interface MehmedDramaPageProps {
   onBackToHome: () => void;
@@ -94,6 +95,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
     unlockedStreams,
     gateState,
     hasDramaAccess,
+    getWatermarkForEpisode,
     verifyAndUnlockEpisode,
     attemptWatchEpisode,
     closeGateModal,
@@ -205,6 +207,9 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
     : selectedEpisode.embeds?.[activeServerIndex]?.src ||
       selectedEpisode.embeds?.[0]?.src ||
       'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8';
+  const activeWatermark = isSelectedPremium
+    ? getWatermarkForEpisode('mehmed-fetihler-sultani', selectedEpSlug)
+    : undefined;
 
   useEffect(() => {
     if (activeView === 'episode-detail' && isSelectedPremium) {
@@ -851,6 +856,9 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                           playback-id={extractMuxPlaybackId(resolvedStreamUrl) || undefined}
                           crossorigin="anonymous"
                           playsinline
+                          controlsList={isSelectedPremium ? 'nodownload noremoteplayback' : undefined}
+                          disablePictureInPicture={isSelectedPremium ? true : undefined}
+                          disableRemotePlayback={isSelectedPremium ? true : undefined}
                           poster={selectedEpisode.thumbnail}
                           onContextMenu={(e: any) => e.preventDefault()}
                           style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -858,12 +866,15 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                         <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.title}></mux-data>
                       </video-skin>
                     </video-player>
+                    {isSelectedPremium && resolvedStreamUrl && (
+                      <ProtectedPlayerWatermark watermark={activeWatermark} />
+                    )}
                   </div>
                 )}
 
                 {/* Action Row: Download & Share Buttons (Guaranteed same line on phones) */}
                 <div className="mt-3 flex flex-row items-center justify-between gap-2 w-full">
-                  {(!isSelectedPremium || resolvedStreamUrl) ? (
+                  {!isSelectedPremium ? (
                     <a
                       href={selectedEpisode.downloadUrl || "https://shrinkme.click/mehmedepisode88urdu"}
                       target="_blank"

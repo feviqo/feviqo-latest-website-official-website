@@ -45,6 +45,7 @@ import { attachHlsStream, extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { isEpisodePremium } from '../../data/membershipCatalog';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
+import { ProtectedPlayerWatermark } from '../membership/ProtectedPlayerWatermark';
 
 interface TeskilatEpisode {
   id: string;
@@ -358,6 +359,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     unlockedStreams,
     gateState,
     hasDramaAccess,
+    getWatermarkForEpisode,
     verifyAndUnlockEpisode,
     attemptWatchEpisode,
     closeGateModal,
@@ -370,6 +372,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   const resolvedStreamUrl = isSelectedPremium
     ? unlockedStreams[`teskilat:${selectedEpSlug}`] || ''
     : selectedEpisode.videoUrl;
+  const activeWatermark = isSelectedPremium
+    ? getWatermarkForEpisode('teskilat', selectedEpSlug)
+    : undefined;
 
   useEffect(() => {
     setShowPosterOverlay(true);
@@ -1403,6 +1408,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                         playback-id={extractMuxPlaybackId(resolvedStreamUrl) || undefined}
                         crossorigin="anonymous"
                         playsinline
+                        controlsList={isSelectedPremium ? 'nodownload noremoteplayback' : undefined}
+                        disablePictureInPicture={isSelectedPremium ? true : undefined}
+                        disableRemotePlayback={isSelectedPremium ? true : undefined}
                         poster={selectedEpisode.thumbnailUrl}
                         onContextMenu={(e: any) => e.preventDefault()}
                         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -1410,6 +1418,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       <mux-data env-key="feviqo" metadata-video-title={selectedEpisode.titleEnglish}></mux-data>
                     </video-skin>
                   </video-player>
+                  {isSelectedPremium && resolvedStreamUrl && (
+                    <ProtectedPlayerWatermark watermark={activeWatermark} />
+                  )}
                 </div>
               )}
 

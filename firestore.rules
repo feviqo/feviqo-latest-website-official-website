@@ -467,6 +467,127 @@ service cloud.firestore {
         && data.createdAt is timestamp;
     }
 
+    function isValidReferralCampaign(data) {
+      return data.keys().hasAll([
+          'id', 'name', 'partnerName', 'slug', 'referralUrl',
+          'commissionRatePercent', 'attributionWindowDays', 'status', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isBoundedString(data.name, 2, 120)
+        && isBoundedString(data.partnerName, 2, 120)
+        && (!('partnerEmail' in data) || isBoundedString(data.partnerEmail, 0, 200))
+        && (!('description' in data) || isBoundedString(data.description, 0, 600))
+        && isBoundedString(data.slug, 2, 64)
+        && isBoundedString(data.referralUrl, 10, 300)
+        && data.commissionRatePercent is number && data.commissionRatePercent >= 0 && data.commissionRatePercent <= 100
+        && data.attributionWindowDays is number && data.attributionWindowDays >= 1 && data.attributionWindowDays <= 365
+        && (data.status in ['active', 'paused', 'disabled'])
+        && (!('createdByAdminEmail' in data) || isBoundedString(data.createdByAdminEmail, 0, 200))
+        && (!('activityHistory' in data) || (data.activityHistory is list && data.activityHistory.size() <= 100))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidReferralVisit(data) {
+      return data.keys().hasAll(['id', 'campaignId', 'campaignSlug', 'visitorId', 'landingPage', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.campaignId)
+        && isBoundedString(data.campaignSlug, 2, 64)
+        && isBoundedString(data.visitorId, 3, 128)
+        && isBoundedString(data.landingPage, 1, 300)
+        && (!('referrerHeader' in data) || isBoundedString(data.referrerHeader, 0, 300))
+        && (!('ipHash' in data) || isBoundedString(data.ipHash, 0, 64))
+        && (!('uaHash' in data) || isBoundedString(data.uaHash, 0, 64))
+        && (!('userAgentSummary' in data) || isBoundedString(data.userAgentSummary, 0, 200))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidReferralUniqueVisitor(data) {
+      return data.keys().hasAll(['id', 'campaignId', 'campaignSlug', 'visitorId', 'visitCount', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.campaignId)
+        && isBoundedString(data.campaignSlug, 2, 64)
+        && isBoundedString(data.visitorId, 3, 128)
+        && data.visitCount is number && data.visitCount >= 1 && data.visitCount <= 100000
+        && (!('firstLandingPage' in data) || isBoundedString(data.firstLandingPage, 0, 300))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidUserCampaignAttribution(data) {
+      return data.keys().hasAll(['id', 'memberId', 'campaignId', 'campaignSlug', 'attributedAt', 'attributionExpiresAt', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.memberId)
+        && isValidId(data.campaignId)
+        && isBoundedString(data.campaignSlug, 2, 64)
+        && (!('memberEmail' in data) || isBoundedString(data.memberEmail, 0, 200))
+        && (!('memberName' in data) || isBoundedString(data.memberName, 0, 120))
+        && (!('campaignName' in data) || isBoundedString(data.campaignName, 0, 120))
+        && isBoundedString(data.attributedAt, 10, 64)
+        && isBoundedString(data.attributionExpiresAt, 10, 64)
+        && data.createdAt is timestamp;
+    }
+
+    function isValidOrderCampaignAttribution(data) {
+      return data.keys().hasAll(['id', 'orderId', 'memberId', 'campaignId', 'campaignSlug', 'currency', 'orderStatus', 'commissionRatePercent', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.orderId)
+        && isValidId(data.memberId)
+        && isValidId(data.campaignId)
+        && isBoundedString(data.campaignSlug, 2, 64)
+        && (data.currency in ['PKR', 'USD'])
+        && isBoundedString(data.orderStatus, 2, 64)
+        && data.commissionRatePercent is number && data.commissionRatePercent >= 0 && data.commissionRatePercent <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCampaignCommission(data) {
+      return data.keys().hasAll([
+          'id', 'campaignId', 'orderId', 'memberId', 'currency',
+          'commissionRatePercent', 'commissionAmountPkr', 'commissionAmountUsd', 'status', 'monthKey',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.campaignId)
+        && isValidId(data.orderId)
+        && isValidId(data.memberId)
+        && (data.currency in ['PKR', 'USD'])
+        && data.commissionRatePercent is number && data.commissionRatePercent >= 0 && data.commissionRatePercent <= 100
+        && data.commissionAmountPkr is number && data.commissionAmountPkr >= 0 && data.commissionAmountPkr <= 1000000
+        && data.commissionAmountUsd is number && data.commissionAmountUsd >= 0 && data.commissionAmountUsd <= 100000
+        && (data.status in ['pending', 'approved', 'paid', 'reversed'])
+        && isBoundedString(data.monthKey, 7, 7)
+        && (!('paymentNotes' in data) || isBoundedString(data.paymentNotes, 0, 500))
+        && (!('reversalReason' in data) || isBoundedString(data.reversalReason, 0, 300))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCommissionPayment(data) {
+      return data.keys().hasAll(['id', 'campaignId', 'monthKey', 'totalAmountPkr', 'totalAmountUsd', 'paymentDate', 'paidByAdminEmail', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.campaignId)
+        && isBoundedString(data.monthKey, 7, 7)
+        && data.totalAmountPkr is number && data.totalAmountPkr >= 0 && data.totalAmountPkr <= 10000000
+        && data.totalAmountUsd is number && data.totalAmountUsd >= 0 && data.totalAmountUsd <= 1000000
+        && isBoundedString(data.paymentDate, 8, 64)
+        && isBoundedString(data.paidByAdminEmail, 5, 200)
+        && (!('notes' in data) || isBoundedString(data.notes, 0, 500))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidMonthlyCommissionReport(data) {
+      return data.keys().hasAll(['id', 'monthKey', 'generatedAt', 'generatedByAdminEmail', 'totalMemberships', 'rows', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isBoundedString(data.monthKey, 7, 7)
+        && isBoundedString(data.generatedAt, 10, 64)
+        && isBoundedString(data.generatedByAdminEmail, 5, 200)
+        && data.totalMemberships is number && data.totalMemberships >= 0 && data.totalMemberships <= 1000000
+        && data.rows is list && data.rows.size() <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     // --- COLLECTION MATCH BLOCKS ---
     match /admins/{adminUid} {
       allow get: if isValidId(adminUid) && isVerifiedUser() && (request.auth.uid == adminUid || isAdmin());
@@ -719,6 +840,114 @@ service cloud.firestore {
         && incoming().id == entryId
         && incoming().createdAt == request.time;
       allow update, delete: if false;
+    }
+
+    match /referralCampaigns/{campaignId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(campaignId) && isAdmin()
+        && isValidReferralCampaign(incoming())
+        && incoming().id == campaignId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(campaignId) && isAdmin()
+        && isValidReferralCampaign(incoming())
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /referralVisits/{visitId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(visitId) && isAdmin()
+        && isValidReferralVisit(incoming())
+        && incoming().id == visitId
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /referralUniqueVisitors/{visitorKey} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(visitorKey) && isAdmin()
+        && isValidReferralUniqueVisitor(incoming())
+        && incoming().id == visitorKey
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(visitorKey) && isAdmin()
+        && isValidReferralUniqueVisitor(incoming())
+        && incoming().id == existing().id
+        && incoming().campaignId == existing().campaignId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /userCampaignAttributions/{attrId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(attrId) && isAdmin()
+        && isValidUserCampaignAttribution(incoming())
+        && incoming().id == attrId
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /orderCampaignAttributions/{orderAttrId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(orderAttrId) && isAdmin()
+        && isValidOrderCampaignAttribution(incoming())
+        && incoming().id == orderAttrId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(orderAttrId) && isAdmin()
+        && isValidOrderCampaignAttribution(incoming())
+        && incoming().id == existing().id
+        && incoming().orderId == existing().orderId
+        && incoming().campaignId == existing().campaignId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /campaignCommissions/{commissionId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(commissionId) && isAdmin()
+        && isValidCampaignCommission(incoming())
+        && incoming().id == commissionId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(commissionId) && isAdmin()
+        && isValidCampaignCommission(incoming())
+        && incoming().id == existing().id
+        && incoming().orderId == existing().orderId
+        && incoming().campaignId == existing().campaignId
+        && incoming().commissionRatePercent == existing().commissionRatePercent
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /commissionPayments/{paymentId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(paymentId) && isAdmin()
+        && isValidCommissionPayment(incoming())
+        && incoming().id == paymentId
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /monthlyCommissionReports/{reportId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(reportId) && isAdmin()
+        && isValidMonthlyCommissionReport(incoming())
+        && incoming().id == reportId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(reportId) && isAdmin()
+        && isValidMonthlyCommissionReport(incoming())
+        && incoming().id == existing().id
+        && incoming().monthKey == existing().monthKey
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
     }
   }
 }
