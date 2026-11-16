@@ -139,6 +139,7 @@ import {
   buildMonthlyCommissionReport,
   saveMonthlyCommissionReportSnapshot,
   exportMonthlyCommissionReportCsv,
+  syncClientReferralVisits,
 } from './server/referralCampaignStore';
 
 const app = express();
@@ -4203,8 +4204,58 @@ app.get('/api/membership/stream/:sessionToken/seg', (req, res) => {
   void handleProtectedStreamProxy(req, res, 'seg');
 });
 
-// Public Partner Referral Campaign Visit Tracking (?ref=slug)
-app.post('/api/referral-campaigns/track', (req, res) => {
+function captureServerSideReferralVisit(req: express.Request, res: express.Response): void {
+  try {
+    if (req.method !== 'GET') return;
+    const rawPath = (req.path || '/').trim();
+    let candidateSlug = '';
+
+    const pathMatch = rawPath.match(/^\/memberships?\/([a-zA-Z0-9_-]{2,64})\/?$/i);
+    if (pathMatch && pathMatch[1]) {
+      const candidate = pathMatch[1].trim().toLowerCase();
+      const reserved = new Set(['index', 'index.html', 'checkout', 'account', 'plans', 'pricing', 'verify']);
+      if (!reserved.has(candidate)) {
+        candidateSlug = candidate;
+      }
+    }
+    if (!candidateSlug) {
+      const qRef =
+        (typeof req.query?.ref === 'string' && req.query.ref) ||
+        (typeof req.query?.referral === 'string' && req.query.referral) ||
+        (typeof req.query?.partner === 'string' && req.query.partner) ||
+        '';
+      if (qRef && qRef.trim().length >= 2) {
+        candidateSlug = qRef.trim();
+      }
+    }
+    if (!candidateSlug) return;
+
+    const { ip, ua } = extractSecurityRequestMeta(req);
+    const cookies = parseCookiesMap(req);
+    const existingVisitorToken = cookies[CAMPAIGN_VISITOR_COOKIE] || undefined;
+
+    const tracked = trackCampaignVisit({
+      slug: candidateSlug,
+      landingPage: req.originalUrl || req.url || rawPath || '/',
+      referrerHeader: req.headers.referer as string | undefined,
+      ip,
+      userAgent: ua,
+      existingVisitorToken,
+    });
+
+    if (tracked.tracked && tracked.visitorToken && tracked.attributionToken) {
+      const expMs = tracked.attributionExpiresAt
+        ? Math.max(60_000, Date.parse(tracked.attributionExpiresAt) - Date.now())
+        : 30 * 24 * 60 * 60 * 1000;
+      setCampaignTrackingCookie(req, res, CAMPAIGN_VISITOR_COOKIE, tracked.visitorToken, 365 * 24 * 60 * 60 * 1000);
+      setCampaignTrackingCookie(req, res, CAMPAIGN_ATTR_COOKIE, tracked.attributionToken, expMs);
+    }
+  } catch {}
+}
+
+// Public Partner Referral Campaign Visit Tracking (?ref=slug or /membership/:slug)
+// Registered on both /api/referral-campaigns/track and ad-blocker-safe /api/membership/partner-session
+app.post(['/api/referral-campaigns/track', '/api/membership/partner-session'], (req, res) => {
   try {
     const { ip, ua } = extractSecurityRequestMeta(req);
     const { slug, landingPage, referrer } = req.body || {};
@@ -5066,6 +5117,27 @@ app.get('/api/admin/referral-campaigns/overview', requireAdmin, (req, res) => {
   }
 });
 
+app.post('/api/admin/referral-campaigns/sync-visits', requireAdmin, (req, res) => {
+  try {
+    const { ip, ua } = extractSecurityRequestMeta(req);
+    const rawVisits = Array.isArray(req.body?.visits) ? req.body.visits : [];
+    const enriched = rawVisits.map((v: any) => ({
+      ...v,
+      ip: v?.ip || ip,
+      userAgent: v?.userAgent || ua,
+    }));
+    const syncedCount = syncClientReferralVisits(enriched);
+    const month = typeof req.body?.month === 'string' ? req.body.month : undefined;
+    return res.json({
+      success: true,
+      syncedCount,
+      ...formatCampaignsOverviewForClient(month),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to sync referral campaign visits.' });
+  }
+});
+
 app.post('/api/admin/referral-campaigns', requireAdmin, (req: any, res) => {
   try {
     const body = req.body || {};
@@ -5656,6 +5728,7 @@ async function startServer() {
         return next();
       }
       try {
+        captureServerSideReferralVisit(req, res);
         const indexPath = path.join(process.cwd(), 'index.html');
         let rawHtml = fs.readFileSync(indexPath, 'utf-8');
         rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
@@ -5721,6 +5794,7 @@ async function startServer() {
 
     app.get('*', (req, res) => {
       try {
+        captureServerSideReferralVisit(req, res);
         const indexPath = path.join(distPath, 'index.html');
         const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
         const cleanRoutePath = rawPath.replace(/^\/+|\/+$/g, '');

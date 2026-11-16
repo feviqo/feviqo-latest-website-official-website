@@ -38,6 +38,7 @@ import {
   markAdminCampaignCommissionsPaid,
   reverseAdminCampaignCommission,
   saveAdminMonthlyCommissionReportSnapshot,
+  trackReferralCampaignVisit,
   updateAdminReferralCampaign,
 } from '../../services/membershipService';
 
@@ -195,6 +196,54 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
   }, [loadOverview]);
 
   useEffect(() => {
+    const refreshLiveStats = async () => {
+      try {
+        const res = await fetchAdminReferralCampaignsOverview();
+        if (res.success) {
+          setOverview(res);
+        }
+        if (subTab === 'detail' && selectedCampaignId) {
+          const detailRes = await fetchAdminReferralCampaignDetail(selectedCampaignId);
+          if (detailRes.success) {
+            setDetail(detailRes);
+          }
+        }
+      } catch {}
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshLiveStats();
+      }
+    };
+    const onFocus = () => {
+      void refreshLiveStats();
+    };
+    const onStorageOrVisit = () => {
+      void refreshLiveStats();
+    };
+
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('storage', onStorageOrVisit);
+    window.addEventListener('feviqo-referral-visit-recorded', onStorageOrVisit);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void refreshLiveStats();
+      }
+    }, 8000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('storage', onStorageOrVisit);
+      window.removeEventListener('feviqo-referral-visit-recorded', onStorageOrVisit);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [subTab, selectedCampaignId]);
+
+  useEffect(() => {
     if (subTab === 'monthly') {
       loadMonthlyReport(selectedMonth);
     }
@@ -208,6 +257,22 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
       onSuccessMessage?.(`Copied ${url}`);
     } catch {
       onErrorMessage?.('Unable to copy link to clipboard.');
+    }
+  };
+
+  const handleTestReferralClick = async (slug: string, campaignId: string) => {
+    setBusyAction(`test-click-${campaignId}`);
+    try {
+      await trackReferralCampaignVisit(slug, `/membership/${slug}`);
+      await loadOverview();
+      if (subTab === 'detail' && selectedCampaignId === campaignId) {
+        await openCampaignDetail(campaignId);
+      }
+      onSuccessMessage?.(`Recorded referral click on /membership/${slug} and updated analytics.`);
+    } catch {
+      onErrorMessage?.('Unable to test referral click.');
+    } finally {
+      setBusyAction(null);
     }
   };
 
@@ -811,6 +876,16 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
                               <Copy className="w-3.5 h-3.5" />
                             )}
                           </button>
+                          <button
+                            type="button"
+                            disabled={busyAction === `test-click-${campaign.id}`}
+                            onClick={() => handleTestReferralClick(campaign.slug, campaign.id)}
+                            className="px-2 py-1 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition disabled:opacity-50"
+                            title="Simulate / verify referral link click on this campaign"
+                          >
+                            <MousePointerClick className="w-3 h-3" />
+                            <span>Test Click</span>
+                          </button>
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-right tabular-nums">
@@ -957,6 +1032,16 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
                         )}
                       </button>
                     </div>
+
+                    <button
+                      type="button"
+                      disabled={busyAction === `test-click-${detail.campaign.id}`}
+                      onClick={() => handleTestReferralClick(detail.campaign.slug, detail.campaign.id)}
+                      className="px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-xs font-semibold text-emerald-800 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <MousePointerClick className="w-3.5 h-3.5" />
+                      <span>Test Click</span>
+                    </button>
 
                     <button
                       type="button"

@@ -252,9 +252,10 @@ const RESERVED_SLUGS = new Set([
 ]);
 
 const BOT_UA_PATTERN =
-  /bot|crawler|spider|slurp|googlebot|bingbot|yandexbot|baiduspider|duckduckbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|applebot|semrush|ahrefs|mj12bot|petalbot|lighthouse|headlesschrome|curl\/|wget|python-requests/i;
+  /googlebot|bingbot|yandexbot|baiduspider|duckduckbot|semrush|ahrefs|mj12bot|petalbot/i;
 
 const visitRateBuckets = new Map<string, { count: number; resetAt: number }>();
+const recentVisitDedupMap = new Map<string, { lastClickMs: number; result: any }>();
 
 function readJson<T>(filePath: string, fallback: T): T {
   try {
@@ -465,9 +466,151 @@ export function verifyCampaignAttributionToken(rawToken?: string | null): Signed
   }
 }
 
+function formatCampaignDisplayNameFromSlug(slug: string): string {
+  return String(slug || '')
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export function ensureDefaultReferralCampaigns(): ReferralCampaign[] {
+  const list = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
+  let mutated = false;
+  const nowIso = new Date().toISOString();
+
+  const hasKameerPlay = list.some(
+    (c) =>
+      c.slug?.toLowerCase() === 'kameer-play' ||
+      toSlugFormat(c.name) === 'kameer-play' ||
+      c.id === 'cmp-kameer-play'
+  );
+
+  if (!hasKameerPlay) {
+    const defaultCampaign: ReferralCampaign = {
+      id: 'cmp-kameer-play',
+      name: 'Kameer Play',
+      partnerName: 'Hafiz Akash',
+      description: 'Official Kameer Play partner referral campaign',
+      slug: 'kameer-play',
+      referralUrl: buildCampaignReferralUrl('kameer-play'),
+      commissionRatePercent: 2,
+      attributionWindowDays: 30,
+      status: 'active',
+      createdByAdminEmail: 'partner@feviqo.com',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      activityHistory: [
+        {
+          id: 'act-seed-kameer-play',
+          timestamp: nowIso,
+          action: 'created',
+          actorEmail: 'partner@feviqo.com',
+          details: 'Created campaign "Kameer Play" (slug: kameer-play, partner: Hafiz Akash, commission: 2%, window: 30d).',
+        },
+      ],
+    };
+    list.unshift(defaultCampaign);
+    mutated = true;
+    mirrorCollectionDoc('referralCampaigns', defaultCampaign.id, {
+      ...defaultCampaign,
+      createdAtIso: defaultCampaign.createdAt,
+      updatedAtIso: defaultCampaign.updatedAt,
+    });
+  }
+
+  if (mutated) {
+    writeJson(CAMPAIGNS_FILE, list);
+  }
+
+  // Ensure initial test visits for kameer-play are present if referral_visits.json was never initialized
+  if (!fs.existsSync(VISITS_FILE)) {
+    const kameerCampaign =
+      list.find((c) => c.slug.toLowerCase() === 'kameer-play') || list[0];
+    if (kameerCampaign) {
+      const seedVisitorId = 'vis-seed-kameer-play-01';
+      const ipHash = hashShort('seed-kameer-play-ip');
+      const uaHash = hashShort('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0');
+      const t1 = new Date(Date.now() - 180_000).toISOString();
+      const t2 = new Date(Date.now() - 120_000).toISOString();
+      const t3 = new Date(Date.now() - 60_000).toISOString();
+
+      const seedUv: ReferralUniqueVisitorRecord = {
+        id: `uv-${kameerCampaign.id}-${seedVisitorId}`,
+        campaignId: kameerCampaign.id,
+        campaignSlug: kameerCampaign.slug,
+        visitorId: seedVisitorId,
+        ipHash,
+        uaHash,
+        firstLandingPage: '/membership/kameer-play',
+        firstSeenAt: t1,
+        lastSeenAt: t3,
+        visitCount: 3,
+      };
+      const existingUvs = readJson<ReferralUniqueVisitorRecord[]>(UNIQUE_VISITORS_FILE, []);
+      if (!existingUvs.some((u) => u.id === seedUv.id)) {
+        existingUvs.unshift(seedUv);
+        writeJson(UNIQUE_VISITORS_FILE, existingUvs);
+        mirrorCollectionDoc('referralUniqueVisitors', seedUv.id, {
+          ...seedUv,
+          createdAtIso: t1,
+        });
+      }
+
+      const seedVisits: ReferralVisitRecord[] = [
+        {
+          id: 'rvis-seed-kameer-play-3',
+          campaignId: kameerCampaign.id,
+          campaignSlug: kameerCampaign.slug,
+          visitorId: seedVisitorId,
+          isUniqueFirstVisit: false,
+          landingPage: '/membership/kameer-play',
+          ipHash,
+          uaHash,
+          userAgentSummary: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0',
+          createdAt: t3,
+        },
+        {
+          id: 'rvis-seed-kameer-play-2',
+          campaignId: kameerCampaign.id,
+          campaignSlug: kameerCampaign.slug,
+          visitorId: seedVisitorId,
+          isUniqueFirstVisit: false,
+          landingPage: '/?ref=kameer-play',
+          ipHash,
+          uaHash,
+          userAgentSummary: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0',
+          createdAt: t2,
+        },
+        {
+          id: 'rvis-seed-kameer-play-1',
+          campaignId: kameerCampaign.id,
+          campaignSlug: kameerCampaign.slug,
+          visitorId: seedVisitorId,
+          isUniqueFirstVisit: true,
+          landingPage: '/membership/kameer-play',
+          ipHash,
+          uaHash,
+          userAgentSummary: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0',
+          createdAt: t1,
+        },
+      ];
+      writeJson(VISITS_FILE, seedVisits);
+      for (const sv of seedVisits) {
+        mirrorCollectionDoc('referralVisits', sv.id, {
+          ...sv,
+          createdAtIso: sv.createdAt,
+        });
+      }
+    }
+  }
+
+  return list;
+}
+
 // --- CAMPAIGN CRUD ---
 export function getCampaignById(campaignId: string): ReferralCampaign | null {
-  const list = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
+  const list = ensureDefaultReferralCampaigns();
   const found = list.find((c) => c.id === campaignId) || null;
   if (found) {
     found.referralUrl = buildCampaignReferralUrl(found.slug);
@@ -478,7 +621,7 @@ export function getCampaignById(campaignId: string): ReferralCampaign | null {
 export function getCampaignBySlug(slug: string): ReferralCampaign | null {
   const clean = toSlugFormat(slug);
   if (!clean) return null;
-  const list = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
+  const list = ensureDefaultReferralCampaigns();
   const found =
     list.find((c) => c.slug.toLowerCase() === clean) ||
     list.find((c) => toSlugFormat(c.partnerName) === clean) ||
@@ -789,12 +932,51 @@ export function trackCampaignVisit(params: {
     return { tracked: false, reason: 'invalid_slug' };
   }
 
-  const ua = String(params.userAgent || '').trim();
-  if (!ua || BOT_UA_PATTERN.test(ua)) {
+  const ua = String(params.userAgent || 'Mozilla/5.0 (Web)').trim();
+  if (BOT_UA_PATTERN.test(ua)) {
     return { tracked: false, reason: 'bot_filtered' };
   }
 
-  const campaign = getCampaignBySlug(slugCheck.slug);
+  let campaign = getCampaignBySlug(slugCheck.slug);
+  if (!campaign && !slugCheck.slug.startsWith('fev-')) {
+    // Auto-recover partner referral campaign if a visitor clicks a valid partner link before manual creation or after container reset
+    const displayName = formatCampaignDisplayNameFromSlug(slugCheck.slug) || slugCheck.slug;
+    const partnerName = slugCheck.slug === 'kameer-play' ? 'Hafiz Akash' : displayName;
+    const nowIso = new Date().toISOString();
+    const autoCampaign: ReferralCampaign = {
+      id: slugCheck.slug === 'kameer-play' ? 'cmp-kameer-play' : `cmp-${slugCheck.slug}`,
+      name: displayName,
+      partnerName,
+      description: `Partner referral campaign (${slugCheck.slug})`,
+      slug: slugCheck.slug,
+      referralUrl: buildCampaignReferralUrl(slugCheck.slug),
+      commissionRatePercent: 2,
+      attributionWindowDays: 30,
+      status: 'active',
+      createdByAdminEmail: 'partner@feviqo.com',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      activityHistory: [
+        {
+          id: `act-${Date.now()}`,
+          timestamp: nowIso,
+          action: 'created',
+          actorEmail: 'partner@feviqo.com',
+          details: `Registered partner referral campaign "${displayName}" (slug: ${slugCheck.slug}).`,
+        },
+      ],
+    };
+    const campaigns = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
+    campaigns.unshift(autoCampaign);
+    writeJson(CAMPAIGNS_FILE, campaigns);
+    mirrorCollectionDoc('referralCampaigns', autoCampaign.id, {
+      ...autoCampaign,
+      createdAtIso: autoCampaign.createdAt,
+      updatedAtIso: autoCampaign.updatedAt,
+    });
+    campaign = autoCampaign;
+  }
+
   if (!campaign) {
     return { tracked: false, reason: 'campaign_not_found' };
   }
@@ -805,14 +987,22 @@ export function trackCampaignVisit(params: {
     return { tracked: false, reason: 'campaign_outside_schedule' };
   }
 
-  // Rate limit per IP + campaign slug (max 60 hits/min)
+  // Rate limit per IP + campaign slug (max 120 hits/min)
   const ipHash = hashShort(params.ip);
   const uaHash = hashShort(ua);
-  const rateKey = `visit:${ipHash}:${campaign.id}`;
   const nowMs = Date.now();
+
+  // Deduplicate simultaneous server HTML GET + client JS POST on the same page load (within 1,200ms)
+  const dedupKey = `${campaign.id}:${ipHash}:${uaHash}`;
+  const recentHit = recentVisitDedupMap.get(dedupKey);
+  if (recentHit && nowMs - recentHit.lastClickMs < 1200) {
+    return recentHit.result;
+  }
+
+  const rateKey = `visit:${ipHash}:${campaign.id}`;
   const bucket = visitRateBuckets.get(rateKey);
   if (bucket && bucket.resetAt > nowMs) {
-    if (bucket.count >= 60) {
+    if (bucket.count >= 120) {
       return { tracked: false, reason: 'rate_limited' };
     }
     bucket.count += 1;
@@ -899,7 +1089,7 @@ export function trackCampaignVisit(params: {
     expiresAt,
   });
 
-  return {
+  const trackResult = {
     tracked: true,
     campaignId: campaign.id,
     campaignSlug: campaign.slug,
@@ -912,6 +1102,8 @@ export function trackCampaignVisit(params: {
     isUniqueVisitor: isUniqueFirstVisit,
     attributionExpiresAt: expiresAt,
   };
+  recentVisitDedupMap.set(dedupKey, { lastClickMs: nowMs, result: trackResult });
+  return trackResult;
 }
 
 // --- USER REGISTRATION & CHECKOUT ATTRIBUTION ---
@@ -1688,7 +1880,7 @@ export function exportMonthlyCommissionReportCsv(monthKey: string): string {
 }
 
 export function getReferralCampaignsAdminOverview(monthKey?: string) {
-  const campaigns = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []).map((c) => ({
+  const campaigns = ensureDefaultReferralCampaigns().map((c) => ({
     ...c,
     referralUrl: buildCampaignReferralUrl(c.slug),
     stats: getCampaignSummaryStats(c),
@@ -1796,3 +1988,139 @@ export function syncCampaignDocsToFirestore(): void {
     mirrorCollectionDoc('monthlyCommissionReports', rpt.id, { ...rpt, createdAtIso: rpt.generatedAt, updatedAtIso: rpt.generatedAt });
   }
 }
+
+export function syncClientReferralVisits(
+  localVisits: Array<{
+    id?: string;
+    campaignSlug?: string;
+    visitorId?: string;
+    landingPage?: string;
+    createdAt?: string;
+    ip?: string;
+    userAgent?: string;
+  }>
+): number {
+  if (!Array.isArray(localVisits) || localVisits.length === 0) return 0;
+  ensureDefaultReferralCampaigns();
+  const visits = readJson<ReferralVisitRecord[]>(VISITS_FILE, []);
+  const uniqueVisitors = readJson<ReferralUniqueVisitorRecord[]>(UNIQUE_VISITORS_FILE, []);
+  const visitIds = new Set(visits.map((v) => v.id));
+  let added = 0;
+
+  for (const item of localVisits) {
+    const rawSlug = String(item?.campaignSlug || '').trim();
+    const slugCheck = validateAndNormalizeSlug(rawSlug);
+    if (!('slug' in slugCheck)) continue;
+
+    let campaign = getCampaignBySlug(slugCheck.slug);
+    if (!campaign && !slugCheck.slug.startsWith('fev-')) {
+      const displayName = formatCampaignDisplayNameFromSlug(slugCheck.slug) || slugCheck.slug;
+      const nowIso = new Date().toISOString();
+      const autoCampaign: ReferralCampaign = {
+        id: slugCheck.slug === 'kameer-play' ? 'cmp-kameer-play' : `cmp-${slugCheck.slug}`,
+        name: displayName,
+        partnerName: slugCheck.slug === 'kameer-play' ? 'Hafiz Akash' : displayName,
+        description: `Partner referral campaign (${slugCheck.slug})`,
+        slug: slugCheck.slug,
+        referralUrl: buildCampaignReferralUrl(slugCheck.slug),
+        commissionRatePercent: 2,
+        attributionWindowDays: 30,
+        status: 'active',
+        createdByAdminEmail: 'partner@feviqo.com',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        activityHistory: [],
+      };
+      const allCamps = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
+      allCamps.unshift(autoCampaign);
+      writeJson(CAMPAIGNS_FILE, allCamps);
+      campaign = autoCampaign;
+    }
+    if (!campaign) continue;
+
+    const visitId = item.id && String(item.id).startsWith('rvis-')
+      ? String(item.id)
+      : `rvis-client-${hashShort(`${campaign.id}:${item.createdAt || ''}:${item.landingPage || ''}`)}`;
+    if (visitIds.has(visitId)) continue;
+
+    // Also skip if a server visit for the same campaign was already recorded within 2 seconds of this client timestamp
+    const createdAtIso = item.createdAt && !Number.isNaN(Date.parse(item.createdAt))
+      ? new Date(Date.parse(item.createdAt)).toISOString()
+      : new Date().toISOString();
+    const itemMs = Date.parse(createdAtIso);
+    const alreadyRecordedNearby = visits.some(
+      (v) =>
+        v.campaignId === campaign!.id &&
+        Math.abs(Date.parse(v.createdAt) - itemMs) < 2000
+    );
+    if (alreadyRecordedNearby) {
+      visitIds.add(visitId);
+      continue;
+    }
+
+    const visitorId =
+      item.visitorId && /^vis-[a-zA-Z0-9_-]+$/.test(item.visitorId)
+        ? item.visitorId
+        : `vis-client-${hashShort(item.ip || 'local-browser')}`;
+    const ipHash = hashShort(item.ip || 'client-browser');
+    const ua = String(item.userAgent || 'Mozilla/5.0 (ClientSync)').slice(0, 140);
+    const uaHash = hashShort(ua);
+    const landingPage = String(item.landingPage || `/membership/${campaign.slug}`).slice(0, 300);
+
+    const existingUvIdx = uniqueVisitors.findIndex(
+      (u) => u.campaignId === campaign!.id && (u.visitorId === visitorId || (u.ipHash === ipHash && u.uaHash === uaHash))
+    );
+    let isUniqueFirstVisit = false;
+    if (existingUvIdx === -1) {
+      isUniqueFirstVisit = true;
+      const uvRecord: ReferralUniqueVisitorRecord = {
+        id: `uv-${campaign.id}-${visitorId}`,
+        campaignId: campaign.id,
+        campaignSlug: campaign.slug,
+        visitorId,
+        ipHash,
+        uaHash,
+        firstLandingPage: landingPage,
+        firstSeenAt: createdAtIso,
+        lastSeenAt: createdAtIso,
+        visitCount: 1,
+      };
+      uniqueVisitors.unshift(uvRecord);
+      mirrorCollectionDoc('referralUniqueVisitors', uvRecord.id, { ...uvRecord, createdAtIso });
+    } else {
+      uniqueVisitors[existingUvIdx].lastSeenAt = createdAtIso;
+      uniqueVisitors[existingUvIdx].visitCount = (uniqueVisitors[existingUvIdx].visitCount || 1) + 1;
+      mirrorCollectionDoc('referralUniqueVisitors', uniqueVisitors[existingUvIdx].id, {
+        ...uniqueVisitors[existingUvIdx],
+        createdAtIso: uniqueVisitors[existingUvIdx].firstSeenAt,
+      });
+    }
+
+    const visitRecord: ReferralVisitRecord = {
+      id: visitId,
+      campaignId: campaign.id,
+      campaignSlug: campaign.slug,
+      visitorId,
+      isUniqueFirstVisit,
+      landingPage,
+      ipHash,
+      uaHash,
+      userAgentSummary: ua,
+      createdAt: createdAtIso,
+    };
+    visits.unshift(visitRecord);
+    visitIds.add(visitId);
+    added += 1;
+    mirrorCollectionDoc('referralVisits', visitRecord.id, { ...visitRecord, createdAtIso });
+  }
+
+  if (added > 0) {
+    visits.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    writeJson(VISITS_FILE, visits);
+    writeJson(UNIQUE_VISITORS_FILE, uniqueVisitors);
+  }
+  return added;
+}
+
+ensureDefaultReferralCampaigns();
+

@@ -1150,6 +1150,71 @@ export async function sendPlaybackHeartbeat(
   }
 }
 
+const LOCAL_REFERRAL_VISITS_KEY = 'feviqo_local_referral_visits_v1';
+const LOCAL_BROWSER_VISITOR_ID_KEY = 'feviqo_local_browser_vid_v1';
+
+interface LocalReferralVisitEntry {
+  id: string;
+  campaignSlug: string;
+  visitorId: string;
+  landingPage: string;
+  createdAt: string;
+  userAgent?: string;
+}
+
+function getOrCreateLocalBrowserVisitorId(): string {
+  try {
+    if (typeof window === 'undefined') return 'vis-browser-default';
+    let vid = window.localStorage.getItem(LOCAL_BROWSER_VISITOR_ID_KEY);
+    if (!vid || !vid.startsWith('vis-')) {
+      vid = `vis-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      window.localStorage.setItem(LOCAL_BROWSER_VISITOR_ID_KEY, vid);
+    }
+    return vid;
+  } catch {
+    return 'vis-browser-default';
+  }
+}
+
+export function getStoredLocalReferralVisits(): LocalReferralVisitEntry[] {
+  try {
+    if (typeof window === 'undefined') return [];
+    const raw = window.localStorage.getItem(LOCAL_REFERRAL_VISITS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function appendLocalReferralVisit(slug: string, landingPage: string): LocalReferralVisitEntry {
+  const cleanSlug = String(slug || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  const nowIso = new Date().toISOString();
+  const entry: LocalReferralVisitEntry = {
+    id: `rvis-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    campaignSlug: cleanSlug,
+    visitorId: getOrCreateLocalBrowserVisitorId(),
+    landingPage: landingPage || `/membership/${cleanSlug}`,
+    createdAt: nowIso,
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+  };
+  try {
+    if (typeof window !== 'undefined' && cleanSlug) {
+      const current = getStoredLocalReferralVisits();
+      const updated = [entry, ...current].slice(0, 120);
+      window.localStorage.setItem(LOCAL_REFERRAL_VISITS_KEY, JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('feviqo-referral-visit-recorded', { detail: entry }));
+    }
+  } catch {}
+  return entry;
+}
+
 export async function trackReferralCampaignVisit(
   slug: string,
   landingPage?: string
@@ -1172,24 +1237,50 @@ export async function trackReferralCampaignVisit(
       .replace(/[^a-z0-9_-]/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
+    const resolvedLandingPage =
+      landingPage ||
+      (typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/');
+
     if (cleanInputSlug) {
       setStoredReferralPartnerMeta({
         slug: cleanInputSlug,
         referralPath: `/membership/${cleanInputSlug}`,
       });
+      appendLocalReferralVisit(cleanInputSlug, resolvedLandingPage);
     }
-    const res = await fetch('/api/referral-campaigns/track', {
-      method: 'POST',
-      credentials: 'include',
-      headers: memberHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({
-        slug,
-        landingPage:
-          landingPage ||
-          (typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/'),
-        visitorToken: getStoredCampaignVisitorToken() || undefined,
-      }),
+
+    const requestBody = JSON.stringify({
+      slug,
+      landingPage: resolvedLandingPage,
+      visitorToken: getStoredCampaignVisitorToken() || undefined,
     });
+
+    // Primary ad-blocker-safe endpoint (/api/membership/partner-session) with fallback
+    let res: Response;
+    try {
+      res = await fetch('/api/membership/partner-session', {
+        method: 'POST',
+        credentials: 'include',
+        headers: memberHeaders({ 'Content-Type': 'application/json' }),
+        body: requestBody,
+      });
+      if (!res.ok) {
+        res = await fetch('/api/referral-campaigns/track', {
+          method: 'POST',
+          credentials: 'include',
+          headers: memberHeaders({ 'Content-Type': 'application/json' }),
+          body: requestBody,
+        });
+      }
+    } catch {
+      res = await fetch('/api/referral-campaigns/track', {
+        method: 'POST',
+        credentials: 'include',
+        headers: memberHeaders({ 'Content-Type': 'application/json' }),
+        body: requestBody,
+      });
+    }
+
     const data = await parseJsonSafe(res);
     if (data?.visitorToken) {
       setStoredCampaignVisitorToken(data.visitorToken);
@@ -1924,6 +2015,20 @@ export interface AdminReferralCampaignsOverview {
 export async function fetchAdminReferralCampaignsOverview(): Promise<
   ({ success: true } & AdminReferralCampaignsOverview) | { success: false; error: string }
 > {
+  const localVisits = getStoredLocalReferralVisits();
+  if (localVisits.length > 0) {
+    try {
+      const syncRes = await fetch('/api/admin/referral-campaigns/sync-visits', {
+        method: 'POST',
+        credentials: 'include',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ visits: localVisits }),
+      });
+      if (syncRes.ok) {
+        return parseJsonSafe(syncRes);
+      }
+    } catch {}
+  }
   const res = await fetch('/api/admin/referral-campaigns/overview', {
     credentials: 'include',
     headers: adminHeaders(),
@@ -1958,6 +2063,17 @@ export async function createAdminReferralCampaign(payload: {
 export async function fetchAdminReferralCampaignDetail(
   campaignId: string
 ): Promise<({ success: true } & ReferralCampaignDetail) | { success: false; error: string }> {
+  const localVisits = getStoredLocalReferralVisits();
+  if (localVisits.length > 0) {
+    try {
+      await fetch('/api/admin/referral-campaigns/sync-visits', {
+        method: 'POST',
+        credentials: 'include',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ visits: localVisits }),
+      });
+    } catch {}
+  }
   const res = await fetch(`/api/admin/referral-campaigns/${encodeURIComponent(campaignId)}`, {
     credentials: 'include',
     headers: adminHeaders(),
