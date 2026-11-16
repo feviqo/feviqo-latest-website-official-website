@@ -78,11 +78,13 @@ export interface MuxAssetAuditItem {
 export interface MuxSecurityStatus {
   signedUrlsEnabled: boolean;
   signingKeyIdConfigured: boolean;
+  signingKeyIdMasked: string | null;
   signingPrivateKeyValid: boolean;
   playbackRestrictionConfigured: boolean;
   playbackRestrictionId: string | null;
   drmConfigured: boolean;
   drmConfigurationId: string | null;
+  drmNote: string;
   drmSystems: {
     widevine: boolean;
     fairplay: boolean;
@@ -226,14 +228,25 @@ export function getMuxSecurityStatus(): MuxSecurityStatus {
   const jwtTtlSeconds = Number.isFinite(ttlRaw) ? Math.min(900, Math.max(60, Math.round(ttlRaw))) : 300;
   const signedUrlsEnabled = Boolean(keyId && keyObj);
 
+  const signingKeyIdMasked = keyId
+    ? keyId.length <= 8
+      ? `${keyId.slice(0, 2)}***`
+      : `${keyId.slice(0, 4)}...${keyId.slice(-4)}`
+    : null;
+  const drmNote = drmId
+    ? 'Mux DRM (Widevine, FairPlay, PlayReady) configuration ID is attached to playback tokens.'
+    : 'Mux Enterprise DRM requires a MUX_DRM_CONFIGURATION_ID in your Mux account; streams are currently protected by backend membership HLS proxy and RS256 playback signing when configured.';
+
   return {
     signedUrlsEnabled,
     signingKeyIdConfigured: Boolean(keyId),
+    signingKeyIdMasked,
     signingPrivateKeyValid: Boolean(keyObj),
     playbackRestrictionConfigured: Boolean(restrictionId),
     playbackRestrictionId: restrictionId,
     drmConfigured: Boolean(drmId),
     drmConfigurationId: drmId,
+    drmNote,
     drmSystems: {
       widevine: Boolean(drmId),
       fairplay: Boolean(drmId),

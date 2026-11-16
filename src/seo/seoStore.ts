@@ -659,6 +659,80 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
     }
   }
 
+  // Partner & member referral links under /membership/:slug open the Membership page with 200 OK
+  if (cleanPath.startsWith('/membership/') || cleanPath.startsWith('/memberships/')) {
+    const cfg = DEFAULT_PAGE_SEO['/membership'];
+    return {
+      ...cfg,
+      path: cleanPath,
+      canonicalUrl: 'https://feviqo.com/membership',
+    };
+  }
+
+  if (cleanPath.startsWith('/account/')) {
+    const cfg = DEFAULT_PAGE_SEO['/account'];
+    return { ...cfg, path: cleanPath, canonicalUrl: 'https://feviqo.com/account' };
+  }
+
+  if (cleanPath.startsWith('/admin/')) {
+    const cfg = DEFAULT_PAGE_SEO['/admin/memberships'] || DEFAULT_PAGE_SEO['/admin'];
+    return { ...cfg, path: cleanPath };
+  }
+
+  if (cleanPath === '/watch' || cleanPath.startsWith('/watch/') || cleanPath.startsWith('/video/')) {
+    const cfg = DEFAULT_PAGE_SEO['/gallery'];
+    return { ...cfg, path: cleanPath, canonicalUrl: 'https://feviqo.com/gallery' };
+  }
+
+  // Dynamic drama episode routes (e.g., /teskilat/episode-192, /mehmed-fetihler-sultani/episode-91, /gunesin-dogdugu-yer/episode-8)
+  const teskilatEpMatch = cleanPath.match(/^\/(?:teskilat|teskilat-urdu)\/episode-(\d+)$/);
+  if (teskilatEpMatch) {
+    const epNum = teskilatEpMatch[1];
+    return {
+      ...DEFAULT_PAGE_SEO['/teskilat'],
+      path: `/teskilat/episode-${epNum}`,
+      pageName: `Teskilat Episode ${epNum} Watch Page`,
+      seoTitle: `Teşkilat Season 7 Episode ${epNum} Urdu Subtitles (Bolum ${epNum}) | FEVIQO`,
+      metaDescription: `Watch Teşkilat Season 7 Episode ${epNum} (Bolum ${epNum}) in 1080p HD with Urdu subtitles and full story recap on FEVIQO.`,
+      focusKeyword: `Teskilat Episode ${epNum} Urdu Subtitles`,
+      canonicalUrl: `https://feviqo.com/teskilat/episode-${epNum}`,
+      ogTitle: `Teşkilat Season 7 Episode ${epNum} Urdu Subtitles | FEVIQO`,
+      schemaType: 'TVEpisode',
+    };
+  }
+
+  const mehmedEpMatch = cleanPath.match(/^\/(?:mehmed-fetihler-sultani|mehmed)\/episode-(\d+)$/);
+  if (mehmedEpMatch) {
+    const epNum = mehmedEpMatch[1];
+    return {
+      ...DEFAULT_PAGE_SEO['/mehmed-fetihler-sultani'],
+      path: `/mehmed-fetihler-sultani/episode-${epNum}`,
+      pageName: `Mehmed Fetihler Sultani Episode ${epNum} Watch Page`,
+      seoTitle: `Mehmed Season 4 Episode ${epNum} Urdu Subtitles | Bolum ${epNum} - FEVIQO`,
+      metaDescription: `Watch Mehmed: Fetihler Sultanı Season 4 Episode ${epNum} (Bolum ${epNum}) in 1080p HD with Urdu subtitles on FEVIQO.`,
+      focusKeyword: `Mehmed Season 4 Episode ${epNum} Urdu Subtitles`,
+      canonicalUrl: `https://feviqo.com/mehmed-fetihler-sultani/episode-${epNum}`,
+      ogTitle: `Mehmed Season 4 Episode ${epNum} Urdu Subtitles | Bolum ${epNum} - FEVIQO`,
+      schemaType: 'TVEpisode',
+    };
+  }
+
+  const gunesinEpMatch = cleanPath.match(/^\/gunesin-dogdugu-yer\/episode-(\d+)$/);
+  if (gunesinEpMatch) {
+    const epNum = gunesinEpMatch[1];
+    return {
+      ...DEFAULT_PAGE_SEO['/gunesin-dogdugu-yer'],
+      path: `/gunesin-dogdugu-yer/episode-${epNum}`,
+      pageName: `Gunesin Dogdugu Yer Episode ${epNum} Watch Page`,
+      seoTitle: `Güneşin Doğduğu Yer Episode ${epNum} Urdu Subtitles | Bolum ${epNum} - FEVIQO`,
+      metaDescription: `Watch Güneşin Doğduğu Yer Episode ${epNum} (Bolum ${epNum}) in 1080p HD with Urdu subtitles on FEVIQO.`,
+      focusKeyword: `Gunesin Dogdugu Yer Episode ${epNum} Urdu Subtitles`,
+      canonicalUrl: `https://feviqo.com/gunesin-dogdugu-yer/episode-${epNum}`,
+      ogTitle: `Güneşin Doğduğu Yer Episode ${epNum} Urdu Subtitles | Bolum ${epNum} - FEVIQO`,
+      schemaType: 'TVEpisode',
+    };
+  }
+
   // Unknown URLs currently fall through to the homepage in the React app.
   // Do not give those soft-404 routes self-canonicals or indexable metadata.
   return {

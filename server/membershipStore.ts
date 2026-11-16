@@ -2373,7 +2373,7 @@ function buildMemberReferralSummary(member: SafeMember) {
   const baseAppUrl = (process.env.APP_URL || 'https://feviqo.com').replace(/\/$/, '');
   const referralCode = member.referralCode || '';
   const referralLink = referralCode
-    ? `${baseAppUrl}/membership?ref=${encodeURIComponent(referralCode)}`
+    ? `${baseAppUrl}/membership/${encodeURIComponent(referralCode)}`
     : `${baseAppUrl}/membership`;
 
   // Also include active personal reward promo codes issued to this member

@@ -328,7 +328,16 @@ export function getPublicSiteOrigin(fallbackOrigin?: string): string {
 }
 
 export function buildCampaignReferralUrl(slug: string, origin?: string): string {
-  return `${getPublicSiteOrigin(origin)}/?ref=${encodeURIComponent(slug)}`;
+  return `${getPublicSiteOrigin(origin)}/membership/${encodeURIComponent(slug)}`;
+}
+
+function toSlugFormat(val?: string): string {
+  return String(val || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
 }
 
 export function validateAndNormalizeSlug(
@@ -459,14 +468,26 @@ export function verifyCampaignAttributionToken(rawToken?: string | null): Signed
 // --- CAMPAIGN CRUD ---
 export function getCampaignById(campaignId: string): ReferralCampaign | null {
   const list = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
-  return list.find((c) => c.id === campaignId) || null;
+  const found = list.find((c) => c.id === campaignId) || null;
+  if (found) {
+    found.referralUrl = buildCampaignReferralUrl(found.slug);
+  }
+  return found;
 }
 
 export function getCampaignBySlug(slug: string): ReferralCampaign | null {
-  const clean = String(slug || '').trim().toLowerCase();
+  const clean = toSlugFormat(slug);
   if (!clean) return null;
   const list = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
-  return list.find((c) => c.slug.toLowerCase() === clean) || null;
+  const found =
+    list.find((c) => c.slug.toLowerCase() === clean) ||
+    list.find((c) => toSlugFormat(c.partnerName) === clean) ||
+    list.find((c) => toSlugFormat(c.name) === clean) ||
+    null;
+  if (found) {
+    found.referralUrl = buildCampaignReferralUrl(found.slug);
+  }
+  return found;
 }
 
 export function createReferralCampaign(params: {
@@ -754,6 +775,10 @@ export function trackCampaignVisit(params: {
   reason?: string;
   campaignId?: string;
   campaignSlug?: string;
+  campaignName?: string;
+  partnerName?: string;
+  partnerSlug?: string;
+  referralPath?: string;
   visitorToken?: string;
   attributionToken?: string;
   isUniqueVisitor?: boolean;
@@ -878,6 +903,10 @@ export function trackCampaignVisit(params: {
     tracked: true,
     campaignId: campaign.id,
     campaignSlug: campaign.slug,
+    campaignName: campaign.name,
+    partnerName: campaign.partnerName,
+    partnerSlug: toSlugFormat(campaign.partnerName) || campaign.slug,
+    referralPath: `/membership/${campaign.slug}`,
     visitorToken: signedVisitorToken,
     attributionToken,
     isUniqueVisitor: isUniqueFirstVisit,
@@ -1661,6 +1690,7 @@ export function exportMonthlyCommissionReportCsv(monthKey: string): string {
 export function getReferralCampaignsAdminOverview(monthKey?: string) {
   const campaigns = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []).map((c) => ({
     ...c,
+    referralUrl: buildCampaignReferralUrl(c.slug),
     stats: getCampaignSummaryStats(c),
   }));
   const commissions = readJson<CampaignCommissionRecord[]>(COMMISSIONS_FILE, []);

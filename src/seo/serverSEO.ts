@@ -825,7 +825,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
     });
   }
 
-  if (cleanPath === '/membership') {
+  if (cleanPath === '/membership' || cleanPath.startsWith('/membership/')) {
     transformed = transformed.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/i, '');
 
     schemaObj["@graph"].push(
@@ -953,44 +953,13 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   const jsonLdScript = `<script type="application/ld+json" id="feviqo-server-jsonld">${JSON.stringify(schemaObj)}</script>`;
   transformed = transformed.replace('</head>', `  ${jsonLdScript}\n  </head>`);
 
-  const routeMainHtml =
-    cleanPath === '/membership'
-      ? `<article style="max-width:1120px;margin:0 auto;padding:32px 20px;color:#0B0B0D;background:#FFFFFF;font-family:Inter,system-ui,sans-serif;line-height:1.6;">
-          <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:#16A34A;margin:0 0 10px;">FEVIQO PREMIUM MEMBERSHIP · URDU HD TURKISH DRAMAS</p>
-          <h1 style="font-size:36px;line-height:1.15;font-weight:800;margin:0 0 14px;">FEVIQO Premium Membership — Watch Turkish Dramas in Urdu HD</h1>
-          <p style="font-size:16px;color:#3F3F46;margin:0 0 24px;">Unlock full Urdu-dubbed and Urdu-subtitled episodes of Teşkilat Season 7, Mehmed: Fetihler Sultanı Season 4, and Güneşin Doğduğu Yer in 1080p HD. Pay securely in Pakistan with Bank QR (PKR) or internationally worldwide via Binance QR in USD.</p>
-          <section style="margin:28px 0;">
-            <h2 style="font-size:24px;font-weight:700;margin:0 0 12px;">Membership Plans &amp; Pricing (Pakistan PKR &amp; International USD)</h2>
-            <ul>
-              <li><strong>Starter Plan</strong> — PKR 299 ($1.20 USD) · 15 Days · Access 1 selected Turkish drama</li>
-              <li><strong>Standard Plan (Most Popular)</strong> — PKR 599 ($2.50 USD) · 30 Days · Access 1 selected Turkish drama</li>
-              <li><strong>Plus Plan</strong> — PKR 899 ($3.50 USD) · 30 Days · Access 2 selected Turkish dramas</li>
-              <li><strong>VIP Plan</strong> — PKR 1,299 ($5.00 USD) · 30 Days · Full access to all eligible VIP catalogue dramas</li>
-            </ul>
-          </section>
-          <section style="margin:28px 0;">
-            <h2 style="font-size:24px;font-weight:700;margin:0 0 12px;">Turkish Dramas Included in FEVIQO Premium</h2>
-            <ul>
-              <li><a href="/teskilat">Teşkilat Season 7 (Urdu Dubbed &amp; Subtitles)</a> — <a href="/teskilat/episode-189">Latest Episode 189</a></li>
-              <li><a href="/mehmed-fetihler-sultani">Mehmed: Fetihler Sultanı Season 4 (Urdu)</a> — <a href="/mehmed-fetihler-sultani/episode-90">Latest Episode 90</a></li>
-              <li><a href="/gunesin-dogdugu-yer">Güneşin Doğduğu Yer (Urdu)</a> — <a href="/gunesin-dogdugu-yer/episode-7">Latest Episode 7</a></li>
-              <li><a href="/dramas">Browse All FEVIQO Turkish Dramas Directory</a></li>
-            </ul>
-          </section>
-          <section style="margin:28px 0;">
-            <h2 style="font-size:24px;font-weight:700;margin:0 0 12px;">Payment Verification &amp; Membership FAQ</h2>
-            <p><strong>How do Pakistan and international payments work?</strong> Select Pakistan (PKR) to scan your local Bank QR code, or International (USD) to scan the Binance QR code and pay the exact USD rate. Upload your screenshot receipt or share it via WhatsApp for quick administrator verification and instant episode unlocking across your account.</p>
-          </section>
-        </article>`
-      : `<article style="max-width:1120px;margin:0 auto;padding:28px 20px;color:#0B0B0D;background:#FFFFFF;font-family:Inter,system-ui,sans-serif;line-height:1.6;">
-          <h1 style="font-size:32px;line-height:1.2;font-weight:800;margin:0 0 12px;">${escapeHtmlText(config.seoTitle)}</h1>
-          <p style="font-size:16px;color:#3F3F46;margin:0 0 18px;">${escapeHtmlText(config.metaDescription)}</p>
-        </article>`;
+  // Strip any legacy visible unstyled #feviqo-ssr-shell or duplicate noscript block
+  transformed = transformed.replace(/<div id="feviqo-ssr-shell"[\s\S]*?<\/main><\/div>/gi, '');
+  transformed = transformed.replace(/<noscript id="feviqo-noscript-fallback">[\s\S]*?<\/noscript>/gi, '');
 
-  // Inject visible semantic SSR fallback inside <div id="root"> (NOT inside <noscript>) so both initial HTML fetches and JS-enabled Googlebot WRS parse complete titles, copy, and internal links before React createRoot replaces #root children.
-  const prerenderedBody = `<div id="root"><div id="feviqo-ssr-shell" style="background:#FFFFFF;color:#0B0B0D;min-height:100vh;"><header style="background:#0B0B0D;color:#FFFFFF;padding:14px 20px;"><nav aria-label="FEVIQO Navigation" style="max-width:1120px;margin:0 auto;display:flex;flex-wrap:wrap;gap:14px;font-size:13px;font-family:Inter,system-ui,sans-serif;"><a href="/" style="color:#FFFFFF;text-decoration:none;font-weight:700;">FEVIQO Home</a> <a href="/membership" style="color:#22C55E;text-decoration:none;font-weight:700;">Premium Membership</a> <a href="/dramas" style="color:#FFFFFF;text-decoration:none;">Turkish Dramas</a> <a href="/teskilat" style="color:#FFFFFF;text-decoration:none;">Teşkilat Season 7</a> <a href="/mehmed-fetihler-sultani" style="color:#FFFFFF;text-decoration:none;">Mehmed: Fetihler Sultanı</a> <a href="/gunesin-dogdugu-yer" style="color:#FFFFFF;text-decoration:none;">Güneşin Doğduğu Yer</a> <a href="/pricing" style="color:#FFFFFF;text-decoration:none;">Agency Pricing</a> <a href="/about" style="color:#FFFFFF;text-decoration:none;">About</a></nav></header><main>${routeMainHtml}<section style="max-width:1120px;margin:0 auto;padding:0 20px 32px;font-family:Inter,system-ui,sans-serif;"><h2>FEVIQO Navigation Directory</h2><ul><li><a href="/">FEVIQO Unlimited Video Editing Agency Home</a></li><li><a href="/membership">FEVIQO Premium Membership &amp; Pricing</a></li><li><a href="/dramas">Turkish Drama Urdu Subtitles Directory</a></li><li><a href="/teskilat">Teşkilat Season 7 Main Hub</a></li><li><a href="/teskilat/episode-189">Teşkilat Season 7 Episode 189 Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani">Mehmed: Fetihler Sultanı Main Hub</a></li><li><a href="/mehmed-fetihler-sultani/episode-90">Mehmed Episode 90 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer">Güneşin Doğduğu Yer Main Hub</a></li><li><a href="/gunesin-dogdugu-yer/episode-7">Güneşin Doğduğu Yer Episode 7 Urdu Subtitles</a></li><li><a href="/pricing">Agency Pricing Plans</a></li><li><a href="/about">About FEVIQO</a></li></ul></section></main></div></div>`;
+  const noscriptFallback = `<noscript id="feviqo-noscript-fallback"><div style="max-width:960px;margin:0 auto;padding:32px 20px;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;"><h1>${escapeHtmlText(config.seoTitle)}</h1><p>${escapeHtmlText(config.metaDescription)}</p><nav aria-label="FEVIQO Sitemap Navigation"><a href="https://feviqo.com/">FEVIQO Home</a> · <a href="https://feviqo.com/membership">FEVIQO Premium Membership</a> · <a href="https://feviqo.com/dramas">Turkish Dramas</a> · <a href="https://feviqo.com/teskilat">Teşkilat Season 7</a> · <a href="https://feviqo.com/mehmed-fetihler-sultani">Mehmed: Fetihler Sultanı</a> · <a href="https://feviqo.com/gunesin-dogdugu-yer">Güneşin Doğduğu Yer</a> · <a href="https://feviqo.com/pricing">Agency Pricing</a> · <a href="https://feviqo.com/sitemap.xml">Sitemap</a></nav></div></noscript>`;
 
-  transformed = transformed.replace('<div id="root"></div>', prerenderedBody);
+  transformed = transformed.replace('</body>', `  ${noscriptFallback}\n  </body>`);
 
   return transformed;
 }
