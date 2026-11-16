@@ -309,11 +309,23 @@ export function updateSitemapFiles(): void {
     const publicDir = path.join(process.cwd(), 'public');
     const xml = generateSitemapXml();
 
-    // Write public/sitemap.xml and mirror to dist/sitemap.xml if dist/ exists
-    fs.writeFileSync(path.join(publicDir, 'sitemap.xml'), xml, 'utf-8');
+    const publicSitemapPath = path.join(publicDir, 'sitemap.xml');
+    const existingPublic = fs.existsSync(publicSitemapPath)
+      ? fs.readFileSync(publicSitemapPath, 'utf-8')
+      : '';
+    if (existingPublic !== xml) {
+      fs.writeFileSync(publicSitemapPath, xml, 'utf-8');
+    }
+
     const distDir = path.join(process.cwd(), 'dist');
     if (fs.existsSync(distDir)) {
-      fs.writeFileSync(path.join(distDir, 'sitemap.xml'), xml, 'utf-8');
+      const distSitemapPath = path.join(distDir, 'sitemap.xml');
+      const existingDist = fs.existsSync(distSitemapPath)
+        ? fs.readFileSync(distSitemapPath, 'utf-8')
+        : '';
+      if (existingDist !== xml) {
+        fs.writeFileSync(distSitemapPath, xml, 'utf-8');
+      }
     }
 
     // Clean up any stale sub-sitemap files in public/ if they exist
@@ -330,8 +342,6 @@ export function updateSitemapFiles(): void {
         try { fs.unlinkSync(p); } catch {}
       }
     });
-
-    console.log('[SEO Service] Single master sitemap.xml updated successfully!');
   } catch (err) {
     console.error('Failed to write sitemap file:', err);
   }

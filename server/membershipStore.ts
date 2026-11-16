@@ -61,6 +61,7 @@ for (const dir of [DATA_DIR, PRIVATE_PROOFS_DIR, PUBLIC_QR_DIR]) {
 // Never export or serialize these into public catalog endpoints or static frontend bundles.
 const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
   teskilat: {
+    'episode-193': 'https://stream.mux.com/019jnoxNSoObArxNDjk8h5HRQDh4ahOYzCruDLCD00zgQ.m3u8',
     'episode-192': 'https://stream.mux.com/9KzAsaCfqKFh5hi4k5o5NCUuYWa3TbQsbCrVgsih8WU.m3u8',
     'episode-189': 'https://stream.mux.com/toXOVmLVaJSsRkVRJUxYiColdHPoHLSI8qBM00KBHyuA.m3u8',
     'episode-188': 'https://stream.mux.com/myroEGBWeut02BU5yZEPr3GT3stSVu91dYtKAJPeJkfs.m3u8',

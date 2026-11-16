@@ -6,7 +6,7 @@ import { transformHTMLForRoute } from '../src/seo/serverSEO';
 /**
  * FEVIQO Static Site Generator & SEO Pre-Renderer
  * Generates the sitemap from the same route source used by the application,
- * then pre-renders every canonical sitemap route into dist/.
+ * then pre-renders every canonical sitemap route into dist/ and copies Cloudflare Pages rules.
  */
 async function main() {
   console.log('Starting FEVIQO static site and sitemap pre-renderer...');
@@ -20,7 +20,6 @@ async function main() {
   }
 
   // Generate the sitemap from the live SEO route and episode data.
-  // Do not copy a manually maintained sitemap that can fall behind new episodes.
   const sitemapXml = generateSitemapXml();
   const robotsTxt = fs.readFileSync(path.join(publicDir, 'robots.txt'), 'utf-8');
 
@@ -29,8 +28,8 @@ async function main() {
   fs.writeFileSync(path.join(distDir, 'robots.txt'), robotsTxt, 'utf-8');
   fs.writeFileSync(path.join(rootDir, 'robots.txt'), robotsTxt, 'utf-8');
 
-  // Copy optional discovery files.
-  for (const file of ['llms.txt', 'ai-catalog.json']) {
+  // Copy Cloudflare Pages & discovery files into dist/.
+  for (const file of ['llms.txt', 'ai-catalog.json', '_headers', '_redirects']) {
     const source = path.join(publicDir, file);
     if (fs.existsSync(source)) {
       fs.copyFileSync(source, path.join(distDir, file));
@@ -42,6 +41,7 @@ async function main() {
     throw new Error('dist/index.html not found. Run vite build before static generation.');
   }
 
+  // Read pristine Vite build HTML before route transformations
   const baseHtml = fs.readFileSync(distIndexPath, 'utf-8');
   const urlMatches = sitemapXml.match(/<loc>(.*?)<\/loc>/g) || [];
   const routePaths: string[] = [];
@@ -56,6 +56,11 @@ async function main() {
     } catch {
       // Ignore malformed sitemap locations.
     }
+  }
+
+  // Ensure /account is also pre-rendered for direct navigation
+  if (!routePaths.includes('/account')) {
+    routePaths.push('/account');
   }
 
   console.log(`Pre-rendering ${routePaths.length} canonical routes from sitemap.xml...`);
@@ -76,8 +81,6 @@ async function main() {
     fs.mkdirSync(targetDir, { recursive: true });
     fs.writeFileSync(path.join(targetDir, 'index.html'), routeSeoHtml, 'utf-8');
     renderedCount++;
-
-
   }
 
   console.log(`Pre-rendered ${renderedCount} routes into dist/.`);

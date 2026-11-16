@@ -126,6 +126,7 @@ import {
 } from './server/muxSecurity';
 import {
   trackCampaignVisit,
+  getCampaignBySlug,
   attachCampaignAttributionToUser,
   recordCheckoutAttemptForMember,
   createReferralCampaign,
@@ -294,8 +295,11 @@ app.use((req, res, next) => {
     "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; style-src * 'unsafe-inline' data: blob:; font-src * data: blob:; img-src * data: blob:; media-src * data: blob:; connect-src * data: blob: ws: wss:; frame-src *; worker-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
   );
 
-  // Set long cache lifetimes for static assets (images, css, js, fonts)
-  if (req.path.match(/\.(js|css|webp|avif|png|jpg|jpeg|svg|woff2?|ttf|eot)$/i)) {
+  // Set long cache lifetimes for static assets under /assets, /images, /fonts, /logos
+  if (
+    /^\/(assets|images|fonts|logos)\//i.test(req.path) &&
+    req.path.match(/\.(js|css|webp|avif|png|jpg|jpeg|svg|woff2?|ttf|eot)$/i)
+  ) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   }
 
@@ -4229,7 +4233,20 @@ app.post('/api/referral-campaigns/track', (req, res) => {
       setCampaignTrackingCookie(req, res, CAMPAIGN_ATTR_COOKIE, tracked.attributionToken, expMs);
     }
 
-    return res.json({ success: true, ...tracked });
+    const matchedCampaign = !tracked.campaignName ? getCampaignBySlug(String(slug || '')) : null;
+    return res.json({
+      success: true,
+      ...(matchedCampaign
+        ? {
+            campaignId: matchedCampaign.id,
+            campaignSlug: matchedCampaign.slug,
+            campaignName: matchedCampaign.name,
+            partnerName: matchedCampaign.partnerName,
+            referralPath: `/membership/${matchedCampaign.slug}`,
+          }
+        : {}),
+      ...tracked,
+    });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to record referral campaign visit.' });
   }
@@ -5573,40 +5590,40 @@ app.patch('/api/admin/roles/:adminId', requireAdmin, (req: any, res) => {
   });
 });
 
-// Initial sitemap sync & search engine IndexNow ping on boot
-try {
-  updateSitemapFiles();
-  pingSearchEnginesForReindexing({
-    urls: [
-      'https://feviqo.com/',
-      'https://feviqo.com/teskilat',
-      'https://feviqo.com/teskilat/episode-189',
-      'https://feviqo.com/teskilat/episode-188',
-      'https://feviqo.com/teskilat/episode-187',
-      'https://feviqo.com/teskilat/episode-186',
-      'https://feviqo.com/mehmed-fetihler-sultani',
-      'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
-      'https://feviqo.com/mehmed-fetihler-sultani/episode-87',
-      'https://feviqo.com/gunesin-dogdugu-yer',
-      'https://feviqo.com/gunesin-dogdugu-yer/episode-7',
-      'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
-      'https://feviqo.com/dramas',
-      'https://feviqo.com/membership',
-      'https://feviqo.com/sitemap.xml'
-    ],
-    reason: 'Server startup / IndexNow automated episode ping'
-  }).catch((e) => console.error('Auto ping error:', e));
-} catch (e) {
-  console.error('Initial sitemap sync error:', e);
+// Initial sitemap sync & search engine IndexNow ping on boot (production only to avoid dev file-watcher churn)
+if (!process.env.CONTROL_PLANE_PORT) {
+  try {
+    updateSitemapFiles();
+    pingSearchEnginesForReindexing({
+      urls: [
+        'https://feviqo.com/',
+        'https://feviqo.com/teskilat',
+        'https://feviqo.com/teskilat/episode-189',
+        'https://feviqo.com/teskilat/episode-188',
+        'https://feviqo.com/teskilat/episode-187',
+        'https://feviqo.com/teskilat/episode-186',
+        'https://feviqo.com/mehmed-fetihler-sultani',
+        'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
+        'https://feviqo.com/mehmed-fetihler-sultani/episode-87',
+        'https://feviqo.com/gunesin-dogdugu-yer',
+        'https://feviqo.com/gunesin-dogdugu-yer/episode-7',
+        'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
+        'https://feviqo.com/dramas',
+        'https://feviqo.com/membership',
+        'https://feviqo.com/sitemap.xml'
+      ],
+      reason: 'Server startup / IndexNow automated episode ping'
+    }).catch((e) => console.error('Auto ping error:', e));
+  } catch (e) {
+    console.error('Initial sitemap sync error:', e);
+  }
 }
 
 // --- VITE DEV / PRODUCTION MIDDLEWARE ---
 async function startServer() {
-  try {
-    await hydrateStoreFromFirestore();
-  } catch (err) {
+  void hydrateStoreFromFirestore().catch((err) => {
     console.warn('Initial Firestore hydration skipped:', (err as Error)?.message || err);
-  }
+  });
   if (process.env.NODE_ENV !== 'production') {
     const disableHmr =
       process.env.DISABLE_HMR === 'true' || Boolean(process.env.CONTROL_PLANE_PORT);
@@ -5647,11 +5664,23 @@ async function startServer() {
         const routeConfig = getSEOConfigForPath(requestPath);
         const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
         if (routeConfig.pageName === 'Unknown Route') {
-          return res.status(404).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
+          return res
+            .status(404)
+            .set({
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'no-store, max-age=0',
+            })
+            .end(seoHtml);
         }
         const canonicalUrl = routeConfig.canonicalUrl;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
-        return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
+        return res
+          .status(200)
+          .set({
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'public, max-age=0, must-revalidate',
+          })
+          .end(seoHtml);
       } catch (e) {
         vite.ssrFixStacktrace(e as Error);
         next(e);
@@ -5659,20 +5688,35 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+    const publicPath = path.join(process.cwd(), 'public');
     app.use(express.static(distPath, {
       maxAge: '1y',
       immutable: true,
       etag: true,
       index: false,
-      // Static pre-render routes are directories containing index.html.
-      // Do not let serve-static append "/" because the canonical middleware
-      // above intentionally strips trailing slashes; that would create a
-      // redirect loop for every pre-rendered route.
-      redirect: false
+      redirect: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html') || filePath.endsWith('sitemap.xml') || filePath.endsWith('robots.txt')) {
+          res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        }
+      },
+    }));
+    app.use(express.static(publicPath, {
+      maxAge: '1y',
+      immutable: true,
+      etag: true,
+      index: false,
+      redirect: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html') || filePath.endsWith('sitemap.xml') || filePath.endsWith('robots.txt')) {
+          res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        }
+      },
     }));
     // Prevent missing static assets from returning index.html (preventing MIME type errors)
-    app.get(['/assets/*', '/images/*', '/fonts/*'], (req, res) => {
-      res.status(404).send('Asset not found');
+    app.get(['/assets/*', '/images/*', '/fonts/*', '/logos/*'], (_req, res) => {
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
+      res.status(404).type('text/plain').send('Asset not found');
     });
 
     app.get('*', (req, res) => {
@@ -5682,9 +5726,6 @@ async function startServer() {
         const cleanRoutePath = rawPath.replace(/^\/+|\/+$/g, '');
         const requestPath = rawPath === '/' ? '/' : `/${cleanRoutePath}`;
 
-        // Serve the route-specific pre-rendered HTML directly for clean URLs.
-        // This avoids relying on express.static directory redirects or a
-        // trailing-slash URL to reach nested index.html files.
         const distRoot = path.resolve(distPath) + path.sep;
         const candidatePath = cleanRoutePath
           ? path.resolve(distPath, cleanRoutePath, 'index.html')
@@ -5700,12 +5741,25 @@ async function startServer() {
           : transformHTMLForRoute(rawHtml, requestPath);
 
         if (routeConfig.pageName === 'Unknown Route') {
-          return res.status(404).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
+          return res
+            .status(404)
+            .set({
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'no-store, max-age=0',
+            })
+            .end(seoHtml);
         }
         const canonicalUrl = routeConfig.canonicalUrl;
         res.setHeader('Link', `<${canonicalUrl}>; rel="canonical"`);
-        return res.status(200).set({ 'Content-Type': 'text/html; charset=utf-8' }).end(seoHtml);
+        return res
+          .status(200)
+          .set({
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'public, max-age=0, must-revalidate',
+          })
+          .end(seoHtml);
       } catch {
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
         return res.sendFile(path.join(distPath, 'index.html'));
       }
     });
@@ -5715,19 +5769,21 @@ async function startServer() {
     console.log(`FEVIQO full-stack server running on http://0.0.0.0:${PORT}`);
   });
 
-  // Automated membership expiry & renewal reminder lifecycle scheduler (startup + every 5 min)
-  const dispatcher = createLifecycleEmailDispatcher();
-  setTimeout(() => {
-    runLifecycleReminderCheck('startup', dispatcher).catch((err) =>
-      console.warn('[MembershipScheduler] Startup check error:', err)
-    );
-  }, 3000).unref();
+  // Automated membership expiry & renewal reminder lifecycle scheduler (production only to avoid dev file-watcher churn)
+  if (!process.env.CONTROL_PLANE_PORT) {
+    const dispatcher = createLifecycleEmailDispatcher();
+    setTimeout(() => {
+      runLifecycleReminderCheck('startup', dispatcher).catch((err) =>
+        console.warn('[MembershipScheduler] Startup check error:', err)
+      );
+    }, 3000).unref();
 
-  setInterval(() => {
-    runLifecycleReminderCheck('scheduled_interval', dispatcher).catch((err) =>
-      console.warn('[MembershipScheduler] Interval check error:', err)
-    );
-  }, 5 * 60 * 1000).unref();
+    setInterval(() => {
+      runLifecycleReminderCheck('scheduled_interval', dispatcher).catch((err) =>
+        console.warn('[MembershipScheduler] Interval check error:', err)
+      );
+    }, 5 * 60 * 1000).unref();
+  }
 
   server.on('error', (err: any) => {
     if (err.code === 'EADDRINUSE') {

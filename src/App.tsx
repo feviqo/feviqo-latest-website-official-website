@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, lazy, Suspense } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { useState, useEffect, lazy, Suspense, ComponentType } from 'react';
 import { TopAlertBar } from './components/TopAlertBar';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
@@ -20,31 +19,10 @@ import { BookingSection } from './components/BookingSection';
 import { Footer } from './components/Footer';
 import { CookieBanner } from './components/CookieBanner';
 
-// Synchronous Static Imports for Instant Execution & Direct Boot on Deep Routes
+// Synchronous critical routes for instant zero-wait boot on / and /membership/*
 import { VideoModal } from './components/VideoModal';
 import { BookCallModal } from './components/BookCallModal';
-import { PricingPage } from './components/PricingPage';
-import { FeviqoFlowApp } from './components/FeviqoFlowApp';
-import { BookingPage } from './components/pages/BookingPage';
-import { VideoGalleryPage } from './components/pages/VideoGalleryPage';
-import { ContentCreatorsPage } from './components/pages/ContentCreatorsPage';
-import { BusinessOwnersPage } from './components/pages/BusinessOwnersPage';
-import { AgenciesPage } from './components/pages/AgenciesPage';
-import { TestimonialsPage } from './components/pages/TestimonialsPage';
-import { CaseStudiesPage } from './components/pages/CaseStudiesPage';
-import { UnlimitedEditingPage } from './components/pages/UnlimitedEditingPage';
-import { PlatformOverviewPage } from './components/pages/PlatformOverviewPage';
-import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
-import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
-import { GunesinDramaPage } from './components/pages/GunesinDramaPage';
-import { MehmedDramaPage } from './components/pages/MehmedDramaPage';
-import { DramasPage } from './components/pages/DramasPage';
 import { MembershipPage } from './components/pages/MembershipPage';
-import { MembershipAdminPage } from './components/pages/MembershipAdminPage';
-import { AboutUsPage } from './components/pages/AboutUsPage';
-import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
-import { TermsPage } from './components/pages/TermsPage';
-import { SEOAdminModal } from './components/admin/SEOAdminModal';
 import { LanguageProvider } from './i18n/LanguageContext';
 
 import { getSEOConfigForPath } from './seo/seoStore';
@@ -53,16 +31,123 @@ import { initializeAssetSync } from './services/assetService';
 import { findVideoItem } from './data/videoRegistry';
 import SEOHead from './seo/SEOHead';
 import { testFirestoreConnection } from './firebase';
-import { setStoredReferralCode, trackReferralCampaignVisit } from './services/membershipService';
+import {
+  setStoredReferralCode,
+  setStoredReferralPartnerMeta,
+  trackReferralCampaignVisit,
+  extractReferralSlugFromLocation,
+} from './services/membershipService';
+
+function lazyWithRetry<T extends ComponentType<any>>(
+  importer: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    try {
+      return await importer();
+    } catch (err) {
+      try {
+        const key = 'feviqo_lazy_chunk_reload_v2';
+        const prev = Number(sessionStorage.getItem(key) || '0');
+        if (Date.now() - prev > 15000) {
+          sessionStorage.setItem(key, String(Date.now()));
+          const u = new URL(window.location.href);
+          u.searchParams.set('_fv', String(Date.now()).slice(-6));
+          window.location.replace(u.toString());
+        }
+      } catch {}
+      throw err;
+    }
+  });
+}
+
+const PricingPage = lazyWithRetry(() =>
+  import('./components/PricingPage').then((m) => ({ default: m.PricingPage }))
+);
+const FeviqoFlowApp = lazyWithRetry(() =>
+  import('./components/FeviqoFlowApp').then((m) => ({ default: m.FeviqoFlowApp }))
+);
+const BookingPage = lazyWithRetry(() =>
+  import('./components/pages/BookingPage').then((m) => ({ default: m.BookingPage }))
+);
+const VideoGalleryPage = lazyWithRetry(() =>
+  import('./components/pages/VideoGalleryPage').then((m) => ({ default: m.VideoGalleryPage }))
+);
+const ContentCreatorsPage = lazyWithRetry(() =>
+  import('./components/pages/ContentCreatorsPage').then((m) => ({ default: m.ContentCreatorsPage }))
+);
+const BusinessOwnersPage = lazyWithRetry(() =>
+  import('./components/pages/BusinessOwnersPage').then((m) => ({ default: m.BusinessOwnersPage }))
+);
+const AgenciesPage = lazyWithRetry(() =>
+  import('./components/pages/AgenciesPage').then((m) => ({ default: m.AgenciesPage }))
+);
+const TestimonialsPage = lazyWithRetry(() =>
+  import('./components/pages/TestimonialsPage').then((m) => ({ default: m.TestimonialsPage }))
+);
+const CaseStudiesPage = lazyWithRetry(() =>
+  import('./components/pages/CaseStudiesPage').then((m) => ({ default: m.CaseStudiesPage }))
+);
+const UnlimitedEditingPage = lazyWithRetry(() =>
+  import('./components/pages/UnlimitedEditingPage').then((m) => ({ default: m.UnlimitedEditingPage }))
+);
+const PlatformOverviewPage = lazyWithRetry(() =>
+  import('./components/pages/PlatformOverviewPage').then((m) => ({ default: m.PlatformOverviewPage }))
+);
+const TurkishDramaPage = lazyWithRetry(() =>
+  import('./components/pages/TurkishDramaPage').then((m) => ({ default: m.TurkishDramaPage }))
+);
+const TeskilatDramaPage = lazyWithRetry(() =>
+  import('./components/pages/TeskilatDramaPage').then((m) => ({ default: m.TeskilatDramaPage }))
+);
+const GunesinDramaPage = lazyWithRetry(() =>
+  import('./components/pages/GunesinDramaPage').then((m) => ({ default: m.GunesinDramaPage }))
+);
+const MehmedDramaPage = lazyWithRetry(() =>
+  import('./components/pages/MehmedDramaPage').then((m) => ({ default: m.MehmedDramaPage }))
+);
+const DramasPage = lazyWithRetry(() =>
+  import('./components/pages/DramasPage').then((m) => ({ default: m.DramasPage }))
+);
+const MembershipAdminPage = lazyWithRetry(() =>
+  import('./components/pages/MembershipAdminPage').then((m) => ({ default: m.MembershipAdminPage }))
+);
+const AboutUsPage = lazyWithRetry(() =>
+  import('./components/pages/AboutUsPage').then((m) => ({ default: m.AboutUsPage }))
+);
+const PrivacyPolicyPage = lazyWithRetry(() =>
+  import('./components/pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage }))
+);
+const TermsPage = lazyWithRetry(() =>
+  import('./components/pages/TermsPage').then((m) => ({ default: m.TermsPage }))
+);
+const SEOAdminModal = lazyWithRetry(() =>
+  import('./components/admin/SEOAdminModal').then((m) => ({ default: m.SEOAdminModal }))
+);
 
 const lastCampaignTrackAt = new Map<string, number>();
+
+function normalizePartnerSlugForUrl(raw: string): string {
+  return String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 64);
+}
 
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      
+      const refSlug = extractReferralSlugFromLocation(window.location.pathname, window.location.search);
+
+      // Any referral link (?ref=slug or /membership/<slug>) opens the Membership Page directly
+      if (refSlug && !path.startsWith('/admin')) {
+        return 'membership';
+      }
+
       if (path.startsWith('/admin/memberships')) return 'admin-memberships';
       if (path.includes('/admin') || hash.includes('#admin')) return 'flow';
       if (path.includes('/flow') || hash.includes('#flow')) return 'flow';
@@ -77,7 +162,7 @@ export default function App() {
       if (path.includes('/unlimited-editing') || hash.includes('#unlimited-editing')) return 'unlimited-editing';
       if (path.includes('/platform') || hash.includes('#platform')) return 'platform';
       if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) return 'turkish-drama';
-      if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/episode-189') || path.includes('/episode-192') || path.includes('/teskilat-188') || path.includes('/teskilat-189') || path.includes('/teskilat-192')) return 'teskilat-urdu';
+      if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/episode-189') || path.includes('/episode-192') || path.includes('/episode-193') || path.includes('/teskilat-188') || path.includes('/teskilat-189') || path.includes('/teskilat-192') || path.includes('/teskilat-193')) return 'teskilat-urdu';
       if (path.includes('/gunesin-dogdugu-yer')) return 'gunesin-dogdugu-yer';
       if (path.includes('/mehmed') || path.includes('/mehmed-fetihler-sultani')) return 'mehmed-fetihler-sultani';
       if (path.includes('/dramas')) return 'dramas';
@@ -106,25 +191,52 @@ export default function App() {
 
   useEffect(() => {
     const handleUrlStateAndVideo = () => {
-      const path = window.location.pathname.toLowerCase();
+      const rawPath = window.location.pathname;
+      const path = rawPath.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      
+      const originalLanding = `${window.location.pathname}${window.location.search}`;
+
       let videoQueryParam: string | null = null;
       const params = new URLSearchParams(window.location.search);
-      const refCodeParam = params.get('ref');
-      if (refCodeParam) {
-        setStoredReferralCode(refCodeParam);
-        const cleanSlug = refCodeParam.trim().toLowerCase();
-        const nowTs = Date.now();
-        const lastTracked = lastCampaignTrackAt.get(cleanSlug) || 0;
-        if (nowTs - lastTracked > 1500) {
-          lastCampaignTrackAt.set(cleanSlug, nowTs);
-          trackReferralCampaignVisit(
-            refCodeParam,
-            `${window.location.pathname}${window.location.search}`
-          );
+      const refSlugRaw = extractReferralSlugFromLocation(window.location.pathname, window.location.search);
+
+      if (refSlugRaw && !path.startsWith('/admin')) {
+        const cleanSlug = normalizePartnerSlugForUrl(refSlugRaw);
+        if (cleanSlug) {
+          setStoredReferralCode(refSlugRaw);
+          setStoredReferralPartnerMeta({
+            slug: cleanSlug,
+            referralPath: `/membership/${cleanSlug}`,
+          });
+
+          // Preserve referral partner name in the browser URL bar: /membership/<partner-slug>
+          const cleanParams = new URLSearchParams(window.location.search);
+          cleanParams.delete('ref');
+          cleanParams.delete('referral');
+          cleanParams.delete('partner');
+          cleanParams.delete('_fv');
+          const remainingSearch = cleanParams.toString();
+          const desiredUrl = `/membership/${encodeURIComponent(cleanSlug)}${
+            remainingSearch ? `?${remainingSearch}` : ''
+          }`;
+          if (`${window.location.pathname}${window.location.search}` !== desiredUrl) {
+            try {
+              window.history.replaceState({ route: 'membership', ref: cleanSlug }, '', desiredUrl);
+            } catch {}
+          }
+
+          const nowTs = Date.now();
+          const lastTracked = lastCampaignTrackAt.get(cleanSlug) || 0;
+          if (nowTs - lastTracked > 1500) {
+            lastCampaignTrackAt.set(cleanSlug, nowTs);
+            void trackReferralCampaignVisit(cleanSlug, originalLanding);
+          }
+
+          setCurrentRoute('membership');
+          return;
         }
       }
+
       videoQueryParam = params.get('v') || params.get('video') || params.get('watch');
 
       if (!videoQueryParam && hash.includes('v=')) {
@@ -174,7 +286,7 @@ export default function App() {
         setCurrentRoute('unlimited-editing');
       } else if (path.includes('/platform') || hash.includes('#platform')) {
         setCurrentRoute('platform');
-      } else if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/episode-189') || path.includes('/episode-192') || path.includes('/teskilat-186') || path.includes('/teskilat-187') || path.includes('/teskilat-188') || path.includes('/teskilat-189') || path.includes('/teskilat-192') || hash.includes('#teskilat')) {
+      } else if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/episode-189') || path.includes('/episode-192') || path.includes('/episode-193') || path.includes('/teskilat-186') || path.includes('/teskilat-187') || path.includes('/teskilat-188') || path.includes('/teskilat-189') || path.includes('/teskilat-192') || path.includes('/teskilat-193') || hash.includes('#teskilat')) {
         setCurrentRoute('teskilat-urdu');
       } else if (path.includes('/gunesin-dogdugu-yer')) {
         setCurrentRoute('gunesin-dogdugu-yer');
@@ -283,11 +395,17 @@ export default function App() {
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
+    const currentPartnerSlug =
+      typeof window !== 'undefined'
+        ? extractReferralSlugFromLocation(window.location.pathname, window.location.search)
+        : null;
     const newPath =
       route === 'home'
         ? '/'
         : route === 'admin-memberships'
         ? '/admin/memberships'
+        : route === 'membership' && currentPartnerSlug
+        ? `/membership/${encodeURIComponent(normalizePartnerSlugForUrl(currentPartnerSlug))}`
         : `/${route}`;
     try {
       window.history.pushState({ route }, '', newPath);
@@ -847,13 +965,20 @@ export default function App() {
         }
         return '/mehmed-fetihler-sultani';
       case 'dramas': return '/dramas';
-      case 'membership': return '/membership';
+      case 'membership':
+        if (typeof window !== 'undefined' && /^\/memberships?\/[a-z0-9_-]+/i.test(window.location.pathname)) {
+          return window.location.pathname;
+        }
+        return '/membership';
       case 'account': return '/account';
       case 'admin-memberships': return '/admin/memberships';
       case 'privacy': return '/privacy';
       case 'terms': return '/terms';
       case 'teskilat-urdu':
         if (typeof window !== 'undefined') {
+          if (window.location.pathname.includes('/episode-193') || window.location.pathname.includes('193')) {
+            return '/teskilat/episode-193';
+          }
           if (window.location.pathname.includes('/episode-192') || window.location.pathname.includes('192')) {
             return '/teskilat/episode-192';
           }

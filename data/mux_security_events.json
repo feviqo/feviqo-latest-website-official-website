@@ -1,0 +1,12 @@
+[
+  {
+    "id": "mxs-1794850014339-a87e42",
+    "type": "downloader_ua_blocked",
+    "severity": "warning",
+    "dramaId": "teskilat",
+    "episodeSlug": "episode-193",
+    "userAgent": "curl/7.88.1",
+    "details": "Blocked automated downloader / ripper client (\\bcurl\\b) on /api/membership/watch/teskilat/episode-193",
+    "createdAt": "2026-11-16T17:26:54.340Z"
+  }
+]

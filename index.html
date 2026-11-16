@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>FEVIQO — Unlimited Video Editing Agency | Flat-Rate Post Production Services</title>
     <meta name="description" content="FEVIQO is the premier unlimited video editing agency for content creators, brands, and marketing agencies worldwide. Dedicated video editors, flat monthly rates, 24-48h turnaround, and Turkish drama Urdu portals." />
     <meta name="keywords" content="FEVIQO, Feviqo, FEVIQO video editing, unlimited video editing services, video editing subscription, hire dedicated video editor, video post production agency, performance video ads, Teskilat Season 7 Urdu Subtitles, Turkish Drama Urdu Subtitles, FEVIQO agency" />
@@ -11,9 +11,129 @@
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="google-site-verification" content="Bpjxxa-Hx8mJuUKR77oNf7CuHzUs_zOSKWlFAoh7E7M" />
     <link rel="sitemap" type="application/xml" title="Sitemap" href="https://feviqo.com/sitemap.xml" />
-    
-    <!-- Chrome Extension Error Suppression Handler -->
+
+    <!-- Critical Boot CSS: Prevents FOUC / Unstyled HTML Appearance on All Devices -->
+    <style id="feviqo-critical-boot-css">
+      *, *::before, *::after {
+        box-sizing: border-box;
+      }
+      html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 100%;
+        background-color: #FFFFFF;
+        color: #0F172A;
+        font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        -webkit-text-size-adjust: 100%;
+        overflow-x: hidden;
+      }
+      #root {
+        min-height: 100vh;
+        width: 100%;
+      }
+      #feviqo-boot-loader {
+        min-height: 100vh;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 50% 25%, #0F1A2C 0%, #070B12 70%);
+        color: #F8FAFC;
+        padding: 24px;
+        text-align: center;
+      }
+      .feviqo-boot-card {
+        max-width: 380px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .feviqo-boot-mark {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+        color: #052E16;
+        font-weight: 900;
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 30px -6px rgba(34, 197, 94, 0.45);
+        margin-bottom: 18px;
+        letter-spacing: -0.03em;
+      }
+      .feviqo-boot-brand {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        color: #FFFFFF;
+        margin: 0 0 6px;
+      }
+      .feviqo-boot-sub {
+        font-size: 13px;
+        color: #94A3B8;
+        margin: 0 0 22px;
+      }
+      .feviqo-boot-bar-track {
+        width: 180px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+        position: relative;
+      }
+      .feviqo-boot-bar-fill {
+        width: 45%;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #22C55E, #4ADE80);
+        animation: feviqoBootSlide 1.15s ease-in-out infinite alternate;
+      }
+      @keyframes feviqoBootSlide {
+        0% { transform: translateX(-20%); }
+        100% { transform: translateX(140%); }
+      }
+      #feviqo-boot-retry {
+        display: none;
+        margin-top: 24px;
+        padding: 16px 20px;
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        width: 100%;
+      }
+      #feviqo-boot-retry p {
+        font-size: 12px;
+        color: #CBD5E1;
+        margin: 0 0 12px;
+        line-height: 1.5;
+      }
+      .feviqo-boot-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 18px;
+        border-radius: 8px;
+        background: #22C55E;
+        color: #052E16;
+        font-weight: 700;
+        font-size: 13px;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+      }
+    </style>
+
+    <!-- Chrome Extension Error Suppression & Stale Asset Cache-Busting Recovery -->
     <script>
+      window.__FEVIQO_MOUNTED__ = false;
+
       window.addEventListener('error', function(e) {
         if ((e.filename && e.filename.indexOf('chrome-extension://') !== -1) ||
             (e.message && e.message.indexOf('property fetch of') !== -1)) {
@@ -21,7 +141,24 @@
           e.preventDefault();
           return true;
         }
+        var target = e.target || e.srcElement;
+        if (target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK')) {
+          var assetUrl = target.src || target.href || '';
+          if (assetUrl && assetUrl.indexOf('/assets/') !== -1) {
+            try {
+              var reloadKey = 'feviqo_asset_recover_v1';
+              var prevTs = Number(sessionStorage.getItem(reloadKey) || '0');
+              if (Date.now() - prevTs > 15000) {
+                sessionStorage.setItem(reloadKey, String(Date.now()));
+                var nextUrl = new URL(window.location.href);
+                nextUrl.searchParams.set('_v', String(Date.now()));
+                window.location.replace(nextUrl.toString());
+              }
+            } catch (_) {}
+          }
+        }
       }, true);
+
       window.addEventListener('unhandledrejection', function(e) {
         if (e.reason && (
           (e.reason.message && e.reason.message.indexOf('property fetch of') !== -1) ||
@@ -29,19 +166,38 @@
         )) {
           e.stopImmediatePropagation();
           e.preventDefault();
+          return;
+        }
+        var msg = (e.reason && (e.reason.message || String(e.reason))) || '';
+        if (
+          msg.indexOf('Failed to fetch dynamically imported module') !== -1 ||
+          msg.indexOf('Importing a module script failed') !== -1 ||
+          msg.indexOf('Unable to preload CSS') !== -1 ||
+          msg.indexOf('Loading chunk') !== -1
+        ) {
+          try {
+            var chunkKey = 'feviqo_chunk_recover_v1';
+            var lastAttempt = Number(sessionStorage.getItem(chunkKey) || '0');
+            if (Date.now() - lastAttempt > 15000) {
+              sessionStorage.setItem(chunkKey, String(Date.now()));
+              var reloadUrl = new URL(window.location.href);
+              reloadUrl.searchParams.set('_v', String(Date.now()));
+              window.location.replace(reloadUrl.toString());
+            }
+          } catch (_) {}
         }
       }, true);
     </script>
-    
+
     <!-- Google AdSense Official Verification & Ad Delivery Script -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4691262355758432" crossorigin="anonymous"></script>
-    
+
     <!-- Favicon & Brand Icon for Google Search & Browsers -->
     <link rel="icon" type="image/png" href="/feviqo1.png" />
     <link rel="icon" type="image/svg+xml" href="/feviqo1.svg" />
     <link rel="apple-touch-icon" href="/feviqo1.png" />
     <link rel="shortcut icon" href="/feviqo1.png" />
-    
+
     <!-- Geo Targeting (USA, UK, Australia, Global) -->
     <meta name="geo.region" content="US;GB;AU;CA" />
     <meta name="geo.placename" content="United States, United Kingdom, Australia, Worldwide" />
@@ -50,7 +206,7 @@
     <meta name="rating" content="General" />
     <meta name="language" content="English" />
 
-    <!-- Optimized Resource Hints: Exactly 2 Critical Preconnect Origins (Fonts) + DNS-Prefetch for Media -->
+    <!-- Optimized Resource Hints: Preconnect Origins (Fonts) + DNS-Prefetch for Media -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="dns-prefetch" href="https://lh3.googleusercontent.com" />
@@ -76,8 +232,37 @@
     <meta name="twitter:image" content="https://feviqo.com/HEADER-removebg-preview.png" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Noto+Nastaliq+Urdu:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600&display=swap" rel="stylesheet">
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-[#22C55E] selection:text-black">
-    <div id="root"></div>
+  <body class="bg-white text-slate-900 antialiased selection:bg-[#22C55E] selection:text-black">
+    <div id="root">
+      <div id="feviqo-boot-loader" role="status" aria-live="polite">
+        <div class="feviqo-boot-card">
+          <div class="feviqo-boot-mark">F</div>
+          <p class="feviqo-boot-brand">FEVIQO</p>
+          <p class="feviqo-boot-sub">Loading your studio &amp; streaming experience…</p>
+          <div class="feviqo-boot-bar-track">
+            <div class="feviqo-boot-bar-fill"></div>
+          </div>
+          <div id="feviqo-boot-retry">
+            <p>Taking longer than expected on your current connection.</p>
+            <button
+              type="button"
+              class="feviqo-boot-btn"
+              onclick="window.location.href = window.location.pathname + '?_v=' + Date.now()"
+            >
+              Retry Loading FEVIQO
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      setTimeout(function() {
+        if (!window.__FEVIQO_MOUNTED__) {
+          var retryBox = document.getElementById('feviqo-boot-retry');
+          if (retryBox) retryBox.style.display = 'block';
+        }
+      }, 9000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

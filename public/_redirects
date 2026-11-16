@@ -1,0 +1,16 @@
+# Cloudflare Pages SPA & Pre-Rendered Route Rules for FEVIQO
+/mehmed /mehmed-fetihler-sultani 301
+/mehmed/episode-87 /mehmed-fetihler-sultani/episode-87 301
+/mehmed/episode-88 /mehmed-fetihler-sultani/episode-88 301
+/mehmed/episode-89 /mehmed-fetihler-sultani/episode-89 301
+/mehmed/episode-90 /mehmed-fetihler-sultani/episode-90 301
+/teskilat-urdu /teskilat 301
+/memberships /membership 301
+
+# Partner & User Referral Links (/membership/:partnerName) open Membership Page with 200 OK
+/membership/* /membership/index.html 200
+/account/* /account/index.html 200
+/admin/* /index.html 200
+
+# SPA Fallback for all dynamic client routes
+/* /index.html 200

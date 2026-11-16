@@ -656,7 +656,7 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
               <div className="text-[11px] text-slate-500 mt-1 truncate">
                 Generated URL:{' '}
                 <span className="font-mono text-[#0F172A]">
-                  https://feviqo.com/?ref={previewSlug || 'your-slug'}
+                  https://feviqo.com/membership/{previewSlug || 'your-slug'}
                 </span>
               </div>
             </div>
@@ -766,7 +766,7 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
               <div className="text-sm font-semibold text-[#0F172A]">No referral campaigns yet</div>
               <p className="text-xs text-slate-500">
                 Click "New Referral Campaign" to create your first campaign (for example: Kameer Play →{' '}
-                <code className="font-mono">https://feviqo.com/?ref=kameer-play</code>).
+                <code className="font-mono">https://feviqo.com/membership/kameer-play</code>).
               </p>
             </div>
           ) : (

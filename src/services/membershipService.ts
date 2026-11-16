@@ -562,6 +562,93 @@ const ADMIN_TOKEN_KEY = 'feviqo_admin_token';
 const REFERRAL_CODE_KEY = 'feviqo_ref_code';
 const CAMPAIGN_VISITOR_KEY = 'feviqo_campaign_visitor';
 const CAMPAIGN_ATTR_KEY = 'feviqo_campaign_attr';
+const REFERRAL_PARTNER_META_KEY = 'feviqo_referral_partner_meta_v1';
+
+export interface ReferralPartnerMeta {
+  slug: string;
+  campaignName?: string;
+  partnerName?: string;
+  referralPath: string;
+  updatedAt: string;
+}
+
+export function formatReferralPartnerDisplayName(rawSlug?: string | null): string {
+  const clean = String(rawSlug || '')
+    .trim()
+    .replace(/^\/+|\/+$/g, '')
+    .replace(/^membership\//i, '');
+  if (!clean) return '';
+  return clean
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export function extractReferralSlugFromLocation(pathname?: string, search?: string): string | null {
+  try {
+    const p = (pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '')).trim();
+    const s = search ?? (typeof window !== 'undefined' ? window.location.search : '');
+    const pathMatch = p.match(/^\/memberships?\/([a-zA-Z0-9_-]{2,64})\/?$/i);
+    if (pathMatch && pathMatch[1]) {
+      const candidate = pathMatch[1].trim();
+      const reserved = new Set(['index', 'index.html', 'checkout', 'account', 'plans', 'pricing', 'verify']);
+      if (!reserved.has(candidate.toLowerCase())) {
+        return candidate;
+      }
+    }
+    if (s) {
+      const params = new URLSearchParams(s);
+      const refParam = params.get('ref') || params.get('referral') || params.get('partner');
+      if (refParam && refParam.trim().length >= 2) {
+        return refParam.trim();
+      }
+    }
+  } catch {}
+  return null;
+}
+
+export function getStoredReferralPartnerMeta(): ReferralPartnerMeta | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage.getItem(REFERRAL_PARTNER_META_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ReferralPartnerMeta;
+    if (!parsed || typeof parsed.slug !== 'string' || !parsed.slug) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredReferralPartnerMeta(meta: Partial<ReferralPartnerMeta> & { slug: string }): void {
+  try {
+    if (typeof window === 'undefined') return;
+    const cleanSlug = meta.slug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    if (!cleanSlug) return;
+    const existing = getStoredReferralPartnerMeta();
+    const merged: ReferralPartnerMeta = {
+      slug: cleanSlug,
+      campaignName:
+        meta.campaignName ||
+        (existing?.slug === cleanSlug ? existing.campaignName : undefined) ||
+        formatReferralPartnerDisplayName(cleanSlug),
+      partnerName:
+        meta.partnerName ||
+        (existing?.slug === cleanSlug ? existing.partnerName : undefined) ||
+        formatReferralPartnerDisplayName(cleanSlug),
+      referralPath: meta.referralPath || `/membership/${cleanSlug}`,
+      updatedAt: new Date().toISOString(),
+    };
+    window.localStorage.setItem(REFERRAL_PARTNER_META_KEY, JSON.stringify(merged));
+    window.dispatchEvent(new CustomEvent('feviqo-referral-partner-updated', { detail: merged }));
+  } catch {}
+}
 
 export function getStoredCampaignVisitorToken(): string {
   try {
@@ -617,7 +704,7 @@ export function getStoredReferralCode(): string {
 
 export function setStoredReferralCode(code: string): void {
   const clean = normalizeReferralInput(code);
-  if (!clean || clean.length < 4) return;
+  if (!clean || clean.length < 3) return;
   try {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(REFERRAL_CODE_KEY, clean);
@@ -1071,10 +1158,26 @@ export async function trackReferralCampaignVisit(
   tracked?: boolean;
   campaignId?: string;
   campaignSlug?: string;
+  campaignName?: string;
+  partnerName?: string;
+  partnerSlug?: string;
+  referralPath?: string;
   isNewUniqueVisitor?: boolean;
   ignoredReason?: string;
 }> {
   try {
+    const cleanInputSlug = String(slug || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    if (cleanInputSlug) {
+      setStoredReferralPartnerMeta({
+        slug: cleanInputSlug,
+        referralPath: `/membership/${cleanInputSlug}`,
+      });
+    }
     const res = await fetch('/api/referral-campaigns/track', {
       method: 'POST',
       credentials: 'include',
@@ -1093,6 +1196,14 @@ export async function trackReferralCampaignVisit(
     }
     if (data?.attributionToken) {
       setStoredCampaignAttrToken(data.attributionToken);
+    }
+    if (data?.campaignSlug || data?.campaignName || data?.partnerName) {
+      setStoredReferralPartnerMeta({
+        slug: cleanInputSlug || data.campaignSlug,
+        campaignName: data.campaignName,
+        partnerName: data.partnerName,
+        referralPath: `/membership/${cleanInputSlug || data.campaignSlug}`,
+      });
     }
     return data;
   } catch {

@@ -310,7 +310,25 @@ const EPISODE_192: TeskilatEpisode = {
   isLockedPremium: true,
 };
 
-const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_192, EPISODE_189, EPISODE_188, EPISODE_187, FEATURED_SEASON7_EPISODE];
+const EPISODE_193: TeskilatEpisode = {
+  id: 'ep-193-s7',
+  episodeNumber: 193,
+  seasonNumber: 7,
+  titleUrdu: 'تشکیلات سیزن 7 قسط 193 اردو ڈبنگ — صرف پریمیم ممبرز کے لیے',
+  titleEnglish: 'Teskilat Season 7 Episode 193 (Bolum 193) — Premium Subscriptions Only',
+  releaseDate: 'November 2026',
+  duration: '2h 25m',
+  thumbnailUrl: 'https://lh3.googleusercontent.com/d/1pDs3oj0h6eOP64xO10eYp6TMqcGs2AqP',
+  directoryThumbnailUrl: 'https://lh3.googleusercontent.com/d/1pDs3oj0h6eOP64xO10eYp6TMqcGs2AqP',
+  videoUrl: '',
+  storyRecapUrdu: `تشکیلات سیزن 7 قسط 193 مکمل اردو ڈبنگ میں صرف FEVIQO پریمیم ممبرشپ کے ساتھ دستیاب ہے۔ مکمل قسط دیکھنے کے لیے پریمیم سبسکرپشن حاصل کریں یا اپنے ممبر اکاؤنٹ میں سائن ان کریں۔`,
+  storyRecapEnglish: `Teskilat Season 7 Episode 193 (Bolum 193) in Urdu Dubbed HD is exclusively unlocked for active FEVIQO Premium Membership subscribers. Subscribe to a Starter, Standard, Plus, or VIP plan to watch Episode 193 inside your My Account library.`,
+  views: 'Premium Members',
+  isLatest: false,
+  isLockedPremium: true,
+};
+
+const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_193, EPISODE_192, EPISODE_189, EPISODE_188, EPISODE_187, FEATURED_SEASON7_EPISODE];
 
 interface TeskilatDramaPageProps {
   onBackToHome: () => void;
@@ -332,7 +350,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192') || path.includes('193') || hash.includes('193')) {
         return 'episode-detail';
       }
     }
@@ -341,6 +359,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   const [selectedEpisode, setSelectedEpisode] = useState<TeskilatEpisode>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
+      if (path.includes('193')) return EPISODE_193;
       if (path.includes('192')) return EPISODE_192;
       if (path.includes('186')) return FEATURED_SEASON7_EPISODE;
       if (path.includes('187')) return EPISODE_187;
@@ -407,9 +426,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192') || path.includes('/episode')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192') || path.includes('193') || hash.includes('193') || path.includes('/episode')) {
         setActiveView('episode-detail');
-        if (path.includes('192') || hash.includes('192')) {
+        if (path.includes('193') || hash.includes('193')) {
+          setSelectedEpisode(EPISODE_193);
+        } else if (path.includes('192') || hash.includes('192')) {
           setSelectedEpisode(EPISODE_192);
         } else if (path.includes('186') || hash.includes('186')) {
           setSelectedEpisode(FEATURED_SEASON7_EPISODE);
@@ -1146,8 +1167,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                                 : 'text-[#0B0B0D] group-hover:text-[#22C55E]'
                             }`}
                           >
-                            {ep.episodeNumber === 192
-                              ? 'Teskilat Season 7 Episode 192 (Bolum 192)'
+                            {ep.episodeNumber >= 192
+                              ? `Teskilat Season 7 Episode ${ep.episodeNumber} (Bolum ${ep.episodeNumber})`
                               : `Teskilat Season 7 Episode ${
                                   ep.episodeNumber === 189
                                     ? '5'
@@ -1245,10 +1266,10 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
 
                 <h1 className="text-xl sm:text-4xl font-black text-[#0B0B0D] tracking-tight">
-                  {selectedEpisode.episodeNumber === 192 ? (
+                  {selectedEpisode.episodeNumber >= 192 ? (
                     resolvedStreamUrl
-                      ? 'Teskilat Season 7 Episode 192 Urdu Dubbed (Unlocked · FEVIQO Premium)'
-                      : 'Teskilat Season 7 Episode 192 Urdu Dubbed (FEVIQO Premium)'
+                      ? `Teskilat Season 7 Episode ${selectedEpisode.episodeNumber} Urdu Dubbed (Unlocked · FEVIQO Premium)`
+                      : `Teskilat Season 7 Episode ${selectedEpisode.episodeNumber} Urdu Dubbed (FEVIQO Premium)`
                   ) : selectedEpisode.episodeNumber === 189 ? (
                     "Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu"
                   ) : (
@@ -1581,7 +1602,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 <div className="grid grid-cols-3 items-center text-xs font-bold">
                   <button 
                     onClick={() => {
-                      if (selectedEpisode.episodeNumber === 192) {
+                      if (selectedEpisode.episodeNumber === 193) {
+                        attemptWatchEpisode('teskilat', 'episode-192', EPISODE_192.titleEnglish, () => {
+                          handleOpenEpisode(EPISODE_192);
+                        });
+                      } else if (selectedEpisode.episodeNumber === 192) {
                         handleOpenEpisode(EPISODE_189);
                       } else if (selectedEpisode.episodeNumber === 189) {
                         handleOpenEpisode(EPISODE_188);
@@ -1597,7 +1622,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   >
                     <div className="text-slate-400 text-[10px] uppercase font-bold">&larr; Previous</div>
                     <div className="text-[#0B0B0D] font-extrabold text-sm mt-0.5 group-hover:text-[#22C55E] transition">
-                      Episode {selectedEpisode.episodeNumber === 192 ? 189 : selectedEpisode.episodeNumber === 189 ? 188 : selectedEpisode.episodeNumber === 188 ? 187 : selectedEpisode.episodeNumber === 187 ? 186 : 185}
+                      Episode {selectedEpisode.episodeNumber === 193 ? 192 : selectedEpisode.episodeNumber === 192 ? 189 : selectedEpisode.episodeNumber === 189 ? 188 : selectedEpisode.episodeNumber === 188 ? 187 : selectedEpisode.episodeNumber === 187 ? 186 : 185}
                     </div>
                   </button>
 
@@ -1616,9 +1641,13 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                         handleOpenEpisode(EPISODE_188);
                       } else if (selectedEpisode.episodeNumber === 188) {
                         handleOpenEpisode(EPISODE_189);
-                      } else {
+                      } else if (selectedEpisode.episodeNumber === 189) {
                         attemptWatchEpisode('teskilat', 'episode-192', EPISODE_192.titleEnglish, () => {
                           handleOpenEpisode(EPISODE_192);
+                        });
+                      } else {
+                        attemptWatchEpisode('teskilat', 'episode-193', EPISODE_193.titleEnglish, () => {
+                          handleOpenEpisode(EPISODE_193);
                         });
                       }
                     }}
@@ -1642,9 +1671,13 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           ? 'Episode 188'
                           : selectedEpisode.episodeNumber === 188
                           ? 'Episode 189'
+                          : selectedEpisode.episodeNumber === 189
+                          ? hasDramaAccess('teskilat')
+                            ? 'Episode 192 (Watch Now)'
+                            : 'Episode 192 (Premium)'
                           : hasDramaAccess('teskilat')
-                          ? 'Episode 192 (Watch Now)'
-                          : 'Episode 192 (Premium)'}
+                          ? 'Episode 193 (Watch Now)'
+                          : 'Episode 193 (Premium)'}
                       </span>
                     </div>
                   </button>

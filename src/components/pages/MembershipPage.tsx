@@ -36,6 +36,10 @@ import {
   createMembershipCheckout,
   validateCheckoutPromoQuote,
   normalizeReferralInput,
+  extractReferralSlugFromLocation,
+  getStoredReferralPartnerMeta,
+  formatReferralPartnerDisplayName,
+  ReferralPartnerMeta,
   CheckoutPricingQuote,
   MemberAccountState,
   MembershipOrder,
@@ -117,6 +121,25 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     episodeSlug?: string;
   } | null>(null);
 
+  const [referralPartner, setReferralPartner] = useState<ReferralPartnerMeta | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const urlSlug = extractReferralSlugFromLocation(window.location.pathname, window.location.search);
+    const stored = getStoredReferralPartnerMeta();
+    if (urlSlug) {
+      const clean = urlSlug.toLowerCase();
+      if (stored && stored.slug === clean) return stored;
+      const formatted = formatReferralPartnerDisplayName(clean);
+      return {
+        slug: clean,
+        campaignName: formatted,
+        partnerName: formatted,
+        referralPath: `/membership/${clean}`,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return stored;
+  });
+
   const pricingRef = useRef<HTMLElement | null>(null);
   const dramaSelectionRef = useRef<HTMLElement | null>(null);
   const paymentSectionRef = useRef<HTMLDivElement | null>(null);
@@ -124,6 +147,37 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
   useEffect(() => {
     setShowAccountSection(initialViewAccount);
   }, [initialViewAccount]);
+
+  useEffect(() => {
+    const syncPartnerMeta = () => {
+      const urlSlug = extractReferralSlugFromLocation(window.location.pathname, window.location.search);
+      const stored = getStoredReferralPartnerMeta();
+      if (urlSlug) {
+        const clean = urlSlug.toLowerCase();
+        if (stored && stored.slug === clean) {
+          setReferralPartner(stored);
+          return;
+        }
+        const formatted = formatReferralPartnerDisplayName(clean);
+        setReferralPartner({
+          slug: clean,
+          campaignName: formatted,
+          partnerName: formatted,
+          referralPath: `/membership/${clean}`,
+          updatedAt: new Date().toISOString(),
+        });
+      } else if (stored) {
+        setReferralPartner(stored);
+      }
+    };
+    syncPartnerMeta();
+    window.addEventListener('feviqo-referral-partner-updated', syncPartnerMeta);
+    window.addEventListener('popstate', syncPartnerMeta);
+    return () => {
+      window.removeEventListener('feviqo-referral-partner-updated', syncPartnerMeta);
+      window.removeEventListener('popstate', syncPartnerMeta);
+    };
+  }, []);
 
   const applyUrlContextFromLocation = React.useCallback((currentAccount?: MemberAccountState | null) => {
     if (typeof window === 'undefined') return;
@@ -659,6 +713,48 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Partner Referral Trust & Invitation Banner (/membership/<partner-slug>) */}
+      {referralPartner && !showAccountSection && (
+        <div
+          dir={dir}
+          data-testid="referral-partner-banner"
+          className="bg-[#0B0B0D] text-white border-b border-zinc-800"
+        >
+          <div
+            className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+              isUrdu ? 'font-urdu-slim' : ''
+            }`}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#22C55E] shrink-0" />
+              <span className="text-zinc-300">
+                {isUrdu ? 'آفیشل پارٹنر دعوت نامہ:' : 'Official Partner Invitation:'}
+              </span>
+              <strong className="text-white font-bold">
+                {referralPartner.partnerName &&
+                referralPartner.campaignName &&
+                referralPartner.partnerName.toLowerCase() !== referralPartner.campaignName.toLowerCase()
+                  ? `${referralPartner.campaignName} (${referralPartner.partnerName})`
+                  : referralPartner.partnerName ||
+                    referralPartner.campaignName ||
+                    formatReferralPartnerDisplayName(referralPartner.slug)}
+              </strong>
+              <span className="hidden md:inline text-zinc-500">·</span>
+              <code className="hidden md:inline font-mono text-[11px] text-[#22C55E]">
+                feviqo.com/membership/{referralPartner.slug}
+              </code>
+            </div>
+            <button
+              type="button"
+              onClick={() => scrollToSection(pricingRef.current)}
+              className="px-3 py-1 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] font-bold text-xs self-start sm:self-auto transition cursor-pointer"
+            >
+              {isUrdu ? 'پلان منتخب کریں' : 'Select Membership Plan'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Continue Watching Return Banner when visitor arrived from a gated episode */}
       {returnEpisodeContext && (() => {
