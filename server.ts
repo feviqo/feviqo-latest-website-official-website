@@ -96,6 +96,13 @@ import {
   runLifecycleReminderCheck,
   getCustomerNotificationById,
   updateCustomerNotificationEmailStatus,
+  calculateCheckoutPricingQuote,
+  confirmZeroBalanceOrder,
+  createPromoCode,
+  updatePromoCode,
+  deletePromoCode,
+  updateReferralConfig,
+  updateReferralStatusByAdmin,
   LifecycleEmailDispatcher,
   SafeAdmin,
 } from './server/membershipStore';
@@ -104,7 +111,12 @@ import { verifyFirebaseIdToken } from './server/firestoreAdmin';
 
 const app = express();
 app.set('trust proxy', 1);
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT =
+  process.env.NODE_ENV !== 'production'
+    ? parseInt(process.env.DEFAULT_APP_PORT || '3000', 10)
+    : process.env.PORT
+    ? parseInt(process.env.PORT, 10)
+    : 3000;
 
 // Canonical 301 Redirect Middleware: Enforce feviqo.com primary domain & no-trailing-slash URLs
 app.use((req, res, next) => {
@@ -179,6 +191,9 @@ app.use((req, res, next) => {
     '/for-business/': '/business',
     '/for-agencies': '/agencies',
     '/for-agencies/': '/agencies',
+    '/membership/': '/membership',
+    '/memberships': '/membership',
+    '/memberships/': '/membership',
   };
 
   if (aliasMap[rawPath] && aliasMap[rawPath] !== rawPath) {
@@ -3292,8 +3307,8 @@ app.get('/api/membership/qr/:planId/download', (req, res) => {
 
 app.post('/api/membership/register', (req, res) => {
   try {
-    const { email, password, confirmPassword, fullName, phone } = req.body || {};
-    const result = registerMember({ email, phone, password, confirmPassword, fullName });
+    const { email, password, confirmPassword, fullName, phone, referralCode } = req.body || {};
+    const result = registerMember({ email, phone, password, confirmPassword, fullName, referralCode });
     if ('error' in result) {
       return res.status(result.statusCode || 400).json({ success: false, error: result.error });
     }
@@ -3330,7 +3345,7 @@ app.post('/api/membership/login', (req, res) => {
 
 app.post('/api/membership/google-auth', async (req, res) => {
   try {
-    const { idToken, fullName, phone } = req.body || {};
+    const { idToken, fullName, phone, referralCode } = req.body || {};
     const decoded = await verifyFirebaseIdToken(idToken);
     if (!decoded || !decoded.email || !decoded.email_verified) {
       return res.status(401).json({
@@ -3343,6 +3358,7 @@ app.post('/api/membership/google-auth', async (req, res) => {
       email: decoded.email,
       fullName: decoded.name || fullName,
       phone,
+      referralCode,
     });
     if ('error' in result) {
       return res.status(400).json({ success: false, error: result.error });
@@ -3385,6 +3401,7 @@ app.post('/api/membership/profile/phone', (req, res) => {
     const result = updateMemberPhone({
       memberId,
       phone: req.body?.phone,
+      referralCode: req.body?.referralCode,
     });
     if ('error' in result) {
       return res.status(result.statusCode || 400).json({ success: false, error: result.error });
@@ -3396,6 +3413,30 @@ app.post('/api/membership/profile/phone', (req, res) => {
     return res.json({ success: true, ...account });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to save phone number.' });
+  }
+});
+
+app.post('/api/membership/promo/validate', (req, res) => {
+  try {
+    const memberId = getAuthenticatedMemberId(req);
+    const { planId, paymentRegion, promoCode, applyCredits } = req.body || {};
+    const quote = calculateCheckoutPricingQuote({
+      memberId,
+      planId: String(planId || 'starter'),
+      paymentRegion: paymentRegion === 'international' ? 'international' : 'pakistan',
+      promoCode: typeof promoCode === 'string' ? promoCode : undefined,
+      applyCredits: Boolean(applyCredits),
+    });
+    if (!quote.valid) {
+      return res.status(400).json({
+        success: false,
+        error: quote.error || 'Promo code is invalid.',
+        quote,
+      });
+    }
+    return res.json({ success: true, quote });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to validate promo code.' });
   }
 });
 
@@ -3417,6 +3458,8 @@ app.post('/api/membership/checkout', async (req, res) => {
       targetMembershipId,
       visitorCountryCode,
       indicativeLocalDisplay,
+      promoCode,
+      applyCredits,
     } = req.body || {};
     const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
     const host = req.headers.host || 'localhost:3000';
@@ -3432,6 +3475,8 @@ app.post('/api/membership/checkout', async (req, res) => {
       targetMembershipId,
       visitorCountryCode,
       indicativeLocalDisplay,
+      promoCode: typeof promoCode === 'string' ? promoCode : undefined,
+      applyCredits: Boolean(applyCredits),
     });
 
     if ('error' in result) {
@@ -3446,6 +3491,7 @@ app.post('/api/membership/checkout', async (req, res) => {
     return res.json({
       success: true,
       order: result.order,
+      quote: result.quote,
       qrImageUrl: result.qrImageUrl,
       publicConfig: result.publicConfig,
       gatewayConfigured: result.gatewayConfigured,
@@ -3455,6 +3501,63 @@ app.post('/api/membership/checkout', async (req, res) => {
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to initialize membership checkout.' });
+  }
+});
+
+app.post('/api/membership/orders/:orderId/confirm-free', async (req, res) => {
+  try {
+    const memberId = getAuthenticatedMemberId(req);
+    if (!memberId) {
+      return res.status(401).json({
+        success: false,
+        code: 'UNAUTHENTICATED',
+        error: 'Please sign in to submit this order.',
+      });
+    }
+    const result = confirmZeroBalanceOrder({
+      memberId,
+      orderId: req.params.orderId,
+      paymentNote: req.body?.paymentNote,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+
+    const { order, member } = result;
+    const cfg = getMembershipConfig();
+    const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'https';
+    const host = req.headers.host || 'feviqo.com';
+    const baseUrl = `${proto}://${host}`;
+    const adminReviewUrl = `${baseUrl}/admin/memberships?request=${encodeURIComponent(order.id)}`;
+    const dramaTitles = order.selectedDramaIds.map((id) => getDramaById(id)?.title || id).join(', ');
+    const recipients = Array.from(
+      new Set(
+        [cfg.adminEmail, ...getStudioNotificationRecipients()]
+          .map((e) => e.trim().toLowerCase())
+          .filter((e) => e.includes('@'))
+      )
+    );
+    let anySent = false;
+    for (const recipient of recipients) {
+      const dispatch = await dispatchTrackedEmail({
+        orderId: order.id,
+        to: recipient,
+        subject: 'New Zero-Balance FEVIQO Membership Order — Fast Approval',
+        html: `<p>Customer <strong>${escapeHtml(member.fullName)}</strong> (${escapeHtml(member.email)}) submitted a 100% discounted order for <strong>${escapeHtml(order.planName)}</strong> (${escapeHtml(dramaTitles)}). Promo: ${escapeHtml(order.promoCode || 'None')}. <a href="${escapeHtml(adminReviewUrl)}">Review in Admin Panel &rarr;</a></p>`,
+        type: 'admin_payment_verification',
+      });
+      if (dispatch.success) anySent = true;
+    }
+
+    const account = getMemberAccountState(memberId);
+    return res.json({
+      success: true,
+      order,
+      adminNotificationSent: anySent,
+      account,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to confirm zero-balance order.' });
   }
 });
 
@@ -4141,6 +4244,116 @@ app.put('/api/admin/memberships/config', requireAdmin, (req: any, res) => {
   }
 });
 
+app.post('/api/admin/memberships/promos', requireAdmin, (req: any, res) => {
+  try {
+    const body = req.body || {};
+    const result = createPromoCode({
+      code: body.code,
+      description: body.description,
+      discountType: body.discountType,
+      discountPercent: body.discountPercent,
+      discountAmountPkr: body.discountAmountPkr,
+      discountAmountUsd: body.discountAmountUsd,
+      maxDiscountPkr: body.maxDiscountPkr,
+      maxDiscountUsd: body.maxDiscountUsd,
+      minPurchasePkr: body.minPurchasePkr,
+      minPurchaseUsd: body.minPurchaseUsd,
+      applicablePlanIds: body.applicablePlanIds,
+      usageLimit: body.usageLimit,
+      perUserLimit: body.perUserLimit,
+      expiresAt: body.expiresAt,
+      isActive: body.isActive,
+      admin: req.admin,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.status(201).json({
+      success: true,
+      promo: result.promo,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to create promo code.' });
+  }
+});
+
+app.put('/api/admin/memberships/promos/:promoId', requireAdmin, (req: any, res) => {
+  try {
+    const result = updatePromoCode({
+      promoId: req.params.promoId,
+      updates: req.body || {},
+      admin: req.admin,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      promo: result.promo,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to update promo code.' });
+  }
+});
+
+app.delete('/api/admin/memberships/promos/:promoId', requireAdmin, (req: any, res) => {
+  try {
+    const result = deletePromoCode({
+      promoId: req.params.promoId,
+      admin: req.admin,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      deletedPromoId: result.deletedPromoId,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to delete promo code.' });
+  }
+});
+
+app.put('/api/admin/memberships/referral-config', requireAdmin, (req: any, res) => {
+  try {
+    const updated = updateReferralConfig({ updates: req.body || {}, admin: req.admin });
+    return res.json({
+      success: true,
+      config: updated,
+      referralConfig: updated.referralConfig,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to update referral reward settings.' });
+  }
+});
+
+app.post('/api/admin/memberships/referrals/:referralId/status', requireAdmin, (req: any, res) => {
+  try {
+    const { status, blockReason } = req.body || {};
+    const nextStatus = status === 'blocked' ? 'blocked' : 'signed_up';
+    const result = updateReferralStatusByAdmin({
+      referralId: req.params.referralId,
+      status: nextStatus,
+      blockReason,
+      admin: req.admin,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      referral: result.referral,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to update referral status.' });
+  }
+});
+
 app.post(
   '/api/admin/memberships/qr/:planId',
   requireAdmin,
@@ -4418,8 +4631,16 @@ async function startServer() {
     console.warn('Initial Firestore hydration skipped:', (err as Error)?.message || err);
   }
   if (process.env.NODE_ENV !== 'production') {
+    const disableHmr =
+      process.env.DISABLE_HMR === 'true' || Boolean(process.env.CONTROL_PLANE_PORT);
     const vite = await createViteServer({
-      server: { middlewareMode: true, host: true, allowedHosts: true },
+      server: {
+        middlewareMode: true,
+        host: true,
+        allowedHosts: true,
+        hmr: !disableHmr,
+        watch: disableHmr ? null : undefined,
+      },
       appType: 'custom',
     });
     app.use(vite.middlewares);
@@ -4445,7 +4666,7 @@ async function startServer() {
         let rawHtml = fs.readFileSync(indexPath, 'utf-8');
         rawHtml = await vite.transformIndexHtml(req.url, rawHtml);
         const rawPath = (req.originalUrl || req.url || req.path || '/').split('?')[0].split('#')[0];
-        const requestPath = rawPath === '/' ? '/' : (rawPath.endsWith('/') ? rawPath : `${rawPath}/`);
+        const requestPath = rawPath === '/' ? '/' : rawPath.replace(/\/+$/, '');
         const routeConfig = getSEOConfigForPath(requestPath);
         const seoHtml = transformHTMLForRoute(rawHtml, requestPath);
         if (routeConfig.pageName === 'Unknown Route') {
@@ -4533,18 +4754,7 @@ async function startServer() {
 
   server.on('error', (err: any) => {
     if (err.code === 'EADDRINUSE') {
-      console.error(`Port ${PORT} is in use. Attempting to free port...`);
-      try {
-        execFile('fuser', ['-k', `${PORT}/tcp`], () => {
-          setTimeout(() => {
-            app.listen(PORT, '0.0.0.0', () => {
-              console.log(`FEVIQO full-stack server recovered and listening on http://0.0.0.0:${PORT}`);
-            });
-          }, 500);
-        });
-      } catch (e) {
-        console.error('Failed to free port:', e);
-      }
+      console.error(`Port ${PORT} is already in use.`);
     } else {
       console.error('Server error:', err);
     }

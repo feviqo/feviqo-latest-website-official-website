@@ -53,6 +53,7 @@ import { initializeAssetSync } from './services/assetService';
 import { findVideoItem } from './data/videoRegistry';
 import SEOHead from './seo/SEOHead';
 import { testFirestoreConnection } from './firebase';
+import { setStoredReferralCode } from './services/membershipService';
 
 export default function App() {
   const [currentRoute, setCurrentRoute] = useState<AppRoute>(() => {
@@ -108,6 +109,10 @@ export default function App() {
       
       let videoQueryParam: string | null = null;
       const params = new URLSearchParams(window.location.search);
+      const refCodeParam = params.get('ref');
+      if (refCodeParam) {
+        setStoredReferralCode(refCodeParam);
+      }
       videoQueryParam = params.get('v') || params.get('video') || params.get('watch');
 
       if (!videoQueryParam && hash.includes('v=')) {

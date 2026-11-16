@@ -173,19 +173,26 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
   memberships: any[];
   history: any[];
   notifications: any[];
+  promoCodes: any[];
+  referrals: any[];
+  referralCredits: any[];
   config: Record<string, any> | null;
 } | null> {
   const db = getAdminFirestoreDb();
   if (!db) return null;
   try {
-    const [membersSnap, ordersSnap, subsSnap, histSnap, notifSnap, cfgSnap] = await Promise.all([
-      db.collection('members').get(),
-      db.collection('membershipOrders').get(),
-      db.collection('memberships').get(),
-      db.collection('membershipHistory').get(),
-      db.collection('memberNotifications').get(),
-      db.collection('membershipConfig').doc('public').get(),
-    ]);
+    const [membersSnap, ordersSnap, subsSnap, histSnap, notifSnap, promoSnap, refSnap, creditSnap, cfgSnap] =
+      await Promise.all([
+        db.collection('members').get(),
+        db.collection('membershipOrders').get(),
+        db.collection('memberships').get(),
+        db.collection('membershipHistory').get(),
+        db.collection('memberNotifications').get(),
+        db.collection('promoCodes').get(),
+        db.collection('referrals').get(),
+        db.collection('referralCredits').get(),
+        db.collection('membershipConfig').doc('public').get(),
+      ]);
 
     const members = membersSnap.docs.map((d) => {
       const data = d.data();
@@ -195,6 +202,11 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
         email: data.email || '',
         fullName: data.fullName || 'FEVIQO Member',
         phone: data.phone || '',
+        referralCode: data.referralCode || undefined,
+        referredByMemberId: data.referredByMemberId || undefined,
+        referredByCode: data.referredByCode || undefined,
+        creditBalancePkr: Number(data.creditBalancePkr) || 0,
+        creditBalanceUsd: Number(data.creditBalanceUsd) || 0,
         createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
         updatedAt: toIso(data.updatedAtIso || data.updatedAt) || new Date().toISOString(),
       };
@@ -237,6 +249,35 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       };
     });
 
+    const promoCodes = promoSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        ...data,
+        id: data.id || d.id,
+        createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
+        updatedAt: toIso(data.updatedAtIso || data.updatedAt) || new Date().toISOString(),
+      };
+    });
+
+    const referrals = refSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        ...data,
+        id: data.id || d.id,
+        createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
+        updatedAt: toIso(data.updatedAtIso || data.updatedAt) || new Date().toISOString(),
+      };
+    });
+
+    const referralCredits = creditSnap.docs.map((d) => {
+      const data = d.data();
+      return {
+        ...data,
+        id: data.id || d.id,
+        createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
+      };
+    });
+
     let config: Record<string, any> | null = null;
     if (cfgSnap.exists) {
       const data = cfgSnap.data() || {};
@@ -246,7 +287,7 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       };
     }
 
-    return { members, orders, memberships, history, notifications, config };
+    return { members, orders, memberships, history, notifications, promoCodes, referrals, referralCredits, config };
   } catch (err: any) {
     if (err?.code === 7 || String(err?.message || '').includes('PERMISSION_DENIED')) {
       firestoreWriteDisabled = true;

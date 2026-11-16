@@ -22,6 +22,9 @@ import {
   Clock,
   Globe,
   Trash2,
+  Tag,
+  Gift,
+  Edit2,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
@@ -37,7 +40,10 @@ import {
 } from '../../data/membershipCatalog';
 import {
   AdminMembershipsOverview,
+  AdminPromoCodeView,
   MembershipOrder,
+  PromoDiscountType,
+  ReferralConfig,
   SafeAdmin,
   SafeMember,
   fetchAdminAuthStatus,
@@ -65,6 +71,11 @@ import {
   fetchAdminEmailTransport,
   saveAdminEmailTransport,
   fetchAuthenticatedProofObjectUrl,
+  createAdminPromoCode,
+  updateAdminPromoCode,
+  deleteAdminPromoCode,
+  updateAdminReferralConfig,
+  updateAdminReferralStatus,
 } from '../../services/membershipService';
 import { auth, googleProvider } from '../../firebase';
 import {
@@ -84,7 +95,7 @@ interface MembershipAdminPageProps {
   onNavigatePage: (route: AppRoute) => void;
 }
 
-type AdminTab = 'requests' | 'memberships' | 'accounts' | 'notifications' | 'config' | 'audit' | 'roles';
+type AdminTab = 'requests' | 'memberships' | 'promos' | 'accounts' | 'notifications' | 'config' | 'audit' | 'roles';
 
 export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   onBookCall,
@@ -208,6 +219,46 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     notificationRecipients?: string[];
   } | null>(null);
 
+  // Promo Codes & Referral Program Admin State
+  const [editingPromoId, setEditingPromoId] = useState<string | null>(null);
+  const [promoCodeField, setPromoCodeField] = useState('');
+  const [promoDescField, setPromoDescField] = useState('');
+  const [promoDiscountType, setPromoDiscountType] = useState<PromoDiscountType>('percentage');
+  const [promoPercentField, setPromoPercentField] = useState('20');
+  const [promoMaxPkrField, setPromoMaxPkrField] = useState('');
+  const [promoMaxUsdField, setPromoMaxUsdField] = useState('');
+  const [promoAmtPkrField, setPromoAmtPkrField] = useState('150');
+  const [promoAmtUsdField, setPromoAmtUsdField] = useState('0.50');
+  const [promoMinPkrField, setPromoMinPkrField] = useState('0');
+  const [promoMinUsdField, setPromoMinUsdField] = useState('0');
+  const [promoPlansField, setPromoPlansField] = useState<MembershipPlanId[]>([]);
+  const [promoUsageLimitField, setPromoUsageLimitField] = useState('');
+  const [promoPerUserLimitField, setPromoPerUserLimitField] = useState('1');
+  const [promoExpiresAtField, setPromoExpiresAtField] = useState('');
+  const [promoIsActiveField, setPromoIsActiveField] = useState(true);
+  const [savingPromo, setSavingPromo] = useState(false);
+  const [deletingPromoId, setDeletingPromoId] = useState<string | null>(null);
+  const [promoSearch, setPromoSearch] = useState('');
+
+  const [refEnabled, setRefEnabled] = useState(true);
+  const [refRewardType, setRefRewardType] = useState<ReferralConfig['referrerRewardType']>('credit');
+  const [refRewardPkr, setRefRewardPkr] = useState('100');
+  const [refRewardUsd, setRefRewardUsd] = useState('0.5');
+  const [refPromoPercent, setRefPromoPercent] = useState('20');
+  const [refPromoExpiryDays, setRefPromoExpiryDays] = useState('30');
+  const [refereeDiscType, setRefereeDiscType] = useState<ReferralConfig['refereeDiscountType']>('percentage');
+  const [refereeDiscPercent, setRefereeDiscPercent] = useState('10');
+  const [refereeDiscPkr, setRefereeDiscPkr] = useState('50');
+  const [refereeDiscUsd, setRefereeDiscUsd] = useState('0.25');
+  const [refMinOrderPkr, setRefMinOrderPkr] = useState('300');
+  const [refMinOrderUsd, setRefMinOrderUsd] = useState('1');
+  const [refMaxConversions, setRefMaxConversions] = useState('25');
+  const [savingRefConfig, setSavingRefConfig] = useState(false);
+
+  const [referralStatusFilter, setReferralStatusFilter] = useState<'all' | 'signed_up' | 'converted' | 'blocked'>('all');
+  const [referralSearch, setReferralSearch] = useState('');
+  const [updatingReferralId, setUpdatingReferralId] = useState<string | null>(null);
+
   const syncSettingsFromOverview = (ov: AdminMembershipsOverview) => {
     setWhatsappInput(ov.config.whatsappNumber || '');
     setAdminEmailInput(ov.config.adminEmail || '');
@@ -222,6 +273,22 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     });
     setIntlInstructionsEnInput(ov.config.internationalInstructionsEn || '');
     setIntlInstructionsUrInput(ov.config.internationalInstructionsUr || '');
+    const rc = ov.referralConfig || ov.config.referralConfig;
+    if (rc) {
+      setRefEnabled(Boolean(rc.enabled));
+      setRefRewardType(rc.referrerRewardType);
+      setRefRewardPkr(String(rc.referrerRewardPkr ?? 100));
+      setRefRewardUsd(String(rc.referrerRewardUsd ?? 0.5));
+      setRefPromoPercent(String(rc.referrerPromoDiscountPercent ?? 20));
+      setRefPromoExpiryDays(String(rc.referrerPromoExpiryDays ?? 30));
+      setRefereeDiscType(rc.refereeDiscountType || 'none');
+      setRefereeDiscPercent(String(rc.refereeDiscountPercent ?? 10));
+      setRefereeDiscPkr(String(rc.refereeDiscountPkr ?? 50));
+      setRefereeDiscUsd(String(rc.refereeDiscountUsd ?? 0.25));
+      setRefMinOrderPkr(String(rc.minOrderPkrForReward ?? 300));
+      setRefMinOrderUsd(String(rc.minOrderUsdForReward ?? 1));
+      setRefMaxConversions(rc.maxConversionsPerReferrer === null ? '' : String(rc.maxConversionsPerReferrer ?? 25));
+    }
   };
 
   const runBidirectionalCloudSync = useCallback(
@@ -959,6 +1026,194 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     }
   };
 
+  const resetPromoForm = () => {
+    setEditingPromoId(null);
+    setPromoCodeField('');
+    setPromoDescField('');
+    setPromoDiscountType('percentage');
+    setPromoPercentField('20');
+    setPromoMaxPkrField('');
+    setPromoMaxUsdField('');
+    setPromoAmtPkrField('150');
+    setPromoAmtUsdField('0.50');
+    setPromoMinPkrField('0');
+    setPromoMinUsdField('0');
+    setPromoPlansField([]);
+    setPromoUsageLimitField('');
+    setPromoPerUserLimitField('1');
+    setPromoExpiresAtField('');
+    setPromoIsActiveField(true);
+  };
+
+  const handleEditPromoClick = (promo: AdminPromoCodeView) => {
+    setEditingPromoId(promo.id);
+    setPromoCodeField(promo.code);
+    setPromoDescField(promo.description || '');
+    setPromoDiscountType(promo.discountType);
+    setPromoPercentField(String(promo.discountPercent || 20));
+    setPromoMaxPkrField(promo.maxDiscountPkr ? String(promo.maxDiscountPkr) : '');
+    setPromoMaxUsdField(promo.maxDiscountUsd ? String(promo.maxDiscountUsd) : '');
+    setPromoAmtPkrField(String(promo.discountAmountPkr || 0));
+    setPromoAmtUsdField(String(promo.discountAmountUsd || 0));
+    setPromoMinPkrField(String(promo.minPurchasePkr || 0));
+    setPromoMinUsdField(String(promo.minPurchaseUsd || 0));
+    setPromoPlansField(promo.applicablePlanIds || []);
+    setPromoUsageLimitField(promo.usageLimit === null ? '' : String(promo.usageLimit));
+    setPromoPerUserLimitField(String(promo.perUserLimit || 1));
+    setPromoExpiresAtField(promo.expiresAt ? promo.expiresAt.slice(0, 16) : '');
+    setPromoIsActiveField(Boolean(promo.isActive));
+  };
+
+  const handleSavePromoSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingPromo(true);
+    setFeedbackBanner(null);
+    try {
+      const expiresIso = promoExpiresAtField.trim()
+        ? new Date(promoExpiresAtField.trim()).toISOString()
+        : undefined;
+      const usageLim = promoUsageLimitField.trim() ? Number(promoUsageLimitField.trim()) : null;
+      const payload = {
+        code: promoCodeField.trim().toUpperCase(),
+        description: promoDescField.trim(),
+        discountType: promoDiscountType,
+        discountPercent: Number(promoPercentField) || 0,
+        discountAmountPkr: Number(promoAmtPkrField) || 0,
+        discountAmountUsd: Number(promoAmtUsdField) || 0,
+        maxDiscountPkr: promoMaxPkrField.trim() ? Number(promoMaxPkrField.trim()) : undefined,
+        maxDiscountUsd: promoMaxUsdField.trim() ? Number(promoMaxUsdField.trim()) : undefined,
+        minPurchasePkr: Number(promoMinPkrField) || 0,
+        minPurchaseUsd: Number(promoMinUsdField) || 0,
+        applicablePlanIds: promoPlansField,
+        usageLimit: usageLim,
+        perUserLimit: Math.max(1, Number(promoPerUserLimitField) || 1),
+        expiresAt: expiresIso,
+        isActive: promoIsActiveField,
+      };
+      const res = editingPromoId
+        ? await updateAdminPromoCode(editingPromoId, {
+            ...payload,
+            maxDiscountPkr: payload.maxDiscountPkr ?? null,
+            maxDiscountUsd: payload.maxDiscountUsd ?? null,
+            expiresAt: expiresIso ?? null,
+          })
+        : await createAdminPromoCode(payload);
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        resetPromoForm();
+        setFeedbackBanner({
+          type: 'success',
+          text: editingPromoId
+            ? `Promo code ${res.promo.code} updated.`
+            : `Promo code ${res.promo.code} created and activated.`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to save promo code.' });
+    } finally {
+      setSavingPromo(false);
+    }
+  };
+
+  const handleTogglePromoActive = async (promo: AdminPromoCodeView) => {
+    setFeedbackBanner(null);
+    try {
+      const res = await updateAdminPromoCode(promo.id, { isActive: !promo.isActive });
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setFeedbackBanner({
+          type: 'success',
+          text: `Promo code ${promo.code} is now ${!promo.isActive ? 'active' : 'disabled'}.`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to toggle promo code status.' });
+    }
+  };
+
+  const handleDeletePromo = async (promoId: string, code: string) => {
+    setActionBusy(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await deleteAdminPromoCode(promoId);
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setDeletingPromoId(null);
+        if (editingPromoId === promoId) resetPromoForm();
+        setFeedbackBanner({ type: 'success', text: `Promo code ${code} deleted.` });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to delete promo code.' });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleSaveReferralConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingRefConfig(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await updateAdminReferralConfig({
+        enabled: refEnabled,
+        referrerRewardType: refRewardType,
+        referrerRewardPkr: Math.max(0, Number(refRewardPkr) || 0),
+        referrerRewardUsd: Math.max(0, Number(refRewardUsd) || 0),
+        referrerPromoDiscountPercent: Math.min(100, Math.max(1, Number(refPromoPercent) || 20)),
+        referrerPromoExpiryDays: Math.max(1, Number(refPromoExpiryDays) || 30),
+        refereeDiscountType: refereeDiscType,
+        refereeDiscountPercent: Math.min(100, Math.max(0, Number(refereeDiscPercent) || 0)),
+        refereeDiscountPkr: Math.max(0, Number(refereeDiscPkr) || 0),
+        refereeDiscountUsd: Math.max(0, Number(refereeDiscUsd) || 0),
+        minOrderPkrForReward: Math.max(0, Number(refMinOrderPkr) || 0),
+        minOrderUsdForReward: Math.max(0, Number(refMinOrderUsd) || 0),
+        maxConversionsPerReferrer: refMaxConversions.trim() ? Number(refMaxConversions.trim()) : null,
+      });
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        syncSettingsFromOverview(res.overview);
+        setFeedbackBanner({ type: 'success', text: 'Referral reward settings saved.' });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to save referral program settings.' });
+    } finally {
+      setSavingRefConfig(false);
+    }
+  };
+
+  const handleToggleReferralStatus = async (referralId: string, nextStatus: 'blocked' | 'signed_up') => {
+    setUpdatingReferralId(referralId);
+    setFeedbackBanner(null);
+    try {
+      const res = await updateAdminReferralStatus(
+        referralId,
+        nextStatus,
+        nextStatus === 'blocked' ? 'Flagged by admin review' : undefined
+      );
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setFeedbackBanner({
+          type: 'success',
+          text: nextStatus === 'blocked' ? 'Referral marked as blocked.' : 'Referral eligibility restored.',
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to update referral status.' });
+    } finally {
+      setUpdatingReferralId(null);
+    }
+  };
+
   const selectedRequest: MembershipOrder | undefined = selectedRequestId
     ? overview?.requests.find((r) => r.id === selectedRequestId)
     : undefined;
@@ -1142,7 +1397,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#0B0B0D] font-sans flex flex-col">
+    <div
+      className="admin-workspace min-h-screen bg-[#F8FAFC] text-[#0F172A] flex flex-col antialiased"
+      style={{ fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}
+    >
       <Navbar
         onBookCall={onBookCall}
         onNavigateSection={onNavigateSection}
@@ -1151,30 +1409,30 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         onNavigatePage={onNavigatePage}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <main className="flex-1 max-w-[1360px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
         {authLoading ? (
-          <div className="rounded-2xl bg-white border border-zinc-200 p-10 text-center text-sm text-zinc-600">
+          <div className="rounded-2xl bg-white border border-slate-200 p-10 text-center text-sm text-slate-600">
             Checking FEVIQO administrator authorization...
           </div>
         ) : !authenticatedAdmin ? (
-          <div className="max-w-md mx-auto rounded-2xl bg-white border border-zinc-200 p-6 sm:p-8 shadow-sm space-y-6">
-            <div className="space-y-1.5">
-              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A] flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5" />
+          <div className="max-w-md mx-auto rounded-2xl bg-white border border-slate-200 p-7 sm:p-8 shadow-sm space-y-6">
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-[0.06em] text-[#16A34A] flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 shrink-0" />
                 <span>Restricted Admin Portal</span>
               </div>
-              <h1 className="text-2xl font-bold text-[#0B0B0D]">
+              <h1 className="text-2xl font-bold text-[#0F172A] leading-tight">
                 {hasConfiguredAdmins ? 'FEVIQO Admin Sign In' : 'Initialize Primary Owner Admin'}
               </h1>
-              <p className="text-xs text-zinc-600 leading-relaxed">
+              <p className="text-[13px] text-slate-600 leading-relaxed">
                 {hasConfiguredAdmins
-                  ? 'Sign in with your authorized FEVIQO administrator credentials to review Bank QR payment proofs and manage memberships.'
+                  ? 'Sign in with your authorized FEVIQO administrator credentials to review payment proofs and manage memberships.'
                   : 'No administrator account is initialized yet. Create the primary owner admin account once to lock and protect this portal.'}
               </p>
             </div>
 
             {authError && (
-              <div role="alert" className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
+              <div role="alert" className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-[13px] text-red-700 flex items-start gap-2.5 leading-relaxed">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{authError}</span>
               </div>
@@ -1183,31 +1441,31 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             <form onSubmit={hasConfiguredAdmins ? handleLogin : handleBootstrap} className="space-y-4">
               {!hasConfiguredAdmins && (
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Admin Full Name</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Admin Full Name</label>
                   <input
                     type="text"
                     required
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                    className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">Admin Email</label>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Admin Email</label>
                 <input
                   type="email"
                   required
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="Enter admin email"
-                  className="w-full px-3.5 py-2.5 text-sm border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                  className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">Password</label>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Password</label>
                 <input
                   type="password"
                   required
@@ -1215,13 +1473,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
                   placeholder={hasConfiguredAdmins ? 'Enter admin password' : 'Minimum 8 characters'}
-                  className="w-full px-3.5 py-2.5 text-sm border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                  className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                 />
               </div>
 
               {!hasConfiguredAdmins && (
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Confirm Password</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Confirm Password</label>
                   <input
                     type="password"
                     required
@@ -1229,7 +1487,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     value={authConfirmPassword}
                     onChange={(e) => setAuthConfirmPassword(e.target.value)}
                     placeholder="Re-enter admin password"
-                    className="w-full px-3.5 py-2.5 text-sm border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                    className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                   />
                 </div>
               )}
@@ -1237,7 +1495,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
               <button
                 type="submit"
                 disabled={authSubmitting || googleAuthLoading}
-                className="w-full py-3 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-sm font-semibold transition cursor-pointer disabled:opacity-60"
+                className="w-full py-3 rounded-xl bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-sm font-semibold transition cursor-pointer disabled:opacity-60"
               >
                 {authSubmitting
                   ? 'Verifying...'
@@ -1249,16 +1507,16 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
             {hasConfiguredAdmins && (
               <div className="space-y-3 pt-1">
-                <div className="flex items-center gap-3 text-[11px] uppercase tracking-wider text-zinc-400">
-                  <div className="flex-1 h-px bg-zinc-200" />
+                <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.06em] text-slate-400">
+                  <div className="flex-1 h-px bg-slate-200" />
                   <span>or</span>
-                  <div className="flex-1 h-px bg-zinc-200" />
+                  <div className="flex-1 h-px bg-slate-200" />
                 </div>
                 <button
                   type="button"
                   disabled={googleAuthLoading || authSubmitting}
                   onClick={handleGoogleAdminSignIn}
-                  className="w-full py-2.5 px-4 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 disabled:opacity-60 text-[#0B0B0D] text-xs font-semibold flex items-center justify-center gap-2.5 transition cursor-pointer"
+                  className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-60 text-[#0F172A] text-[13px] font-semibold flex items-center justify-center gap-2.5 transition cursor-pointer"
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                     <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z" />
@@ -1274,51 +1532,52 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         ) : (
           <>
             {/* Admin Workspace Top Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white rounded-2xl border border-zinc-200 p-6">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A] flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>FEVIQO Membership &amp; Payment Verification Admin</span>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white rounded-2xl border border-slate-200 p-6 sm:p-7">
+              <div className="space-y-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.06em] text-[#16A34A] flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span>FEVIQO Admin · Membership &amp; Payment Operations</span>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-[#0B0B0D] mt-1">
+                <h1 className="text-2xl sm:text-[28px] font-bold text-[#0F172A] tracking-normal leading-snug">
                   Payment Verification &amp; Subscriptions
                 </h1>
-                <div className="flex flex-wrap items-center gap-3 mt-1">
-                  <p className="text-xs text-zinc-500">
-                    Signed in as <strong>{authenticatedAdmin.name}</strong> ({authenticatedAdmin.email})
-                  </p>
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-slate-600 leading-relaxed">
+                  <span>
+                    Signed in as <strong className="font-semibold text-[#0F172A]">{authenticatedAdmin.name}</strong> ({authenticatedAdmin.email})
+                  </span>
+                  <span aria-hidden="true" className="text-slate-300">·</span>
                   {firebaseAdminConnected || overview?.serverCloudConnected ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                      <Cloud className="w-3 h-3" />
+                    <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+                      <Cloud className="w-3.5 h-3.5 shrink-0" />
                       <span>
-                        Cloud DB Connected{overview?.serverCloudConnected && !firebaseAdminConnected ? ' (Server)' : ''}
-                        {cloudSyncedAt ? ` · Synced ${new Date(cloudSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                        Cloud Sync Connected{overview?.serverCloudConnected && !firebaseAdminConnected ? ' (Server)' : ''}
+                        {cloudSyncedAt ? ` · Updated ${new Date(cloudSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
                       </span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                      <Cloud className="w-3 h-3" />
-                      <span>Connect Google Cloud Sync for permanent persistence</span>
+                    <span className="inline-flex items-center gap-1.5 font-medium text-amber-700">
+                      <Cloud className="w-3.5 h-3.5 shrink-0" />
+                      <span>Connect Cloud Sync for permanent persistence</span>
                     </span>
                   )}
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={handleManualCloudSync}
                   disabled={cloudSyncing}
-                  className={`px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition ${
+                  className={`px-4 py-2.5 rounded-xl text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0 ${
                     firebaseAdminConnected || overview?.serverCloudConnected
-                      ? 'border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900'
-                      : 'bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white'
+                      ? 'border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
+                      : 'bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white'
                   }`}
                 >
-                  <Cloud className={`w-3.5 h-3.5 ${cloudSyncing ? 'animate-pulse' : ''}`} />
+                  <Cloud className={`w-3.5 h-3.5 shrink-0 ${cloudSyncing ? 'animate-pulse' : ''}`} />
                   <span>
                     {cloudSyncing
-                      ? 'Syncing Cloud...'
+                      ? 'Syncing...'
                       : firebaseAdminConnected || overview?.serverCloudConnected
                       ? 'Sync Cloud DB'
                       : 'Connect Cloud Sync'}
@@ -1328,18 +1587,18 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   type="button"
                   onClick={() => loadOverview(true)}
                   disabled={loadingOverview}
-                  className="px-4 py-2 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingOverview ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${loadingOverview ? 'animate-spin' : ''}`} />
                   <span>Refresh</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign Out Admin</span>
+                  <LogOut className="w-3.5 h-3.5 shrink-0" />
+                  <span>Sign Out</span>
                 </button>
               </div>
             </div>
@@ -1347,7 +1606,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             {feedbackBanner && (
               <div
                 role={feedbackBanner.type === 'error' ? 'alert' : 'status'}
-                className={`p-4 rounded-xl border text-sm flex items-center justify-between gap-4 ${
+                className={`p-4 rounded-xl border text-sm flex items-center justify-between gap-4 leading-relaxed ${
                   feedbackBanner.type === 'error'
                     ? 'bg-red-50 border-red-200 text-red-800'
                     : 'bg-emerald-50 border-emerald-200 text-emerald-900'
@@ -1357,47 +1616,144 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setFeedbackBanner(null)}
-                  className="p-1 rounded-lg hover:bg-black/5 cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-black/5 cursor-pointer shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             )}
 
-            {/* Overview Metrics */}
+            {/* Overview Metrics: Symmetric 4 Primary KPIs + 7-Column Status Ledger */}
             {overview && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-                {[
-                  { label: 'Total Members', value: overview.metrics.totalMembers, accent: 'text-[#0B0B0D]' },
-                  { label: 'Active Plans', value: overview.metrics.activeMemberships, accent: 'text-[#16A34A]' },
-                  { label: 'Expiring ≤7d', value: overview.metrics.expiringIn7Days ?? 0, accent: 'text-amber-600' },
-                  { label: 'Pending Review', value: overview.metrics.pendingVerifications, accent: 'text-amber-600' },
-                  { label: 'Pending Renewals', value: overview.metrics.pendingRenewals ?? 0, accent: 'text-blue-700' },
-                  { label: 'USD Binance Orders', value: overview.metrics.internationalOrders ?? 0, accent: 'text-[#0B0B0D]' },
-                  { label: 'Awaiting Pay', value: overview.metrics.awaitingPayments, accent: 'text-zinc-600' },
-                  { label: 'Approved', value: overview.metrics.approvedPayments, accent: 'text-emerald-700' },
-                  { label: 'Rejected', value: overview.metrics.rejectedPayments, accent: 'text-red-600' },
-                  { label: 'Expired', value: overview.metrics.expiredMemberships, accent: 'text-zinc-500' },
-                  { label: 'Failed Emails', value: overview.metrics.failedEmails, accent: overview.metrics.failedEmails > 0 ? 'text-red-600' : 'text-zinc-500' },
-                ].map((metric) => (
-                  <div key={metric.label} className="rounded-xl bg-white border border-zinc-200 p-3.5">
-                    <div className="text-[11px] text-zinc-500 font-medium">{metric.label}</div>
-                    <div className={`text-2xl font-bold tabular-nums mt-1 ${metric.accent}`}>{metric.value}</div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    {
+                      label: 'Total Members',
+                      value: overview.metrics.totalMembers,
+                      sub: 'Registered customer accounts',
+                      accent: 'text-[#0F172A]',
+                    },
+                    {
+                      label: 'Active Memberships',
+                      value: overview.metrics.activeMemberships,
+                      sub: 'Currently unlocked subscribers',
+                      accent: 'text-[#16A34A]',
+                    },
+                    {
+                      label: 'Pending Verification',
+                      value: overview.metrics.pendingVerifications,
+                      sub: 'Proofs awaiting admin review',
+                      accent: overview.metrics.pendingVerifications > 0 ? 'text-amber-600' : 'text-[#0F172A]',
+                    },
+                    {
+                      label: 'Binance USD Orders',
+                      value: overview.metrics.internationalOrders ?? 0,
+                      sub: 'International USD checkouts',
+                      accent: 'text-[#0F172A]',
+                    },
+                  ].map((kpi) => (
+                    <div
+                      key={kpi.label}
+                      className="rounded-2xl bg-white border border-slate-200 px-5 py-4 flex flex-col justify-between gap-1.5"
+                    >
+                      <div className="text-[13px] font-medium text-slate-500">{kpi.label}</div>
+                      <div className={`text-3xl font-bold tabular-nums tracking-normal leading-tight ${kpi.accent}`}>
+                        {kpi.value}
+                      </div>
+                      <div className="text-xs text-slate-400">{kpi.sub}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-2xl bg-white border border-slate-200 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 divide-y sm:divide-y-0 sm:divide-x divide-slate-200 overflow-hidden">
+                  {[
+                    { label: 'Expiring ≤7d', value: overview.metrics.expiringIn7Days ?? 0, accent: 'text-amber-600' },
+                    { label: 'Renewals', value: overview.metrics.pendingRenewals ?? 0, accent: 'text-blue-700' },
+                    { label: 'Awaiting Pay', value: overview.metrics.awaitingPayments, accent: 'text-slate-700' },
+                    { label: 'Approved', value: overview.metrics.approvedPayments, accent: 'text-emerald-700' },
+                    { label: 'Rejected', value: overview.metrics.rejectedPayments, accent: 'text-red-600' },
+                    { label: 'Expired', value: overview.metrics.expiredMemberships, accent: 'text-slate-600' },
+                    {
+                      label: 'Failed Emails',
+                      value: overview.metrics.failedEmails,
+                      accent: overview.metrics.failedEmails > 0 ? 'text-red-600' : 'text-slate-500',
+                    },
+                  ].map((metric) => (
+                    <div key={metric.label} className="px-4 py-3.5 flex flex-col justify-between gap-1">
+                      <div className="text-xs font-medium text-slate-500 whitespace-nowrap">{metric.label}</div>
+                      <div className={`text-xl font-bold tabular-nums tracking-normal ${metric.accent}`}>
+                        {metric.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Growth, Promos & Referrals KPI Strip */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="rounded-2xl bg-white border border-slate-200 px-5 py-4 flex flex-col justify-between gap-1">
+                    <div className="text-[13px] font-medium text-slate-500 flex items-center gap-1.5">
+                      <Gift className="w-3.5 h-3.5 text-[#16A34A]" />
+                      <span>Total Referrals</span>
+                    </div>
+                    <div className="text-2xl font-bold text-[#0F172A] tabular-nums">
+                      {overview.metrics.totalReferrals ?? 0}
+                    </div>
+                    <div className="text-xs text-slate-400 tabular-nums">
+                      {overview.metrics.pendingReferrals ?? 0} pending · {overview.metrics.blockedReferrals ?? 0} blocked
+                    </div>
                   </div>
-                ))}
+
+                  <div className="rounded-2xl bg-white border border-slate-200 px-5 py-4 flex flex-col justify-between gap-1">
+                    <div className="text-[13px] font-medium text-slate-500">Referral Conversions</div>
+                    <div className="text-2xl font-bold text-[#16A34A] tabular-nums">
+                      {overview.metrics.convertedReferrals ?? 0}
+                      <span className="text-sm font-semibold text-slate-500 ml-1.5">
+                        ({overview.metrics.referralConversionRate ?? 0}%)
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-400">Approved invited purchases</div>
+                  </div>
+
+                  <div className="rounded-2xl bg-white border border-slate-200 px-5 py-4 flex flex-col justify-between gap-1">
+                    <div className="text-[13px] font-medium text-slate-500 flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-[#16A34A]" />
+                      <span>Promo Redemptions</span>
+                    </div>
+                    <div className="text-2xl font-bold text-[#0F172A] tabular-nums">
+                      {overview.metrics.promoRedemptions ?? 0}
+                    </div>
+                    <div className="text-xs text-slate-400 tabular-nums">
+                      {overview.metrics.activePromoCodes ?? 0} active promo campaigns
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-white border border-slate-200 px-5 py-4 flex flex-col justify-between gap-1">
+                    <div className="text-[13px] font-medium text-slate-500">Discounts &amp; Referral Rewards</div>
+                    <div className="text-base font-bold text-[#0F172A] tabular-nums leading-snug">
+                      PKR {Math.round(overview.metrics.totalDiscountGivenPkr ?? 0).toLocaleString()} · $
+                      {Number(overview.metrics.totalDiscountGivenUsd ?? 0).toFixed(2)}
+                    </div>
+                    <div className="text-xs text-slate-400 tabular-nums">
+                      Rewards: PKR {Math.round(overview.metrics.totalReferralRewardsPkr ?? 0).toLocaleString()} · $
+                      {Number(overview.metrics.totalReferralRewardsUsd ?? 0).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Admin Workspace Tabs */}
-            <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 pb-3">
+            <div className="bg-white rounded-2xl border border-slate-200 p-1.5 flex items-center gap-1.5 overflow-x-auto">
               {(
                 [
-                  { id: 'requests', label: 'Payment Verification Queue', icon: CheckCircle2 },
-                  { id: 'memberships', label: 'Customer Memberships', icon: Users },
+                  { id: 'requests', label: 'Payment Verification', icon: CheckCircle2 },
+                  { id: 'memberships', label: 'Memberships', icon: Users },
+                  { id: 'promos', label: 'Promo & Referrals', icon: Tag },
                   { id: 'accounts', label: 'Registered Accounts', icon: UserPlus },
                   { id: 'notifications', label: 'Reminders & Scheduler', icon: Bell },
-                  { id: 'config', label: 'QR Codes & USD Settings', icon: Settings },
-                  { id: 'audit', label: 'Email Logs & Audit Trail', icon: ClipboardList },
+                  { id: 'config', label: 'QR & USD Settings', icon: Settings },
+                  { id: 'audit', label: 'Email & Audit Logs', icon: ClipboardList },
                   { id: 'roles', label: 'Admin Roles', icon: ShieldCheck },
                 ] as const
               ).map((tab) => {
@@ -1408,13 +1764,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-2 transition cursor-pointer ${
+                    className={`px-4 py-2.5 rounded-xl text-[13px] font-semibold inline-flex items-center gap-2 transition cursor-pointer whitespace-nowrap shrink-0 ${
                       active
-                        ? 'bg-[#0B0B0D] text-white'
-                        : 'bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50'
+                        ? 'bg-[#0F172A] text-white shadow-xs'
+                        : 'text-slate-600 hover:text-[#0F172A] hover:bg-slate-100'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="w-4 h-4 shrink-0" />
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -1424,101 +1780,83 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             {/* TAB 1: PAYMENT VERIFICATION QUEUE */}
             {overview && activeTab === 'requests' && (
               <div className="space-y-4">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {[
-                      { id: 'all', label: 'All' },
-                      { id: 'pending_verification', label: 'Pending Verification' },
-                      { id: 'awaiting_payment', label: 'Awaiting Payment' },
-                      { id: 'approved', label: 'Approved' },
-                      { id: 'rejected', label: 'Rejected' },
-                    ].map((f) => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => setRequestStatusFilter(f.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
-                          requestStatusFilter === f.id
-                            ? 'bg-[#22C55E] text-[#0B0B0D]'
-                            : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                    <div className="h-4 w-px bg-zinc-200 mx-1 hidden sm:block" />
-                    {(
-                      [
-                        { id: 'all', label: 'All Types' },
-                        { id: 'new', label: 'New' },
-                        { id: 'renewal', label: 'Renewals' },
-                      ] as const
-                    ).map((tf) => (
-                      <button
-                        key={tf.id}
-                        type="button"
-                        onClick={() => setRequestTypeFilter(tf.id)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
-                          requestTypeFilter === tf.id
-                            ? 'bg-[#0B0B0D] text-white'
-                            : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-                        }`}
-                      >
-                        {tf.label}
-                      </button>
-                    ))}
-                    <div className="h-4 w-px bg-zinc-200 mx-1 hidden sm:block" />
-                    {(
-                      [
-                        { id: 'all', label: 'All Methods' },
-                        { id: 'bank_qr', label: 'PKR Bank QR' },
-                        { id: 'binance_qr', label: 'USD Binance QR' },
-                      ] as const
-                    ).map((mf) => (
-                      <button
-                        key={mf.id}
-                        type="button"
-                        onClick={() => setRequestMethodFilter(mf.id)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
-                          requestMethodFilter === mf.id
-                            ? 'bg-amber-100 text-amber-950 border border-amber-300'
-                            : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-                        }`}
-                      >
-                        {mf.label}
-                      </button>
-                    ))}
+                <div className="rounded-2xl bg-white border border-slate-200 p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <div className="inline-flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-100">
+                      {[
+                        { id: 'all', label: 'All' },
+                        { id: 'pending_verification', label: 'Pending Review' },
+                        { id: 'awaiting_payment', label: 'Awaiting Pay' },
+                        { id: 'approved', label: 'Approved' },
+                        { id: 'rejected', label: 'Rejected' },
+                      ].map((f) => (
+                        <button
+                          key={f.id}
+                          type="button"
+                          onClick={() => setRequestStatusFilter(f.id)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer whitespace-nowrap transition ${
+                            requestStatusFilter === f.id
+                              ? 'bg-white text-[#0F172A] shadow-xs'
+                              : 'text-slate-600 hover:text-[#0F172A]'
+                          }`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <select
+                      value={requestTypeFilter}
+                      onChange={(e) => setRequestTypeFilter(e.target.value as 'all' | 'new' | 'renewal')}
+                      aria-label="Filter by request type"
+                      className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer focus:outline-none focus:border-[#0F172A]"
+                    >
+                      <option value="all">All Order Types</option>
+                      <option value="new">New Memberships</option>
+                      <option value="renewal">Renewals Only</option>
+                    </select>
+
+                    <select
+                      value={requestMethodFilter}
+                      onChange={(e) => setRequestMethodFilter(e.target.value as 'all' | 'bank_qr' | 'binance_qr')}
+                      aria-label="Filter by payment method"
+                      className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer focus:outline-none focus:border-[#0F172A]"
+                    >
+                      <option value="all">All Methods</option>
+                      <option value="bank_qr">PKR Bank QR</option>
+                      <option value="binance_qr">USD Binance QR</option>
+                    </select>
                   </div>
 
-                  <div className="relative w-full lg:w-72 shrink-0">
-                    <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <div className="relative w-full xl:w-80 shrink-0">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={requestSearch}
                       onChange={(e) => setRequestSearch(e.target.value)}
-                      placeholder="Search name, email, phone, request ID"
-                      className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                      placeholder="Search customer, drama, or request ID"
+                      className="w-full pl-10 pr-3.5 py-2 text-[13px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-white border border-zinc-200 overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                <div className="rounded-2xl bg-white border border-slate-200 overflow-x-auto">
+                  <table className="w-full text-left text-[13px] leading-relaxed">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-[0.06em] text-[11px] font-semibold">
                       <tr>
-                        <th className="py-3.5 px-4">Request ID &amp; Type</th>
-                        <th className="py-3.5 px-4">Customer</th>
-                        <th className="py-3.5 px-4">Plan &amp; Amount</th>
-                        <th className="py-3.5 px-4">Selected Dramas</th>
-                        <th className="py-3.5 px-4">Date</th>
-                        <th className="py-3.5 px-4">Status</th>
-                        <th className="py-3.5 px-4 text-right">Action</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Request</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Customer</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Plan &amp; Amount</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Included Dramas</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Submitted</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Status</th>
+                        <th className="py-3.5 px-5 text-right whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100">
+                    <tbody className="divide-y divide-slate-100">
                       {filteredRequests.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="py-10 text-center text-zinc-500">
+                          <td colSpan={7} className="py-12 text-center text-sm text-slate-500">
                             No payment requests match the current filter.
                           </td>
                         </tr>
@@ -1526,33 +1864,25 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         filteredRequests.map((req) => {
                           const isRenewal = req.orderType === 'renewal';
                           const isBinance = req.paymentMethod === 'binance_qr' || req.currency === 'USD';
+                          const dramaNames = resolvePackageDramaNames(req.planId, req.selectedDramaIds);
                           return (
-                            <tr key={req.id} className="hover:bg-zinc-50/70">
-                              <td className="py-3.5 px-4 font-mono text-[11px] text-zinc-700 whitespace-nowrap space-y-1">
-                                <div>{req.id}</div>
-                                <div className="flex flex-wrap gap-1 font-sans">
-                                  <span
-                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                      isRenewal
-                                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                        : 'bg-zinc-100 text-zinc-700'
-                                    }`}
-                                  >
+                            <tr key={req.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-4 px-5 align-top whitespace-nowrap">
+                                <div className="font-mono text-xs font-medium text-[#0F172A] tabular-nums">
+                                  {req.id}
+                                </div>
+                                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                                  <span className={isRenewal ? 'font-semibold text-blue-700' : 'font-medium text-slate-600'}>
                                     {isRenewal ? 'Renewal' : 'New'}
                                   </span>
-                                  <span
-                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                      isBinance
-                                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                    }`}
-                                  >
+                                  <span aria-hidden="true" className="text-slate-300">·</span>
+                                  <span className={isBinance ? 'font-semibold text-amber-700' : 'font-semibold text-emerald-700'}>
                                     {isBinance ? 'Binance USD' : 'Bank PKR'}
                                   </span>
                                 </div>
                               </td>
-                              <td className="py-3.5 px-4">
-                                <div className="font-semibold text-[#0B0B0D] flex items-center gap-1.5">
+                              <td className="py-4 px-5 align-top min-w-[200px]">
+                                <div className="font-semibold text-[#0F172A] flex items-center gap-1.5">
                                   <span>{req.customerName || 'Member'}</span>
                                   {(() => {
                                     const m = memberByIdMap.get(req.memberId);
@@ -1562,67 +1892,86 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                       ? 'google'
                                       : null;
                                     return method === 'google' ? (
-                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                                        Google
-                                      </span>
+                                      <span className="text-[11px] font-medium text-blue-700">· Google</span>
                                     ) : null;
                                   })()}
                                 </div>
-                                <div className="text-zinc-500">{req.customerEmail}</div>
-                                {req.customerPhone && <div className="text-zinc-400">{req.customerPhone}</div>}
-                                {req.visitorCountryCode && (
-                                  <div className="text-[10px] text-zinc-400 mt-0.5">
-                                    Country: {req.visitorCountryCode}
+                                <div className="text-xs text-slate-600 mt-0.5">{req.customerEmail}</div>
+                                {(req.customerPhone || req.visitorCountryCode) && (
+                                  <div className="text-xs text-slate-400 mt-0.5 tabular-nums flex items-center gap-1.5">
+                                    {req.customerPhone && <span>{req.customerPhone}</span>}
+                                    {req.customerPhone && req.visitorCountryCode && <span aria-hidden="true">·</span>}
+                                    {req.visitorCountryCode && <span>Country: {req.visitorCountryCode}</span>}
                                   </div>
                                 )}
                               </td>
-                              <td className="py-3.5 px-4 space-y-1">
-                                <div className="font-semibold text-[#0B0B0D] whitespace-nowrap">
-                                  {req.planName} ({req.durationDays}d)
+                              <td className="py-4 px-5 align-top whitespace-nowrap">
+                                <div className="font-semibold text-[#0F172A]">
+                                  {req.planName} · {req.durationDays}d
                                 </div>
-                                <div className="text-[#16A34A] font-bold tabular-nums whitespace-nowrap">
+                                <div className="text-emerald-700 font-bold tabular-nums mt-0.5">
                                   {formatOrderAmount(req)}
                                 </div>
+                                {(req.promoCode || (req.discountTotalPkr || 0) > 0 || (req.discountTotalUsd || 0) > 0) && (
+                                  <div className="text-[11px] text-emerald-700 font-medium mt-0.5 flex items-center gap-1.5">
+                                    {req.promoCode && (
+                                      <span className="font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200">
+                                        {req.promoCode}
+                                      </span>
+                                    )}
+                                    {((req.discountTotalPkr || 0) > 0 || (req.discountTotalUsd || 0) > 0) && (
+                                      <span>
+                                        Saved{' '}
+                                        {isBinance
+                                          ? `$${Number(req.discountTotalUsd || 0).toFixed(2)}`
+                                          : `PKR ${Number(req.discountTotalPkr || 0).toLocaleString()}`}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                                 {req.indicativeLocalDisplay && (
-                                  <div className="text-[10px] text-zinc-400 whitespace-nowrap">
+                                  <div className="text-xs text-slate-400 mt-0.5">
                                     Ref: {req.indicativeLocalDisplay}
                                   </div>
                                 )}
-                                <div className="text-[11px] font-medium text-zinc-700 leading-snug max-w-[240px]">
-                                  {resolvePackageDramaNames(req.planId, req.selectedDramaIds).join(', ') || '—'}
+                              </td>
+                              <td className="py-4 px-5 align-top min-w-[210px] max-w-[260px]">
+                                {req.planId === 'vip' && (
+                                  <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-emerald-700 mb-1">
+                                    All VIP Dramas
+                                  </div>
+                                )}
+                                <div className="space-y-0.5 text-[13px] font-medium text-[#0F172A]">
+                                  {dramaNames.length > 0 ? (
+                                    dramaNames.map((title) => (
+                                      <div key={title} className="leading-snug">
+                                        {title}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <span className="text-slate-400">—</span>
+                                  )}
                                 </div>
                               </td>
-                              <td className="py-3.5 px-4 max-w-[260px]">
-                                <div className="flex flex-wrap gap-1">
-                                  {resolvePackageDramaNames(req.planId, req.selectedDramaIds).map((title) => (
-                                    <span
-                                      key={title}
-                                      className="px-2 py-0.5 rounded-md bg-zinc-100 border border-zinc-200 text-[11px] font-semibold text-[#0B0B0D]"
-                                    >
-                                      {title}
-                                    </span>
-                                  ))}
-                                </div>
-                              </td>
-                              <td className="py-3.5 px-4 text-zinc-500 whitespace-nowrap">
+                              <td className="py-4 px-5 align-top text-xs text-slate-600 whitespace-nowrap tabular-nums">
                                 {formatDateTime(req.proofSubmittedAt || req.createdAt)}
                               </td>
-                              <td className="py-3.5 px-4 whitespace-nowrap">
+                              <td className="py-4 px-5 align-top whitespace-nowrap">
                                 <span
-                                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase ${
+                                  className={`inline-block px-2.5 py-1 rounded-md text-xs font-semibold capitalize ${
                                     req.status === 'approved'
                                       ? 'bg-emerald-50 text-emerald-700'
                                       : req.status === 'pending_verification'
                                       ? 'bg-amber-50 text-amber-800'
                                       : req.status === 'rejected'
                                       ? 'bg-red-50 text-red-700'
-                                      : 'bg-zinc-100 text-zinc-700'
+                                      : 'bg-slate-100 text-slate-700'
                                   }`}
                                 >
                                   {req.status.replace('_', ' ')}
                                 </span>
                               </td>
-                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                              <td className="py-4 px-5 align-top text-right whitespace-nowrap">
                                 {(() => {
                                   const linkedToActive =
                                     req.status === 'approved' &&
@@ -1633,7 +1982,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                           (Boolean(req.targetMembershipId) && s.id === req.targetMembershipId))
                                     );
                                   return (
-                                    <div className="inline-flex items-center justify-end gap-1.5">
+                                    <div className="inline-flex items-center justify-end gap-2">
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -1642,26 +1991,26 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                           setDeletingRequestId(null);
                                           setRejectReasonInput('');
                                         }}
-                                        className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                                        className="px-3.5 py-2 rounded-lg bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
                                       >
-                                        <Eye className="w-3.5 h-3.5" />
+                                        <Eye className="w-3.5 h-3.5 shrink-0" />
                                         <span>Inspect</span>
                                       </button>
                                       {!linkedToActive && (
                                         deletingRequestId === req.id ? (
-                                          <div className="inline-flex items-center gap-1">
+                                          <div className="inline-flex items-center gap-1.5">
                                             <button
                                               type="button"
                                               disabled={actionBusy}
                                               onClick={() => handleDeleteRequest(req.id)}
-                                              className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+                                              className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 whitespace-nowrap"
                                             >
                                               {actionBusy ? 'Deleting...' : 'Confirm'}
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => setDeletingRequestId(null)}
-                                              className="px-2 py-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-xs font-semibold cursor-pointer"
+                                              className="px-2.5 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold cursor-pointer whitespace-nowrap"
                                             >
                                               Cancel
                                             </button>
@@ -1670,10 +2019,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                           <button
                                             type="button"
                                             onClick={() => setDeletingRequestId(req.id)}
-                                            className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                            className="px-3 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
                                             title="Delete unnecessary or unpaid request"
                                           >
-                                            <Trash2 className="w-3.5 h-3.5" />
+                                            <Trash2 className="w-3.5 h-3.5 shrink-0" />
                                             <span>Delete</span>
                                           </button>
                                         )
@@ -1695,8 +2044,8 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             {/* TAB 2: MEMBERSHIPS MANAGEMENT */}
             {overview && activeTab === 'memberships' && (
               <div className="space-y-4">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-2xl bg-white border border-slate-200 p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                  <div className="inline-flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-100">
                     {(
                       [
                         { id: 'all', label: 'All' },
@@ -1712,54 +2061,54 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         key={st.id}
                         type="button"
                         onClick={() => setMembershipStatusFilter(st.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer whitespace-nowrap transition ${
                           membershipStatusFilter === st.id
-                            ? 'bg-[#22C55E] text-[#0B0B0D]'
-                            : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                            ? 'bg-white text-[#0F172A] shadow-xs'
+                            : 'text-slate-600 hover:text-[#0F172A]'
                         }`}
                       >
                         {st.label}
                       </button>
                     ))}
                   </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative w-full sm:w-64">
-                      <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    <div className="relative w-full sm:w-72">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         value={membershipSearch}
                         onChange={(e) => setMembershipSearch(e.target.value)}
-                        placeholder="Search member name, email, phone"
-                        className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                        placeholder="Search member, drama, email, phone"
+                        className="w-full pl-10 pr-3.5 py-2 text-[13px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => handleOpenAssignModal()}
-                      className="px-4 py-2 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                      className="px-4 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap shrink-0"
                     >
-                      <Plus className="w-3.5 h-3.5" />
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
                       <span>Assign Membership</span>
                     </button>
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-white border border-zinc-200 overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                <div className="rounded-2xl bg-white border border-slate-200 overflow-x-auto">
+                  <table className="w-full text-left text-[13px] leading-relaxed">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-[0.06em] text-[11px] font-semibold">
                       <tr>
-                        <th className="py-3.5 px-4">Customer</th>
-                        <th className="py-3.5 px-4">Plan &amp; Method</th>
-                        <th className="py-3.5 px-4">Selected Dramas</th>
-                        <th className="py-3.5 px-4">Activated / Expires</th>
-                        <th className="py-3.5 px-4">Status</th>
-                        <th className="py-3.5 px-4 text-right">Manage</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Customer</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Plan &amp; Billing</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Included Dramas</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Validity Period</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Status</th>
+                        <th className="py-3.5 px-5 text-right whitespace-nowrap">Manage</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100">
+                    <tbody className="divide-y divide-slate-100">
                       {filteredMemberships.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-10 text-center text-zinc-500">
+                          <td colSpan={6} className="py-12 text-center text-sm text-slate-500">
                             No memberships match the selected filter.
                           </td>
                         </tr>
@@ -1770,10 +2119,11 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                             Math.ceil((Date.parse(m.expiresAt) - Date.now()) / 86400000)
                           );
                           const renewalCount = Array.isArray(m.renewalHistory) ? m.renewalHistory.length : 0;
+                          const dramaNames = resolvePackageDramaNames(m.planId, m.selectedDramaIds);
                           return (
-                            <tr key={m.id} className="hover:bg-zinc-50/70">
-                              <td className="py-3.5 px-4">
-                                <div className="font-semibold text-[#0B0B0D] flex items-center gap-1.5">
+                            <tr key={m.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-4 px-5 align-top min-w-[200px]">
+                                <div className="font-semibold text-[#0F172A] flex items-center gap-1.5">
                                   <span>{m.customerName}</span>
                                   {(() => {
                                     const member = memberByIdMap.get(m.memberId);
@@ -1783,25 +2133,22 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                       ? 'google'
                                       : null;
                                     return method === 'google' ? (
-                                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                                        Google
-                                      </span>
+                                      <span className="text-[11px] font-medium text-blue-700">· Google</span>
                                     ) : null;
                                   })()}
                                 </div>
-                                <div className="text-zinc-500">{m.customerEmail}</div>
-                                {m.customerPhone && <div className="text-zinc-400">{m.customerPhone}</div>}
+                                <div className="text-xs text-slate-600 mt-0.5">{m.customerEmail}</div>
+                                {m.customerPhone && (
+                                  <div className="text-xs text-slate-400 mt-0.5 tabular-nums">{m.customerPhone}</div>
+                                )}
                               </td>
-                              <td className="py-3.5 px-4 space-y-1">
-                                <div className="font-semibold text-[#0B0B0D] whitespace-nowrap">{m.planName}</div>
-                                <div className="text-zinc-600 font-semibold tabular-nums whitespace-nowrap">
+                              <td className="py-4 px-5 align-top whitespace-nowrap">
+                                <div className="font-semibold text-[#0F172A]">{m.planName}</div>
+                                <div className="text-emerald-700 font-bold tabular-nums mt-0.5">
                                   {formatMembershipAmount(m)}
                                 </div>
-                                <div className="text-[11px] font-medium text-zinc-700 leading-snug max-w-[240px]">
-                                  {resolvePackageDramaNames(m.planId, m.selectedDramaIds).join(', ') || '—'}
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                  <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-600 text-[10px] font-semibold uppercase">
+                                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                                  <span>
                                     {m.paymentMethod === 'binance_qr'
                                       ? 'Binance QR'
                                       : m.paymentMethod === 'admin_assigned'
@@ -1809,54 +2156,59 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                       : 'Bank QR'}
                                   </span>
                                   {renewalCount > 0 && (
-                                    <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-semibold">
-                                      {renewalCount} {renewalCount === 1 ? 'Renewal' : 'Renewals'}
-                                    </span>
+                                    <>
+                                      <span aria-hidden="true" className="text-slate-300">·</span>
+                                      <span className="font-medium text-blue-700">
+                                        {renewalCount} {renewalCount === 1 ? 'Renewal' : 'Renewals'}
+                                      </span>
+                                    </>
                                   )}
                                 </div>
                               </td>
-                              <td className="py-3.5 px-4 max-w-[260px]">
-                                <div className="flex flex-wrap gap-1">
-                                  {resolvePackageDramaNames(m.planId, m.selectedDramaIds).map((title) => (
-                                    <span
-                                      key={title}
-                                      className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-[11px] font-semibold text-emerald-950"
-                                    >
-                                      {title}
-                                    </span>
-                                  ))}
+                              <td className="py-4 px-5 align-top min-w-[210px] max-w-[260px]">
+                                {m.planId === 'vip' && (
+                                  <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-emerald-700 mb-1">
+                                    All VIP Dramas
+                                  </div>
+                                )}
+                                <div className="space-y-0.5 text-[13px] font-medium text-[#0F172A]">
+                                  {dramaNames.length > 0 ? (
+                                    dramaNames.map((title) => (
+                                      <div key={title} className="leading-snug">
+                                        {title}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <span className="text-slate-400">—</span>
+                                  )}
                                 </div>
                               </td>
-                              <td className="py-3.5 px-4 whitespace-nowrap text-zinc-600">
+                              <td className="py-4 px-5 align-top whitespace-nowrap text-xs text-slate-600 tabular-nums space-y-1">
                                 <div>Start: {formatDateTime(m.activatedAt)}</div>
                                 <div>End: {formatDateTime(m.expiresAt)}</div>
                                 {m.status === 'active' && (
-                                  <div className={`text-[11px] font-semibold mt-0.5 ${remDays <= 7 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                  <div className={`font-semibold ${remDays <= 7 ? 'text-amber-700' : 'text-emerald-700'}`}>
                                     {remDays} {remDays === 1 ? 'day' : 'days'} remaining
                                   </div>
                                 )}
                               </td>
-                              <td className="py-3.5 px-4 whitespace-nowrap space-y-1">
+                              <td className="py-4 px-5 align-top whitespace-nowrap space-y-1.5">
                                 <span
-                                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase inline-block ${
+                                  className={`px-2.5 py-1 rounded-md text-xs font-semibold capitalize inline-block ${
                                     m.status === 'active'
                                       ? 'bg-emerald-50 text-emerald-700'
                                       : m.status === 'cancelled'
                                       ? 'bg-red-50 text-red-700'
-                                      : 'bg-zinc-100 text-zinc-700'
+                                      : 'bg-slate-100 text-slate-700'
                                   }`}
                                 >
                                   {m.status}
                                 </span>
                                 {m.hasPendingRenewal && (
-                                  <div>
-                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                      Pending Renewal
-                                    </span>
-                                  </div>
+                                  <div className="text-xs font-semibold text-amber-700">Pending Renewal</div>
                                 )}
                               </td>
-                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                              <td className="py-4 px-5 align-top text-right whitespace-nowrap">
                                 <div className="inline-flex flex-col items-end gap-2">
                                   {extendingMembershipId === m.id ? (
                                     <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
@@ -1866,7 +2218,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                         max={3650}
                                         value={extendDaysInput}
                                         onChange={(e) => setExtendDaysInput(e.target.value)}
-                                        className="w-16 px-2 py-1 border border-zinc-300 rounded-lg text-xs"
+                                        className="w-16 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs"
                                         title="Days to add"
                                       />
                                       <input
@@ -1874,20 +2226,20 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                         value={extendReasonInput}
                                         onChange={(e) => setExtendReasonInput(e.target.value)}
                                         placeholder="Reason / note"
-                                        className="w-32 px-2 py-1 border border-zinc-300 rounded-lg text-xs"
+                                        className="w-32 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs"
                                       />
                                       <button
                                         type="button"
                                         disabled={actionBusy}
                                         onClick={() => handleExtendMembership(m.id)}
-                                        className="px-2.5 py-1 rounded-lg bg-[#22C55E] text-[#0B0B0D] font-bold cursor-pointer"
+                                        className="px-3 py-1.5 rounded-lg bg-[#22C55E] text-[#0F172A] text-xs font-semibold cursor-pointer whitespace-nowrap"
                                       >
                                         +Add
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => setExtendingMembershipId(null)}
-                                        className="px-2 py-1 text-zinc-500 cursor-pointer"
+                                        className="px-2.5 py-1.5 text-xs text-slate-500 cursor-pointer whitespace-nowrap"
                                       >
                                         Cancel
                                       </button>
@@ -1902,11 +2254,11 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                           setExtendDaysInput('30');
                                           setExtendReasonInput('Admin manual extension');
                                         }}
-                                        className="px-2.5 py-1.5 rounded-lg border border-emerald-200 text-emerald-800 hover:bg-emerald-50 font-semibold cursor-pointer"
+                                        className="px-3 py-2 rounded-lg border border-emerald-200 text-emerald-800 hover:bg-emerald-50 text-xs font-semibold cursor-pointer transition whitespace-nowrap"
                                       >
                                         Extend +Days
                                       </button>
-                                       {m.status === 'active' ? (
+                                      {m.status === 'active' ? (
                                         revokingMembershipId === m.id ? (
                                           <div className="inline-flex items-center gap-1.5">
                                             <input
@@ -1914,20 +2266,20 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                               value={revokeReasonInput}
                                               onChange={(e) => setRevokeReasonInput(e.target.value)}
                                               placeholder="Reason to revoke"
-                                              className="px-2.5 py-1 border border-zinc-300 rounded-lg text-xs"
+                                              className="px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs"
                                             />
                                             <button
                                               type="button"
                                               disabled={actionBusy}
                                               onClick={() => handleRevokeMembership(m.id)}
-                                              className="px-2.5 py-1 rounded-lg bg-red-600 text-white font-semibold cursor-pointer"
+                                              className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold cursor-pointer whitespace-nowrap"
                                             >
                                               Confirm
                                             </button>
                                             <button
                                               type="button"
                                               onClick={() => setRevokingMembershipId(null)}
-                                              className="px-2 py-1 text-zinc-500 cursor-pointer"
+                                              className="px-2.5 py-1.5 text-xs text-slate-500 cursor-pointer whitespace-nowrap"
                                             >
                                               Cancel
                                             </button>
@@ -1941,25 +2293,25 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                               setDeletingMembershipId(null);
                                               setRevokeReasonInput('');
                                             }}
-                                            className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 font-semibold cursor-pointer"
+                                            className="px-3 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold cursor-pointer transition whitespace-nowrap"
                                           >
                                             Revoke
                                           </button>
                                         )
                                       ) : deletingMembershipId === m.id ? (
-                                        <div className="inline-flex items-center gap-1">
+                                        <div className="inline-flex items-center gap-1.5">
                                           <button
                                             type="button"
                                             disabled={actionBusy}
                                             onClick={() => handleDeleteMembership(m.id)}
-                                            className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+                                            className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 whitespace-nowrap"
                                           >
                                             {actionBusy ? 'Deleting...' : 'Confirm'}
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => setDeletingMembershipId(null)}
-                                            className="px-2 py-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-xs font-semibold cursor-pointer"
+                                            className="px-2.5 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold cursor-pointer whitespace-nowrap"
                                           >
                                             Cancel
                                           </button>
@@ -1972,10 +2324,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                             setExtendingMembershipId(null);
                                             setRevokingMembershipId(null);
                                           }}
-                                          className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                          className="px-3 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
                                           title="Delete expired or cancelled membership record"
                                         >
-                                          <Trash2 className="w-3.5 h-3.5" />
+                                          <Trash2 className="w-3.5 h-3.5 shrink-0" />
                                           <span>Delete</span>
                                         </button>
                                       )}
@@ -1993,11 +2345,735 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
               </div>
             )}
 
+            {/* TAB: PROMO CODES & REFERRAL SYSTEM */}
+            {overview && activeTab === 'promos' && (
+              <div className="space-y-6">
+                {/* Section 1: Promo Code Builder + Directory */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  <form
+                    onSubmit={handleSavePromoSubmit}
+                    className="lg:col-span-5 rounded-2xl bg-white border border-slate-200 p-6 space-y-4"
+                  >
+                    <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-[#16A34A]" />
+                        <h2 className="text-base font-bold text-[#0F172A]">
+                          {editingPromoId ? 'Edit Promo Code' : 'Create Promo Code'}
+                        </h2>
+                      </div>
+                      {editingPromoId && (
+                        <button
+                          type="button"
+                          onClick={resetPromoForm}
+                          className="text-xs font-semibold text-slate-500 hover:text-[#0F172A] cursor-pointer"
+                        >
+                          Cancel Edit
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Promo Code *</label>
+                        <input
+                          type="text"
+                          required
+                          value={promoCodeField}
+                          onChange={(e) => setPromoCodeField(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
+                          placeholder="e.g. EID25"
+                          className="w-full px-3.5 py-2 text-[13px] font-mono uppercase border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Discount Type</label>
+                        <select
+                          value={promoDiscountType}
+                          onChange={(e) => setPromoDiscountType(e.target.value as PromoDiscountType)}
+                          className="w-full px-3.5 py-2 text-[13px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
+                        >
+                          <option value="percentage">Percentage (%)</option>
+                          <option value="fixed">Fixed Amount (PKR / USD)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Campaign Description</label>
+                      <input
+                        type="text"
+                        value={promoDescField}
+                        onChange={(e) => setPromoDescField(e.target.value)}
+                        placeholder="e.g. Weekend Launch Offer"
+                        className="w-full px-3.5 py-2 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
+                      />
+                    </div>
+
+                    {promoDiscountType === 'percentage' ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Discount (%)</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={100}
+                            step="1"
+                            required
+                            value={promoPercentField}
+                            onChange={(e) => setPromoPercentField(e.target.value)}
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Max Cap PKR</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={promoMaxPkrField}
+                            onChange={(e) => setPromoMaxPkrField(e.target.value)}
+                            placeholder="Optional"
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Max Cap USD</label>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={promoMaxUsdField}
+                            onChange={(e) => setPromoMaxUsdField(e.target.value)}
+                            placeholder="Optional"
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-3.5">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Fixed Off (PKR)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            required
+                            value={promoAmtPkrField}
+                            onChange={(e) => setPromoAmtPkrField(e.target.value)}
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Fixed Off (USD)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            required
+                            value={promoAmtUsdField}
+                            onChange={(e) => setPromoAmtUsdField(e.target.value)}
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Min Purchase (PKR)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={promoMinPkrField}
+                          onChange={(e) => setPromoMinPkrField(e.target.value)}
+                          className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Min Purchase (USD)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={promoMinUsdField}
+                          onChange={(e) => setPromoMinUsdField(e.target.value)}
+                          className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Total Limit</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={promoUsageLimitField}
+                          onChange={(e) => setPromoUsageLimitField(e.target.value)}
+                          placeholder="Unlimited"
+                          className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Per-User Limit</label>
+                        <input
+                          type="number"
+                          min={1}
+                          required
+                          value={promoPerUserLimitField}
+                          onChange={(e) => setPromoPerUserLimitField(e.target.value)}
+                          className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Expiry Date</label>
+                        <input
+                          type="datetime-local"
+                          value={promoExpiresAtField}
+                          onChange={(e) => setPromoExpiresAtField(e.target.value)}
+                          className="w-full px-2.5 py-2 text-xs border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Applicable Plans (leave all unchecked for All Plans)
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {MEMBERSHIP_PLANS.map((plan) => {
+                          const checked = promoPlansField.includes(plan.id);
+                          return (
+                            <button
+                              key={plan.id}
+                              type="button"
+                              onClick={() =>
+                                setPromoPlansField((prev) =>
+                                  checked ? prev.filter((id) => id !== plan.id) : [...prev, plan.id]
+                                )
+                              }
+                              className={`px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition ${
+                                checked
+                                  ? 'bg-[#0F172A] text-white border-[#0F172A]'
+                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {plan.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={promoIsActiveField}
+                        onChange={(e) => setPromoIsActiveField(e.target.checked)}
+                        className="h-4 w-4 accent-[#16A34A] rounded cursor-pointer"
+                      />
+                      <span>Promo Code Active Immediately</span>
+                    </label>
+
+                    <button
+                      type="submit"
+                      disabled={savingPromo}
+                      className="w-full py-2.5 px-4 rounded-xl bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold transition cursor-pointer disabled:opacity-60"
+                    >
+                      {savingPromo
+                        ? 'Saving Promo Code...'
+                        : editingPromoId
+                        ? 'Save Promo Changes'
+                        : 'Create Promo Code'}
+                    </button>
+                  </form>
+
+                  {/* Right: Promo Codes Table */}
+                  <div className="lg:col-span-7 rounded-2xl bg-white border border-slate-200 overflow-hidden">
+                    <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-base font-bold text-[#0F172A]">
+                          Promo Codes Directory ({(overview.promoCodes || []).length})
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Create, edit, disable, or delete checkout discount campaigns.
+                        </p>
+                      </div>
+                      <div className="relative w-full sm:w-56">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={promoSearch}
+                          onChange={(e) => setPromoSearch(e.target.value)}
+                          placeholder="Search promo code"
+                          className="w-full pl-8.5 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#0F172A]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-[13px] leading-relaxed">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-[0.06em] text-[11px] font-semibold">
+                          <tr>
+                            <th className="py-3 px-4">Code</th>
+                            <th className="py-3 px-4">Discount &amp; Rules</th>
+                            <th className="py-3 px-4">Usage</th>
+                            <th className="py-3 px-4">Status</th>
+                            <th className="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(() => {
+                            const rows = (overview.promoCodes || []).filter((p) => {
+                              if (!promoSearch.trim()) return true;
+                              const q = promoSearch.toLowerCase();
+                              return p.code.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
+                            });
+                            if (rows.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={5} className="py-10 text-center text-xs text-slate-500">
+                                    No promo codes configured yet. Create your first code on the left.
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            return rows.map((p) => (
+                              <tr key={p.id} className="hover:bg-slate-50/70">
+                                <td className="py-3.5 px-4 align-top">
+                                  <div className="font-mono font-bold text-[#0F172A]">{p.code}</div>
+                                  {p.description && <div className="text-xs text-slate-500 mt-0.5">{p.description}</div>}
+                                  {p.rewardForReferrerMemberId && (
+                                    <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-semibold">
+                                      Referral Reward Code
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 align-top text-xs space-y-0.5">
+                                  <div className="font-bold text-[#16A34A]">
+                                    {p.discountType === 'percentage'
+                                      ? `${p.discountPercent}% OFF`
+                                      : `PKR ${p.discountAmountPkr} / $${Number(p.discountAmountUsd || 0).toFixed(2)} OFF`}
+                                  </div>
+                                  <div className="text-slate-500">
+                                    Plans:{' '}
+                                    {p.applicablePlanIds && p.applicablePlanIds.length > 0
+                                      ? p.applicablePlanIds.join(', ').toUpperCase()
+                                      : 'All'}
+                                  </div>
+                                  {(p.minPurchasePkr > 0 || p.minPurchaseUsd > 0) && (
+                                    <div className="text-slate-500">
+                                      Min: PKR {p.minPurchasePkr} / ${p.minPurchaseUsd}
+                                    </div>
+                                  )}
+                                  {p.expiresAt && (
+                                    <div className="text-slate-400">Exp: {formatDateTime(p.expiresAt)}</div>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 align-top text-xs tabular-nums">
+                                  <div className="font-semibold text-[#0F172A]">
+                                    {p.usedCount} / {p.usageLimit === null ? '∞' : p.usageLimit}
+                                  </div>
+                                  <div className="text-slate-500">{p.approvedUses} approved</div>
+                                  <div className="text-slate-400">
+                                    Saved: PKR {Math.round(p.totalDiscountGivenPkr)} / ${Number(p.totalDiscountGivenUsd || 0).toFixed(2)}
+                                  </div>
+                                </td>
+                                <td className="py-3.5 px-4 align-top whitespace-nowrap">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTogglePromoActive(p)}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition ${
+                                      p.isActive
+                                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    }`}
+                                  >
+                                    {p.isActive ? 'Active' : 'Disabled'}
+                                  </button>
+                                </td>
+                                <td className="py-3.5 px-4 align-top text-right whitespace-nowrap">
+                                  {deletingPromoId === p.id ? (
+                                    <div className="inline-flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        disabled={actionBusy}
+                                        onClick={() => handleDeletePromo(p.id, p.code)}
+                                        className="px-2.5 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold cursor-pointer"
+                                      >
+                                        Confirm
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setDeletingPromoId(null)}
+                                        className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-600 cursor-pointer"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="inline-flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditPromoClick(p)}
+                                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Edit2 className="w-3 h-3" />
+                                        <span>Edit</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setDeletingPromoId(p.id)}
+                                        className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Referral Program Config + Referral Attribution Ledger */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                  <form
+                    onSubmit={handleSaveReferralConfig}
+                    className="lg:col-span-5 rounded-2xl bg-white border border-slate-200 p-6 space-y-4"
+                  >
+                    <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <Gift className="w-4 h-4 text-[#16A34A]" />
+                        <h2 className="text-base font-bold text-[#0F172A]">Referral Reward Settings</h2>
+                      </div>
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={refEnabled}
+                          onChange={(e) => setRefEnabled(e.target.checked)}
+                          className="h-4 w-4 accent-[#16A34A] rounded cursor-pointer"
+                        />
+                        <span>Program Enabled</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Referrer Reward Mode</label>
+                      <select
+                        value={refRewardType}
+                        onChange={(e) => setRefRewardType(e.target.value as ReferralConfig['referrerRewardType'])}
+                        className="w-full px-3.5 py-2 text-[13px] bg-white border border-slate-200 rounded-xl"
+                      >
+                        <option value="credit">Account Wallet Credit (PKR &amp; USD)</option>
+                        <option value="promo_code">Personal Reward Promo Code</option>
+                        <option value="both">Both Credit + Personal Promo Code</option>
+                      </select>
+                    </div>
+
+                    {(refRewardType === 'credit' || refRewardType === 'both') && (
+                      <div className="grid grid-cols-2 gap-3.5">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Referrer Credit (PKR)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={refRewardPkr}
+                            onChange={(e) => setRefRewardPkr(e.target.value)}
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Referrer Credit (USD)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={refRewardUsd}
+                            onChange={(e) => setRefRewardUsd(e.target.value)}
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {(refRewardType === 'promo_code' || refRewardType === 'both') && (
+                      <div className="grid grid-cols-2 gap-3.5">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Reward Promo (%)</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={refPromoPercent}
+                            onChange={(e) => setRefPromoPercent(e.target.value)}
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Promo Expiry (Days)</label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={refPromoExpiryDays}
+                            onChange={(e) => setRefPromoExpiryDays(e.target.value)}
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-slate-100 space-y-3">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Friend (Referee) First-Order Welcome Discount
+                      </label>
+                      <select
+                        value={refereeDiscType}
+                        onChange={(e) => setRefereeDiscType(e.target.value as ReferralConfig['refereeDiscountType'])}
+                        className="w-full px-3.5 py-2 text-[13px] bg-white border border-slate-200 rounded-xl"
+                      >
+                        <option value="none">No Welcome Discount (Referrer Reward Only)</option>
+                        <option value="percentage">Percentage Welcome Discount (%)</option>
+                        <option value="fixed">Fixed Welcome Discount (PKR / USD)</option>
+                      </select>
+
+                      {refereeDiscType === 'percentage' && (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">Welcome Discount (%)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={refereeDiscPercent}
+                            onChange={(e) => setRefereeDiscPercent(e.target.value)}
+                            className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                          />
+                        </div>
+                      )}
+
+                      {refereeDiscType === 'fixed' && (
+                        <div className="grid grid-cols-2 gap-3.5">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1">Welcome Off (PKR)</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={refereeDiscPkr}
+                              onChange={(e) => setRefereeDiscPkr(e.target.value)}
+                              className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-700 mb-1">Welcome Off (USD)</label>
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={refereeDiscUsd}
+                              onChange={(e) => setRefereeDiscUsd(e.target.value)}
+                              className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Min Order PKR</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={refMinOrderPkr}
+                          onChange={(e) => setRefMinOrderPkr(e.target.value)}
+                          className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Min Order USD</label>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={refMinOrderUsd}
+                          onChange={(e) => setRefMinOrderUsd(e.target.value)}
+                          className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Max / Referrer</label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={refMaxConversions}
+                          onChange={(e) => setRefMaxConversions(e.target.value)}
+                          placeholder="Unlimited"
+                          className="w-full px-3 py-2 text-[13px] tabular-nums border border-slate-200 rounded-xl"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={savingRefConfig}
+                      className="w-full py-2.5 px-4 rounded-xl bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold transition cursor-pointer disabled:opacity-60"
+                    >
+                      {savingRefConfig ? 'Saving Referral Settings...' : 'Save Referral Reward Settings'}
+                    </button>
+                  </form>
+
+                  {/* Right: Referral Attribution & Anti-Abuse Table */}
+                  <div className="lg:col-span-7 rounded-2xl bg-white border border-slate-200 overflow-hidden">
+                    <div className="p-5 border-b border-slate-200 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                      <div className="inline-flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-100">
+                        {(['all', 'signed_up', 'converted', 'blocked'] as const).map((st) => (
+                          <button
+                            key={st}
+                            type="button"
+                            onClick={() => setReferralStatusFilter(st)}
+                            className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize cursor-pointer transition ${
+                              referralStatusFilter === st
+                                ? 'bg-white text-[#0F172A] shadow-xs'
+                                : 'text-slate-600 hover:text-[#0F172A]'
+                            }`}
+                          >
+                            {st.replace('_', ' ')}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="relative w-full xl:w-56">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          value={referralSearch}
+                          onChange={(e) => setReferralSearch(e.target.value)}
+                          placeholder="Search name, email, code"
+                          className="w-full pl-8.5 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-[#0F172A]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-[13px] leading-relaxed">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-[0.06em] text-[11px] font-semibold">
+                          <tr>
+                            <th className="py-3 px-4">Referrer</th>
+                            <th className="py-3 px-4">Invited Customer</th>
+                            <th className="py-3 px-4">Reward &amp; Order</th>
+                            <th className="py-3 px-4">Status</th>
+                            <th className="py-3 px-4 text-right">Abuse Guard</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {(() => {
+                            const list = (overview.referrals || []).filter((r) => {
+                              if (referralStatusFilter !== 'all' && r.status !== referralStatusFilter) return false;
+                              if (!referralSearch.trim()) return true;
+                              const q = referralSearch.toLowerCase();
+                              return (
+                                r.referrerCode.toLowerCase().includes(q) ||
+                                r.referrerName.toLowerCase().includes(q) ||
+                                r.referrerEmail.toLowerCase().includes(q) ||
+                                r.referredName.toLowerCase().includes(q) ||
+                                r.referredEmail.toLowerCase().includes(q)
+                              );
+                            });
+                            if (list.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={5} className="py-10 text-center text-xs text-slate-500">
+                                    No referral attributions recorded under this filter yet.
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            return list.map((r) => (
+                              <tr key={r.id} className="hover:bg-slate-50/70">
+                                <td className="py-3.5 px-4 align-top text-xs">
+                                  <div className="font-semibold text-[#0F172A]">{r.referrerName}</div>
+                                  <div className="font-mono font-bold text-[#16A34A]">{r.referrerCode}</div>
+                                  <div className="text-slate-400">{r.referrerEmail}</div>
+                                </td>
+                                <td className="py-3.5 px-4 align-top text-xs">
+                                  <div className="font-semibold text-[#0F172A]">{r.referredName}</div>
+                                  <div className="text-slate-600">{r.referredEmail}</div>
+                                  <div className="text-slate-400 tabular-nums">{formatDateTime(r.createdAt)}</div>
+                                </td>
+                                <td className="py-3.5 px-4 align-top text-xs">
+                                  {r.status === 'converted' ? (
+                                    <div className="space-y-0.5">
+                                      <div className="font-bold text-[#16A34A]">
+                                        {r.rewardAmountPkr > 0
+                                          ? `PKR ${r.rewardAmountPkr} / $${Number(r.rewardAmountUsd || 0).toFixed(2)}`
+                                          : 'Promo Issued'}
+                                      </div>
+                                      {r.rewardPromoCode && (
+                                        <div className="font-mono font-semibold text-[#0F172A]">{r.rewardPromoCode}</div>
+                                      )}
+                                      {r.conversionOrderId && (
+                                        <div className="font-mono text-slate-400">{r.conversionOrderId}</div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-slate-400">—</span>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 align-top text-xs">
+                                  <span
+                                    className={`inline-block px-2 py-0.5 rounded font-semibold capitalize ${
+                                      r.status === 'converted'
+                                        ? 'bg-emerald-50 text-emerald-700'
+                                        : r.status === 'blocked'
+                                        ? 'bg-red-50 text-red-700'
+                                        : 'bg-amber-50 text-amber-800'
+                                    }`}
+                                  >
+                                    {r.status.replace('_', ' ')}
+                                  </span>
+                                  {r.blockReason && (
+                                    <div className="text-[11px] text-red-600 mt-1 max-w-[180px] leading-snug">
+                                      {r.blockReason}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 align-top text-right whitespace-nowrap">
+                                  {r.status !== 'converted' && (
+                                    <button
+                                      type="button"
+                                      disabled={updatingReferralId === r.id}
+                                      onClick={() =>
+                                        handleToggleReferralStatus(
+                                          r.id,
+                                          r.status === 'blocked' ? 'signed_up' : 'blocked'
+                                        )
+                                      }
+                                      className={`px-3 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition ${
+                                        r.status === 'blocked'
+                                          ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                                          : 'border-red-200 text-red-700 hover:bg-red-50'
+                                      }`}
+                                    >
+                                      {r.status === 'blocked' ? 'Restore' : 'Block'}
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* TAB: REGISTERED ACCOUNTS & SIGN-IN METHOD (GOOGLE VS EMAIL) */}
             {overview && activeTab === 'accounts' && (
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-2xl bg-white border border-slate-200 p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                  <div className="inline-flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-100">
                     {[
                       { id: 'all' as const, label: `All (${overview.members.length})` },
                       { id: 'google' as const, label: `Google Sign-In (${googleAccountsCount})` },
@@ -2008,10 +3084,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         key={f.id}
                         type="button"
                         onClick={() => setAccountAuthFilter(f.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer whitespace-nowrap transition ${
                           accountAuthFilter === f.id
-                            ? 'bg-[#22C55E] text-[#0B0B0D]'
-                            : 'bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                            ? 'bg-white text-[#0F172A] shadow-xs'
+                            : 'text-slate-600 hover:text-[#0F172A]'
                         }`}
                       >
                         {f.label}
@@ -2019,33 +3095,33 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     ))}
                   </div>
 
-                  <div className="relative w-full sm:w-72">
-                    <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <div className="relative w-full xl:w-80 shrink-0">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={accountSearch}
                       onChange={(e) => setAccountSearch(e.target.value)}
-                      placeholder="Search account name, email, phone"
-                      className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                      placeholder="Search account name, email, phone, drama"
+                      className="w-full pl-10 pr-3.5 py-2 text-[13px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
                 </div>
 
-                <div className="rounded-2xl bg-white border border-zinc-200 overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                <div className="rounded-2xl bg-white border border-slate-200 overflow-x-auto">
+                  <table className="w-full text-left text-[13px] leading-relaxed">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-[0.06em] text-[11px] font-semibold">
                       <tr>
-                        <th className="py-3.5 px-4">Customer</th>
-                        <th className="py-3.5 px-4">Sign-In Method</th>
-                        <th className="py-3.5 px-4">Membership Status</th>
-                        <th className="py-3.5 px-4">Joined</th>
-                        <th className="py-3.5 px-4 text-right">Action</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Customer</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Sign-In Method</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Package &amp; Dramas</th>
+                        <th className="py-3.5 px-5 whitespace-nowrap">Joined</th>
+                        <th className="py-3.5 px-5 text-right whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100">
+                    <tbody className="divide-y divide-slate-100">
                       {filteredAccounts.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="py-10 text-center text-zinc-500">
+                          <td colSpan={5} className="py-12 text-center text-sm text-slate-500">
                             No registered accounts match this filter yet.
                           </td>
                         </tr>
@@ -2059,46 +3135,45 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                           const latestSub = overview.memberships.find((s) => s.memberId === member.id);
                           const latestReq = overview.requests.find((r) => r.memberId === member.id);
                           return (
-                            <tr key={member.id} className="hover:bg-zinc-50/70">
-                              <td className="py-3.5 px-4">
-                                <div className="font-semibold text-[#0B0B0D]">{member.fullName}</div>
-                                <div className="text-zinc-500">{member.email}</div>
-                                {member.phone && <div className="text-zinc-400">{member.phone}</div>}
-                              </td>
-                              <td className="py-3.5 px-4 whitespace-nowrap">
-                                {method === 'google' ? (
-                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                    <span>Google Sign-In</span>
-                                  </span>
-                                ) : method === 'admin_assigned' ? (
-                                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    Admin Created
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-zinc-100 text-zinc-700">
-                                    Email &amp; Password
-                                  </span>
+                            <tr key={member.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-4 px-5 align-top min-w-[220px]">
+                                <div className="font-semibold text-[#0F172A]">{member.fullName}</div>
+                                <div className="text-xs text-slate-600 mt-0.5">{member.email}</div>
+                                {member.phone && (
+                                  <div className="text-xs text-slate-400 mt-0.5 tabular-nums">{member.phone}</div>
                                 )}
                               </td>
-                              <td className="py-3.5 px-4 max-w-[280px] space-y-1.5">
+                              <td className="py-4 px-5 align-top whitespace-nowrap">
+                                <span
+                                  className={`inline-block px-2.5 py-1 rounded-md text-xs font-semibold ${
+                                    method === 'google'
+                                      ? 'bg-blue-50 text-blue-700'
+                                      : method === 'admin_assigned'
+                                      ? 'bg-emerald-50 text-emerald-700'
+                                      : 'bg-slate-100 text-slate-700'
+                                  }`}
+                                >
+                                  {method === 'google'
+                                    ? 'Google Sign-In'
+                                    : method === 'admin_assigned'
+                                    ? 'Admin Created'
+                                    : 'Email & Password'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-5 align-top min-w-[240px] max-w-[320px] space-y-2.5">
                                 {activeSubs.length > 0 ? (
                                   activeSubs.map((sub) => {
                                     const dramaNames = resolvePackageDramaNames(sub.planId, sub.selectedDramaIds);
                                     return (
                                       <div key={sub.id} className="space-y-1">
-                                        <span className="inline-block px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700">
-                                          {sub.planName} (Active)
-                                        </span>
+                                        <div className="flex items-center gap-2 text-[13px] font-semibold text-[#0F172A]">
+                                          <span>{sub.planName}</span>
+                                          <span aria-hidden="true" className="text-slate-300">·</span>
+                                          <span className="text-xs font-semibold text-emerald-700">Active</span>
+                                        </div>
                                         {dramaNames.length > 0 && (
-                                          <div className="flex flex-wrap gap-1">
-                                            {dramaNames.map((title) => (
-                                              <span
-                                                key={title}
-                                                className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-[#0B0B0D]"
-                                              >
-                                                {title}
-                                              </span>
-                                            ))}
+                                          <div className="text-xs text-slate-600 leading-relaxed">
+                                            {dramaNames.join(', ')}
                                           </div>
                                         )}
                                       </div>
@@ -2106,68 +3181,62 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                   })
                                 ) : latestReq ? (
                                   <div className="space-y-1">
-                                    <span className="inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                                      {latestReq.planName} ({latestReq.status.replace('_', ' ')})
-                                    </span>
-                                    <div className="flex flex-wrap gap-1">
-                                      {resolvePackageDramaNames(latestReq.planId, latestReq.selectedDramaIds).map((title) => (
-                                        <span
-                                          key={title}
-                                          className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-zinc-700"
-                                        >
-                                          {title}
-                                        </span>
-                                      ))}
+                                    <div className="flex items-center gap-2 text-[13px] font-semibold text-[#0F172A]">
+                                      <span>{latestReq.planName}</span>
+                                      <span aria-hidden="true" className="text-slate-300">·</span>
+                                      <span className="text-xs font-semibold capitalize text-amber-700">
+                                        {latestReq.status.replace('_', ' ')}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-slate-600 leading-relaxed">
+                                      {resolvePackageDramaNames(latestReq.planId, latestReq.selectedDramaIds).join(', ') || '—'}
                                     </div>
                                   </div>
                                 ) : latestSub ? (
                                   <div className="space-y-1">
-                                    <span className="inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold bg-zinc-100 text-zinc-700">
-                                      {latestSub.planName} ({latestSub.status})
-                                    </span>
-                                    <div className="flex flex-wrap gap-1">
-                                      {resolvePackageDramaNames(latestSub.planId, latestSub.selectedDramaIds).map((title) => (
-                                        <span
-                                          key={title}
-                                          className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-zinc-700"
-                                        >
-                                          {title}
-                                        </span>
-                                      ))}
+                                    <div className="flex items-center gap-2 text-[13px] font-semibold text-[#0F172A]">
+                                      <span>{latestSub.planName}</span>
+                                      <span aria-hidden="true" className="text-slate-300">·</span>
+                                      <span className="text-xs font-semibold capitalize text-slate-500">
+                                        {latestSub.status}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-slate-600 leading-relaxed">
+                                      {resolvePackageDramaNames(latestSub.planId, latestSub.selectedDramaIds).join(', ') || '—'}
                                     </div>
                                   </div>
                                 ) : (
-                                  <span className="text-zinc-400">No active plan</span>
+                                  <span className="text-xs text-slate-400">No active plan</span>
                                 )}
                               </td>
-                              <td className="py-3.5 px-4 text-zinc-500 whitespace-nowrap">
+                              <td className="py-4 px-5 align-top text-xs text-slate-500 whitespace-nowrap tabular-nums">
                                 {formatDateTime(member.createdAt)}
                               </td>
-                              <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                                <div className="inline-flex items-center justify-end gap-1.5">
+                              <td className="py-4 px-5 align-top text-right whitespace-nowrap">
+                                <div className="inline-flex items-center justify-end gap-2">
                                   <button
                                     type="button"
                                     onClick={() => handleOpenAssignModal(member)}
-                                    className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                                    className="px-3.5 py-2 rounded-lg bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
                                   >
-                                    <Plus className="w-3.5 h-3.5" />
+                                    <Plus className="w-3.5 h-3.5 shrink-0" />
                                     <span>Assign Plan</span>
                                   </button>
                                   {!activeSub && (
                                     deletingAccountId === member.id ? (
-                                      <div className="inline-flex items-center gap-1">
+                                      <div className="inline-flex items-center gap-1.5">
                                         <button
                                           type="button"
                                           disabled={actionBusy}
                                           onClick={() => handleDeleteAccount(member.id, member.email || member.fullName)}
-                                          className="px-2.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+                                          className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 whitespace-nowrap"
                                         >
                                           {actionBusy ? 'Deleting...' : 'Confirm'}
                                         </button>
                                         <button
                                           type="button"
                                           onClick={() => setDeletingAccountId(null)}
-                                          className="px-2 py-1.5 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-xs font-semibold cursor-pointer"
+                                          className="px-2.5 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold cursor-pointer whitespace-nowrap"
                                         >
                                           Cancel
                                         </button>
@@ -2176,10 +3245,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                       <button
                                         type="button"
                                         onClick={() => setDeletingAccountId(member.id)}
-                                        className="px-2.5 py-1.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                        className="px-3 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
                                         title="Delete unnecessary or unpaid customer lead"
                                       >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-3.5 h-3.5 shrink-0" />
                                         <span>Delete</span>
                                       </button>
                                     )
@@ -2199,50 +3268,52 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             {/* TAB: LIFECYCLE REMINDERS & SCHEDULER */}
             {overview && activeTab === 'notifications' && (
               <div className="space-y-6">
-                <div className="rounded-2xl bg-white border border-zinc-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-wider text-[#16A34A] flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
+                <div className="rounded-2xl bg-white border border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold uppercase tracking-[0.06em] text-[#16A34A] flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 shrink-0" />
                       <span>Automated Membership Expiry &amp; Renewal Reminders</span>
                     </div>
-                    <h2 className="text-lg font-bold text-[#0B0B0D] mt-1">
+                    <h2 className="text-lg font-bold text-[#0F172A] leading-snug">
                       Lifecycle Check &amp; Customer Notification Engine
                     </h2>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      Runs automatically every 15 minutes to revoke expired memberships and generate 7d / 3d / 1d / expired reminders.
+                    <p className="text-[13px] text-slate-500 leading-relaxed">
+                      Runs automatically every 15 minutes to revoke expired memberships and generate 7d, 3d, 1d, and expired reminders.
                     </p>
                   </div>
                   <button
                     type="button"
                     disabled={runningScheduler}
                     onClick={handleRunSchedulerNow}
-                    className="px-4 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-2 transition cursor-pointer shrink-0 disabled:opacity-60"
+                    className="px-4 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold inline-flex items-center gap-2 transition cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-60"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${runningScheduler ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${runningScheduler ? 'animate-spin' : ''}`} />
                     <span>{runningScheduler ? 'Running Check...' : 'Run Expiry & Renewal Check Now'}</span>
                   </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  <div className="lg:col-span-5 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4">
+                  <div className="lg:col-span-5 rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#16A34A]" />
-                      <h3 className="text-base font-bold text-[#0B0B0D]">Scheduler Run History</h3>
+                      <Clock className="w-4 h-4 text-[#16A34A] shrink-0" />
+                      <h3 className="text-base font-bold text-[#0F172A]">Scheduler Run History</h3>
                     </div>
                     {!overview.schedulerRuns || overview.schedulerRuns.length === 0 ? (
-                      <p className="text-xs text-zinc-500">No scheduler runs recorded yet.</p>
+                      <p className="text-[13px] text-slate-500">No scheduler runs recorded yet.</p>
                     ) : (
-                      <div className="space-y-2.5 max-h-[480px] overflow-y-auto">
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto">
                         {overview.schedulerRuns.map((run) => (
-                          <div key={run.id} className="p-3 rounded-xl border border-zinc-200 bg-zinc-50 text-xs space-y-1">
+                          <div key={run.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="font-bold uppercase text-[11px] text-[#0B0B0D]">
+                              <span className="font-semibold uppercase tracking-[0.04em] text-xs text-[#0F172A]">
                                 {run.triggerSource.replace('_', ' ')}
                               </span>
-                              <span className="text-zinc-400">{formatDateTime(run.ranAt)}</span>
+                              <span className="text-xs text-slate-400 tabular-nums whitespace-nowrap">
+                                {formatDateTime(run.ranAt)}
+                              </span>
                             </div>
-                            <div className="text-zinc-700">{run.summary}</div>
-                            <div className="text-[11px] text-zinc-500">
+                            <div className="text-[13px] text-slate-700 leading-relaxed">{run.summary}</div>
+                            <div className="text-xs text-slate-500 tabular-nums">
                               Checked: {run.checkedMemberships} · Expired: {run.expiredCount} · Reminders: {run.remindersCreated} · Emails Sent: {run.emailsSent} · Failed: {run.emailsFailed}
                             </div>
                           </div>
@@ -2251,70 +3322,64 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     )}
                   </div>
 
-                  <div className="lg:col-span-7 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4">
+                  <div className="lg:col-span-7 rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <Bell className="w-4 h-4 text-[#16A34A]" />
-                        <h3 className="text-base font-bold text-[#0B0B0D]">Customer Notification Log</h3>
+                        <Bell className="w-4 h-4 text-[#16A34A] shrink-0" />
+                        <h3 className="text-base font-bold text-[#0F172A]">Customer Notification Log</h3>
                       </div>
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-xs font-medium text-slate-500 tabular-nums">
                         {(overview.customerNotifications || []).length} recorded
                       </span>
                     </div>
                     {!overview.customerNotifications || overview.customerNotifications.length === 0 ? (
-                      <p className="text-xs text-zinc-500">No customer reminders or notifications recorded yet.</p>
+                      <p className="text-[13px] text-slate-500">No customer reminders or notifications recorded yet.</p>
                     ) : (
-                      <div className="space-y-2.5 max-h-[480px] overflow-y-auto">
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto">
                         {overview.customerNotifications.map((notif) => (
-                          <div key={notif.id} className="p-3.5 rounded-xl border border-zinc-200 bg-zinc-50 text-xs space-y-1.5">
+                          <div key={notif.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2">
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded bg-[#0B0B0D] text-white font-bold uppercase text-[10px]">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-bold uppercase tracking-[0.04em] text-[#0F172A]">
                                   {notif.type.replace('_', ' ')}
                                 </span>
-                                <span className="font-semibold text-[#0B0B0D]">{notif.title}</span>
+                                <span aria-hidden="true" className="text-slate-300">·</span>
+                                <span className="text-[13px] font-semibold text-[#0F172A]">{notif.title}</span>
                               </div>
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2 text-xs font-semibold whitespace-nowrap">
                                 <span
-                                  className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                  className={
                                     notif.emailStatus === 'sent'
-                                      ? 'bg-emerald-100 text-emerald-800'
+                                      ? 'text-emerald-700'
                                       : notif.emailStatus === 'failed'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-zinc-200 text-zinc-700'
-                                  }`}
+                                      ? 'text-red-700'
+                                      : 'text-slate-600'
+                                  }
                                 >
                                   Email: {notif.emailStatus.replace('_', ' ')}
                                 </span>
-                                <span
-                                  className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                    notif.isRead ? 'bg-zinc-100 text-zinc-600' : 'bg-blue-50 text-blue-700'
-                                  }`}
-                                >
+                                <span aria-hidden="true" className="text-slate-300">·</span>
+                                <span className={notif.isRead ? 'text-slate-500' : 'text-blue-700'}>
                                   {notif.isRead ? 'Read' : 'Unread'}
                                 </span>
                               </div>
                             </div>
-                            <p className="text-zinc-700">{notif.message}</p>
+                            <p className="text-[13px] text-slate-700 leading-relaxed">{notif.message}</p>
                             {(notif.planId || (notif.dramaIds && notif.dramaIds.length > 0)) && (
-                              <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                              <div className="text-xs text-slate-600 leading-relaxed">
                                 {notif.planId && (
-                                  <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 font-semibold text-emerald-900">
+                                  <span className="font-semibold text-emerald-800">
                                     {getPlanById(notif.planId)?.name || notif.planId}
                                   </span>
                                 )}
-                                {resolvePackageDramaNames(notif.planId, notif.dramaIds).map((title) => (
-                                  <span
-                                    key={title}
-                                    className="px-2 py-0.5 rounded bg-white border border-zinc-200 font-medium text-zinc-700"
-                                  >
-                                    {title}
-                                  </span>
-                                ))}
+                                {notif.planId && resolvePackageDramaNames(notif.planId, notif.dramaIds).length > 0 && (
+                                  <span aria-hidden="true" className="text-slate-300 mx-1.5">·</span>
+                                )}
+                                <span>{resolvePackageDramaNames(notif.planId, notif.dramaIds).join(', ')}</span>
                               </div>
                             )}
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500">
-                              <span>
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 pt-0.5">
+                              <span className="tabular-nums">
                                 To: {notif.customerEmail || notif.memberId} · {formatDateTime(notif.createdAt)}
                                 {notif.supersededAt ? ' · Superseded on renewal' : ''}
                               </span>
@@ -2323,13 +3388,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                   type="button"
                                   disabled={retryingCustNotifId === notif.id}
                                   onClick={() => handleRetryCustomerEmail(notif.id)}
-                                  className="px-2.5 py-1 rounded-lg bg-[#0B0B0D] text-white font-semibold cursor-pointer disabled:opacity-60"
+                                  className="px-3 py-1.5 rounded-lg bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold cursor-pointer transition whitespace-nowrap shrink-0 disabled:opacity-60"
                                 >
                                   {retryingCustNotifId === notif.id ? 'Sending...' : 'Send / Retry Email'}
                                 </button>
                               )}
                             </div>
-                            {notif.emailError && <div className="text-red-700 text-[11px]">{notif.emailError}</div>}
+                            {notif.emailError && <div className="text-red-700 text-xs">{notif.emailError}</div>}
                           </div>
                         ))}
                       </div>
@@ -2341,13 +3406,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
             {/* TAB 3: QR CODES & SETTINGS */}
             {overview && activeTab === 'config' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 <div className="lg:col-span-7 space-y-6">
                   {/* Pakistan Bank QR Codes */}
-                  <div className="rounded-2xl bg-white border border-zinc-200 p-6 space-y-5">
-                    <div>
-                      <h2 className="text-lg font-bold text-[#0B0B0D]">Pakistan Bank QR Codes (PKR)</h2>
-                      <p className="text-xs text-zinc-500 mt-0.5">
+                  <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-5">
+                    <div className="space-y-1">
+                      <h2 className="text-lg font-bold text-[#0F172A]">Pakistan Bank QR Codes (PKR)</h2>
+                      <p className="text-[13px] text-slate-500 leading-relaxed">
                         Each membership plan displays its corresponding uncropped Pakistani Bank QR code. Upload a replacement image anytime.
                       </p>
                     </div>
@@ -2364,22 +3429,22 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                             : overview.config.vipQrImage;
 
                         return (
-                          <div key={plan.id} className="rounded-xl border border-zinc-200 bg-[#F8FAFC] p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold">{plan.name}</span>
-                              <span className="text-xs font-semibold text-[#16A34A]">
+                          <div key={plan.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-bold text-[#0F172A]">{plan.name}</span>
+                              <span className="text-xs font-semibold text-[#16A34A] tabular-nums">
                                 PKR {plan.pricePkr.toLocaleString()}
                               </span>
                             </div>
-                            <div className="bg-white rounded-lg border border-zinc-200 p-2 h-44 flex items-center justify-center">
+                            <div className="bg-white rounded-lg border border-slate-200 p-2 h-44 flex items-center justify-center">
                               <img
                                 src={imgSrc}
                                 alt={`${plan.name} Bank QR`}
                                 className="max-h-full max-w-full object-contain"
                               />
                             </div>
-                            <label className="w-full py-2 px-3 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
-                              <Upload className="w-3.5 h-3.5" />
+                            <label className="w-full py-2.5 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer transition whitespace-nowrap">
+                              <Upload className="w-3.5 h-3.5 shrink-0" />
                               <span>
                                 {uploadingQrPlanId === plan.id ? 'Uploading...' : `Replace ${plan.name} Bank QR`}
                               </span>
@@ -2397,16 +3462,16 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   </div>
 
                   {/* International Binance Pay QR Codes */}
-                  <div className="rounded-2xl bg-white border border-zinc-200 p-6 space-y-5">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
-                        <Globe className="w-3.5 h-3.5" />
+                  <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-5">
+                    <div className="space-y-1">
+                      <div className="text-xs font-semibold uppercase tracking-[0.06em] text-amber-700 flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 shrink-0" />
                         <span>International Payments</span>
                       </div>
-                      <h2 className="text-lg font-bold text-[#0B0B0D] mt-0.5">
+                      <h2 className="text-lg font-bold text-[#0F172A]">
                         International Binance Pay QR Codes (USD)
                       </h2>
-                      <p className="text-xs text-zinc-500 mt-0.5">
+                      <p className="text-[13px] text-slate-500 leading-relaxed">
                         Upload separate Binance QR images for Starter, Standard, Plus, and VIP. International members always pay the exact USD amount below.
                       </p>
                     </div>
@@ -2425,13 +3490,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
                         return (
                           <div key={plan.id} className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold">{plan.name}</span>
-                              <span className="text-xs font-bold text-amber-800">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-bold text-[#0F172A]">{plan.name}</span>
+                              <span className="text-xs font-bold text-amber-800 tabular-nums">
                                 ${usdVal.toFixed(2)} USD
                               </span>
                             </div>
-                            <div className="bg-white rounded-lg border border-zinc-200 p-2 h-44 flex items-center justify-center">
+                            <div className="bg-white rounded-lg border border-slate-200 p-2 h-44 flex items-center justify-center">
                               {binanceSrc ? (
                                 <img
                                   src={binanceSrc}
@@ -2439,13 +3504,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                   className="max-h-full max-w-full object-contain"
                                 />
                               ) : (
-                                <span className="text-xs text-zinc-400 text-center px-3">
+                                <span className="text-xs text-slate-400 text-center px-3">
                                   No Binance QR uploaded for {plan.name} yet
                                 </span>
                               )}
                             </div>
-                            <label className="w-full py-2 px-3 rounded-lg border border-zinc-300 bg-white hover:bg-zinc-100 text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
-                              <Upload className="w-3.5 h-3.5" />
+                            <label className="w-full py-2.5 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer transition whitespace-nowrap">
+                              <Upload className="w-3.5 h-3.5 shrink-0" />
                               <span>
                                 {uploadingBinanceQrPlanId === plan.id
                                   ? 'Uploading...'
@@ -2469,21 +3534,21 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
                 <form
                   onSubmit={handleSaveSettings}
-                  className="lg:col-span-5 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4 h-fit"
+                  className="lg:col-span-5 rounded-2xl bg-white border border-slate-200 p-6 space-y-4 h-fit"
                 >
-                  <div>
-                    <h2 className="text-lg font-bold text-[#0B0B0D]">USD Pricing, Instructions &amp; Support Settings</h2>
-                    <p className="text-xs text-zinc-500 mt-0.5">
+                  <div className="space-y-1">
+                    <h2 className="text-lg font-bold text-[#0F172A]">USD Pricing, Instructions &amp; Support Settings</h2>
+                    <p className="text-[13px] text-slate-500 leading-relaxed">
                       Configure exact USD plan pricing, international Binance instructions, WhatsApp proof forwarding, and support notes.
                     </p>
                   </div>
 
-                  <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-200 space-y-3">
+                  <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200 space-y-3">
                     <div className="text-xs font-bold text-amber-950">Exact USD Prices (International Binance QR)</div>
                     <div className="grid grid-cols-2 gap-3">
                       {MEMBERSHIP_PLANS.map((plan) => (
                         <div key={plan.id}>
-                          <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
+                          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                             {plan.name} (USD)
                           </label>
                           <input
@@ -2498,7 +3563,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                 [plan.id]: e.target.value,
                               }))
                             }
-                            className="w-full px-3 py-1.5 text-xs bg-white border border-zinc-300 rounded-lg"
+                            className="w-full px-3.5 py-2 text-[13px] tabular-nums bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                           />
                         </div>
                       ))}
@@ -2506,7 +3571,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                       International Binance Instructions (EN)
                     </label>
                     <textarea
@@ -2514,12 +3579,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       value={intlInstructionsEnInput}
                       onChange={(e) => setIntlInstructionsEnInput(e.target.value)}
                       placeholder="Scan the Binance Pay QR and send the exact USD amount shown..."
-                      className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                       International Binance Instructions (Urdu)
                     </label>
                     <textarea
@@ -2527,12 +3592,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       dir="rtl"
                       value={intlInstructionsUrInput}
                       onChange={(e) => setIntlInstructionsUrInput(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm font-urdu-slim border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-sm font-urdu-slim border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                       WhatsApp Number (International digits, e.g. 923001234567)
                     </label>
                     <input
@@ -2540,12 +3605,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       value={whatsappInput}
                       onChange={(e) => setWhatsappInput(e.target.value)}
                       placeholder="Leave empty until configured"
-                      className="w-full px-3.5 py-2 text-sm border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-[13px] tabular-nums border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                       Admin Verification Email Recipient
                     </label>
                     <input
@@ -2553,45 +3618,45 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       required
                       value={adminEmailInput}
                       onChange={(e) => setAdminEmailInput(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">Support Email</label>
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Support Email</label>
                     <input
                       type="email"
                       value={supportEmailInput}
                       onChange={(e) => setSupportEmailInput(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">Support Note (EN)</label>
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Support Note (EN)</label>
                     <textarea
                       rows={2}
                       value={supportNoteEnInput}
                       onChange={(e) => setSupportNoteEnInput(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">Support Note (Urdu)</label>
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Support Note (Urdu)</label>
                     <textarea
                       rows={2}
                       dir="rtl"
                       value={supportNoteUrInput}
                       onChange={(e) => setSupportNoteUrInput(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm font-urdu-slim border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-sm font-urdu-slim border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={savingSettings}
-                    className="w-full py-3 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-semibold transition cursor-pointer disabled:opacity-60"
+                    className="w-full py-3 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white text-sm font-semibold transition cursor-pointer disabled:opacity-60"
                   >
                     {savingSettings ? 'Saving Settings...' : 'Save Settings'}
                   </button>
@@ -2645,40 +3710,32 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       setSavingTransport(false);
                     }
                   }}
-                  className="lg:col-span-12 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4"
+                  className="lg:col-span-12 rounded-2xl bg-white border border-slate-200 p-6 space-y-5"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <h2 className="text-lg font-bold text-[#0B0B0D]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1.5">
+                      <h2 className="text-lg font-bold text-[#0F172A]">
                         Email Delivery Credentials (Gmail SMTP App Password or Resend)
                       </h2>
-                      <p className="text-xs text-zinc-600 mt-0.5 leading-relaxed">
-                        Used for automatic admin alerts on Bank QR screenshots and editing client updates. Set via Render environment variables or save below.
+                      <p className="text-[13px] text-slate-600 leading-relaxed">
+                        Used for automatic admin alerts on payment proofs and customer membership notifications. Set via Render environment variables or save below.
                       </p>
                       {transportStatus && (
-                        <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-                          <span
-                            className={`px-2.5 py-1 rounded-md font-semibold ${
-                              transportStatus.smtpConfigured
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-zinc-100 text-zinc-600'
-                            }`}
-                          >
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-medium pt-0.5">
+                          <span className={transportStatus.smtpConfigured ? 'text-emerald-700 font-semibold' : 'text-slate-500'}>
                             SMTP: {transportStatus.smtpConfigured ? `Configured (${transportStatus.smtpSource || 'active'})` : 'Not configured'}
                           </span>
-                          <span
-                            className={`px-2.5 py-1 rounded-md font-semibold ${
-                              transportStatus.resendConfigured
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-zinc-100 text-zinc-600'
-                            }`}
-                          >
+                          <span aria-hidden="true" className="text-slate-300">·</span>
+                          <span className={transportStatus.resendConfigured ? 'text-emerald-700 font-semibold' : 'text-slate-500'}>
                             Resend: {transportStatus.resendConfigured ? `Configured (${transportStatus.resendSource || 'active'})` : 'Not configured'}
                           </span>
                           {transportStatus.notificationRecipients?.length ? (
-                            <span className="px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-700 font-medium">
-                              Alerts to: {transportStatus.notificationRecipients.join(', ')}
-                            </span>
+                            <>
+                              <span aria-hidden="true" className="text-slate-300">·</span>
+                              <span className="text-slate-600">
+                                Alerts to: {transportStatus.notificationRecipients.join(', ')}
+                              </span>
+                            </>
                           ) : null}
                         </div>
                       )}
@@ -2711,7 +3768,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                           setTestingTransport(false);
                         }
                       }}
-                      className="px-4 py-2 rounded-xl border border-zinc-300 bg-white hover:bg-zinc-50 text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-60"
+                      className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 whitespace-nowrap shrink-0 cursor-pointer transition disabled:opacity-60"
                     >
                       {testingTransport ? 'Testing...' : 'Test Current Email Setup'}
                     </button>
@@ -2719,35 +3776,35 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-700 mb-1">SMTP Host</label>
+                      <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">SMTP Host</label>
                       <input
                         type="text"
                         value={smtpHostInput}
                         onChange={(e) => setSmtpHostInput(e.target.value)}
-                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                        className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-700 mb-1">SMTP Port</label>
+                      <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">SMTP Port</label>
                       <input
                         type="number"
                         value={smtpPortInput}
                         onChange={(e) => setSmtpPortInput(e.target.value)}
-                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                        className="w-full px-3.5 py-2.5 text-[13px] tabular-nums border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-700 mb-1">SMTP Email (Sender)</label>
+                      <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">SMTP Email (Sender)</label>
                       <input
                         type="email"
                         value={smtpUserInput}
                         onChange={(e) => setSmtpUserInput(e.target.value)}
                         placeholder="Sender email address"
-                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                        className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                         New Gmail App Password
                       </label>
                       <input
@@ -2755,14 +3812,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         value={smtpPassInput}
                         onChange={(e) => setSmtpPassInput(e.target.value)}
                         placeholder="16-character App Password"
-                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                        className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                         Or Resend API Key (Optional Alternative)
                       </label>
                       <input
@@ -2770,13 +3827,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         value={resendKeyInput}
                         onChange={(e) => setResendKeyInput(e.target.value)}
                         placeholder="re_..."
-                        className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                        className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                       />
                     </div>
                     <button
                       type="submit"
                       disabled={savingTransport}
-                      className="py-2.5 px-5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold transition cursor-pointer disabled:opacity-60"
+                      className="py-2.5 px-5 rounded-xl bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-[13px] font-semibold transition cursor-pointer disabled:opacity-60"
                     >
                       {savingTransport ? 'Testing Email Delivery...' : 'Save Credentials & Send Test Email'}
                     </button>
@@ -2788,39 +3845,37 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             {/* TAB 4: EMAIL LOGS & AUDIT TRAIL */}
             {overview && activeTab === 'audit' && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="rounded-2xl bg-white border border-zinc-200 p-6 space-y-4">
+                <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
                   <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-[#16A34A]" />
-                    <h2 className="text-base font-bold text-[#0B0B0D]">Admin Email Notifications Log</h2>
+                    <Mail className="w-4 h-4 text-[#16A34A] shrink-0" />
+                    <h2 className="text-base font-bold text-[#0F172A]">Admin Email Notifications Log</h2>
                   </div>
 
                   {overview.emailNotifications.length === 0 ? (
-                    <p className="text-xs text-zinc-500">No verification emails recorded yet.</p>
+                    <p className="text-[13px] text-slate-500">No verification emails recorded yet.</p>
                   ) : (
-                    <div className="space-y-3 max-h-[480px] overflow-y-auto">
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto">
                       {overview.emailNotifications.map((notif) => (
-                        <div key={notif.id} className="p-3.5 rounded-xl border border-zinc-200 bg-zinc-50 space-y-1.5 text-xs">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-semibold text-[#0B0B0D] truncate">{notif.subject}</span>
+                        <div key={notif.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-[13px] font-semibold text-[#0F172A] truncate">{notif.subject}</span>
                             <span
-                              className={`px-2 py-0.5 rounded font-bold uppercase text-[10px] shrink-0 ${
-                                notif.status === 'sent'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-red-100 text-red-800'
+                              className={`text-xs font-bold uppercase shrink-0 ${
+                                notif.status === 'sent' ? 'text-emerald-700' : 'text-red-700'
                               }`}
                             >
                               {notif.status}
                             </span>
                           </div>
-                          <div className="text-zinc-500">
+                          <div className="text-xs text-slate-500 tabular-nums">
                             To: {notif.to} · Attempts: {notif.attempts} · {formatDateTime(notif.lastAttemptAt)}
                           </div>
-                          {notif.error && <div className="text-red-700">{notif.error}</div>}
+                          {notif.error && <div className="text-xs text-red-700 leading-relaxed">{notif.error}</div>}
                           {notif.status === 'failed' && (
                             <button
                               type="button"
                               onClick={() => handleRetryEmail(notif.id)}
-                              className="px-3 py-1 rounded-lg bg-[#0B0B0D] text-white font-semibold cursor-pointer"
+                              className="mt-1 px-3 py-1.5 rounded-lg bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold cursor-pointer transition"
                             >
                               Retry Send
                             </button>
@@ -2831,24 +3886,28 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   )}
                 </div>
 
-                <div className="rounded-2xl bg-white border border-zinc-200 p-6 space-y-4">
+                <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
                   <div className="flex items-center gap-2">
-                    <ClipboardList className="w-4 h-4 text-[#16A34A]" />
-                    <h2 className="text-base font-bold text-[#0B0B0D]">Admin Action Audit Trail</h2>
+                    <ClipboardList className="w-4 h-4 text-[#16A34A] shrink-0" />
+                    <h2 className="text-base font-bold text-[#0F172A]">Admin Action Audit Trail</h2>
                   </div>
 
                   {overview.auditLogs.length === 0 ? (
-                    <p className="text-xs text-zinc-500">No admin actions recorded yet.</p>
+                    <p className="text-[13px] text-slate-500">No admin actions recorded yet.</p>
                   ) : (
-                    <div className="space-y-2.5 max-h-[480px] overflow-y-auto">
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto">
                       {overview.auditLogs.map((log) => (
-                        <div key={log.id} className="p-3 rounded-xl border border-zinc-200 text-xs space-y-1">
+                        <div key={log.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-1.5">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-bold uppercase text-[11px] text-[#0B0B0D]">{log.action}</span>
-                            <span className="text-zinc-400">{formatDateTime(log.createdAt)}</span>
+                            <span className="font-semibold uppercase tracking-[0.04em] text-xs text-[#0F172A]">
+                              {log.action}
+                            </span>
+                            <span className="text-xs text-slate-400 tabular-nums whitespace-nowrap">
+                              {formatDateTime(log.createdAt)}
+                            </span>
                           </div>
-                          <div className="text-zinc-700">{log.details}</div>
-                          <div className="text-[11px] text-zinc-500">By: {log.adminEmail}</div>
+                          <div className="text-[13px] text-slate-700 leading-relaxed">{log.details}</div>
+                          <div className="text-xs text-slate-500">By: {log.adminEmail}</div>
                         </div>
                       ))}
                     </div>
@@ -2859,21 +3918,21 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
             {/* TAB 5: ADMIN ROLES */}
             {overview && activeTab === 'roles' && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-7 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4">
-                  <h2 className="text-lg font-bold text-[#0B0B0D]">Authorized Administrators</h2>
-                  <div className="divide-y divide-zinc-100">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="lg:col-span-7 rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
+                  <h2 className="text-lg font-bold text-[#0F172A]">Authorized Administrators</h2>
+                  <div className="divide-y divide-slate-100">
                     {overview.admins.map((adm) => (
-                      <div key={adm.id} className="py-3.5 flex items-center justify-between gap-4 text-xs">
-                        <div>
-                          <div className="font-bold text-[#0B0B0D] text-sm">{adm.name}</div>
-                          <div className="text-zinc-600">{adm.email}</div>
-                          <div className="text-zinc-400 mt-0.5">Created by: {adm.createdBy}</div>
+                      <div key={adm.id} className="py-4 flex items-center justify-between gap-4">
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="font-semibold text-[#0F172A] text-sm">{adm.name}</div>
+                          <div className="text-[13px] text-slate-600 truncate">{adm.email}</div>
+                          <div className="text-xs text-slate-400">Created by: {adm.createdBy}</div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 shrink-0">
                           <span
-                            className={`px-2.5 py-1 rounded-md font-bold uppercase text-[11px] ${
-                              adm.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                            className={`text-xs font-semibold uppercase tracking-[0.04em] ${
+                              adm.isActive ? 'text-emerald-700' : 'text-red-700'
                             }`}
                           >
                             {adm.isActive ? 'Active' : 'Disabled'}
@@ -2882,7 +3941,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                             <button
                               type="button"
                               onClick={() => handleToggleAdminActive(adm)}
-                              className="px-3 py-1.5 rounded-lg border border-zinc-300 hover:bg-zinc-100 font-semibold cursor-pointer"
+                              className="px-3.5 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 cursor-pointer whitespace-nowrap transition"
                             >
                               {adm.isActive ? 'Revoke Admin' : 'Restore Admin'}
                             </button>
@@ -2895,35 +3954,35 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
                 <form
                   onSubmit={handleAddAdminRole}
-                  className="lg:col-span-5 rounded-2xl bg-white border border-zinc-200 p-6 space-y-4"
+                  className="lg:col-span-5 rounded-2xl bg-white border border-slate-200 p-6 space-y-4"
                 >
                   <div className="flex items-center gap-2">
-                    <UserPlus className="w-4 h-4 text-[#16A34A]" />
-                    <h2 className="text-lg font-bold text-[#0B0B0D]">Grant Admin Role</h2>
+                    <UserPlus className="w-4 h-4 text-[#16A34A] shrink-0" />
+                    <h2 className="text-lg font-bold text-[#0F172A]">Grant Admin Role</h2>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">Full Name</label>
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Full Name</label>
                     <input
                       type="text"
                       required
                       value={newAdminName}
                       onChange={(e) => setNewAdminName(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">Email</label>
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Email</label>
                     <input
                       type="email"
                       required
                       value={newAdminEmail}
                       onChange={(e) => setNewAdminEmail(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                       Temporary Password (min 8 chars)
                     </label>
                     <input
@@ -2932,13 +3991,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       minLength={8}
                       value={newAdminPassword}
                       onChange={(e) => setNewAdminPassword(e.target.value)}
-                      className="w-full px-3.5 py-2 text-sm border border-zinc-300 rounded-xl"
+                      className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={creatingAdmin}
-                    className="w-full py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold transition cursor-pointer"
+                    className="w-full py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-[13px] font-semibold transition cursor-pointer disabled:opacity-60"
                   >
                     {creatingAdmin ? 'Creating Admin...' : 'Grant Admin Access'}
                   </button>
@@ -2956,55 +4015,47 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
           onClick={() => setSelectedRequestId(null)}
         >
           <div
-            className="bg-white rounded-2xl max-w-4xl w-full p-6 sm:p-8 space-y-6 my-8 shadow-2xl"
+            className="bg-white rounded-2xl max-w-4xl w-full p-6 sm:p-8 space-y-6 my-8 shadow-2xl border border-slate-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 pb-4">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[#16A34A]">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5">
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                  <span className="uppercase tracking-[0.06em] text-[#16A34A]">
                     Verification Request Detail
                   </span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      selectedRequest.orderType === 'renewal'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'bg-zinc-100 text-zinc-700'
-                    }`}
-                  >
+                  <span aria-hidden="true" className="text-slate-300">·</span>
+                  <span className={selectedRequest.orderType === 'renewal' ? 'text-blue-700' : 'text-slate-600'}>
                     {selectedRequest.orderType === 'renewal' ? 'Membership Renewal' : 'New Membership'}
                   </span>
+                  <span aria-hidden="true" className="text-slate-300">·</span>
                   <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                    className={
                       selectedRequest.paymentMethod === 'binance_qr' || selectedRequest.currency === 'USD'
-                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    }`}
+                        ? 'text-amber-700'
+                        : 'text-emerald-700'
+                    }
                   >
                     {selectedRequest.paymentMethod === 'binance_qr' || selectedRequest.currency === 'USD'
                       ? 'International Binance QR (USD)'
                       : 'Pakistan Bank QR (PKR)'}
                   </span>
                 </div>
-                <h3 className="text-xl font-bold text-[#0B0B0D] mt-1">
+                <h3 className="text-xl font-bold text-[#0F172A]">
                   {selectedRequest.planName} — {formatOrderAmount(selectedRequest)} ({selectedRequest.durationDays} Days)
                 </h3>
-                <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                  {resolvePackageDramaNames(selectedRequest.planId, selectedRequest.selectedDramaIds).map((title) => (
-                    <span
-                      key={title}
-                      className="px-2.5 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-950"
-                    >
-                      {title}
-                    </span>
-                  ))}
+                <div className="text-[13px] font-medium text-slate-700 leading-relaxed">
+                  Included Dramas:{' '}
+                  <strong className="font-semibold text-[#0F172A]">
+                    {resolvePackageDramaNames(selectedRequest.planId, selectedRequest.selectedDramaIds).join(', ') || '—'}
+                  </strong>
                 </div>
-                <div className="text-xs font-mono text-zinc-500 mt-1">{selectedRequest.id}</div>
+                <div className="text-xs font-mono text-slate-500 tabular-nums">{selectedRequest.id}</div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedRequestId(null)}
-                className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-600 cursor-pointer"
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3012,14 +4063,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
               {/* Proof Screenshot Viewer */}
-              <div className="md:col-span-7 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 space-y-2">
-                <div className="text-xs font-bold text-zinc-600 uppercase tracking-wider">
+              <div className="md:col-span-7 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-2.5">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-[0.06em]">
                   Customer Payment Proof Screenshot
                 </div>
                 {selectedRequest.hasProof ? (
-                  <div className="bg-white rounded-xl border border-zinc-200 p-2 flex items-center justify-center min-h-[320px]">
+                  <div className="bg-white rounded-xl border border-slate-200 p-2 flex items-center justify-center min-h-[320px]">
                     {proofModalLoading ? (
-                      <div className="text-xs text-zinc-500">Loading payment screenshot...</div>
+                      <div className="text-[13px] text-slate-500">Loading payment screenshot...</div>
                     ) : proofModalSrc ? (
                       <img
                         src={proofModalSrc}
@@ -3027,13 +4078,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         className="max-w-full max-h-[520px] object-contain rounded-lg"
                       />
                     ) : (
-                      <div className="text-xs text-zinc-500 text-center px-4">
+                      <div className="text-[13px] text-slate-500 text-center px-4">
                         Payment proof file could not be loaded cleanly. Try refreshing or syncing Cloud DB.
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="h-60 flex items-center justify-center text-xs text-zinc-500 bg-white rounded-xl border border-dashed border-zinc-300">
+                  <div className="h-60 flex items-center justify-center text-[13px] text-slate-500 bg-white rounded-xl border border-dashed border-slate-300">
                     No payment screenshot has been uploaded for this request yet.
                   </div>
                 )}
@@ -3041,79 +4092,118 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
               {/* Request Metadata & Approve / Reject Actions */}
               <div className="md:col-span-5 space-y-5">
-                <div className="rounded-xl border border-zinc-200 p-4 space-y-2.5 text-xs">
-                  <div>
-                    <span className="text-zinc-500">Customer Name:</span>{' '}
-                    <strong className="text-[#0B0B0D]">{selectedRequest.customerName}</strong>
-                  </div>
-                  <div>
-                    <span className="text-zinc-500">Customer Email:</span>{' '}
-                    <strong className="text-[#0B0B0D]">{selectedRequest.customerEmail}</strong>
-                  </div>
-                  <div>
-                    <span className="text-zinc-500">Phone Number:</span>{' '}
-                    <strong className="text-[#0B0B0D]">{selectedRequest.customerPhone || '—'}</strong>
-                  </div>
-                  <div>
-                    <span className="text-zinc-500">Payable Amount:</span>{' '}
-                    <strong className="text-[#16A34A]">{formatOrderAmount(selectedRequest)}</strong>
+                <dl className="rounded-xl border border-slate-200 bg-white p-5 grid grid-cols-[118px_1fr] gap-y-3 gap-x-3 text-[13px] leading-relaxed">
+                  <dt className="text-slate-500 font-medium">Customer</dt>
+                  <dd className="font-semibold text-[#0F172A] break-words">{selectedRequest.customerName}</dd>
+
+                  <dt className="text-slate-500 font-medium">Email</dt>
+                  <dd className="font-medium text-[#0F172A] break-all">{selectedRequest.customerEmail}</dd>
+
+                  <dt className="text-slate-500 font-medium">Phone</dt>
+                  <dd className="font-medium text-[#0F172A] tabular-nums">{selectedRequest.customerPhone || '—'}</dd>
+
+                  <dt className="text-slate-500 font-medium">Amount</dt>
+                  <dd className="font-semibold text-[#16A34A] tabular-nums">
+                    {formatOrderAmount(selectedRequest)}
                     {selectedRequest.indicativeLocalDisplay && (
-                      <span className="text-zinc-400 ml-1">(Local ref: {selectedRequest.indicativeLocalDisplay})</span>
+                      <span className="text-xs font-normal text-slate-400 ml-1.5">
+                        (Ref: {selectedRequest.indicativeLocalDisplay})
+                      </span>
                     )}
-                  </div>
+                  </dd>
+
+                  {(() => {
+                    const isUsd = selectedRequest.paymentMethod === 'binance_qr' || selectedRequest.currency === 'USD';
+                    const orig = isUsd
+                      ? Number(selectedRequest.originalAmountUsd ?? selectedRequest.amountUsd ?? 0)
+                      : Number(selectedRequest.originalAmountPkr ?? selectedRequest.amountPkr ?? 0);
+                    const pDisc = isUsd ? Number(selectedRequest.promoDiscountUsd ?? 0) : Number(selectedRequest.promoDiscountPkr ?? 0);
+                    const rDisc = isUsd ? Number(selectedRequest.referralDiscountUsd ?? 0) : Number(selectedRequest.referralDiscountPkr ?? 0);
+                    const cUsed = isUsd ? Number(selectedRequest.creditsUsedUsd ?? 0) : Number(selectedRequest.creditsUsedPkr ?? 0);
+                    const hasAny = pDisc > 0 || rDisc > 0 || cUsed > 0 || Boolean(selectedRequest.promoCode);
+                    if (!hasAny) return null;
+                    const fmt = (v: number) => (isUsd ? `$${v.toFixed(2)} USD` : `PKR ${Math.round(v).toLocaleString()}`);
+                    return (
+                      <>
+                        <dt className="text-slate-500 font-medium">Discounts</dt>
+                        <dd className="text-xs space-y-1 text-emerald-800">
+                          <div>Original: <span className="font-semibold">{fmt(orig)}</span></div>
+                          {selectedRequest.promoCode && (
+                            <div>
+                              Promo <span className="font-mono font-bold">{selectedRequest.promoCode}</span>: -{fmt(pDisc)}
+                            </div>
+                          )}
+                          {rDisc > 0 && <div>Referral Welcome: -{fmt(rDisc)}</div>}
+                          {cUsed > 0 && <div>Wallet Credits: -{fmt(cUsed)}</div>}
+                        </dd>
+                      </>
+                    );
+                  })()}
+
                   {selectedRequest.visitorCountryCode && (
-                    <div>
-                      <span className="text-zinc-500">Visitor Country:</span>{' '}
-                      <strong className="text-[#0B0B0D]">{selectedRequest.visitorCountryCode}</strong>
-                    </div>
+                    <>
+                      <dt className="text-slate-500 font-medium">Country</dt>
+                      <dd className="font-semibold text-[#0F172A]">{selectedRequest.visitorCountryCode}</dd>
+                    </>
                   )}
-                  <div>
-                    <span className="text-zinc-500">Selected Dramas:</span>{' '}
-                    <strong className="text-[#0B0B0D]">
-                      {resolvePackageDramaNames(selectedRequest.planId, selectedRequest.selectedDramaIds).join(', ')}
-                    </strong>
-                  </div>
+
+                  <dt className="text-slate-500 font-medium">Dramas</dt>
+                  <dd className="font-medium text-[#0F172A]">
+                    {resolvePackageDramaNames(selectedRequest.planId, selectedRequest.selectedDramaIds).join(', ') || '—'}
+                  </dd>
+
+                  <dt className="text-slate-500 font-medium">Submitted</dt>
+                  <dd className="font-medium text-[#0F172A] tabular-nums">
+                    {formatDateTime(selectedRequest.proofSubmittedAt || selectedRequest.createdAt)}
+                  </dd>
+
+                  {selectedRequest.paymentNote && (
+                    <>
+                      <dt className="text-slate-500 font-medium">Note</dt>
+                      <dd className="font-medium text-[#0F172A]">{selectedRequest.paymentNote}</dd>
+                    </>
+                  )}
+
+                  <dt className="text-slate-500 font-medium">Status</dt>
+                  <dd className="font-semibold uppercase tracking-[0.04em] text-xs text-[#0F172A] self-center">
+                    {selectedRequest.status.replace('_', ' ')}
+                  </dd>
+
+                  {selectedRequest.reviewedByAdminEmail && (
+                    <>
+                      <dt className="text-slate-500 font-medium">Reviewed By</dt>
+                      <dd className="text-xs text-slate-700 tabular-nums">
+                        <span className="font-semibold text-[#0F172A]">{selectedRequest.reviewedByAdminEmail}</span>
+                        <div className="text-slate-400 mt-0.5">{formatDateTime(selectedRequest.reviewedAt)}</div>
+                      </dd>
+                    </>
+                  )}
+
+                  {selectedRequest.rejectionReason && (
+                    <>
+                      <dt className="text-red-700 font-medium">Rejection</dt>
+                      <dd className="font-semibold text-red-700">{selectedRequest.rejectionReason}</dd>
+                    </>
+                  )}
+
                   {selectedRequest.orderType === 'renewal' && (
-                    <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-200 space-y-1 text-blue-950">
+                    <div className="col-span-2 mt-1 p-3 rounded-xl bg-blue-50 border border-blue-200 space-y-1 text-xs text-blue-950">
                       <div className="font-bold">Renewal Extension Preview</div>
-                      <div>
+                      <div className="tabular-nums">
                         Target Membership: <span className="font-mono">{selectedRequest.targetMembershipId}</span>
                       </div>
                       {selectedRequest.targetMembershipCurrentExpiry && (
-                        <div>Current Expiry: {formatDateTime(selectedRequest.targetMembershipCurrentExpiry)}</div>
+                        <div className="tabular-nums">
+                          Current Expiry: {formatDateTime(selectedRequest.targetMembershipCurrentExpiry)}
+                        </div>
                       )}
-                      <div>
+                      <div className="tabular-nums">
                         Projected New Expiry:{' '}
                         <strong>{formatDateTime(getProjectedExtendedExpiry(selectedRequest))}</strong>
                       </div>
                     </div>
                   )}
-                  <div>
-                    <span className="text-zinc-500">Submitted At:</span>{' '}
-                    <strong>{formatDateTime(selectedRequest.proofSubmittedAt || selectedRequest.createdAt)}</strong>
-                  </div>
-                  {selectedRequest.paymentNote && (
-                    <div>
-                      <span className="text-zinc-500">Customer Note:</span>{' '}
-                      <strong>{selectedRequest.paymentNote}</strong>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-zinc-500">Current Status:</span>{' '}
-                    <strong className="uppercase">{selectedRequest.status.replace('_', ' ')}</strong>
-                  </div>
-                  {selectedRequest.reviewedByAdminEmail && (
-                    <div>
-                      <span className="text-zinc-500">Reviewed By:</span>{' '}
-                      <strong>{selectedRequest.reviewedByAdminEmail}</strong> ({formatDateTime(selectedRequest.reviewedAt)})
-                    </div>
-                  )}
-                  {selectedRequest.rejectionReason && (
-                    <div className="text-red-700">
-                      <span>Rejection Reason:</span> <strong>{selectedRequest.rejectionReason}</strong>
-                    </div>
-                  )}
-                </div>
+                </dl>
 
                 {selectedRequest.status !== 'approved' && (
                   <div className="space-y-4">
@@ -3123,9 +4213,9 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         type="button"
                         disabled={actionBusy}
                         onClick={() => setConfirmApproveId(selectedRequest.id)}
-                        className="w-full py-3 px-4 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full py-3 px-4 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white text-sm font-semibold inline-flex items-center justify-center gap-2 cursor-pointer transition whitespace-nowrap"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
                         <span>
                           {selectedRequest.orderType === 'renewal'
                             ? 'Approve Renewal & Extend Membership'
@@ -3134,7 +4224,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       </button>
                     ) : (
                       <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3">
-                        <p className="text-xs font-semibold text-emerald-950">
+                        <p className="text-[13px] font-semibold text-emerald-950 leading-relaxed">
                           {selectedRequest.orderType === 'renewal'
                             ? `Confirm renewal approval for ${formatOrderAmount(selectedRequest)}? This adds +${selectedRequest.durationDays} days to membership ${selectedRequest.targetMembershipId} (New Expiry: ${formatDateTime(getProjectedExtendedExpiry(selectedRequest))}).`
                             : `Confirm approval for ${formatOrderAmount(selectedRequest)}? This immediately activates ${selectedRequest.planName} (${selectedRequest.durationDays} days).`}
@@ -3144,14 +4234,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                             type="button"
                             disabled={actionBusy}
                             onClick={() => handleApproveRequest(selectedRequest.id)}
-                            className="flex-1 py-2 rounded-lg bg-[#16A34A] text-white text-xs font-bold cursor-pointer"
+                            className="flex-1 py-2 rounded-lg bg-[#16A34A] text-white text-xs font-semibold cursor-pointer"
                           >
                             {actionBusy ? 'Approving...' : 'Yes, Confirm Approve'}
                           </button>
                           <button
                             type="button"
                             onClick={() => setConfirmApproveId(null)}
-                            className="px-3 py-2 rounded-lg border border-zinc-300 bg-white text-xs font-semibold cursor-pointer"
+                            className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -3162,7 +4252,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     {/* Reject Section (Reason Required) */}
                     {selectedRequest.status !== 'rejected' && (
                       <div className="p-4 rounded-xl border border-red-200 bg-red-50/40 space-y-2.5">
-                        <label className="block text-xs font-bold text-red-900">
+                        <label className="block text-xs font-semibold text-red-900">
                           Reject Payment (Reason Required)
                         </label>
                         <textarea
@@ -3170,15 +4260,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                           value={rejectReasonInput}
                           onChange={(e) => setRejectReasonInput(e.target.value)}
                           placeholder="e.g. Amount does not match plan or screenshot is blurry"
-                          className="w-full px-3 py-2 text-xs bg-white border border-red-200 rounded-lg focus:outline-none"
+                          className="w-full px-3 py-2 text-[13px] bg-white border border-red-200 rounded-lg focus:outline-none focus:border-red-400"
                         />
                         <button
                           type="button"
                           disabled={actionBusy}
                           onClick={() => handleRejectRequest(selectedRequest.id)}
-                          className="w-full py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="w-full py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition"
                         >
-                          <XCircle className="w-4 h-4" />
+                          <XCircle className="w-4 h-4 shrink-0" />
                           <span>Reject Payment</span>
                         </button>
                       </div>
@@ -3199,10 +4289,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     );
                   if (linkedToActive) return null;
                   return (
-                    <div className="pt-2 border-t border-zinc-200">
+                    <div className="pt-3 border-t border-slate-200">
                       {deletingRequestId === selectedRequest.id ? (
-                        <div className="p-3 rounded-xl bg-red-50 border border-red-200 space-y-2">
-                          <p className="text-xs font-semibold text-red-900">
+                        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 space-y-2.5">
+                          <p className="text-xs font-semibold text-red-900 leading-relaxed">
                             Permanently delete this payment request and any uploaded screenshot?
                           </p>
                           <div className="flex items-center gap-2">
@@ -3210,14 +4300,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                               type="button"
                               disabled={actionBusy}
                               onClick={() => handleDeleteRequest(selectedRequest.id)}
-                              className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60"
+                              className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60"
                             >
                               {actionBusy ? 'Deleting...' : 'Yes, Delete Request'}
                             </button>
                             <button
                               type="button"
                               onClick={() => setDeletingRequestId(null)}
-                              className="px-3 py-2 rounded-lg border border-zinc-300 bg-white text-xs font-semibold cursor-pointer"
+                              className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer"
                             >
                               Cancel
                             </button>
@@ -3227,9 +4317,9 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         <button
                           type="button"
                           onClick={() => setDeletingRequestId(selectedRequest.id)}
-                          className="w-full py-2.5 px-4 rounded-xl border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="w-full py-2.5 px-4 rounded-xl border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5 shrink-0" />
                           <span>Delete Unnecessary Request</span>
                         </button>
                       )}
@@ -3249,25 +4339,25 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
           onClick={() => setAssignModalOpen(false)}
         >
           <div
-            className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-8 space-y-5 my-8 shadow-2xl"
+            className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-8 space-y-5 my-8 shadow-2xl border border-slate-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 pb-4">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-[#16A34A]">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+              <div className="space-y-1">
+                <div className="text-xs font-semibold uppercase tracking-[0.06em] text-[#16A34A]">
                   Direct Admin Provisioning
                 </div>
-                <h3 className="text-xl font-bold text-[#0B0B0D] mt-0.5">
+                <h3 className="text-xl font-bold text-[#0F172A]">
                   Assign Customer Membership
                 </h3>
-                <p className="text-xs text-zinc-500 mt-0.5">
+                <p className="text-[13px] text-slate-500 leading-relaxed">
                   Activate a Starter, Standard, Plus, or VIP plan for a new or existing customer immediately.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setAssignModalOpen(false)}
-                className="p-2 rounded-lg hover:bg-zinc-100 text-zinc-600 cursor-pointer"
+                className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 cursor-pointer shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -3276,7 +4366,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             <form onSubmit={handleAssignSubmit} className="space-y-4">
               {overview && overview.members.length > 0 && (
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
                     Select Existing Customer (Optional)
                   </label>
                   <select
@@ -3291,7 +4381,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         setAssignPhone(found.phone || '');
                       }
                     }}
-                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl bg-white"
+                    className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-[#0F172A]"
                   >
                     <option value="">+ Create / Match by Email Below</option>
                     {overview.members.map((m) => (
@@ -3303,60 +4393,60 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Customer Full Name</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Customer Full Name</label>
                   <input
                     type="text"
                     required
                     value={assignFullName}
                     onChange={(e) => setAssignFullName(e.target.value)}
                     placeholder="e.g. Bilal Ahmed"
-                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                    className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Customer Email</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Customer Email</label>
                   <input
                     type="email"
                     required
                     value={assignEmail}
                     onChange={(e) => setAssignEmail(e.target.value)}
                     placeholder="customer@example.com"
-                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                    className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Phone / WhatsApp</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Phone / WhatsApp</label>
                   <input
                     type="text"
                     value={assignPhone}
                     onChange={(e) => setAssignPhone(e.target.value)}
                     placeholder="0300 1234567"
-                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                    className="w-full px-3.5 py-2.5 text-[13px] tabular-nums border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                    Account Password (Optional for New Member)
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                    Account Password (Optional)
                   </label>
                   <input
                     type="text"
                     value={assignPassword}
                     onChange={(e) => setAssignPassword(e.target.value)}
                     placeholder="Min 6 chars (optional)"
-                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                    className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Membership Plan</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Membership Plan</label>
                   <select
                     value={assignPlanId}
                     onChange={(e) => handleAssignPlanChange(e.target.value as MembershipPlanId)}
-                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl bg-white"
+                    className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl bg-white focus:outline-none focus:border-[#0F172A]"
                   >
                     {MEMBERSHIP_PLANS.map((plan) => (
                       <option key={plan.id} value={plan.id}>
@@ -3366,7 +4456,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-zinc-700 mb-1">Duration (Days)</label>
+                  <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Duration (Days)</label>
                   <input
                     type="number"
                     min={1}
@@ -3374,23 +4464,23 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     required
                     value={assignDurationDays}
                     onChange={(e) => setAssignDurationDays(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                    className="w-full px-3.5 py-2.5 text-[13px] tabular-nums border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-zinc-700">
+                  <label className="block text-[13px] font-semibold text-slate-700">
                     Included Dramas
                   </label>
-                  <span className="text-[11px] text-zinc-500">
+                  <span className="text-xs text-slate-500">
                     {assignPlanId === 'vip'
                       ? 'All VIP Dramas'
                       : `Select ${MEMBERSHIP_PLANS.find((p) => p.id === assignPlanId)?.dramaLimit || 1}`}
                   </span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {MEMBERSHIP_DRAMAS.map((drama) => {
                     const selected = assignDramaIds.includes(drama.id);
                     const isVip = assignPlanId === 'vip';
@@ -3414,10 +4504,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                             });
                           }
                         }}
-                        className={`px-3 py-2 rounded-xl border text-left text-xs font-semibold transition cursor-pointer ${
+                        className={`px-3.5 py-2.5 rounded-xl border text-left text-xs font-semibold transition cursor-pointer ${
                           selected
-                            ? 'bg-emerald-50 border-[#22C55E] text-[#0B0B0D]'
-                            : 'bg-white border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                            ? 'bg-emerald-50 border-[#22C55E] text-[#0F172A]'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
                       >
                         <div className="truncate">{drama.title}</div>
@@ -3428,28 +4518,28 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">Admin Note (Optional)</label>
+                <label className="block text-[13px] font-semibold text-slate-700 mb-1.5">Admin Note (Optional)</label>
                 <input
                   type="text"
                   value={assignNote}
                   onChange={(e) => setAssignNote(e.target.value)}
                   placeholder="e.g. Verified via WhatsApp transfer"
-                  className="w-full px-3.5 py-2 text-xs border border-zinc-300 rounded-xl"
+                  className="w-full px-3.5 py-2.5 text-[13px] border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2 border-t border-zinc-200">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => setAssignModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-zinc-300 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer whitespace-nowrap"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={assignSubmitting}
-                  className="px-5 py-2 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold transition cursor-pointer disabled:opacity-60"
+                  className="px-5 py-2.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white text-xs font-semibold transition cursor-pointer whitespace-nowrap disabled:opacity-60"
                 >
                   {assignSubmitting ? 'Activating...' : 'Assign & Activate Membership'}
                 </button>

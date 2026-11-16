@@ -10,6 +10,9 @@ import {
   RefreshCw,
   Play,
   ShieldCheck,
+  Tag,
+  Wallet,
+  X,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
@@ -31,6 +34,9 @@ import {
   fetchMemberAccount,
   logoutMemberAccount,
   createMembershipCheckout,
+  validateCheckoutPromoQuote,
+  normalizeReferralInput,
+  CheckoutPricingQuote,
   MemberAccountState,
   MembershipOrder,
   PublicMembershipConfig,
@@ -92,6 +98,14 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [activePaymentOrder, setActivePaymentOrder] = useState<MembershipOrder | null>(null);
+
+  // Promo code, referral welcome discount & wallet credit state
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedPromoCode, setAppliedPromoCode] = useState('');
+  const [applyCredits, setApplyCredits] = useState(false);
+  const [pricingQuote, setPricingQuote] = useState<CheckoutPricingQuote | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
 
   // Payment region, geo pricing, renewal mode & episode deep-link context
   const [paymentRegion, setPaymentRegion] = useState<PaymentRegion>('pakistan');
@@ -220,6 +234,95 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     ? MEMBERSHIP_PLANS.find((p) => p.id === selectedPlanId)
     : undefined;
 
+  useEffect(() => {
+    if (!selectedPlanId) {
+      setPricingQuote(null);
+      return;
+    }
+    let active = true;
+    setPromoLoading(true);
+    validateCheckoutPromoQuote({
+      planId: selectedPlanId,
+      paymentRegion,
+      promoCode: appliedPromoCode || undefined,
+      applyCredits,
+    })
+      .then((res) => {
+        if (!active) return;
+        if (res.success && res.quote) {
+          setPricingQuote(res.quote);
+          if (appliedPromoCode && res.quote.promoError) {
+            setPromoError(res.quote.promoError);
+            setAppliedPromoCode('');
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setPromoLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    selectedPlanId,
+    paymentRegion,
+    appliedPromoCode,
+    applyCredits,
+    account?.member?.id,
+    account?.member?.creditBalancePkr,
+    account?.member?.creditBalanceUsd,
+    account?.orders?.length,
+  ]);
+
+  const handleApplyPromoCode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!selectedPlanId) return;
+    const clean = normalizeReferralInput(promoCodeInput);
+    if (!clean) {
+      setPromoError(isUrdu ? 'براہ کرم پرومو کوڈ درج کریں۔' : 'Please enter a promo code first.');
+      return;
+    }
+    setPromoLoading(true);
+    setPromoError(null);
+    try {
+      const res = await validateCheckoutPromoQuote({
+        planId: selectedPlanId,
+        paymentRegion,
+        promoCode: clean,
+        applyCredits,
+      });
+      if (!res.success || !res.quote) {
+        setPromoError(res.error || 'Unable to validate promo code.');
+        return;
+      }
+      setPricingQuote(res.quote);
+      if (res.quote.promoError || !res.quote.promoApplied) {
+        setPromoError(res.quote.promoError || 'Promo code is not applicable.');
+        setAppliedPromoCode('');
+        return;
+      }
+      setAppliedPromoCode(res.quote.promoApplied.code);
+      setPromoCodeInput(res.quote.promoApplied.code);
+      setPromoError(null);
+    } catch {
+      setPromoError('Could not validate promo code right now.');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromoCode = () => {
+    setAppliedPromoCode('');
+    setPromoCodeInput('');
+    setPromoError(null);
+  };
+
+  const formatQuoteAmount = (val: number) =>
+    paymentRegion === 'international'
+      ? `$${Number(val || 0).toFixed(2)} USD`
+      : `PKR ${Math.round(Number(val || 0)).toLocaleString()}`;
+
   const scrollToSection = (el: HTMLElement | null) => {
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -321,6 +424,8 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         targetMembershipId: renewMembershipId || undefined,
         visitorCountryCode: geoInfo?.countryCode,
         indicativeLocalDisplay,
+        promoCode: appliedPromoCode || undefined,
+        applyCredits,
       });
 
       if (!res.success || !res.order) {
@@ -334,6 +439,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         return;
       }
 
+      if (res.quote) {
+        setPricingQuote(res.quote);
+      }
       if (res.account) {
         setAccount(res.account);
       }
@@ -703,12 +811,21 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
 
             {/* Approved FEVIQO Drama Visual Showcase */}
             <div className="lg:col-span-6 space-y-4">
-              <div className="relative aspect-video rounded-2xl overflow-hidden bg-[#0B0B0D] border border-zinc-200">
+              <a
+                href={`/${heroFeatured.id}`}
+                onClick={(e) => {
+                  if (!e.metaKey && !e.ctrlKey) {
+                    e.preventDefault();
+                    window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: `/${heroFeatured.id}` }));
+                  }
+                }}
+                className="relative aspect-video rounded-2xl overflow-hidden bg-[#0B0B0D] border border-zinc-200 block group"
+              >
                 <img
                   src={heroFeatured.posterUrl}
                   referrerPolicy="no-referrer"
                   alt={`${heroFeatured.title} — ${heroFeatured.seasonLabel} Urdu Dubbed`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
                   onError={(e) => {
                     if (e.currentTarget.src !== window.location.origin + heroFeatured.fallbackPosterUrl) {
                       e.currentTarget.src = heroFeatured.fallbackPosterUrl;
@@ -729,19 +846,26 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                     {heroFeatured.urduTitle}
                   </div>
                 </div>
-              </div>
+              </a>
 
               <div className="grid grid-cols-2 gap-4">
                 {heroSecondary.map((drama) => (
-                  <div
+                  <a
                     key={drama.id}
-                    className="relative aspect-video rounded-xl overflow-hidden bg-[#0B0B0D] border border-zinc-200"
+                    href={`/${drama.id}`}
+                    onClick={(e) => {
+                      if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: `/${drama.id}` }));
+                      }
+                    }}
+                    className="relative aspect-video rounded-xl overflow-hidden bg-[#0B0B0D] border border-zinc-200 block group"
                   >
                     <img
                       src={drama.posterUrl}
                       referrerPolicy="no-referrer"
                       alt={`${drama.title} — ${drama.seasonLabel} Urdu Dubbed`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
                       onError={(e) => {
                         if (e.currentTarget.src !== window.location.origin + drama.fallbackPosterUrl) {
                           e.currentTarget.src = drama.fallbackPosterUrl;
@@ -756,7 +880,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                       </div>
                       <div className="text-sm font-bold leading-snug truncate mt-0.5">{drama.title}</div>
                     </div>
-                  </div>
+                  </a>
                 ))}
               </div>
             </div>
@@ -994,6 +1118,85 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </section>
 
+        {/* Always-visible Supported Turkish Dramas Catalogue & Coverage Overview */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-t border-zinc-200 pt-12">
+            <div className="space-y-1.5">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[#16A34A]">
+                {t(MEMBERSHIP_COPY.dramaSelection.stepEyebrow)} · URDU HD CATALOGUE
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0B0B0D]">
+                {isUrdu
+                  ? 'ممبرشپ میں شامل ترکی ڈرامے'
+                  : 'Turkish Dramas Included in FEVIQO Premium'}
+              </h2>
+            </div>
+            <a
+              href="/dramas"
+              onClick={(e) => {
+                if (!e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  onNavigatePage('dramas');
+                }
+              }}
+              className="text-xs font-bold text-[#16A34A] hover:underline inline-flex items-center gap-1"
+            >
+              <span>{t(MEMBERSHIP_COPY.hero.exploreDramas)}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {MEMBERSHIP_DRAMAS.map((drama) => (
+              <article
+                key={`catalogue-${drama.id}`}
+                className="rounded-2xl border border-zinc-200 bg-white overflow-hidden flex flex-col justify-between"
+              >
+                <div className="p-5 space-y-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="text-base font-bold text-[#0B0B0D]">
+                      <a
+                        href={`/${drama.id}`}
+                        onClick={(e) => {
+                          if (!e.metaKey && !e.ctrlKey) {
+                            e.preventDefault();
+                            window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: `/${drama.id}` }));
+                          }
+                        }}
+                        className="hover:text-[#16A34A] transition-colors"
+                      >
+                        {drama.title}
+                      </a>
+                    </h3>
+                    <span className="font-urdu-slim text-sm text-zinc-700" dir="rtl">
+                      {drama.urduTitle}
+                    </span>
+                  </div>
+                  <div className="text-xs font-medium text-zinc-500">
+                    {drama.seasonLabel} · {drama.genreLabel}
+                  </div>
+                  <p className="text-xs text-zinc-600 leading-relaxed">{drama.synopsis}</p>
+                </div>
+                <div className="px-5 py-3 bg-[#F8FAFC] border-t border-zinc-200 flex items-center justify-between text-xs font-semibold">
+                  <a
+                    href={`/${drama.id}`}
+                    onClick={(e) => {
+                      if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: `/${drama.id}` }));
+                      }
+                    }}
+                    className="text-[#0B0B0D] hover:text-[#16A34A] transition-colors"
+                  >
+                    {isUrdu ? 'ڈرامہ پیج دیکھیں' : 'View Episodes'}
+                  </a>
+                  <span className="text-[#16A34A]">{t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
         {/* Drama Selection & Bank QR Payment Flow */}
         {selectedPlan && (
           <section
@@ -1116,12 +1319,205 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                 </div>
               )}
 
+              {/* Promo Code, Referral Welcome Discount & Credit Wallet Summary */}
+              {(() => {
+                const availableCredits = account
+                  ? paymentRegion === 'international'
+                    ? Number(account.member.creditBalanceUsd || 0)
+                    : Number(account.member.creditBalancePkr || 0)
+                  : 0;
+                const origVal = pricingQuote
+                  ? pricingQuote.originalAmount
+                  : paymentRegion === 'international'
+                  ? getPlanUsdAmount(selectedPlan)
+                  : selectedPlan.pricePkr;
+                const finalVal = pricingQuote ? pricingQuote.finalAmount : origVal;
+                const hasAnyDiscount = Boolean(
+                  pricingQuote &&
+                    (pricingQuote.promoDiscount > 0 ||
+                      pricingQuote.referralDiscount > 0 ||
+                      pricingQuote.creditsUsed > 0)
+                );
+
+                return (
+                  <div className="rounded-2xl bg-white border border-zinc-200 p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    <div className="lg:col-span-7 space-y-4">
+                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#16A34A]">
+                        <Tag className="w-3.5 h-3.5" />
+                        <span>{t(MEMBERSHIP_COPY.promo.sectionTitle)}</span>
+                      </div>
+
+                      <form onSubmit={handleApplyPromoCode} className="space-y-2">
+                        <label htmlFor="checkout-promo-input" className="block text-xs font-semibold text-zinc-700">
+                          {t(MEMBERSHIP_COPY.promo.inputLabel)}
+                        </label>
+                        <div className="flex flex-col sm:flex-row gap-2.5">
+                          <input
+                            id="checkout-promo-input"
+                            type="text"
+                            dir="ltr"
+                            value={promoCodeInput}
+                            onChange={(e) => {
+                              setPromoCodeInput(normalizeReferralInput(e.target.value));
+                              setPromoError(null);
+                            }}
+                            placeholder={t(MEMBERSHIP_COPY.promo.inputPlaceholder)}
+                            className="flex-1 px-3.5 py-2.5 text-sm font-mono uppercase bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="submit"
+                              disabled={promoLoading || !promoCodeInput.trim()}
+                              className="px-4 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] disabled:opacity-50 text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+                            >
+                              {promoLoading
+                                ? t(MEMBERSHIP_COPY.promo.applyingBtn)
+                                : t(MEMBERSHIP_COPY.promo.applyBtn)}
+                            </button>
+                            {appliedPromoCode && (
+                              <button
+                                type="button"
+                                onClick={handleRemovePromoCode}
+                                className="px-3 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-xs font-semibold text-zinc-700 inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>{t(MEMBERSHIP_COPY.promo.removeBtn)}</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </form>
+
+                      {promoError && (
+                        <div
+                          role="alert"
+                          className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2"
+                        >
+                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <span>{promoError}</span>
+                        </div>
+                      )}
+
+                      {pricingQuote?.promoApplied && (
+                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
+                          <div className="font-semibold">
+                            {t(MEMBERSHIP_COPY.promo.appliedBadge)}:{' '}
+                            <span className="font-mono font-bold text-[#16A34A]" dir="ltr">
+                              {pricingQuote.promoApplied.code}
+                            </span>
+                            {pricingQuote.promoApplied.description ? ` · ${pricingQuote.promoApplied.description}` : ''}
+                          </div>
+                          <span className="font-bold text-[#16A34A]" dir="ltr">
+                            -{formatQuoteAmount(pricingQuote.promoDiscount)}
+                          </span>
+                        </div>
+                      )}
+
+                      {pricingQuote?.referralDiscountApplied && (
+                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-semibold">
+                            {t(MEMBERSHIP_COPY.promo.referralFirstOrderBadge)}
+                          </span>
+                          <span className="font-bold text-[#16A34A]" dir="ltr">
+                            -{formatQuoteAmount(pricingQuote.referralDiscount)}
+                          </span>
+                        </div>
+                      )}
+
+                      {account && availableCredits > 0 && (
+                        <label className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-[#F8FAFC] cursor-pointer hover:border-[#22C55E] transition">
+                          <input
+                            type="checkbox"
+                            checked={applyCredits}
+                            onChange={(e) => setApplyCredits(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 accent-[#16A34A] rounded cursor-pointer"
+                          />
+                          <div className="text-xs space-y-0.5">
+                            <div className="font-bold text-[#0B0B0D] flex items-center gap-1.5">
+                              <Wallet className="w-3.5 h-3.5 text-[#16A34A]" />
+                              <span>{t(MEMBERSHIP_COPY.promo.applyCreditsLabel)}</span>
+                            </div>
+                            <div className="text-zinc-600">
+                              {t(MEMBERSHIP_COPY.promo.availableCreditsLabel)}{' '}
+                              <strong className="text-[#0B0B0D]" dir="ltr">
+                                {formatQuoteAmount(availableCredits)}
+                              </strong>
+                            </div>
+                          </div>
+                        </label>
+                      )}
+                    </div>
+
+                    {/* Itemized Checkout Price Summary */}
+                    <div className="lg:col-span-5 rounded-xl border border-zinc-200 bg-[#F8FAFC] p-4 sm:p-5 space-y-2.5 text-xs">
+                      <div className="flex items-center justify-between text-zinc-600">
+                        <span>
+                          {t(MEMBERSHIP_COPY.promo.originalPrice)} ({selectedPlan.name})
+                        </span>
+                        <span className="font-semibold text-[#0B0B0D] tabular-nums" dir="ltr">
+                          {formatQuoteAmount(origVal)}
+                        </span>
+                      </div>
+                      {pricingQuote && pricingQuote.promoDiscount > 0 && (
+                        <div className="flex items-center justify-between text-[#16A34A] font-semibold">
+                          <span>
+                            {t(MEMBERSHIP_COPY.promo.promoDiscount)} ({pricingQuote.promoApplied?.code})
+                          </span>
+                          <span className="tabular-nums" dir="ltr">
+                            -{formatQuoteAmount(pricingQuote.promoDiscount)}
+                          </span>
+                        </div>
+                      )}
+                      {pricingQuote && pricingQuote.referralDiscount > 0 && (
+                        <div className="flex items-center justify-between text-[#16A34A] font-semibold">
+                          <span>{t(MEMBERSHIP_COPY.promo.referralDiscount)}</span>
+                          <span className="tabular-nums" dir="ltr">
+                            -{formatQuoteAmount(pricingQuote.referralDiscount)}
+                          </span>
+                        </div>
+                      )}
+                      {pricingQuote && pricingQuote.creditsUsed > 0 && (
+                        <div className="flex items-center justify-between text-[#16A34A] font-semibold">
+                          <span>{t(MEMBERSHIP_COPY.promo.walletCredits)}</span>
+                          <span className="tabular-nums" dir="ltr">
+                            -{formatQuoteAmount(pricingQuote.creditsUsed)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="pt-2.5 border-t border-zinc-200 flex items-center justify-between text-sm font-bold text-[#0B0B0D]">
+                        <span>{t(MEMBERSHIP_COPY.promo.netPayable)}</span>
+                        <span className="text-lg text-[#16A34A] tabular-nums" dir="ltr">
+                          {formatQuoteAmount(finalVal)}
+                        </span>
+                      </div>
+                      {hasAnyDiscount && finalVal === 0 && (
+                        <div className="pt-1 text-[11px] font-semibold text-[#16A34A]">
+                          {t(MEMBERSHIP_COPY.promo.zeroBalanceTitle)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Checkout Action Bar */}
               <div className="rounded-2xl bg-white border border-zinc-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
-                  <div className="text-sm font-bold text-[#0B0B0D]">
-                    {selectedPlan.name} · <span dir="ltr">{getPlanDisplayPrice(selectedPlan)}</span> (
-                    {t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})
+                  <div className="text-sm font-bold text-[#0B0B0D] flex flex-wrap items-center gap-2">
+                    <span>{selectedPlan.name} ·</span>
+                    {pricingQuote && pricingQuote.finalAmount < pricingQuote.originalAmount ? (
+                      <>
+                        <span dir="ltr" className="text-zinc-400 line-through font-normal">
+                          {formatQuoteAmount(pricingQuote.originalAmount)}
+                        </span>
+                        <span dir="ltr" className="text-[#16A34A] font-bold">
+                          {formatQuoteAmount(pricingQuote.finalAmount)}
+                        </span>
+                      </>
+                    ) : (
+                      <span dir="ltr">{getPlanDisplayPrice(selectedPlan)}</span>
+                    )}
+                    <span>({t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})</span>
                     {renewMembershipId ? ` · ${t(MEMBERSHIP_COPY.payment.orderTypeRenewal)}` : ''}
                   </div>
                   <div className="text-xs text-zinc-600">
@@ -1141,7 +1537,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                     {checkingOut
                       ? t(MEMBERSHIP_COPY.dramaSelection.preparingCheckout)
                       : account
-                      ? paymentRegion === 'international'
+                      ? pricingQuote && pricingQuote.finalAmount <= 0
+                        ? t(MEMBERSHIP_COPY.promo.zeroBalanceBtn)
+                        : paymentRegion === 'international'
                         ? t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentUsd)
                         : t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentPkr)
                       : t(MEMBERSHIP_COPY.dramaSelection.continueSignInCheckout)}

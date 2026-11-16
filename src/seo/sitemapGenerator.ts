@@ -75,9 +75,11 @@ function formatUrlNode(
  * Single Master Sitemap Generator (sitemap.xml)
  * Clean, single sitemap containing all main pages and drama episodes without any sub-sitemaps.
  */
+const DEFAULT_SITE_LASTMOD = '2026-11-16';
+
 export function generateSitemapXml(): string {
   const seenUrls = new Set<string>();
-  const today = new Date().toISOString().split('T')[0];
+  const defaultLastmod = DEFAULT_SITE_LASTMOD;
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\r\n`;
   xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\r\n`;
@@ -88,7 +90,7 @@ export function generateSitemapXml(): string {
     urlPath: string,
     priority: string = '0.9',
     changefreq: string = 'daily',
-    lastmod: string = today,
+    lastmod: string = defaultLastmod,
     imageLoc?: string,
     imageTitle?: string,
     videoInfo?: VideoXmlInfo
@@ -222,12 +224,17 @@ export function generateSitemapXml(): string {
       };
     }
 
+    const sitemapImageLoc =
+      routeKey === '/membership'
+        ? 'https://feviqo.com/images/MEHMED.png'
+        : config?.ogImage;
+
     addNode(
       routeKey,
       priority,
       changefreq,
-      today,
-      config?.ogImage,
+      defaultLastmod,
+      sitemapImageLoc,
       config?.seoTitle,
       videoInfo
     );
@@ -241,7 +248,7 @@ export function generateSitemapXml(): string {
       epPath,
       '1.0',
       'daily',
-      ep.airDate ? ep.airDate.split('T')[0] : today,
+      ep.airDate ? ep.airDate.split('T')[0] : defaultLastmod,
       ep.thumbnail,
       ep.title,
       firstEmbed ? {
@@ -261,7 +268,7 @@ export function generateSitemapXml(): string {
       epPath,
       '1.0',
       'daily',
-      ep.airDate ? ep.airDate.split('T')[0] : today,
+      ep.airDate ? ep.airDate.split('T')[0] : defaultLastmod,
       ep.thumbnail,
       ep.title,
       firstEmbed ? {

@@ -58,12 +58,14 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
     }
     canonicalLink.setAttribute('href', config.canonicalUrl);
 
-    // 8. JSON-LD Dynamic Schema Script
-    let jsonLdScript = document.getElementById('feviqo-dynamic-jsonld');
+    // 8. JSON-LD Dynamic Schema Script (reuse server-injected script to avoid duplicate Schema graphs)
+    let jsonLdScript =
+      document.getElementById('feviqo-server-jsonld') ||
+      document.getElementById('feviqo-dynamic-jsonld');
     if (!jsonLdScript) {
       jsonLdScript = document.createElement('script');
       jsonLdScript.setAttribute('type', 'application/ld+json');
-      jsonLdScript.setAttribute('id', 'feviqo-dynamic-jsonld');
+      jsonLdScript.setAttribute('id', 'feviqo-server-jsonld');
       document.head.appendChild(jsonLdScript);
     }
 
@@ -317,6 +319,14 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
     } else if (pathname === '/membership') {
       schemaGraph.push(
         {
+          "@type": "WebPage",
+          "@id": "https://feviqo.com/membership#webpage",
+          "url": "https://feviqo.com/membership",
+          "name": config.seoTitle,
+          "description": config.metaDescription,
+          "isPartOf": { "@id": "https://feviqo.com/#website" }
+        },
+        {
           "@type": "Service",
           "@id": "https://feviqo.com/membership#service",
           "url": "https://feviqo.com/membership",
@@ -330,10 +340,54 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
             "@type": "OfferCatalog",
             "name": "FEVIQO Premium Membership Plans",
             "itemListElement": [
-              { "@type": "Offer", "name": "Starter Plan (15 Days, 1 Drama)", "priceCurrency": "USD", "price": "1.20" },
-              { "@type": "Offer", "name": "Standard Plan (30 Days, 1 Drama)", "priceCurrency": "USD", "price": "2.50" },
-              { "@type": "Offer", "name": "Plus Plan (30 Days, 2 Dramas)", "priceCurrency": "USD", "price": "3.50" },
-              { "@type": "Offer", "name": "VIP Plan (30 Days, All Eligible VIP Dramas)", "priceCurrency": "USD", "price": "5.00" }
+              {
+                "@type": "Offer",
+                "name": "Starter Plan (15 Days, 1 Drama)",
+                "url": "https://feviqo.com/membership",
+                "priceCurrency": "PKR",
+                "price": "299",
+                "availability": "https://schema.org/InStock",
+                "priceSpecification": [
+                  { "@type": "UnitPriceSpecification", "price": "299", "priceCurrency": "PKR" },
+                  { "@type": "UnitPriceSpecification", "price": "1.20", "priceCurrency": "USD" }
+                ]
+              },
+              {
+                "@type": "Offer",
+                "name": "Standard Plan (30 Days, 1 Drama)",
+                "url": "https://feviqo.com/membership",
+                "priceCurrency": "PKR",
+                "price": "599",
+                "availability": "https://schema.org/InStock",
+                "priceSpecification": [
+                  { "@type": "UnitPriceSpecification", "price": "599", "priceCurrency": "PKR" },
+                  { "@type": "UnitPriceSpecification", "price": "2.50", "priceCurrency": "USD" }
+                ]
+              },
+              {
+                "@type": "Offer",
+                "name": "Plus Plan (30 Days, 2 Dramas)",
+                "url": "https://feviqo.com/membership",
+                "priceCurrency": "PKR",
+                "price": "899",
+                "availability": "https://schema.org/InStock",
+                "priceSpecification": [
+                  { "@type": "UnitPriceSpecification", "price": "899", "priceCurrency": "PKR" },
+                  { "@type": "UnitPriceSpecification", "price": "3.50", "priceCurrency": "USD" }
+                ]
+              },
+              {
+                "@type": "Offer",
+                "name": "VIP Plan (30 Days, All Eligible VIP Dramas)",
+                "url": "https://feviqo.com/membership",
+                "priceCurrency": "PKR",
+                "price": "1299",
+                "availability": "https://schema.org/InStock",
+                "priceSpecification": [
+                  { "@type": "UnitPriceSpecification", "price": "1299", "priceCurrency": "PKR" },
+                  { "@type": "UnitPriceSpecification", "price": "5.00", "priceCurrency": "USD" }
+                ]
+              }
             ]
           }
         },

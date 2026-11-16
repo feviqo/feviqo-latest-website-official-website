@@ -14,6 +14,11 @@ export interface SafeMember {
   email: string;
   fullName: string;
   phone: string;
+  referralCode?: string;
+  referredByMemberId?: string;
+  referredByCode?: string;
+  creditBalancePkr?: number;
+  creditBalanceUsd?: number;
   createdAt: string;
 }
 
@@ -42,6 +47,17 @@ export interface MembershipRecord {
   planName: string;
   pricePkr: number;
   priceUsd?: number;
+  originalAmountPkr?: number;
+  originalAmountUsd?: number;
+  promoCode?: string;
+  promoDiscountPkr?: number;
+  promoDiscountUsd?: number;
+  referralDiscountPkr?: number;
+  referralDiscountUsd?: number;
+  creditsUsedPkr?: number;
+  creditsUsedUsd?: number;
+  discountTotalPkr?: number;
+  discountTotalUsd?: number;
   durationDays: number;
   selectedDramaIds: string[];
   status: 'active' | 'cancelled' | 'expired';
@@ -84,8 +100,22 @@ export interface MembershipOrder {
   targetMembershipStatus?: string;
   planId: MembershipPlanId;
   planName: string;
+  originalAmountPkr?: number;
+  originalAmountUsd?: number;
   amountPkr: number;
   amountUsd?: number;
+  promoCodeId?: string;
+  promoCode?: string;
+  promoDiscountPkr?: number;
+  promoDiscountUsd?: number;
+  referralCodeUsed?: string;
+  referralDiscountPkr?: number;
+  referralDiscountUsd?: number;
+  creditsUsedPkr?: number;
+  creditsUsedUsd?: number;
+  creditsRefundedAt?: string;
+  discountTotalPkr?: number;
+  discountTotalUsd?: number;
   expectedAmount?: number;
   currency?: PaymentCurrency;
   paymentRegion?: PaymentRegion;
@@ -129,7 +159,10 @@ export interface MembershipHistoryEntry {
     | 'membership_extended'
     | 'membership_cancelled'
     | 'membership_revoked'
-    | 'membership_expired';
+    | 'membership_expired'
+    | 'referral_attributed'
+    | 'referral_reward_earned'
+    | 'credits_refunded';
   planId?: MembershipPlanId;
   planName?: string;
   amountPkr?: number;
@@ -148,7 +181,8 @@ export type CustomerNotificationType =
   | 'membership_approved'
   | 'membership_renewed'
   | 'membership_extended'
-  | 'payment_rejected';
+  | 'payment_rejected'
+  | 'referral_reward';
 
 export interface CustomerNotification {
   id: string;
@@ -210,6 +244,169 @@ export interface GeoPricingInfo {
   indicativePlans: Record<MembershipPlanId, IndicativePlanPrice>;
 }
 
+export type PromoDiscountType = 'percentage' | 'fixed';
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description: string;
+  discountType: PromoDiscountType;
+  discountPercent: number;
+  discountAmountPkr: number;
+  discountAmountUsd: number;
+  maxDiscountPkr?: number;
+  maxDiscountUsd?: number;
+  minPurchasePkr: number;
+  minPurchaseUsd: number;
+  applicablePlanIds: MembershipPlanId[];
+  usageLimit: number | null;
+  perUserLimit: number;
+  expiresAt?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdByAdminEmail: string;
+  rewardForReferrerMemberId?: string;
+}
+
+export interface AdminPromoCodeView extends PromoCode {
+  usedCount: number;
+  approvedUses: number;
+  totalDiscountGivenPkr: number;
+  totalDiscountGivenUsd: number;
+}
+
+export interface ReferralConfig {
+  enabled: boolean;
+  referrerRewardType: 'credit' | 'promo_code' | 'both';
+  referrerRewardPkr: number;
+  referrerRewardUsd: number;
+  referrerPromoDiscountPercent: number;
+  referrerPromoExpiryDays: number;
+  refereeDiscountType: 'none' | 'percentage' | 'fixed';
+  refereeDiscountPercent: number;
+  refereeDiscountPkr: number;
+  refereeDiscountUsd: number;
+  minOrderPkrForReward: number;
+  minOrderUsdForReward: number;
+  maxConversionsPerReferrer: number | null;
+}
+
+export interface ReferralRecord {
+  id: string;
+  referrerMemberId: string;
+  referrerCode: string;
+  referrerEmail: string;
+  referrerName: string;
+  referredMemberId: string;
+  referredOwnerUid?: string;
+  referredEmail: string;
+  referredName: string;
+  referredPhoneNormalized?: string;
+  status: 'signed_up' | 'converted' | 'blocked';
+  blockReason?: string;
+  conversionOrderId?: string;
+  convertedAt?: string;
+  rewardMode?: ReferralConfig['referrerRewardType'];
+  rewardAmountPkr: number;
+  rewardAmountUsd: number;
+  rewardPromoCode?: string;
+  rewardIssuedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReferralCreditEntry {
+  id: string;
+  memberId: string;
+  type: 'referral_bonus' | 'checkout_spent' | 'checkout_refund' | 'admin_adjustment';
+  amountPkr: number;
+  amountUsd: number;
+  currency: PaymentCurrency;
+  referralId?: string;
+  orderId?: string;
+  details: string;
+  createdAt: string;
+}
+
+export interface CheckoutPricingQuote {
+  valid: boolean;
+  error?: string;
+  promoError?: string;
+  planId: MembershipPlanId;
+  planName: string;
+  paymentRegion: PaymentRegion;
+  currency: PaymentCurrency;
+  originalAmountPkr: number;
+  originalAmountUsd: number;
+  originalAmount: number;
+  promoApplied: {
+    id: string;
+    code: string;
+    description: string;
+    discountType: PromoDiscountType;
+    discountPercent: number;
+    discountAmountPkr: number;
+    discountAmountUsd: number;
+  } | null;
+  promoDiscountPkr: number;
+  promoDiscountUsd: number;
+  promoDiscount: number;
+  referralDiscountApplied: boolean;
+  referralCodeUsed?: string;
+  referralDiscountPkr: number;
+  referralDiscountUsd: number;
+  referralDiscount: number;
+  availableCreditPkr: number;
+  availableCreditUsd: number;
+  availableCredit: number;
+  creditsUsedPkr: number;
+  creditsUsedUsd: number;
+  creditsUsed: number;
+  discountTotalPkr: number;
+  discountTotalUsd: number;
+  discountTotal: number;
+  finalAmountPkr: number;
+  finalAmountUsd: number;
+  finalAmount: number;
+}
+
+export interface MemberReferralSummary {
+  referralCode: string;
+  referralLink: string;
+  referredByCode?: string;
+  creditBalancePkr: number;
+  creditBalanceUsd: number;
+  totalReferrals: number;
+  completedPurchases: number;
+  pendingReferrals: number;
+  blockedReferrals: number;
+  totalEarnedPkr: number;
+  totalEarnedUsd: number;
+  refereeFirstOrderDiscountAvailable: boolean;
+  personalRewardPromos?: Array<{
+    code: string;
+    discountType: PromoDiscountType;
+    discountPercent: number;
+    discountAmountPkr: number;
+    discountAmountUsd: number;
+    expiresAt?: string;
+  }>;
+  referrals: Array<{
+    id: string;
+    referredName: string;
+    maskedEmail: string;
+    status: 'signed_up' | 'converted' | 'blocked';
+    rewardAmountPkr: number;
+    rewardAmountUsd: number;
+    rewardPromoCode?: string;
+    createdAt: string;
+    convertedAt?: string;
+  }>;
+  creditLedger: ReferralCreditEntry[];
+  referralConfig: ReferralConfig;
+}
+
 export interface PublicMembershipConfig {
   qrImages: Record<MembershipPlanId, string>;
   binanceQrImages: Record<MembershipPlanId, string>;
@@ -222,6 +419,7 @@ export interface PublicMembershipConfig {
   supportEmail: string;
   supportNoteEn: string;
   supportNoteUr: string;
+  referralConfig?: ReferralConfig;
 }
 
 export interface PaymentGatewayStatus {
@@ -245,6 +443,7 @@ export interface MemberAccountState {
   history: MembershipHistoryEntry[];
   notifications?: CustomerNotification[];
   unreadNotificationCount?: number;
+  referralSummary?: MemberReferralSummary;
   plans?: MembershipPlan[];
   publicConfig?: PublicMembershipConfig;
   gatewayStatus: PaymentGatewayStatus;
@@ -310,6 +509,7 @@ export interface MembershipConfig {
   supportEmail: string;
   supportNoteEn: string;
   supportNoteUr: string;
+  referralConfig?: ReferralConfig;
   updatedAt: string;
 }
 
@@ -327,6 +527,17 @@ export interface AdminMembershipsOverview {
     pendingRenewals?: number;
     internationalOrders?: number;
     failedEmails: number;
+    totalReferrals?: number;
+    convertedReferrals?: number;
+    pendingReferrals?: number;
+    blockedReferrals?: number;
+    referralConversionRate?: number;
+    promoRedemptions?: number;
+    activePromoCodes?: number;
+    totalDiscountGivenPkr?: number;
+    totalDiscountGivenUsd?: number;
+    totalReferralRewardsPkr?: number;
+    totalReferralRewardsUsd?: number;
   };
   members: SafeMember[];
   requests: MembershipOrder[];
@@ -336,6 +547,10 @@ export interface AdminMembershipsOverview {
   emailNotifications: AdminEmailNotification[];
   customerNotifications?: CustomerNotification[];
   schedulerRuns?: SchedulerRunLog[];
+  promoCodes?: AdminPromoCodeView[];
+  referrals?: ReferralRecord[];
+  creditLedger?: ReferralCreditEntry[];
+  referralConfig?: ReferralConfig;
   config: MembershipConfig;
   plans?: MembershipPlan[];
   admins: SafeAdmin[];
@@ -344,6 +559,43 @@ export interface AdminMembershipsOverview {
 
 const MEMBER_TOKEN_KEY = 'feviqo_member_token';
 const ADMIN_TOKEN_KEY = 'feviqo_admin_token';
+const REFERRAL_CODE_KEY = 'feviqo_ref_code';
+
+export function normalizeReferralInput(raw?: string | null): string {
+  return (raw || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, '')
+    .slice(0, 32);
+}
+
+export function getStoredReferralCode(): string {
+  try {
+    return typeof window !== 'undefined'
+      ? normalizeReferralInput(window.localStorage.getItem(REFERRAL_CODE_KEY))
+      : '';
+  } catch {
+    return '';
+  }
+}
+
+export function setStoredReferralCode(code: string): void {
+  const clean = normalizeReferralInput(code);
+  if (!clean || clean.length < 4) return;
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(REFERRAL_CODE_KEY, clean);
+    }
+  } catch {}
+}
+
+export function clearStoredReferralCode(): void {
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(REFERRAL_CODE_KEY);
+    }
+  } catch {}
+}
 
 function readStoredToken(key: string): string | null {
   try {
@@ -434,18 +686,21 @@ export async function registerMemberAccount(payload: {
   phone: string;
   password: string;
   confirmPassword: string;
+  referralCode?: string;
 }): Promise<
   ({ success: true } & MemberAccountState) | { success: false; error: string }
 > {
+  const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
   const res = await fetch('/api/membership/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, referralCode: ref || undefined }),
   });
   const data = await parseJsonSafe(res);
   if (data?.success && data?.token) {
     writeStoredToken(MEMBER_TOKEN_KEY, data.token);
+    if (ref) clearStoredReferralCode();
   }
   return data;
 }
@@ -473,14 +728,16 @@ export async function authenticateMemberWithGoogle(payload: {
   idToken: string;
   fullName?: string;
   phone?: string;
+  referralCode?: string;
 }): Promise<
   ({ success: true } & MemberAccountState) | { success: false; error: string }
 > {
+  const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
   const res = await fetch('/api/membership/google-auth', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, referralCode: ref || undefined }),
   });
   const data = await parseJsonSafe(res);
   if (data?.success && data?.token) {
@@ -489,16 +746,22 @@ export async function authenticateMemberWithGoogle(payload: {
   return data;
 }
 
-export async function updateMemberPhone(phone: string): Promise<
-  ({ success: true } & MemberAccountState) | { success: false; error: string }
-> {
+export async function updateMemberPhone(
+  phone: string,
+  referralCode?: string
+): Promise<({ success: true } & MemberAccountState) | { success: false; error: string }> {
+  const ref = normalizeReferralInput(referralCode) || getStoredReferralCode();
   const res = await fetch('/api/membership/profile/phone', {
     method: 'POST',
     headers: memberHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
-    body: JSON.stringify({ phone }),
+    body: JSON.stringify({ phone, referralCode: ref || undefined }),
   });
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  if (data?.success && ref) {
+    clearStoredReferralCode();
+  }
+  return data;
 }
 
 export async function logoutMemberAccount(): Promise<void> {
@@ -510,6 +773,25 @@ export async function logoutMemberAccount(): Promise<void> {
   }).catch(() => {});
 }
 
+export async function validateCheckoutPromoQuote(payload: {
+  planId: MembershipPlanId;
+  paymentRegion?: PaymentRegion;
+  promoCode?: string;
+  applyCredits?: boolean;
+}): Promise<{
+  success: boolean;
+  error?: string;
+  quote?: CheckoutPricingQuote;
+}> {
+  const res = await fetch('/api/membership/promo/validate', {
+    method: 'POST',
+    headers: memberHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
 export async function createMembershipCheckout(payload: {
   planId: MembershipPlanId;
   selectedDramaIds: string[];
@@ -518,11 +800,14 @@ export async function createMembershipCheckout(payload: {
   targetMembershipId?: string;
   visitorCountryCode?: string;
   indicativeLocalDisplay?: string;
+  promoCode?: string;
+  applyCredits?: boolean;
 }): Promise<{
   success: boolean;
   code?: string;
   error?: string;
   order?: MembershipOrder;
+  quote?: CheckoutPricingQuote;
   qrImageUrl?: string;
   publicConfig?: PublicMembershipConfig;
   gatewayConfigured?: boolean;
@@ -536,6 +821,30 @@ export async function createMembershipCheckout(payload: {
     credentials: 'include',
     body: JSON.stringify(payload),
   });
+  return parseJsonSafe(res);
+}
+
+export async function confirmZeroBalanceOrder(payload: {
+  orderId: string;
+  paymentNote?: string;
+}): Promise<
+  | {
+      success: true;
+      order: MembershipOrder;
+      adminNotificationSent: boolean;
+      account: MemberAccountState;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch(
+    `/api/membership/orders/${encodeURIComponent(payload.orderId)}/confirm-free`,
+    {
+      method: 'POST',
+      headers: memberHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+      body: JSON.stringify({ paymentNote: payload.paymentNote || '' }),
+    }
+  );
   return parseJsonSafe(res);
 }
 
@@ -1060,3 +1369,94 @@ export async function saveAdminEmailTransport(payload: {
   return parseJsonSafe(res);
 }
 
+export async function createAdminPromoCode(payload: {
+  code: string;
+  description?: string;
+  discountType: PromoDiscountType;
+  discountPercent?: number;
+  discountAmountPkr?: number;
+  discountAmountUsd?: number;
+  maxDiscountPkr?: number;
+  maxDiscountUsd?: number;
+  minPurchasePkr?: number;
+  minPurchaseUsd?: number;
+  applicablePlanIds?: MembershipPlanId[];
+  usageLimit?: number | null;
+  perUserLimit?: number;
+  expiresAt?: string;
+  isActive?: boolean;
+}): Promise<{ success: true; promo: AdminPromoCodeView; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+  const res = await fetch('/api/admin/memberships/promos', {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function updateAdminPromoCode(
+  promoId: string,
+  updates: Partial<{
+    code: string;
+    description: string;
+    discountType: PromoDiscountType;
+    discountPercent: number;
+    discountAmountPkr: number;
+    discountAmountUsd: number;
+    maxDiscountPkr: number | null;
+    maxDiscountUsd: number | null;
+    minPurchasePkr: number;
+    minPurchaseUsd: number;
+    applicablePlanIds: MembershipPlanId[];
+    usageLimit: number | null;
+    perUserLimit: number;
+    expiresAt: string | null;
+    isActive: boolean;
+  }>
+): Promise<{ success: true; promo: AdminPromoCodeView; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+  const res = await fetch(`/api/admin/memberships/promos/${encodeURIComponent(promoId)}`, {
+    method: 'PUT',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(updates),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function deleteAdminPromoCode(
+  promoId: string
+): Promise<{ success: true; deletedPromoId: string; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+  const res = await fetch(`/api/admin/memberships/promos/${encodeURIComponent(promoId)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function updateAdminReferralConfig(
+  updates: Partial<ReferralConfig>
+): Promise<{ success: true; referralConfig: ReferralConfig; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+  const res = await fetch('/api/admin/memberships/referral-config', {
+    method: 'PUT',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(updates),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function updateAdminReferralStatus(
+  referralId: string,
+  status: 'blocked' | 'signed_up',
+  blockReason?: string
+): Promise<{ success: true; referral: ReferralRecord; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+  const res = await fetch(`/api/admin/memberships/referrals/${encodeURIComponent(referralId)}/status`, {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify({ status, blockReason }),
+  });
+  return parseJsonSafe(res);
+}

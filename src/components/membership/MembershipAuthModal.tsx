@@ -7,6 +7,8 @@ import {
   authenticateMemberWithGoogle,
   updateMemberPhone,
   logoutMemberAccount,
+  getStoredReferralCode,
+  normalizeReferralInput,
   MemberAccountState,
 } from '../../services/membershipService';
 import { auth, googleProvider, checkGoogleDomainAuthorized } from '../../firebase';
@@ -53,6 +55,7 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [referralCodeInput, setReferralCodeInput] = useState(() => getStoredReferralCode());
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleEnabledForDomain, setGoogleEnabledForDomain] = useState(false);
@@ -60,6 +63,9 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
 
   useEffect(() => {
     setError(null);
+    if (isOpen) {
+      setReferralCodeInput((prev) => prev || getStoredReferralCode());
+    }
     if (isOpen && forcePhoneAccount && !hasValidPhoneNumber(forcePhoneAccount.member.phone)) {
       setStep('phone');
       setPendingGoogleAccount(forcePhoneAccount);
@@ -104,6 +110,7 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
       const result = await authenticateMemberWithGoogle({
         idToken,
         fullName: cred.user.displayName || undefined,
+        referralCode: normalizeReferralInput(referralCodeInput) || undefined,
       });
       if ('error' in result) {
         setError(result.error || 'Google sign-in failed.');
@@ -163,7 +170,10 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
 
     setSavingPhone(true);
     try {
-      const updated = await updateMemberPhone(trimmed);
+      const updated = await updateMemberPhone(
+        trimmed,
+        normalizeReferralInput(referralCodeInput) || undefined
+      );
       if ('error' in updated) {
         setError(updated.error || 'Unable to save phone number.');
         setSavingPhone(false);
@@ -255,6 +265,7 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
               phone: phone.trim(),
               password,
               confirmPassword,
+              referralCode: normalizeReferralInput(referralCodeInput) || undefined,
             })
           : await loginMemberAccount({ email: email.trim(), password });
 
@@ -329,6 +340,28 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
                 className="w-full px-3.5 py-2.5 text-sm bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] transition"
               />
             </div>
+
+            {!pendingGoogleAccount.member.referredByCode && (
+              <div className="space-y-1">
+                <label htmlFor="google-member-referral" className="block text-xs font-semibold text-zinc-700">
+                  {t(MEMBERSHIP_COPY.promo.authReferralLabel)}
+                </label>
+                <input
+                  id="google-member-referral"
+                  type="text"
+                  dir="ltr"
+                  value={referralCodeInput}
+                  onChange={(e) => setReferralCodeInput(normalizeReferralInput(e.target.value))}
+                  placeholder={t(MEMBERSHIP_COPY.promo.authReferralPlaceholder)}
+                  className="w-full px-3.5 py-2 text-xs font-mono uppercase bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] transition"
+                />
+                {referralCodeInput.length >= 4 && (
+                  <p className="text-[11px] text-[#16A34A] leading-relaxed">
+                    {t(MEMBERSHIP_COPY.promo.authReferralAppliedNote)}
+                  </p>
+                )}
+              </div>
+            )}
 
             {error && (
               <div
@@ -573,23 +606,45 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
           </div>
 
           {mode === 'signup' && (
-            <div className="space-y-1">
-              <label htmlFor="member-confirm-password" className="block text-xs font-semibold text-zinc-700">
-                {t(MEMBERSHIP_COPY.auth.confirmPassword)}
-              </label>
-              <input
-                id="member-confirm-password"
-                type={showPassword ? 'text' : 'password'}
-                dir="ltr"
-                autoComplete="new-password"
-                required
-                minLength={6}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={t(MEMBERSHIP_COPY.auth.confirmPasswordPlaceholder)}
-                className="w-full px-3.5 py-2.5 text-sm bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] transition"
-              />
-            </div>
+            <>
+              <div className="space-y-1">
+                <label htmlFor="member-confirm-password" className="block text-xs font-semibold text-zinc-700">
+                  {t(MEMBERSHIP_COPY.auth.confirmPassword)}
+                </label>
+                <input
+                  id="member-confirm-password"
+                  type={showPassword ? 'text' : 'password'}
+                  dir="ltr"
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder={t(MEMBERSHIP_COPY.auth.confirmPasswordPlaceholder)}
+                  className="w-full px-3.5 py-2.5 text-sm bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] transition"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label htmlFor="member-referral-code" className="block text-xs font-semibold text-zinc-700">
+                  {t(MEMBERSHIP_COPY.promo.authReferralLabel)}
+                </label>
+                <input
+                  id="member-referral-code"
+                  type="text"
+                  dir="ltr"
+                  value={referralCodeInput}
+                  onChange={(e) => setReferralCodeInput(normalizeReferralInput(e.target.value))}
+                  placeholder={t(MEMBERSHIP_COPY.promo.authReferralPlaceholder)}
+                  className="w-full px-3.5 py-2 text-xs font-mono uppercase bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] transition"
+                />
+                {referralCodeInput.length >= 4 && (
+                  <p className="text-[11px] text-[#16A34A] leading-relaxed">
+                    {t(MEMBERSHIP_COPY.promo.authReferralAppliedNote)}
+                  </p>
+                )}
+              </div>
+            </>
           )}
 
           {error && (

@@ -35,6 +35,9 @@ const ADMIN_AUDIT_FILE = path.join(DATA_DIR, 'admin_audit_log.json');
 const EMAIL_NOTIFS_FILE = path.join(DATA_DIR, 'email_notifications.json');
 const MEMBER_NOTIFS_FILE = path.join(DATA_DIR, 'member_notifications.json');
 const SCHEDULER_RUNS_FILE = path.join(DATA_DIR, 'scheduler_runs.json');
+const PROMO_CODES_FILE = path.join(DATA_DIR, 'promo_codes.json');
+const REFERRALS_FILE = path.join(DATA_DIR, 'referrals.json');
+const CREDIT_LEDGER_FILE = path.join(DATA_DIR, 'referral_credits.json');
 const SECRET_FILE = path.join(DATA_DIR, '.member_session_secret');
 
 for (const dir of [DATA_DIR, PRIVATE_PROOFS_DIR, PUBLIC_QR_DIR]) {
@@ -78,7 +81,13 @@ export interface MemberRecord {
   email: string;
   fullName: string;
   phone: string;
+  phoneNormalized?: string;
   passwordHash: string;
+  referralCode?: string;
+  referredByMemberId?: string;
+  referredByCode?: string;
+  creditBalancePkr?: number;
+  creditBalanceUsd?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -90,6 +99,11 @@ export interface SafeMember {
   email: string;
   fullName: string;
   phone: string;
+  referralCode: string;
+  referredByMemberId?: string;
+  referredByCode?: string;
+  creditBalancePkr: number;
+  creditBalanceUsd: number;
   createdAt: string;
 }
 
@@ -123,6 +137,17 @@ export interface MembershipRecord {
   planName: string;
   pricePkr: number;
   priceUsd?: number;
+  originalAmountPkr?: number;
+  originalAmountUsd?: number;
+  promoCode?: string;
+  promoDiscountPkr?: number;
+  promoDiscountUsd?: number;
+  referralDiscountPkr?: number;
+  referralDiscountUsd?: number;
+  creditsUsedPkr?: number;
+  creditsUsedUsd?: number;
+  discountTotalPkr?: number;
+  discountTotalUsd?: number;
   durationDays: number;
   selectedDramaIds: string[];
   status: MembershipStatus;
@@ -165,6 +190,21 @@ export interface MembershipOrder {
   planName: string;
   amountPkr: number;
   amountUsd?: number;
+  originalAmountPkr?: number;
+  originalAmountUsd?: number;
+  promoCodeId?: string;
+  promoCode?: string;
+  promoDiscountPkr?: number;
+  promoDiscountUsd?: number;
+  referralId?: string;
+  referralCodeUsed?: string;
+  referralDiscountPkr?: number;
+  referralDiscountUsd?: number;
+  creditsUsedPkr?: number;
+  creditsUsedUsd?: number;
+  creditsRefundedAt?: string;
+  discountTotalPkr?: number;
+  discountTotalUsd?: number;
   expectedAmount?: number;
   currency?: PaymentCurrency;
   paymentRegion?: PaymentRegion;
@@ -210,7 +250,10 @@ export interface MembershipHistoryEntry {
     | 'membership_extended'
     | 'membership_cancelled'
     | 'membership_revoked'
-    | 'membership_expired';
+    | 'membership_expired'
+    | 'referral_attributed'
+    | 'referral_reward_earned'
+    | 'credits_refunded';
   planId?: MembershipPlanId;
   planName?: string;
   amountPkr?: number;
@@ -229,7 +272,8 @@ export type CustomerNotificationType =
   | 'membership_approved'
   | 'membership_renewed'
   | 'membership_extended'
-  | 'payment_rejected';
+  | 'payment_rejected'
+  | 'referral_reward';
 
 export interface CustomerNotification {
   id: string;
@@ -270,6 +314,133 @@ export interface SchedulerRunLog {
   summary: string;
 }
 
+export type PromoDiscountType = 'percentage' | 'fixed';
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description: string;
+  discountType: PromoDiscountType;
+  discountPercent: number;
+  discountAmountPkr: number;
+  discountAmountUsd: number;
+  maxDiscountPkr?: number;
+  maxDiscountUsd?: number;
+  minPurchasePkr: number;
+  minPurchaseUsd: number;
+  applicablePlanIds: MembershipPlanId[];
+  usageLimit: number | null;
+  perUserLimit: number;
+  expiresAt?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  createdByAdminEmail: string;
+  rewardForReferrerMemberId?: string;
+}
+
+export interface AdminPromoCodeView extends PromoCode {
+  usedCount: number;
+  approvedUses: number;
+  totalDiscountGivenPkr: number;
+  totalDiscountGivenUsd: number;
+}
+
+export interface ReferralConfig {
+  enabled: boolean;
+  referrerRewardType: 'credit' | 'promo_code' | 'both';
+  referrerRewardPkr: number;
+  referrerRewardUsd: number;
+  referrerPromoDiscountPercent: number;
+  referrerPromoExpiryDays: number;
+  refereeDiscountType: 'none' | 'percentage' | 'fixed';
+  refereeDiscountPercent: number;
+  refereeDiscountPkr: number;
+  refereeDiscountUsd: number;
+  minOrderPkrForReward: number;
+  minOrderUsdForReward: number;
+  maxConversionsPerReferrer: number | null;
+}
+
+export interface ReferralRecord {
+  id: string;
+  referrerMemberId: string;
+  referrerCode: string;
+  referrerEmail: string;
+  referrerName: string;
+  referredMemberId: string;
+  referredOwnerUid?: string;
+  referredEmail: string;
+  referredName: string;
+  referredPhoneNormalized?: string;
+  status: 'signed_up' | 'converted' | 'blocked';
+  blockReason?: string;
+  conversionOrderId?: string;
+  convertedAt?: string;
+  rewardMode?: ReferralConfig['referrerRewardType'];
+  rewardAmountPkr: number;
+  rewardAmountUsd: number;
+  rewardPromoCode?: string;
+  rewardIssuedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReferralCreditEntry {
+  id: string;
+  memberId: string;
+  type: 'referral_bonus' | 'checkout_spent' | 'checkout_refund' | 'admin_adjustment';
+  amountPkr: number;
+  amountUsd: number;
+  currency: PaymentCurrency;
+  referralId?: string;
+  orderId?: string;
+  details: string;
+  createdAt: string;
+}
+
+export interface CheckoutPricingQuote {
+  valid: boolean;
+  error?: string;
+  promoError?: string;
+  planId: MembershipPlanId;
+  planName: string;
+  paymentRegion: PaymentRegion;
+  currency: PaymentCurrency;
+  originalAmountPkr: number;
+  originalAmountUsd: number;
+  originalAmount: number;
+  promoApplied: {
+    id: string;
+    code: string;
+    description: string;
+    discountType: PromoDiscountType;
+    discountPercent: number;
+    discountAmountPkr: number;
+    discountAmountUsd: number;
+  } | null;
+  promoDiscountPkr: number;
+  promoDiscountUsd: number;
+  promoDiscount: number;
+  referralDiscountApplied: boolean;
+  referralCodeUsed?: string;
+  referralDiscountPkr: number;
+  referralDiscountUsd: number;
+  referralDiscount: number;
+  availableCreditPkr: number;
+  availableCreditUsd: number;
+  availableCredit: number;
+  creditsUsedPkr: number;
+  creditsUsedUsd: number;
+  creditsUsed: number;
+  discountTotalPkr: number;
+  discountTotalUsd: number;
+  discountTotal: number;
+  finalAmountPkr: number;
+  finalAmountUsd: number;
+  finalAmount: number;
+}
+
 export interface MembershipConfig {
   starterQrImage: string;
   standardQrImage: string;
@@ -287,6 +458,7 @@ export interface MembershipConfig {
   supportEmail: string;
   supportNoteEn: string;
   supportNoteUr: string;
+  referralConfig: ReferralConfig;
   updatedAt: string;
 }
 
@@ -302,6 +474,7 @@ export interface PublicMembershipConfig {
   supportEmail: string;
   supportNoteEn: string;
   supportNoteUr: string;
+  referralConfig: ReferralConfig;
 }
 
 export interface AdminRecord {
@@ -344,7 +517,12 @@ export interface AdminAuditEntry {
     | 'config_updated'
     | 'qr_image_updated'
     | 'email_retried'
-    | 'reminders_executed';
+    | 'reminders_executed'
+    | 'promo_created'
+    | 'promo_updated'
+    | 'promo_deleted'
+    | 'referral_config_updated'
+    | 'referral_status_updated';
   targetId?: string;
   details: string;
   createdAt: string;
@@ -571,6 +749,11 @@ function sanitizeMember(member: MemberRecord): SafeMember {
     email: member.email,
     fullName: member.fullName,
     phone: member.phone || '',
+    referralCode: member.referralCode || '',
+    referredByMemberId: member.referredByMemberId,
+    referredByCode: member.referredByCode,
+    creditBalancePkr: Math.max(0, Math.round(Number(member.creditBalancePkr) || 0)),
+    creditBalanceUsd: Math.max(0, Math.round((Number(member.creditBalanceUsd) || 0) * 100) / 100),
     createdAt: member.createdAt,
   };
 }
@@ -595,6 +778,11 @@ function mirrorMemberServer(member: SafeMember) {
     email: member.email,
     fullName: member.fullName,
     phone: member.phone || '',
+    referralCode: member.referralCode || '',
+    referredByMemberId: member.referredByMemberId || '',
+    referredByCode: member.referredByCode || '',
+    creditBalancePkr: member.creditBalancePkr || 0,
+    creditBalanceUsd: member.creditBalanceUsd || 0,
     createdAtIso: member.createdAt,
     updatedAtIso: new Date().toISOString(),
   });
@@ -643,6 +831,32 @@ function mirrorSchedulerRunServer(run: SchedulerRunLog) {
   void mirrorDocToFirestoreServer('schedulerRuns', run.id, {
     ...run,
     ranAtIso: run.ranAt,
+  });
+}
+
+function mirrorPromoCodeServer(promo: PromoCode) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('promoCodes', promo.id, {
+    ...promo,
+    createdAtIso: promo.createdAt,
+    updatedAtIso: promo.updatedAt,
+  });
+}
+
+function mirrorReferralServer(ref: ReferralRecord) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('referrals', ref.id, {
+    ...ref,
+    createdAtIso: ref.createdAt,
+    updatedAtIso: ref.updatedAt,
+  });
+}
+
+function mirrorCreditEntryServer(entry: ReferralCreditEntry) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('referralCredits', entry.id, {
+    ...entry,
+    createdAtIso: entry.createdAt,
   });
 }
 
@@ -752,6 +966,22 @@ export function markAllMemberNotificationsRead(memberId: string): number {
   return count;
 }
 
+const DEFAULT_REFERRAL_CONFIG: ReferralConfig = {
+  enabled: true,
+  referrerRewardType: 'credit',
+  referrerRewardPkr: 150,
+  referrerRewardUsd: 0.75,
+  referrerPromoDiscountPercent: 25,
+  referrerPromoExpiryDays: 30,
+  refereeDiscountType: 'percentage',
+  refereeDiscountPercent: 10,
+  refereeDiscountPkr: 50,
+  refereeDiscountUsd: 0.25,
+  minOrderPkrForReward: 100,
+  minOrderUsdForReward: 0.5,
+  maxConversionsPerReferrer: 50,
+};
+
 // --- CONFIGURATION STORE ---
 const DEFAULT_CONFIG: MembershipConfig = {
   starterQrImage: '/images/qr/starter-qr.jpg',
@@ -772,8 +1002,68 @@ const DEFAULT_CONFIG: MembershipConfig = {
   supportEmail: 'partner@feviqo.com',
   supportNoteEn: 'Payments are manually verified by our team before membership activation.',
   supportNoteUr: 'ادائیگی کی دستی تصدیق کے بعد آپ کی ممبرشپ فعال کر دی جاتی ہے۔',
+  referralConfig: { ...DEFAULT_REFERRAL_CONFIG },
   updatedAt: new Date().toISOString(),
 };
+
+function sanitizeReferralConfig(
+  raw: Partial<ReferralConfig> | undefined,
+  fallback: ReferralConfig = DEFAULT_REFERRAL_CONFIG
+): ReferralConfig {
+  const src = raw || {};
+  const clampNum = (v: unknown, fb: number, min: number, max: number, decimals = 2) => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < min || n > max) return fb;
+    const factor = Math.pow(10, decimals);
+    return Math.round(n * factor) / factor;
+  };
+  return {
+    enabled: src.enabled !== undefined ? Boolean(src.enabled) : fallback.enabled,
+    referrerRewardType:
+      src.referrerRewardType === 'promo_code' || src.referrerRewardType === 'both' || src.referrerRewardType === 'credit'
+        ? src.referrerRewardType
+        : fallback.referrerRewardType,
+    referrerRewardPkr: clampNum(src.referrerRewardPkr, fallback.referrerRewardPkr, 0, 100000, 0),
+    referrerRewardUsd: clampNum(src.referrerRewardUsd, fallback.referrerRewardUsd, 0, 500, 2),
+    referrerPromoDiscountPercent: clampNum(
+      src.referrerPromoDiscountPercent,
+      fallback.referrerPromoDiscountPercent,
+      1,
+      100,
+      0
+    ),
+    referrerPromoExpiryDays: clampNum(
+      src.referrerPromoExpiryDays,
+      fallback.referrerPromoExpiryDays,
+      1,
+      365,
+      0
+    ),
+    refereeDiscountType:
+      src.refereeDiscountType === 'none' ||
+      src.refereeDiscountType === 'percentage' ||
+      src.refereeDiscountType === 'fixed'
+        ? src.refereeDiscountType
+        : fallback.refereeDiscountType,
+    refereeDiscountPercent: clampNum(
+      src.refereeDiscountPercent,
+      fallback.refereeDiscountPercent,
+      0,
+      90,
+      0
+    ),
+    refereeDiscountPkr: clampNum(src.refereeDiscountPkr, fallback.refereeDiscountPkr, 0, 50000, 0),
+    refereeDiscountUsd: clampNum(src.refereeDiscountUsd, fallback.refereeDiscountUsd, 0, 500, 2),
+    minOrderPkrForReward: clampNum(src.minOrderPkrForReward, fallback.minOrderPkrForReward, 0, 100000, 0),
+    minOrderUsdForReward: clampNum(src.minOrderUsdForReward, fallback.minOrderUsdForReward, 0, 500, 2),
+    maxConversionsPerReferrer:
+      src.maxConversionsPerReferrer === null
+        ? null
+        : src.maxConversionsPerReferrer !== undefined && Number.isFinite(Number(src.maxConversionsPerReferrer)) && Number(src.maxConversionsPerReferrer) >= 1
+          ? Math.min(10000, Math.round(Number(src.maxConversionsPerReferrer)))
+          : fallback.maxConversionsPerReferrer,
+  };
+}
 
 function sanitizeUsdPrice(raw: unknown, fallback: number): number {
   const num = Number(raw);
@@ -813,6 +1103,7 @@ export function getMembershipConfig(): MembershipConfig {
     supportEmail: saved.supportEmail || DEFAULT_CONFIG.supportEmail,
     supportNoteEn: saved.supportNoteEn || DEFAULT_CONFIG.supportNoteEn,
     supportNoteUr: saved.supportNoteUr || DEFAULT_CONFIG.supportNoteUr,
+    referralConfig: sanitizeReferralConfig(saved.referralConfig, DEFAULT_REFERRAL_CONFIG),
     updatedAt: saved.updatedAt || DEFAULT_CONFIG.updatedAt,
   };
 }
@@ -867,6 +1158,7 @@ export function getPublicMembershipConfig(): PublicMembershipConfig {
     supportEmail: cfg.supportEmail,
     supportNoteEn: cfg.supportNoteEn,
     supportNoteUr: cfg.supportNoteUr,
+    referralConfig: cfg.referralConfig,
   };
 }
 
@@ -961,6 +1253,9 @@ export function updateMembershipConfig(params: {
     supportEmail: params.updates.supportEmail?.trim() || current.supportEmail,
     supportNoteEn: params.updates.supportNoteEn?.trim() || current.supportNoteEn,
     supportNoteUr: params.updates.supportNoteUr?.trim() || current.supportNoteUr,
+    referralConfig: params.updates.referralConfig
+      ? sanitizeReferralConfig(params.updates.referralConfig, current.referralConfig)
+      : current.referralConfig,
     updatedAt: new Date().toISOString(),
   };
 
@@ -971,6 +1266,29 @@ export function updateMembershipConfig(params: {
     adminEmail: params.admin.email,
     action: 'config_updated',
     details: `Updated membership config (USD Starter=$${next.usdPrices.starter}, Standard=$${next.usdPrices.standard}, Plus=$${next.usdPrices.plus}, VIP=$${next.usdPrices.vip}; WhatsApp: ${next.whatsappNumber ? 'set' : 'unset'}).`,
+  });
+  return next;
+}
+
+export function updateReferralConfig(params: {
+  updates: Partial<ReferralConfig>;
+  admin: SafeAdmin;
+}): MembershipConfig {
+  const current = getMembershipConfig();
+  const nextReferralConfig = sanitizeReferralConfig(params.updates, current.referralConfig);
+  const next: MembershipConfig = {
+    ...current,
+    referralConfig: nextReferralConfig,
+    updatedAt: new Date().toISOString(),
+  };
+  writeJson(CONFIG_FILE, next);
+  mirrorConfigServer(next);
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'referral_config_updated',
+    targetId: 'referralConfig',
+    details: `Updated referral rewards (enabled=${nextReferralConfig.enabled}, mode=${nextReferralConfig.referrerRewardType}, reward=PKR ${nextReferralConfig.referrerRewardPkr}/$${nextReferralConfig.referrerRewardUsd}, referee=${nextReferralConfig.refereeDiscountType}).`,
   });
   return next;
 }
@@ -1315,7 +1633,301 @@ export function toggleAdminActiveStatus(params: {
   return { success: true, admin: sanitizeAdmin(admins[idx]) };
 }
 
-// --- MEMBER REGISTRATION & LOGIN ---
+// --- MEMBER REGISTRATION, PHONE, PROMO & REFERRAL HELPERS ---
+export function normalizePhoneCanonical(rawPhone?: string): string {
+  const digits = (rawPhone || '').replace(/[^\d]/g, '');
+  if (digits.length < 7) return '';
+  if (digits.startsWith('03') && digits.length === 11) {
+    return `92${digits.slice(1)}`;
+  }
+  return digits;
+}
+
+function phonesMatchForAbuse(a?: string, b?: string): boolean {
+  const na = normalizePhoneCanonical(a);
+  const nb = normalizePhoneCanonical(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  if (na.length >= 10 && nb.length >= 10) {
+    return na.slice(-10) === nb.slice(-10);
+  }
+  return false;
+}
+
+export function normalizePromoCodeInput(raw?: string): string {
+  return (raw || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, '')
+    .slice(0, 32);
+}
+
+function generateUniqueReferralCode(seedName: string, takenCodes: Set<string>): string {
+  const letters = (seedName || '')
+    .toUpperCase()
+    .replace(/[^A-Z]/g, '')
+    .slice(0, 3);
+  const prefix = letters.length >= 2 ? `F${letters}` : 'FEV';
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  for (let attempt = 0; attempt < 30; attempt++) {
+    let suffix = '';
+    const bytes = crypto.randomBytes(5);
+    for (let i = 0; i < 5; i++) {
+      suffix += alphabet[bytes[i] % alphabet.length];
+    }
+    const candidate = `${prefix}${suffix}`.slice(0, 10);
+    if (!takenCodes.has(candidate)) {
+      takenCodes.add(candidate);
+      return candidate;
+    }
+  }
+  const fallback = `FEV${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+  takenCodes.add(fallback);
+  return fallback;
+}
+
+function readMembersEnsured(): MemberRecord[] {
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const promos = readJson<PromoCode[]>(PROMO_CODES_FILE, []);
+  const takenCodes = new Set<string>();
+  for (const p of promos) {
+    if (p.code) takenCodes.add(p.code.toUpperCase());
+  }
+  for (const m of members) {
+    if (m.referralCode) takenCodes.add(m.referralCode.toUpperCase());
+  }
+
+  let changed = false;
+  for (const m of members) {
+    if (!m.referralCode || m.referralCode.trim().length < 4) {
+      m.referralCode = generateUniqueReferralCode(m.fullName, takenCodes);
+      changed = true;
+    } else {
+      m.referralCode = normalizePromoCodeInput(m.referralCode);
+    }
+    if (typeof m.creditBalancePkr !== 'number' || m.creditBalancePkr < 0) {
+      m.creditBalancePkr = 0;
+      changed = true;
+    }
+    if (typeof m.creditBalanceUsd !== 'number' || m.creditBalanceUsd < 0) {
+      m.creditBalanceUsd = 0;
+      changed = true;
+    }
+    const normPhone = normalizePhoneCanonical(m.phone);
+    if (normPhone && m.phoneNormalized !== normPhone) {
+      m.phoneNormalized = normPhone;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    writeJson(MEMBERS_FILE, members);
+  }
+  return members;
+}
+
+function appendCreditLedgerEntry(
+  entry: Omit<ReferralCreditEntry, 'id' | 'createdAt'>
+): ReferralCreditEntry {
+  const ledger = readJson<ReferralCreditEntry[]>(CREDIT_LEDGER_FILE, []);
+  const item: ReferralCreditEntry = {
+    ...entry,
+    id: `cred-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+    createdAt: new Date().toISOString(),
+  };
+  ledger.unshift(item);
+  if (ledger.length > 5000) ledger.length = 5000;
+  writeJson(CREDIT_LEDGER_FILE, ledger);
+  mirrorCreditEntryServer(item);
+  return item;
+}
+
+function maskEmailForReferralPrivacy(email: string): string {
+  const parts = (email || '').split('@');
+  if (parts.length !== 2) return '***';
+  const name = parts[0];
+  const domain = parts[1];
+  const visible = name.slice(0, Math.min(2, name.length));
+  return `${visible}${'*'.repeat(Math.max(2, Math.min(5, name.length - visible.length)))}@${domain}`;
+}
+
+export function attributeReferralForMember(params: {
+  memberId: string;
+  referralCode?: string;
+}): { attributed: boolean; referral?: ReferralRecord; blockedReason?: string } {
+  const cleanCode = normalizePromoCodeInput(params.referralCode);
+  if (!cleanCode) return { attributed: false };
+
+  const cfg = getMembershipConfig();
+  if (!cfg.referralConfig.enabled) {
+    return { attributed: false, blockedReason: 'Referral program is currently paused.' };
+  }
+
+  const members = readMembersEnsured();
+  const referredIdx = members.findIndex((m) => m.id === params.memberId);
+  if (referredIdx === -1) return { attributed: false };
+  const referred = members[referredIdx];
+
+  // Already attributed once — never allow switching referrer to prevent abuse
+  const referrals = readJson<ReferralRecord[]>(REFERRALS_FILE, []);
+  if (referred.referredByMemberId || referrals.some((r) => r.referredMemberId === referred.id)) {
+    return { attributed: false };
+  }
+
+  const referrer = members.find(
+    (m) => (m.referralCode || '').toUpperCase() === cleanCode
+  );
+  if (!referrer) {
+    return { attributed: false, blockedReason: 'Referral code was not recognized.' };
+  }
+
+  const nowIso = new Date().toISOString();
+  const referredPhoneNorm = normalizePhoneCanonical(referred.phone);
+
+  // Anti-abuse & self-referral detection
+  let blockReason = '';
+  if (referrer.id === referred.id) {
+    blockReason = 'Self-referral blocked (same member account).';
+  } else if (referrer.email.toLowerCase() === referred.email.toLowerCase()) {
+    blockReason = 'Self-referral blocked (matching email address).';
+  } else if (
+    referrer.ownerUid &&
+    referred.ownerUid &&
+    referrer.ownerUid !== 'email_member' &&
+    referrer.ownerUid !== 'admin_assigned' &&
+    referrer.ownerUid === referred.ownerUid
+  ) {
+    blockReason = 'Self-referral blocked (matching Firebase user identity).';
+  } else if (phonesMatchForAbuse(referrer.phone, referred.phone)) {
+    blockReason = 'Self-referral blocked (matching phone number).';
+  } else if (referrer.referredByMemberId === referred.id) {
+    blockReason = 'Circular referral loop blocked.';
+  } else if (
+    referredPhoneNorm &&
+    referrals.some(
+      (r) =>
+        r.referredMemberId !== referred.id &&
+        r.status !== 'blocked' &&
+        phonesMatchForAbuse(r.referredPhoneNormalized, referredPhoneNorm)
+    )
+  ) {
+    blockReason = 'Duplicate phone number already used by another referred account.';
+  } else if (
+    referredPhoneNorm &&
+    members.some(
+      (other) =>
+        other.id !== referred.id &&
+        other.id !== referrer.id &&
+        phonesMatchForAbuse(other.phone, referredPhoneNorm) &&
+        readAllOrders().some((o) => o.memberId === other.id && o.status === 'approved')
+    )
+  ) {
+    blockReason = 'Phone number is already linked to a prior paid customer account.';
+  }
+
+  const record: ReferralRecord = {
+    id: `ref-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+    referrerMemberId: referrer.id,
+    referrerCode: referrer.referralCode || cleanCode,
+    referrerEmail: referrer.email,
+    referrerName: referrer.fullName,
+    referredMemberId: referred.id,
+    referredOwnerUid: referred.ownerUid,
+    referredEmail: referred.email,
+    referredName: referred.fullName,
+    referredPhoneNormalized: referredPhoneNorm || undefined,
+    status: blockReason ? 'blocked' : 'signed_up',
+    blockReason: blockReason || undefined,
+    rewardAmountPkr: 0,
+    rewardAmountUsd: 0,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+  };
+
+  referrals.unshift(record);
+  writeJson(REFERRALS_FILE, referrals);
+  mirrorReferralServer(record);
+
+  if (blockReason) {
+    return { attributed: false, referral: record, blockedReason: blockReason };
+  }
+
+  members[referredIdx].referredByMemberId = referrer.id;
+  members[referredIdx].referredByCode = referrer.referralCode || cleanCode;
+  members[referredIdx].updatedAt = nowIso;
+  writeJson(MEMBERS_FILE, members);
+  mirrorMemberServer(sanitizeMember(members[referredIdx]));
+
+  appendHistory({
+    memberId: referred.id,
+    event: 'referral_attributed',
+    details: `Joined using referral code ${record.referrerCode}.`,
+  });
+
+  return { attributed: true, referral: record };
+}
+
+function revalidateReferralAfterPhoneUpdate(member: MemberRecord): void {
+  if (!member.referredByMemberId) return;
+  const members = readMembersEnsured();
+  const referrer = members.find((m) => m.id === member.referredByMemberId);
+  const referrals = readJson<ReferralRecord[]>(REFERRALS_FILE, []);
+  const refIdx = referrals.findIndex(
+    (r) => r.referredMemberId === member.id && r.status === 'signed_up'
+  );
+  if (refIdx === -1) return;
+
+  const phoneNorm = normalizePhoneCanonical(member.phone);
+  let blockReason = '';
+  if (referrer && phonesMatchForAbuse(referrer.phone, phoneNorm)) {
+    blockReason = 'Self-referral blocked (phone matches referrer account).';
+  } else if (
+    phoneNorm &&
+    referrals.some(
+      (r, idx) =>
+        idx !== refIdx &&
+        r.referredMemberId !== member.id &&
+        r.status !== 'blocked' &&
+        phonesMatchForAbuse(r.referredPhoneNormalized, phoneNorm)
+    )
+  ) {
+    blockReason = 'Duplicate phone number already used in another referral.';
+  } else if (
+    phoneNorm &&
+    members.some(
+      (other) =>
+        other.id !== member.id &&
+        phonesMatchForAbuse(other.phone, phoneNorm) &&
+        readAllOrders().some((o) => o.memberId === other.id && o.status === 'approved')
+    )
+  ) {
+    blockReason = 'Phone number already exists on an active/previous paid customer account.';
+  }
+
+  const nowIso = new Date().toISOString();
+  referrals[refIdx].referredPhoneNormalized = phoneNorm || undefined;
+  referrals[refIdx].updatedAt = nowIso;
+
+  if (blockReason) {
+    referrals[refIdx].status = 'blocked';
+    referrals[refIdx].blockReason = blockReason;
+    writeJson(REFERRALS_FILE, referrals);
+    mirrorReferralServer(referrals[refIdx]);
+
+    const mIdx = members.findIndex((m) => m.id === member.id);
+    if (mIdx !== -1) {
+      members[mIdx].referredByMemberId = undefined;
+      members[mIdx].referredByCode = undefined;
+      members[mIdx].updatedAt = nowIso;
+      writeJson(MEMBERS_FILE, members);
+      mirrorMemberServer(sanitizeMember(members[mIdx]));
+    }
+  } else {
+    writeJson(REFERRALS_FILE, referrals);
+    mirrorReferralServer(referrals[refIdx]);
+  }
+}
+
 export function normalizeAndValidatePhone(rawPhone: string): { valid: true; phone: string } | { valid: false; error: string } {
   const trimmed = (rawPhone || '').trim();
   const digits = trimmed.replace(/[^\d]/g, '');
@@ -1329,7 +1941,7 @@ export function normalizeAndValidatePhone(rawPhone: string): { valid: true; phon
 }
 
 export function getMemberById(memberId: string): SafeMember | null {
-  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const members = readMembersEnsured();
   const found = members.find((m) => m.id === memberId);
   return found ? sanitizeMember(found) : null;
 }
@@ -1340,6 +1952,7 @@ export function registerMember(params: {
   password: string;
   confirmPassword?: string;
   fullName?: string;
+  referralCode?: string;
 }): { success: true; member: SafeMember; token: string } | { success: false; error: string; statusCode?: number } {
   const email = (params.email || '').trim().toLowerCase();
   const password = params.password || '';
@@ -1365,7 +1978,7 @@ export function registerMember(params: {
     return { success: false, error: 'Password and Confirm Password do not match.', statusCode: 400 };
   }
 
-  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const members = readMembersEnsured();
   if (members.some((m) => m.email === email)) {
     return {
       success: false,
@@ -1374,6 +1987,9 @@ export function registerMember(params: {
     };
   }
 
+  const takenCodes = new Set<string>(
+    members.map((m) => (m.referralCode || '').toUpperCase()).filter(Boolean)
+  );
   const now = new Date().toISOString();
   const newMember: MemberRecord = {
     id: `mem-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
@@ -1382,7 +1998,11 @@ export function registerMember(params: {
     email,
     fullName,
     phone: phoneCheck.phone,
+    phoneNormalized: normalizePhoneCanonical(phoneCheck.phone) || undefined,
     passwordHash: hashMemberPassword(password),
+    referralCode: generateUniqueReferralCode(fullName, takenCodes),
+    creditBalancePkr: 0,
+    creditBalanceUsd: 0,
     createdAt: now,
     updatedAt: now,
   };
@@ -1396,9 +2016,13 @@ export function registerMember(params: {
     details: `Personal FEVIQO account created for ${email}.`,
   });
 
-  const safe = sanitizeMember(newMember);
-  mirrorMemberServer(safe);
-  return { success: true, member: safe, token: createMemberSessionToken(safe) };
+  if (params.referralCode) {
+    attributeReferralForMember({ memberId: newMember.id, referralCode: params.referralCode });
+  }
+
+  const freshMember = getMemberById(newMember.id) || sanitizeMember(newMember);
+  mirrorMemberServer(freshMember);
+  return { success: true, member: freshMember, token: createMemberSessionToken(freshMember) };
 }
 
 export function loginMember(params: {
@@ -1412,7 +2036,7 @@ export function loginMember(params: {
     return { success: false, error: 'Email and password are required.' };
   }
 
-  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const members = readMembersEnsured();
   const found = members.find((m) => m.email === email);
   if (!found || !verifyMemberPassword(password, found.passwordHash)) {
     return { success: false, error: 'Invalid email or password.' };
@@ -1427,13 +2051,14 @@ export function upsertGoogleMember(params: {
   email: string;
   fullName?: string;
   phone?: string;
+  referralCode?: string;
 }): { success: true; member: SafeMember; token: string } | { success: false; error: string } {
   const email = (params.email || '').trim().toLowerCase();
   if (!email || !email.includes('@')) {
     return { success: false, error: 'Verified Google email is required.' };
   }
 
-  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const members = readMembersEnsured();
   const now = new Date().toISOString();
   const existingIdx = members.findIndex((m) => m.email === email);
 
@@ -1459,6 +2084,7 @@ export function upsertGoogleMember(params: {
     }
     if (!existing.phone && params.phone?.trim()) {
       existing.phone = params.phone.trim();
+      existing.phoneNormalized = normalizePhoneCanonical(existing.phone) || undefined;
       updated = true;
     }
     if (updated) {
@@ -1466,19 +2092,40 @@ export function upsertGoogleMember(params: {
       members[existingIdx] = existing;
       writeJson(MEMBERS_FILE, members);
     }
-    const safe = sanitizeMember(existing);
-    if (updated) mirrorMemberServer(safe);
-    return { success: true, member: safe, token: createMemberSessionToken(safe) };
+    // Attribute referral if brand new (created < 10 min ago, 0 orders, no referrer yet)
+    if (
+      params.referralCode &&
+      !existing.referredByMemberId &&
+      Date.now() - Date.parse(existing.createdAt) < 10 * 60 * 1000 &&
+      !readAllOrders().some((o) => o.memberId === existing.id)
+    ) {
+      attributeReferralForMember({ memberId: existing.id, referralCode: params.referralCode });
+    }
+    const fresh = getMemberById(existing.id) || sanitizeMember(existing);
+    if (updated) mirrorMemberServer(fresh);
+    return { success: true, member: fresh, token: createMemberSessionToken(fresh) };
   }
+
+  const takenCodes = new Set<string>(
+    members.map((m) => (m.referralCode || '').toUpperCase()).filter(Boolean)
+  );
+  const resolvedName = (params.fullName || email.split('@')[0] || 'FEVIQO Member')
+    .trim()
+    .slice(0, 120);
+  const cleanPhone = (params.phone || '').trim().slice(0, 32);
 
   const newMember: MemberRecord = {
     id: `mem-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
     ownerUid: params.uid,
     authMethod: 'google',
     email,
-    fullName: (params.fullName || email.split('@')[0] || 'FEVIQO Member').trim().slice(0, 120),
-    phone: (params.phone || '').trim().slice(0, 32),
+    fullName: resolvedName,
+    phone: cleanPhone,
+    phoneNormalized: normalizePhoneCanonical(cleanPhone) || undefined,
     passwordHash: hashMemberPassword(crypto.randomBytes(24).toString('hex')),
+    referralCode: generateUniqueReferralCode(resolvedName, takenCodes),
+    creditBalancePkr: 0,
+    creditBalanceUsd: 0,
     createdAt: now,
     updatedAt: now,
   };
@@ -1492,9 +2139,13 @@ export function upsertGoogleMember(params: {
     details: `Personal FEVIQO account connected via Google for ${email}.`,
   });
 
-  const safe = sanitizeMember(newMember);
-  mirrorMemberServer(safe);
-  return { success: true, member: safe, token: createMemberSessionToken(safe) };
+  if (params.referralCode) {
+    attributeReferralForMember({ memberId: newMember.id, referralCode: params.referralCode });
+  }
+
+  const fresh = getMemberById(newMember.id) || sanitizeMember(newMember);
+  mirrorMemberServer(fresh);
+  return { success: true, member: fresh, token: createMemberSessionToken(fresh) };
 }
 
 export function isMemberPhoneValid(phone?: string): boolean {
@@ -1505,13 +2156,14 @@ export function isMemberPhoneValid(phone?: string): boolean {
 export function updateMemberPhone(params: {
   memberId: string;
   phone: string;
+  referralCode?: string;
 }): { success: true; member: SafeMember } | { success: false; error: string; statusCode?: number } {
   const phoneCheck = normalizeAndValidatePhone(params.phone);
   if (!('phone' in phoneCheck)) {
     return { success: false, error: phoneCheck.error, statusCode: 400 };
   }
 
-  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const members = readMembersEnsured();
   const idx = members.findIndex((m) => m.id === params.memberId);
   if (idx === -1) {
     return { success: false, error: 'Member account not found.', statusCode: 404 };
@@ -1519,10 +2171,21 @@ export function updateMemberPhone(params: {
 
   const now = new Date().toISOString();
   members[idx].phone = phoneCheck.phone.slice(0, 32);
+  members[idx].phoneNormalized = normalizePhoneCanonical(members[idx].phone) || undefined;
   members[idx].updatedAt = now;
   writeJson(MEMBERS_FILE, members);
 
-  const safe = sanitizeMember(members[idx]);
+  if (
+    params.referralCode &&
+    !members[idx].referredByMemberId &&
+    !readAllOrders().some((o) => o.memberId === members[idx].id)
+  ) {
+    attributeReferralForMember({ memberId: members[idx].id, referralCode: params.referralCode });
+  } else {
+    revalidateReferralAfterPhoneUpdate(members[idx]);
+  }
+
+  const safe = getMemberById(members[idx].id) || sanitizeMember(members[idx]);
   mirrorMemberServer(safe);
 
   // Backfill customerPhone on any existing awaiting_payment / pending_verification orders so admin queue sees it immediately
@@ -1655,6 +2318,92 @@ export function syncMemberSubscriptions(memberId?: string): MembershipRecord[] {
     .sort((a, b) => Date.parse(b.activatedAt) - Date.parse(a.activatedAt));
 }
 
+function buildMemberReferralSummary(member: SafeMember) {
+  const cfg = getMembershipConfig().referralConfig;
+  const allReferrals = readJson<ReferralRecord[]>(REFERRALS_FILE, []).filter(
+    (r) => r.referrerMemberId === member.id
+  );
+  const myAttribution = readJson<ReferralRecord[]>(REFERRALS_FILE, []).find(
+    (r) => r.referredMemberId === member.id
+  );
+  const myOrders = readAllOrders().filter((o) => o.memberId === member.id);
+  const hasPriorPaidOrPendingOrder = myOrders.some(
+    (o) => o.status === 'approved' || o.status === 'pending_verification'
+  );
+  const refereeFirstOrderDiscountAvailable = Boolean(
+    cfg.enabled &&
+      cfg.refereeDiscountType !== 'none' &&
+      member.referredByMemberId &&
+      myAttribution &&
+      myAttribution.status === 'signed_up' &&
+      !hasPriorPaidOrPendingOrder
+  );
+
+  const ledger = readJson<ReferralCreditEntry[]>(CREDIT_LEDGER_FILE, [])
+    .filter((entry) => entry.memberId === member.id)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, 60);
+
+  const completedPurchases = allReferrals.filter((r) => r.status === 'converted').length;
+  const pendingReferrals = allReferrals.filter((r) => r.status === 'signed_up').length;
+  const blockedReferrals = allReferrals.filter((r) => r.status === 'blocked').length;
+
+  const totalEarnedPkr = allReferrals.reduce((sum, r) => sum + (Number(r.rewardAmountPkr) || 0), 0);
+  const totalEarnedUsd = Number(
+    allReferrals.reduce((sum, r) => sum + (Number(r.rewardAmountUsd) || 0), 0).toFixed(2)
+  );
+
+  const baseAppUrl = (process.env.APP_URL || 'https://feviqo.com').replace(/\/$/, '');
+  const referralCode = member.referralCode || '';
+  const referralLink = referralCode
+    ? `${baseAppUrl}/membership?ref=${encodeURIComponent(referralCode)}`
+    : `${baseAppUrl}/membership`;
+
+  // Also include active personal reward promo codes issued to this member
+  const personalRewardPromos = readJson<PromoCode[]>(PROMO_CODES_FILE, [])
+    .filter((p) => p.rewardForReferrerMemberId === member.id && p.isActive)
+    .map((p) => ({
+      code: p.code,
+      discountType: p.discountType,
+      discountPercent: p.discountPercent,
+      discountAmountPkr: p.discountAmountPkr,
+      discountAmountUsd: p.discountAmountUsd,
+      expiresAt: p.expiresAt,
+    }));
+
+  return {
+    referralCode,
+    referralLink,
+    referredByCode: member.referredByCode,
+    creditBalancePkr: member.creditBalancePkr || 0,
+    creditBalanceUsd: member.creditBalanceUsd || 0,
+    totalReferrals: allReferrals.filter((r) => r.status !== 'blocked').length,
+    completedPurchases,
+    pendingReferrals,
+    blockedReferrals,
+    totalEarnedPkr,
+    totalEarnedUsd,
+    refereeFirstOrderDiscountAvailable,
+    personalRewardPromos,
+    referrals: allReferrals
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+      .slice(0, 50)
+      .map((r) => ({
+        id: r.id,
+        referredName: r.referredName,
+        maskedEmail: maskEmailForReferralPrivacy(r.referredEmail),
+        status: r.status,
+        rewardAmountPkr: r.rewardAmountPkr || 0,
+        rewardAmountUsd: r.rewardAmountUsd || 0,
+        rewardPromoCode: r.rewardPromoCode,
+        createdAt: r.createdAt,
+        convertedAt: r.convertedAt,
+      })),
+    creditLedger: ledger,
+    referralConfig: cfg,
+  };
+}
+
 export function getMemberAccountState(memberId: string) {
   const member = getMemberById(memberId);
   if (!member) return null;
@@ -1709,6 +2458,7 @@ export function getMemberAccountState(memberId: string) {
     history,
     notifications,
     unreadNotificationCount,
+    referralSummary: buildMemberReferralSummary(member),
     plans: getResolvedPlans(),
     publicConfig: getPublicMembershipConfig(),
     gatewayStatus: getPaymentGatewayStatus(),
@@ -1764,6 +2514,878 @@ export function validatePlanAndDramas(params: {
   return { valid: true, plan, normalizedDramaIds: uniqueIds };
 }
 
+// --- PROMO CODES, CHECKOUT QUOTE & REFERRAL CONVERSION ---
+function readAllPromoCodes(): PromoCode[] {
+  return readJson<PromoCode[]>(PROMO_CODES_FILE, []).map((p) => ({
+    ...p,
+    code: normalizePromoCodeInput(p.code),
+    applicablePlanIds: Array.isArray(p.applicablePlanIds) ? p.applicablePlanIds : [],
+    usageLimit: p.usageLimit === null || p.usageLimit === undefined ? null : Number(p.usageLimit),
+    perUserLimit: Math.max(1, Math.round(Number(p.perUserLimit) || 1)),
+    isActive: p.isActive !== false,
+  }));
+}
+
+export function listPromoCodesOverview(): AdminPromoCodeView[] {
+  const promos = readAllPromoCodes();
+  const orders = readAllOrders();
+  return promos
+    .map((promo) => {
+      const matching = orders.filter(
+        (o) =>
+          o.status !== 'rejected' &&
+          o.status !== 'expired' &&
+          (o.promoCodeId === promo.id ||
+            normalizePromoCodeInput(o.promoCode) === promo.code)
+      );
+      const approved = matching.filter((o) => o.status === 'approved');
+      const totalDiscountGivenPkr = approved.reduce(
+        (sum, o) => sum + (Number(o.promoDiscountPkr) || 0),
+        0
+      );
+      const totalDiscountGivenUsd = Number(
+        approved.reduce((sum, o) => sum + (Number(o.promoDiscountUsd) || 0), 0).toFixed(2)
+      );
+      return {
+        ...promo,
+        usedCount: matching.length,
+        approvedUses: approved.length,
+        totalDiscountGivenPkr,
+        totalDiscountGivenUsd,
+      };
+    })
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}
+
+export function createPromoCode(params: {
+  code: string;
+  description?: string;
+  discountType: PromoDiscountType;
+  discountPercent?: number;
+  discountAmountPkr?: number;
+  discountAmountUsd?: number;
+  maxDiscountPkr?: number;
+  maxDiscountUsd?: number;
+  minPurchasePkr?: number;
+  minPurchaseUsd?: number;
+  applicablePlanIds?: MembershipPlanId[];
+  usageLimit?: number | null;
+  perUserLimit?: number;
+  expiresAt?: string;
+  isActive?: boolean;
+  admin: SafeAdmin;
+  rewardForReferrerMemberId?: string;
+}): { success: true; promo: AdminPromoCodeView } | { success: false; error: string; statusCode: number } {
+  const normalizedCode = normalizePromoCodeInput(params.code);
+  if (!normalizedCode || normalizedCode.length < 3) {
+    return {
+      success: false,
+      error: 'Promo code must be at least 3 alphanumeric characters (A-Z, 0-9, -, _).',
+      statusCode: 400,
+    };
+  }
+
+  const promos = readAllPromoCodes();
+  if (promos.some((p) => p.code === normalizedCode)) {
+    return {
+      success: false,
+      error: `Promo code "${normalizedCode}" already exists.`,
+      statusCode: 409,
+    };
+  }
+
+  const members = readMembersEnsured();
+  if (members.some((m) => (m.referralCode || '').toUpperCase() === normalizedCode)) {
+    return {
+      success: false,
+      error: `Code "${normalizedCode}" conflicts with a member referral code. Choose another promo code.`,
+      statusCode: 409,
+    };
+  }
+
+  const discountType: PromoDiscountType = params.discountType === 'fixed' ? 'fixed' : 'percentage';
+  const discountPercent = Math.min(100, Math.max(0, Math.round(Number(params.discountPercent) || 0)));
+  const discountAmountPkr = Math.max(0, Math.round(Number(params.discountAmountPkr) || 0));
+  const discountAmountUsd = Math.max(0, Number((Number(params.discountAmountUsd) || 0).toFixed(2)));
+
+  if (discountType === 'percentage' && (discountPercent < 1 || discountPercent > 100)) {
+    return { success: false, error: 'Percentage discount must be between 1% and 100%.', statusCode: 400 };
+  }
+  if (discountType === 'fixed' && discountAmountPkr <= 0 && discountAmountUsd <= 0) {
+    return {
+      success: false,
+      error: 'Fixed promo code must specify a discount amount in PKR or USD.',
+      statusCode: 400,
+    };
+  }
+
+  const maxDiscountPkr =
+    params.maxDiscountPkr !== undefined && Number(params.maxDiscountPkr) > 0
+      ? Math.round(Number(params.maxDiscountPkr))
+      : undefined;
+  const maxDiscountUsd =
+    params.maxDiscountUsd !== undefined && Number(params.maxDiscountUsd) > 0
+      ? Number(Number(params.maxDiscountUsd).toFixed(2))
+      : undefined;
+  const minPurchasePkr = Math.max(0, Math.round(Number(params.minPurchasePkr) || 0));
+  const minPurchaseUsd = Math.max(0, Number((Number(params.minPurchaseUsd) || 0).toFixed(2)));
+
+  const validPlanSet = new Set<MembershipPlanId>(['starter', 'standard', 'plus', 'vip']);
+  const applicablePlanIds = Array.isArray(params.applicablePlanIds)
+    ? Array.from(new Set(params.applicablePlanIds.filter((id) => validPlanSet.has(id))))
+    : [];
+
+  const usageLimit =
+    params.usageLimit === null || params.usageLimit === undefined || Number(params.usageLimit) <= 0
+      ? null
+      : Math.round(Number(params.usageLimit));
+  const perUserLimit = Math.max(1, Math.min(100, Math.round(Number(params.perUserLimit) || 1)));
+
+  let expiresAt: string | undefined;
+  if (params.expiresAt && String(params.expiresAt).trim()) {
+    const parsed = Date.parse(String(params.expiresAt).trim());
+    if (Number.isNaN(parsed)) {
+      return { success: false, error: 'Expiry date format is invalid.', statusCode: 400 };
+    }
+    expiresAt = new Date(parsed).toISOString();
+  }
+
+  const nowIso = new Date().toISOString();
+  const promo: PromoCode = {
+    id: `promo-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+    code: normalizedCode,
+    description: (params.description || '').trim().slice(0, 180),
+    discountType,
+    discountPercent: discountType === 'percentage' ? discountPercent : 0,
+    discountAmountPkr: discountType === 'fixed' ? discountAmountPkr : 0,
+    discountAmountUsd: discountType === 'fixed' ? discountAmountUsd : 0,
+    maxDiscountPkr,
+    maxDiscountUsd,
+    minPurchasePkr,
+    minPurchaseUsd,
+    applicablePlanIds,
+    usageLimit,
+    perUserLimit,
+    expiresAt,
+    isActive: params.isActive !== false,
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    createdByAdminEmail: params.admin.email,
+    rewardForReferrerMemberId: params.rewardForReferrerMemberId,
+  };
+
+  promos.unshift(promo);
+  writeJson(PROMO_CODES_FILE, promos);
+  mirrorPromoCodeServer(promo);
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'promo_created',
+    targetId: promo.id,
+    details: `Created promo code ${promo.code} (${promo.discountType === 'percentage' ? `${promo.discountPercent}%` : `PKR ${promo.discountAmountPkr} / $${promo.discountAmountUsd}`}).`,
+  });
+
+  return {
+    success: true,
+    promo: {
+      ...promo,
+      usedCount: 0,
+      approvedUses: 0,
+      totalDiscountGivenPkr: 0,
+      totalDiscountGivenUsd: 0,
+    },
+  };
+}
+
+export function updatePromoCode(params: {
+  promoId: string;
+  updates: Partial<{
+    code: string;
+    description: string;
+    discountType: PromoDiscountType;
+    discountPercent: number;
+    discountAmountPkr: number;
+    discountAmountUsd: number;
+    maxDiscountPkr: number | null;
+    maxDiscountUsd: number | null;
+    minPurchasePkr: number;
+    minPurchaseUsd: number;
+    applicablePlanIds: MembershipPlanId[];
+    usageLimit: number | null;
+    perUserLimit: number;
+    expiresAt: string | null;
+    isActive: boolean;
+  }>;
+  admin: SafeAdmin;
+}): { success: true; promo: AdminPromoCodeView } | { success: false; error: string; statusCode: number } {
+  const promos = readAllPromoCodes();
+  const idx = promos.findIndex((p) => p.id === params.promoId);
+  if (idx === -1) {
+    return { success: false, error: 'Promo code not found.', statusCode: 404 };
+  }
+
+  const current = promos[idx];
+  const u = params.updates || {};
+  let nextCode = current.code;
+  if (u.code !== undefined) {
+    const normalized = normalizePromoCodeInput(u.code);
+    if (!normalized || normalized.length < 3) {
+      return { success: false, error: 'Promo code must be at least 3 characters.', statusCode: 400 };
+    }
+    if (promos.some((p, i) => i !== idx && p.code === normalized)) {
+      return { success: false, error: `Promo code "${normalized}" already exists.`, statusCode: 409 };
+    }
+    nextCode = normalized;
+  }
+
+  const discountType: PromoDiscountType =
+    u.discountType === 'fixed' || u.discountType === 'percentage' ? u.discountType : current.discountType;
+
+  const discountPercent =
+    u.discountPercent !== undefined
+      ? Math.min(100, Math.max(0, Math.round(Number(u.discountPercent) || 0)))
+      : current.discountPercent;
+  const discountAmountPkr =
+    u.discountAmountPkr !== undefined
+      ? Math.max(0, Math.round(Number(u.discountAmountPkr) || 0))
+      : current.discountAmountPkr;
+  const discountAmountUsd =
+    u.discountAmountUsd !== undefined
+      ? Math.max(0, Number((Number(u.discountAmountUsd) || 0).toFixed(2)))
+      : current.discountAmountUsd;
+
+  if (discountType === 'percentage' && (discountPercent < 1 || discountPercent > 100)) {
+    return { success: false, error: 'Percentage discount must be between 1% and 100%.', statusCode: 400 };
+  }
+  if (discountType === 'fixed' && discountAmountPkr <= 0 && discountAmountUsd <= 0) {
+    return { success: false, error: 'Fixed promo code requires a PKR or USD discount amount.', statusCode: 400 };
+  }
+
+  let expiresAt = current.expiresAt;
+  if (u.expiresAt !== undefined) {
+    if (!u.expiresAt || !String(u.expiresAt).trim()) {
+      expiresAt = undefined;
+    } else {
+      const parsed = Date.parse(String(u.expiresAt).trim());
+      if (Number.isNaN(parsed)) {
+        return { success: false, error: 'Expiry date format is invalid.', statusCode: 400 };
+      }
+      expiresAt = new Date(parsed).toISOString();
+    }
+  }
+
+  const validPlanSet = new Set<MembershipPlanId>(['starter', 'standard', 'plus', 'vip']);
+  const next: PromoCode = {
+    ...current,
+    code: nextCode,
+    description: u.description !== undefined ? String(u.description).trim().slice(0, 180) : current.description,
+    discountType,
+    discountPercent: discountType === 'percentage' ? discountPercent : 0,
+    discountAmountPkr: discountType === 'fixed' ? discountAmountPkr : 0,
+    discountAmountUsd: discountType === 'fixed' ? discountAmountUsd : 0,
+    maxDiscountPkr:
+      u.maxDiscountPkr === null
+        ? undefined
+        : u.maxDiscountPkr !== undefined && Number(u.maxDiscountPkr) > 0
+          ? Math.round(Number(u.maxDiscountPkr))
+          : current.maxDiscountPkr,
+    maxDiscountUsd:
+      u.maxDiscountUsd === null
+        ? undefined
+        : u.maxDiscountUsd !== undefined && Number(u.maxDiscountUsd) > 0
+          ? Number(Number(u.maxDiscountUsd).toFixed(2))
+          : current.maxDiscountUsd,
+    minPurchasePkr:
+      u.minPurchasePkr !== undefined ? Math.max(0, Math.round(Number(u.minPurchasePkr) || 0)) : current.minPurchasePkr,
+    minPurchaseUsd:
+      u.minPurchaseUsd !== undefined
+        ? Math.max(0, Number((Number(u.minPurchaseUsd) || 0).toFixed(2)))
+        : current.minPurchaseUsd,
+    applicablePlanIds:
+      u.applicablePlanIds !== undefined
+        ? Array.from(new Set(u.applicablePlanIds.filter((id) => validPlanSet.has(id))))
+        : current.applicablePlanIds,
+    usageLimit:
+      u.usageLimit === null
+        ? null
+        : u.usageLimit !== undefined
+          ? Number(u.usageLimit) > 0
+            ? Math.round(Number(u.usageLimit))
+            : null
+          : current.usageLimit,
+    perUserLimit:
+      u.perUserLimit !== undefined
+        ? Math.max(1, Math.min(100, Math.round(Number(u.perUserLimit) || 1)))
+        : current.perUserLimit,
+    expiresAt,
+    isActive: u.isActive !== undefined ? Boolean(u.isActive) : current.isActive,
+    updatedAt: new Date().toISOString(),
+  };
+
+  promos[idx] = next;
+  writeJson(PROMO_CODES_FILE, promos);
+  mirrorPromoCodeServer(next);
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'promo_updated',
+    targetId: next.id,
+    details: `Updated promo code ${next.code} (active=${next.isActive}).`,
+  });
+
+  const view = listPromoCodesOverview().find((p) => p.id === next.id)!;
+  return { success: true, promo: view };
+}
+
+export function deletePromoCode(params: {
+  promoId: string;
+  admin: SafeAdmin;
+}): { success: true; deletedPromoId: string } | { success: false; error: string; statusCode: number } {
+  const promos = readAllPromoCodes();
+  const idx = promos.findIndex((p) => p.id === params.promoId);
+  if (idx === -1) {
+    return { success: false, error: 'Promo code not found.', statusCode: 404 };
+  }
+  const removed = promos[idx];
+  promos.splice(idx, 1);
+  writeJson(PROMO_CODES_FILE, promos);
+  if (isServerFirestoreEnabled()) {
+    void deleteDocFromFirestoreServer('promoCodes', removed.id);
+  }
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'promo_deleted',
+    targetId: removed.id,
+    details: `Deleted promo code ${removed.code}.`,
+  });
+
+  return { success: true, deletedPromoId: removed.id };
+}
+
+export function updateReferralStatusByAdmin(params: {
+  referralId: string;
+  status: 'blocked' | 'signed_up';
+  blockReason?: string;
+  admin: SafeAdmin;
+}): { success: true; referral: ReferralRecord } | { success: false; error: string; statusCode: number } {
+  const referrals = readJson<ReferralRecord[]>(REFERRALS_FILE, []);
+  const idx = referrals.findIndex((r) => r.id === params.referralId);
+  if (idx === -1) {
+    return { success: false, error: 'Referral record not found.', statusCode: 404 };
+  }
+
+  const ref = referrals[idx];
+  if (ref.status === 'converted') {
+    return {
+      success: false,
+      error: 'Cannot alter status of an already converted referral reward.',
+      statusCode: 409,
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  const members = readMembersEnsured();
+  const referredMemberIdx = members.findIndex((m) => m.id === ref.referredMemberId);
+
+  if (params.status === 'blocked') {
+    ref.status = 'blocked';
+    ref.blockReason = (params.blockReason || '').trim() || `Blocked manually by admin (${params.admin.email}).`;
+    ref.updatedAt = nowIso;
+    if (referredMemberIdx !== -1 && members[referredMemberIdx].referredByMemberId === ref.referrerMemberId) {
+      members[referredMemberIdx].referredByMemberId = undefined;
+      members[referredMemberIdx].referredByCode = undefined;
+      members[referredMemberIdx].updatedAt = nowIso;
+      writeJson(MEMBERS_FILE, members);
+      mirrorMemberServer(sanitizeMember(members[referredMemberIdx]));
+    }
+  } else {
+    ref.status = 'signed_up';
+    ref.blockReason = undefined;
+    ref.updatedAt = nowIso;
+    if (referredMemberIdx !== -1 && !members[referredMemberIdx].referredByMemberId) {
+      members[referredMemberIdx].referredByMemberId = ref.referrerMemberId;
+      members[referredMemberIdx].referredByCode = ref.referrerCode;
+      members[referredMemberIdx].updatedAt = nowIso;
+      writeJson(MEMBERS_FILE, members);
+      mirrorMemberServer(sanitizeMember(members[referredMemberIdx]));
+    }
+  }
+
+  referrals[idx] = ref;
+  writeJson(REFERRALS_FILE, referrals);
+  mirrorReferralServer(ref);
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'referral_status_updated',
+    targetId: ref.id,
+    details: `Set referral ${ref.id} (${ref.referredEmail} <- ${ref.referrerCode}) to ${ref.status}.`,
+  });
+
+  return { success: true, referral: ref };
+}
+
+export function calculateCheckoutPricingQuote(params: {
+  memberId?: string | null;
+  planId: string;
+  paymentRegion?: PaymentRegion;
+  promoCode?: string;
+  applyCredits?: boolean;
+}): CheckoutPricingQuote {
+  const plan =
+    getResolvedPlans().find((p) => p.id === params.planId) ||
+    getPlanById(params.planId) ||
+    getResolvedPlans()[0];
+  const paymentRegion: PaymentRegion =
+    params.paymentRegion === 'international' ? 'international' : 'pakistan';
+  const currency: PaymentCurrency = paymentRegion === 'international' ? 'USD' : 'PKR';
+
+  const originalAmountPkr = plan.pricePkr;
+  const originalAmountUsd = plan.priceUsd;
+  const originalAmount = paymentRegion === 'international' ? originalAmountUsd : originalAmountPkr;
+
+  const member = params.memberId ? getMemberById(params.memberId) : null;
+  const orders = readAllOrders();
+  const cfg = getMembershipConfig().referralConfig;
+
+  let promoError: string | undefined;
+  let promoApplied: CheckoutPricingQuote['promoApplied'] = null;
+  let promoDiscountPkr = 0;
+  let promoDiscountUsd = 0;
+
+  const cleanPromo = normalizePromoCodeInput(params.promoCode);
+  if (cleanPromo) {
+    const promos = readAllPromoCodes();
+    const promo = promos.find((p) => p.code === cleanPromo);
+    const nowMs = Date.now();
+
+    if (!promo) {
+      promoError = 'Invalid promo code. Please double-check the code and try again.';
+    } else if (!promo.isActive) {
+      promoError = 'This promo code has been disabled.';
+    } else if (promo.expiresAt && !Number.isNaN(Date.parse(promo.expiresAt)) && Date.parse(promo.expiresAt) <= nowMs) {
+      promoError = 'This promo code has expired.';
+    } else if (
+      promo.rewardForReferrerMemberId &&
+      (!member || member.id !== promo.rewardForReferrerMemberId)
+    ) {
+      promoError = 'This personal reward promo code belongs to a different member account.';
+    } else if (promo.applicablePlanIds.length > 0 && !promo.applicablePlanIds.includes(plan.id)) {
+      promoError = `Promo code ${promo.code} does not apply to the ${plan.name} plan.`;
+    } else if (paymentRegion === 'pakistan' && originalAmountPkr < promo.minPurchasePkr) {
+      promoError = `Minimum purchase of PKR ${promo.minPurchasePkr.toLocaleString()} required for ${promo.code}.`;
+    } else if (paymentRegion === 'international' && originalAmountUsd < promo.minPurchaseUsd) {
+      promoError = `Minimum purchase of $${promo.minPurchaseUsd.toFixed(2)} USD required for ${promo.code}.`;
+    } else {
+      const globalActiveUses = orders.filter(
+        (o) =>
+          o.status !== 'rejected' &&
+          o.status !== 'expired' &&
+          (o.promoCodeId === promo.id || normalizePromoCodeInput(o.promoCode) === promo.code)
+      ).length;
+      const memberUses = member
+        ? orders.filter(
+            (o) =>
+              o.memberId === member.id &&
+              o.status !== 'rejected' &&
+              o.status !== 'expired' &&
+              (o.promoCodeId === promo.id || normalizePromoCodeInput(o.promoCode) === promo.code)
+          ).length
+        : 0;
+
+      if (promo.usageLimit !== null && globalActiveUses >= promo.usageLimit) {
+        promoError = 'This promo code has reached its total redemption limit.';
+      } else if (member && memberUses >= promo.perUserLimit) {
+        promoError = 'You have already reached the usage limit for this promo code.';
+      } else {
+        if (promo.discountType === 'percentage') {
+          promoDiscountPkr = Math.round(originalAmountPkr * (promo.discountPercent / 100));
+          promoDiscountUsd = Number((originalAmountUsd * (promo.discountPercent / 100)).toFixed(2));
+          if (promo.maxDiscountPkr && promo.maxDiscountPkr > 0) {
+            promoDiscountPkr = Math.min(promoDiscountPkr, promo.maxDiscountPkr);
+          }
+          if (promo.maxDiscountUsd && promo.maxDiscountUsd > 0) {
+            promoDiscountUsd = Math.min(promoDiscountUsd, promo.maxDiscountUsd);
+          }
+        } else {
+          promoDiscountPkr = Math.round(promo.discountAmountPkr || 0);
+          promoDiscountUsd = Number((promo.discountAmountUsd || 0).toFixed(2));
+        }
+
+        promoDiscountPkr = Math.max(0, Math.min(originalAmountPkr, promoDiscountPkr));
+        promoDiscountUsd = Math.max(0, Math.min(originalAmountUsd, Number(promoDiscountUsd.toFixed(2))));
+
+        promoApplied = {
+          id: promo.id,
+          code: promo.code,
+          description: promo.description,
+          discountType: promo.discountType,
+          discountPercent: promo.discountPercent,
+          discountAmountPkr: promo.discountAmountPkr,
+          discountAmountUsd: promo.discountAmountUsd,
+        };
+      }
+    }
+  }
+
+  // First-order referee referral discount (verified strictly server-side)
+  let referralDiscountApplied = false;
+  let referralCodeUsed: string | undefined;
+  let referralDiscountPkr = 0;
+  let referralDiscountUsd = 0;
+
+  if (member && cfg.enabled && cfg.refereeDiscountType !== 'none' && member.referredByMemberId) {
+    const referrals = readJson<ReferralRecord[]>(REFERRALS_FILE, []);
+    const attribution = referrals.find(
+      (r) => r.referredMemberId === member.id && r.status === 'signed_up'
+    );
+    const hasPriorQualifyingOrder = orders.some(
+      (o) =>
+        o.memberId === member.id &&
+        (o.status === 'approved' || o.status === 'pending_verification')
+    );
+
+    if (attribution && !hasPriorQualifyingOrder) {
+      const remPkr = Math.max(0, originalAmountPkr - promoDiscountPkr);
+      const remUsd = Math.max(0, Number((originalAmountUsd - promoDiscountUsd).toFixed(2)));
+      if (cfg.refereeDiscountType === 'percentage' && cfg.refereeDiscountPercent > 0) {
+        referralDiscountPkr = Math.min(remPkr, Math.round(remPkr * (cfg.refereeDiscountPercent / 100)));
+        referralDiscountUsd = Math.min(remUsd, Number((remUsd * (cfg.refereeDiscountPercent / 100)).toFixed(2)));
+      } else if (cfg.refereeDiscountType === 'fixed') {
+        referralDiscountPkr = Math.min(remPkr, Math.max(0, Math.round(cfg.refereeDiscountPkr)));
+        referralDiscountUsd = Math.min(remUsd, Math.max(0, Number(cfg.refereeDiscountUsd.toFixed(2))));
+      }
+      if (referralDiscountPkr > 0 || referralDiscountUsd > 0) {
+        referralDiscountApplied = true;
+        referralCodeUsed = attribution.referrerCode;
+      }
+    }
+  }
+
+  const afterDiscountsPkr = Math.max(0, originalAmountPkr - promoDiscountPkr - referralDiscountPkr);
+  const afterDiscountsUsd = Math.max(
+    0,
+    Number((originalAmountUsd - promoDiscountUsd - referralDiscountUsd).toFixed(2))
+  );
+
+  const availableCreditPkr = member?.creditBalancePkr || 0;
+  const availableCreditUsd = member?.creditBalanceUsd || 0;
+  const availableCredit = paymentRegion === 'international' ? availableCreditUsd : availableCreditPkr;
+
+  let creditsUsedPkr = 0;
+  let creditsUsedUsd = 0;
+  if (params.applyCredits && member) {
+    if (paymentRegion === 'pakistan' && availableCreditPkr > 0 && afterDiscountsPkr > 0) {
+      creditsUsedPkr = Math.min(availableCreditPkr, afterDiscountsPkr);
+    } else if (paymentRegion === 'international' && availableCreditUsd > 0 && afterDiscountsUsd > 0) {
+      creditsUsedUsd = Number(Math.min(availableCreditUsd, afterDiscountsUsd).toFixed(2));
+    }
+  }
+
+  const finalAmountPkr = Math.max(0, afterDiscountsPkr - creditsUsedPkr);
+  const finalAmountUsd = Math.max(0, Number((afterDiscountsUsd - creditsUsedUsd).toFixed(2)));
+  const finalAmount = paymentRegion === 'international' ? finalAmountUsd : finalAmountPkr;
+
+  const promoDiscount = paymentRegion === 'international' ? promoDiscountUsd : promoDiscountPkr;
+  const referralDiscount = paymentRegion === 'international' ? referralDiscountUsd : referralDiscountPkr;
+  const creditsUsed = paymentRegion === 'international' ? creditsUsedUsd : creditsUsedPkr;
+
+  const discountTotalPkr = Math.max(0, originalAmountPkr - finalAmountPkr);
+  const discountTotalUsd = Math.max(0, Number((originalAmountUsd - finalAmountUsd).toFixed(2)));
+  const discountTotal = paymentRegion === 'international' ? discountTotalUsd : discountTotalPkr;
+
+  return {
+    valid: !promoError,
+    error: promoError,
+    promoError,
+    planId: plan.id,
+    planName: plan.name,
+    paymentRegion,
+    currency,
+    originalAmountPkr,
+    originalAmountUsd,
+    originalAmount,
+    promoApplied,
+    promoDiscountPkr,
+    promoDiscountUsd,
+    promoDiscount,
+    referralDiscountApplied,
+    referralCodeUsed,
+    referralDiscountPkr,
+    referralDiscountUsd,
+    referralDiscount,
+    availableCreditPkr,
+    availableCreditUsd,
+    availableCredit,
+    creditsUsedPkr,
+    creditsUsedUsd,
+    creditsUsed,
+    discountTotalPkr,
+    discountTotalUsd,
+    discountTotal,
+    finalAmountPkr,
+    finalAmountUsd,
+    finalAmount,
+  };
+}
+
+function refundOrderCreditsIfNeeded(order: MembershipOrder, reasonSuffix: string): void {
+  const spentPkr = Number(order.creditsUsedPkr) || 0;
+  const spentUsd = Number(order.creditsUsedUsd) || 0;
+  if ((spentPkr <= 0 && spentUsd <= 0) || order.creditsRefundedAt || order.status === 'approved') {
+    return;
+  }
+
+  const members = readMembersEnsured();
+  const idx = members.findIndex((m) => m.id === order.memberId);
+  if (idx === -1) return;
+
+  const nowIso = new Date().toISOString();
+  members[idx].creditBalancePkr = Math.max(0, Math.round((members[idx].creditBalancePkr || 0) + spentPkr));
+  members[idx].creditBalanceUsd = Math.max(
+    0,
+    Number(((members[idx].creditBalanceUsd || 0) + spentUsd).toFixed(2))
+  );
+  members[idx].updatedAt = nowIso;
+  writeJson(MEMBERS_FILE, members);
+  mirrorMemberServer(sanitizeMember(members[idx]));
+
+  order.creditsRefundedAt = nowIso;
+  appendCreditLedgerEntry({
+    memberId: order.memberId,
+    type: 'checkout_refund',
+    amountPkr: spentPkr,
+    amountUsd: spentUsd,
+    currency: order.currency === 'USD' ? 'USD' : 'PKR',
+    orderId: order.id,
+    details: `Refunded credits from ${reasonSuffix} order ${order.id}.`,
+  });
+  appendHistory({
+    memberId: order.memberId,
+    orderId: order.id,
+    event: 'credits_refunded',
+    amountPkr: spentPkr,
+    amountUsd: spentUsd,
+    currency: order.currency === 'USD' ? 'USD' : 'PKR',
+    details: `Account credits refunded (${spentPkr > 0 ? `PKR ${spentPkr}` : `$${spentUsd.toFixed(2)}`}) after order ${order.id} was ${reasonSuffix}.`,
+  });
+}
+
+function processReferralConversionReward(order: MembershipOrder, admin: SafeAdmin): void {
+  const cfg = getMembershipConfig().referralConfig;
+  if (!cfg.enabled) return;
+
+  const referrals = readJson<ReferralRecord[]>(REFERRALS_FILE, []);
+  const refIdx = referrals.findIndex(
+    (r) => r.referredMemberId === order.memberId && r.status === 'signed_up'
+  );
+  if (refIdx === -1) return;
+
+  const ref = referrals[refIdx];
+  const members = readMembersEnsured();
+  const referrerIdx = members.findIndex((m) => m.id === ref.referrerMemberId);
+  if (referrerIdx === -1) return;
+  const referredMember = members.find((m) => m.id === order.memberId);
+
+  // Re-check abuse invariants at conversion time (self-referral, duplicate phone, max conversions)
+  if (
+    referredMember &&
+    (phonesMatchForAbuse(members[referrerIdx].phone, referredMember.phone) ||
+      members[referrerIdx].email.toLowerCase() === referredMember.email.toLowerCase() ||
+      (members[referrerIdx].ownerUid &&
+        referredMember.ownerUid &&
+        members[referrerIdx].ownerUid !== 'email_member' &&
+        members[referrerIdx].ownerUid !== 'admin_assigned' &&
+        members[referrerIdx].ownerUid === referredMember.ownerUid))
+  ) {
+    ref.status = 'blocked';
+    ref.blockReason = 'Blocked at approval due to self-referral match.';
+    ref.updatedAt = new Date().toISOString();
+    referrals[refIdx] = ref;
+    writeJson(REFERRALS_FILE, referrals);
+    mirrorReferralServer(ref);
+    return;
+  }
+
+  const existingConvertedCount = referrals.filter(
+    (r) => r.referrerMemberId === ref.referrerMemberId && r.status === 'converted'
+  ).length;
+  if (
+    cfg.maxConversionsPerReferrer !== null &&
+    existingConvertedCount >= cfg.maxConversionsPerReferrer
+  ) {
+    return;
+  }
+
+  // Verify minimum qualifying purchase amount
+  const basePkr = Number(order.originalAmountPkr ?? order.amountPkr) || 0;
+  const baseUsd = Number(order.originalAmountUsd ?? order.amountUsd) || 0;
+  const qualifies =
+    order.currency === 'USD'
+      ? baseUsd >= cfg.minOrderUsdForReward
+      : basePkr >= cfg.minOrderPkrForReward;
+  if (!qualifies) return;
+
+  const nowIso = new Date().toISOString();
+  let issuedPkr = 0;
+  let issuedUsd = 0;
+  let rewardPromoCode: string | undefined;
+
+  if (cfg.referrerRewardType === 'credit' || cfg.referrerRewardType === 'both') {
+    issuedPkr = Math.max(0, Math.round(cfg.referrerRewardPkr));
+    issuedUsd = Math.max(0, Number(cfg.referrerRewardUsd.toFixed(2)));
+    members[referrerIdx].creditBalancePkr = (members[referrerIdx].creditBalancePkr || 0) + issuedPkr;
+    members[referrerIdx].creditBalanceUsd = Number(
+      ((members[referrerIdx].creditBalanceUsd || 0) + issuedUsd).toFixed(2)
+    );
+    members[referrerIdx].updatedAt = nowIso;
+    writeJson(MEMBERS_FILE, members);
+    mirrorMemberServer(sanitizeMember(members[referrerIdx]));
+
+    if (issuedPkr > 0 || issuedUsd > 0) {
+      appendCreditLedgerEntry({
+        memberId: members[referrerIdx].id,
+        type: 'referral_bonus',
+        amountPkr: issuedPkr,
+        amountUsd: issuedUsd,
+        currency: order.currency === 'USD' ? 'USD' : 'PKR',
+        referralId: ref.id,
+        orderId: order.id,
+        details: `Referral reward earned from ${ref.referredName}'s approved ${order.planName} purchase.`,
+      });
+    }
+  }
+
+  if (cfg.referrerRewardType === 'promo_code' || cfg.referrerRewardType === 'both') {
+    const expiryIso = new Date(
+      Date.now() + Math.max(1, cfg.referrerPromoExpiryDays) * 86400000
+    ).toISOString();
+    const rewardCode = `REW${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const created = createPromoCode({
+      code: rewardCode,
+      description: `Personal referral reward (${cfg.referrerPromoDiscountPercent}% off) for inviting ${ref.referredName}`,
+      discountType: 'percentage',
+      discountPercent: cfg.referrerPromoDiscountPercent,
+      usageLimit: 1,
+      perUserLimit: 1,
+      expiresAt: expiryIso,
+      isActive: true,
+      admin,
+      rewardForReferrerMemberId: members[referrerIdx].id,
+    });
+    if (created.success) {
+      rewardPromoCode = created.promo.code;
+    }
+  }
+
+  ref.status = 'converted';
+  ref.conversionOrderId = order.id;
+  ref.convertedAt = nowIso;
+  ref.rewardMode = cfg.referrerRewardType;
+  ref.rewardAmountPkr = issuedPkr;
+  ref.rewardAmountUsd = issuedUsd;
+  ref.rewardPromoCode = rewardPromoCode;
+  ref.rewardIssuedAt = nowIso;
+  ref.updatedAt = nowIso;
+  referrals[refIdx] = ref;
+  writeJson(REFERRALS_FILE, referrals);
+  mirrorReferralServer(ref);
+
+  appendHistory({
+    memberId: members[referrerIdx].id,
+    orderId: order.id,
+    event: 'referral_reward_earned',
+    amountPkr: issuedPkr,
+    amountUsd: issuedUsd,
+    currency: order.currency === 'USD' ? 'USD' : 'PKR',
+    details: `Earned referral reward (${issuedPkr > 0 ? `PKR ${issuedPkr}` : ''}${issuedUsd > 0 ? ` / $${issuedUsd.toFixed(2)}` : ''}${rewardPromoCode ? ` + Promo ${rewardPromoCode}` : ''}) from referral ${ref.referredName}.`,
+  });
+
+  createCustomerNotificationRecord({
+    memberId: members[referrerIdx].id,
+    ownerUid: members[referrerIdx].ownerUid,
+    customerEmail: members[referrerIdx].email,
+    orderId: order.id,
+    type: 'referral_reward',
+    title: 'Referral reward unlocked!',
+    titleUr: 'آپ کا ریفرل انعام شامل کر دیا گیا ہے!',
+    message: `Your invited friend completed a ${order.planName} purchase.${issuedPkr > 0 || issuedUsd > 0 ? ` Account credit added: PKR ${issuedPkr} / $${issuedUsd.toFixed(2)}.` : ''}${rewardPromoCode ? ` Personal reward code: ${rewardPromoCode} (${cfg.referrerPromoDiscountPercent}% OFF).` : ''}`,
+    messageUr: `آپ کے مدعو کردہ دوست کی خریداری مکمل ہو گئی ہے اور ریفرل انعام آپ کے اکاؤنٹ میں شامل کر دیا گیا ہے۔`,
+    ctaLabel: 'Open Referral Wallet',
+    ctaHref: '/account',
+    dedupeKey: `ref_reward:${ref.id}:${order.id}`,
+    emailStatus: 'not_sent',
+  });
+}
+
+export function confirmZeroBalanceOrder(params: {
+  memberId: string;
+  orderId: string;
+  paymentNote?: string;
+}):
+  | { success: true; order: MembershipOrder; member: SafeMember }
+  | { success: false; error: string; statusCode: number } {
+  const member = getMemberById(params.memberId);
+  if (!member) {
+    return { success: false, error: 'Member account not found.', statusCode: 401 };
+  }
+
+  const orders = readAllOrders();
+  const idx = orders.findIndex((o) => o.id === params.orderId);
+  if (idx === -1) {
+    return { success: false, error: 'Payment request was not found.', statusCode: 404 };
+  }
+
+  const order = orders[idx];
+  if (order.memberId !== params.memberId) {
+    return { success: false, error: 'Forbidden: cannot confirm another member order.', statusCode: 403 };
+  }
+  if (order.status === 'approved') {
+    return { success: false, error: 'Order is already approved.', statusCode: 409 };
+  }
+  const payable = Number(order.expectedAmount ?? (order.currency === 'USD' ? order.amountUsd : order.amountPkr));
+  if (payable > 0) {
+    return {
+      success: false,
+      error: 'Payment proof screenshot is required when net payable amount is greater than 0.',
+      statusCode: 400,
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  order.proofSubmittedAt = nowIso;
+  order.paymentNote =
+    (params.paymentNote || '').trim().slice(0, 400) ||
+    `100% covered via ${order.promoCode ? `promo ${order.promoCode}` : 'referral credits'}`;
+  order.status = 'pending_verification';
+  order.rejectionReason = undefined;
+  order.updatedAt = nowIso;
+  orders[idx] = order;
+  writeJson(ORDERS_FILE, orders);
+  mirrorOrderServer(order);
+
+  appendHistory({
+    memberId: member.id,
+    membershipId: order.targetMembershipId,
+    orderId: order.id,
+    event: 'proof_submitted',
+    planId: order.planId,
+    planName: order.planName,
+    amountPkr: order.amountPkr,
+    amountUsd: order.amountUsd,
+    currency: order.currency,
+    selectedDramaIds: order.selectedDramaIds,
+    details: `Zero-balance discounted order ${order.id} submitted for fast admin activation.`,
+  });
+
+  return { success: true, order, member };
+}
+
 export function getPaymentGatewayStatus(region: PaymentRegion = 'pakistan'): PaymentGatewayStatus {
   if (region === 'international') {
     return {
@@ -1791,10 +3413,13 @@ export async function createMembershipCheckoutOrder(params: {
   targetMembershipId?: string;
   visitorCountryCode?: string;
   indicativeLocalDisplay?: string;
+  promoCode?: string;
+  applyCredits?: boolean;
 }): Promise<
   | {
       success: true;
       order: MembershipOrder;
+      quote: CheckoutPricingQuote;
       gatewayConfigured: true;
       paymentSetupRequired: false;
       qrImageUrl: string;
@@ -1843,18 +3468,62 @@ export async function createMembershipCheckoutOrder(params: {
   const { plan, normalizedDramaIds } = validation;
   const paymentRegion: PaymentRegion =
     params.paymentRegion === 'international' ? 'international' : 'pakistan';
+
+  // Server-enforced pricing, promo, referral & credit calculation — NEVER trust client values
+  const quote = calculateCheckoutPricingQuote({
+    memberId: member.id,
+    planId: plan.id,
+    paymentRegion,
+    promoCode: params.promoCode,
+    applyCredits: Boolean(params.applyCredits),
+  });
+  if (!quote.valid) {
+    return {
+      success: false,
+      error: quote.error || 'Entered promo code cannot be applied to this checkout.',
+      code: 'INVALID_PROMO_CODE',
+      statusCode: 400,
+    };
+  }
+
   const paymentMethod: PaymentMethod =
     paymentRegion === 'international' ? 'binance_qr' : 'bank_qr';
   const currency: PaymentCurrency =
     paymentRegion === 'international' ? 'USD' : 'PKR';
-  const expectedAmount =
-    paymentRegion === 'international' ? plan.priceUsd : plan.pricePkr;
+  const expectedAmount = quote.finalAmount;
 
   const qrImageUrl = getQrUrlForPlan(plan.id, paymentRegion);
   const now = new Date().toISOString();
   const orderId = `ord-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
 
-  // Security: Price, currency & duration ALWAYS derive strictly from server config/catalog
+  // Deduct spent credits atomically before persisting order (refunded automatically if rejected/deleted)
+  if (quote.creditsUsedPkr > 0 || quote.creditsUsedUsd > 0) {
+    const members = readMembersEnsured();
+    const mIdx = members.findIndex((m) => m.id === member.id);
+    if (mIdx !== -1) {
+      members[mIdx].creditBalancePkr = Math.max(
+        0,
+        Math.round((members[mIdx].creditBalancePkr || 0) - quote.creditsUsedPkr)
+      );
+      members[mIdx].creditBalanceUsd = Math.max(
+        0,
+        Number(((members[mIdx].creditBalanceUsd || 0) - quote.creditsUsedUsd).toFixed(2))
+      );
+      members[mIdx].updatedAt = now;
+      writeJson(MEMBERS_FILE, members);
+      mirrorMemberServer(sanitizeMember(members[mIdx]));
+      appendCreditLedgerEntry({
+        memberId: member.id,
+        type: 'checkout_spent',
+        amountPkr: -quote.creditsUsedPkr,
+        amountUsd: -quote.creditsUsedUsd,
+        currency,
+        orderId,
+        details: `Applied wallet credits toward ${plan.name} order ${orderId}.`,
+      });
+    }
+  }
+
   const order: MembershipOrder = {
     id: orderId,
     memberId: member.id,
@@ -1866,8 +3535,21 @@ export async function createMembershipCheckoutOrder(params: {
     targetMembershipId: targetMembership?.id,
     planId: plan.id,
     planName: plan.name,
-    amountPkr: plan.pricePkr,
-    amountUsd: plan.priceUsd,
+    originalAmountPkr: quote.originalAmountPkr,
+    originalAmountUsd: quote.originalAmountUsd,
+    amountPkr: quote.finalAmountPkr,
+    amountUsd: quote.finalAmountUsd,
+    promoCodeId: quote.promoApplied?.id,
+    promoCode: quote.promoApplied?.code,
+    promoDiscountPkr: quote.promoDiscountPkr,
+    promoDiscountUsd: quote.promoDiscountUsd,
+    referralCodeUsed: quote.referralCodeUsed,
+    referralDiscountPkr: quote.referralDiscountPkr,
+    referralDiscountUsd: quote.referralDiscountUsd,
+    creditsUsedPkr: quote.creditsUsedPkr,
+    creditsUsedUsd: quote.creditsUsedUsd,
+    discountTotalPkr: quote.discountTotalPkr,
+    discountTotalUsd: quote.discountTotalUsd,
     expectedAmount,
     currency,
     paymentRegion,
@@ -1898,16 +3580,17 @@ export async function createMembershipCheckoutOrder(params: {
     event: 'checkout_created',
     planId: plan.id,
     planName: plan.name,
-    amountPkr: plan.pricePkr,
-    amountUsd: plan.priceUsd,
+    amountPkr: order.amountPkr,
+    amountUsd: order.amountUsd,
     currency,
     selectedDramaIds: normalizedDramaIds,
-    details: `${orderType === 'renewal' ? 'Renewal' : 'New'} payment request ${order.id} created for ${plan.name} (${amountLabel} via ${paymentMethod === 'binance_qr' ? 'Binance QR' : 'Bank QR'}).`,
+    details: `${orderType === 'renewal' ? 'Renewal' : 'New'} payment request ${order.id} created for ${plan.name} (${amountLabel}${order.promoCode ? `, promo ${order.promoCode}` : ''}${order.creditsUsedPkr || order.creditsUsedUsd ? ', credits applied' : ''}).`,
   });
 
   return {
     success: true,
     order,
+    quote,
     gatewayConfigured: true,
     paymentSetupRequired: false,
     qrImageUrl,
@@ -2164,8 +3847,19 @@ export function approvePaymentRequest(params: {
       target.orderId = order.id;
       target.planId = plan.id;
       target.planName = plan.name;
-      target.pricePkr = plan.pricePkr;
+      target.pricePkr = Number(order.amountPkr ?? plan.pricePkr);
       target.priceUsd = order.amountUsd ?? plan.priceUsd;
+      target.originalAmountPkr = order.originalAmountPkr ?? plan.pricePkr;
+      target.originalAmountUsd = order.originalAmountUsd ?? plan.priceUsd;
+      target.promoCode = order.promoCode;
+      target.promoDiscountPkr = order.promoDiscountPkr;
+      target.promoDiscountUsd = order.promoDiscountUsd;
+      target.referralDiscountPkr = order.referralDiscountPkr;
+      target.referralDiscountUsd = order.referralDiscountUsd;
+      target.creditsUsedPkr = order.creditsUsedPkr;
+      target.creditsUsedUsd = order.creditsUsedUsd;
+      target.discountTotalPkr = order.discountTotalPkr;
+      target.discountTotalUsd = order.discountTotalUsd;
       target.durationDays = order.durationDays;
       target.selectedDramaIds = selectedIds;
       target.approvedByAdminEmail = params.admin.email;
@@ -2213,8 +3907,19 @@ export function approvePaymentRequest(params: {
       orderId: order.id,
       planId: plan.id,
       planName: plan.name,
-      pricePkr: plan.pricePkr,
+      pricePkr: Number(order.amountPkr ?? plan.pricePkr),
       priceUsd: order.amountUsd ?? plan.priceUsd,
+      originalAmountPkr: order.originalAmountPkr ?? plan.pricePkr,
+      originalAmountUsd: order.originalAmountUsd ?? plan.priceUsd,
+      promoCode: order.promoCode,
+      promoDiscountPkr: order.promoDiscountPkr,
+      promoDiscountUsd: order.promoDiscountUsd,
+      referralDiscountPkr: order.referralDiscountPkr,
+      referralDiscountUsd: order.referralDiscountUsd,
+      creditsUsedPkr: order.creditsUsedPkr,
+      creditsUsedUsd: order.creditsUsedUsd,
+      discountTotalPkr: order.discountTotalPkr,
+      discountTotalUsd: order.discountTotalUsd,
       durationDays: order.durationDays,
       selectedDramaIds: selectedIds,
       status: 'active',
@@ -2237,6 +3942,9 @@ export function approvePaymentRequest(params: {
   mirrorOrderServer(order);
   mirrorMembershipServer(resultingMembership);
 
+  // Issue referral reward to referrer ONLY upon verified admin approval of qualifying purchase
+  processReferralConversionReward(order, params.admin);
+
   const amountLabel =
     paymentCurrency === 'USD' ? `$${paidAmount.toFixed(2)} USD` : `PKR ${paidAmount.toLocaleString()}`;
   const dramaNames = selectedIds.map((id) => getDramaById(id)?.title || id).join(', ');
@@ -2248,7 +3956,7 @@ export function approvePaymentRequest(params: {
     event: wasRenewal ? 'membership_renewed' : 'payment_approved',
     planId: plan.id,
     planName: plan.name,
-    amountPkr: plan.pricePkr,
+    amountPkr: order.amountPkr,
     amountUsd: order.amountUsd,
     currency: paymentCurrency,
     selectedDramaIds: selectedIds,
@@ -2290,7 +3998,7 @@ export function approvePaymentRequest(params: {
     success: true,
     order,
     membership: resultingMembership,
-    member: orderMember,
+    member: getMemberById(order.memberId),
     wasRenewal,
   };
 }
@@ -2329,6 +4037,7 @@ export function rejectPaymentRequest(params: {
   order.reviewedByAdminEmail = params.admin.email;
   order.reviewedAt = nowIso;
   order.updatedAt = nowIso;
+  refundOrderCreditsIfNeeded(order, 'rejected');
   orders[idx] = order;
   writeJson(ORDERS_FILE, orders);
   mirrorOrderServer(order);
@@ -2571,6 +4280,7 @@ export function deleteOrderByAdmin(params: {
     };
   }
 
+  refundOrderCreditsIfNeeded(order, 'deleted');
   orders.splice(idx, 1);
   writeJson(ORDERS_FILE, orders);
   unlinkOrderProofFile(order);
@@ -2690,12 +4400,29 @@ export function deleteMemberByAdmin(params: {
   });
   writeJson(MEMBER_NOTIFS_FILE, remainingNotifs);
 
+  const referrals = readJson<ReferralRecord[]>(REFERRALS_FILE, []);
+  const deletedReferralIds: string[] = [];
+  const remainingReferrals = referrals.filter((r) => {
+    if (
+      (r.referredMemberId === member.id || r.referrerMemberId === member.id) &&
+      r.status !== 'converted'
+    ) {
+      deletedReferralIds.push(r.id);
+      return false;
+    }
+    return true;
+  });
+  if (deletedReferralIds.length > 0) {
+    writeJson(REFERRALS_FILE, remainingReferrals);
+  }
+
   if (isServerFirestoreEnabled()) {
     void deleteDocFromFirestoreServer('members', member.id);
     for (const id of deletedOrderIds) void deleteDocFromFirestoreServer('membershipOrders', id);
     for (const id of deletedMembershipIds) void deleteDocFromFirestoreServer('memberships', id);
     for (const id of deletedHistoryIds) void deleteDocFromFirestoreServer('membershipHistory', id);
     for (const id of deletedNotificationIds) void deleteDocFromFirestoreServer('memberNotifications', id);
+    for (const id of deletedReferralIds) void deleteDocFromFirestoreServer('referrals', id);
   }
 
   appendAdminAudit({
@@ -3138,7 +4865,7 @@ export function assignMembershipByAdmin(params: {
 
   const nowMs = Date.now();
   const nowIso = new Date(nowMs).toISOString();
-  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const members = readMembersEnsured();
   let memberIdx = members.findIndex((m) => m.email === cleanEmail);
   let member: MemberRecord;
 
@@ -3146,6 +4873,9 @@ export function assignMembershipByAdmin(params: {
     if (!cleanName || cleanName.length < 2) {
       return { success: false, error: 'Customer Full Name is required for a new member.', statusCode: 400 };
     }
+    const takenCodes = new Set<string>(
+      members.map((m) => (m.referralCode || '').toUpperCase()).filter(Boolean)
+    );
     const rawPass = params.password && params.password.trim().length >= 6
       ? params.password.trim()
       : crypto.randomBytes(16).toString('hex');
@@ -3156,7 +4886,11 @@ export function assignMembershipByAdmin(params: {
       email: cleanEmail,
       fullName: cleanName,
       phone: cleanPhone || '—',
+      phoneNormalized: normalizePhoneCanonical(cleanPhone) || undefined,
       passwordHash: hashMemberPassword(rawPass),
+      referralCode: generateUniqueReferralCode(cleanName, takenCodes),
+      creditBalancePkr: 0,
+      creditBalanceUsd: 0,
       createdAt: nowIso,
       updatedAt: nowIso,
     };
@@ -3322,32 +5056,53 @@ export function mergeCloudSyncSnapshot(payload: {
   memberships?: Array<Partial<MembershipRecord>>;
   history?: Array<Partial<MembershipHistoryEntry>>;
   notifications?: Array<Partial<CustomerNotification>>;
+  promoCodes?: Array<Partial<PromoCode>>;
+  referrals?: Array<Partial<ReferralRecord>>;
+  referralCredits?: Array<Partial<ReferralCreditEntry>>;
   config?: Partial<MembershipConfig> | null;
 }) {
-  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const members = readMembersEnsured();
   const memberById = new Map(members.map((m) => [m.id, m]));
   const memberByEmail = new Map(members.map((m) => [m.email.toLowerCase(), m]));
+  const takenCodes = new Set<string>(
+    members.map((m) => (m.referralCode || '').toUpperCase()).filter(Boolean)
+  );
 
   for (const incoming of payload.members || []) {
     if (!incoming?.id || !incoming?.email) continue;
     const emailLower = incoming.email.trim().toLowerCase();
     const existing = memberById.get(incoming.id) || memberByEmail.get(emailLower);
     if (!existing) {
+      const code =
+        incoming.referralCode && normalizePromoCodeInput(incoming.referralCode).length >= 4
+          ? normalizePromoCodeInput(incoming.referralCode)
+          : generateUniqueReferralCode(incoming.fullName || emailLower, takenCodes);
       const created: MemberRecord = {
         id: incoming.id,
         ownerUid: incoming.ownerUid,
         email: emailLower,
         fullName: incoming.fullName || 'FEVIQO Member',
         phone: incoming.phone || '',
+        phoneNormalized: normalizePhoneCanonical(incoming.phone) || undefined,
         passwordHash: incoming.passwordHash || hashMemberPassword(crypto.randomBytes(16).toString('hex')),
+        referralCode: code,
+        referredByMemberId: incoming.referredByMemberId || undefined,
+        referredByCode: incoming.referredByCode || undefined,
+        creditBalancePkr: Number(incoming.creditBalancePkr) || 0,
+        creditBalanceUsd: Number(incoming.creditBalanceUsd) || 0,
         createdAt: incoming.createdAt || new Date().toISOString(),
         updatedAt: incoming.updatedAt || new Date().toISOString(),
       };
       members.push(created);
       memberById.set(created.id, created);
       memberByEmail.set(created.email, created);
-    } else if (incoming.ownerUid && !existing.ownerUid) {
-      existing.ownerUid = incoming.ownerUid;
+    } else {
+      if (incoming.ownerUid && !existing.ownerUid) {
+        existing.ownerUid = incoming.ownerUid;
+      }
+      if (!existing.referralCode && incoming.referralCode) {
+        existing.referralCode = normalizePromoCodeInput(incoming.referralCode);
+      }
     }
   }
   writeJson(MEMBERS_FILE, members);
@@ -3513,10 +5268,50 @@ export function mergeCloudSyncSnapshot(payload: {
     );
   }
 
+  if (payload.promoCodes && payload.promoCodes.length > 0) {
+    const promos = readAllPromoCodes();
+    const promoById = new Map(promos.map((p) => [p.id, p]));
+    for (const inc of payload.promoCodes) {
+      if (!inc?.id || !inc?.code) continue;
+      if (!promoById.has(inc.id)) {
+        promoById.set(inc.id, inc as PromoCode);
+      }
+    }
+    writeJson(PROMO_CODES_FILE, Array.from(promoById.values()));
+  }
+
+  if (payload.referrals && payload.referrals.length > 0) {
+    const refs = readJson<ReferralRecord[]>(REFERRALS_FILE, []);
+    const refById = new Map(refs.map((r) => [r.id, r]));
+    for (const inc of payload.referrals) {
+      if (!inc?.id || !inc?.referredMemberId || !inc?.referrerMemberId) continue;
+      if (!refById.has(inc.id)) {
+        refById.set(inc.id, inc as ReferralRecord);
+      }
+    }
+    writeJson(REFERRALS_FILE, Array.from(refById.values()));
+  }
+
+  if (payload.referralCredits && payload.referralCredits.length > 0) {
+    const credits = readJson<ReferralCreditEntry[]>(CREDIT_LEDGER_FILE, []);
+    const credById = new Map(credits.map((c) => [c.id, c]));
+    for (const inc of payload.referralCredits) {
+      if (!inc?.id || !inc?.memberId) continue;
+      if (!credById.has(inc.id)) {
+        credById.set(inc.id, inc as ReferralCreditEntry);
+      }
+    }
+    writeJson(CREDIT_LEDGER_FILE, Array.from(credById.values()));
+  }
+
   if (payload.config && payload.config.updatedAt) {
     const current = getMembershipConfig();
     if (Date.parse(payload.config.updatedAt) > Date.parse(current.updatedAt || '')) {
-      writeJson(CONFIG_FILE, { ...current, ...payload.config });
+      writeJson(CONFIG_FILE, {
+        ...current,
+        ...payload.config,
+        referralConfig: sanitizeReferralConfig(payload.config.referralConfig, current.referralConfig),
+      });
     }
   }
 
@@ -3525,7 +5320,7 @@ export function mergeCloudSyncSnapshot(payload: {
 
 // --- ADMIN OVERVIEW DASHBOARD DATA ---
 export function getAdminMembershipsOverview() {
-  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []).map(sanitizeMember);
+  const members = readMembersEnsured().map(sanitizeMember);
   const memberById = new Map(members.map((m) => [m.id, m]));
   const memberships = syncMemberSubscriptions();
   const orders = readAllOrders()
@@ -3570,12 +5365,37 @@ export function getAdminMembershipsOverview() {
   const customerNotifications = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []).slice(0, 150);
   const schedulerRuns = readJson<SchedulerRunLog[]>(SCHEDULER_RUNS_FILE, []).slice(0, 50);
   const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []).slice(0, 200);
+  const promoCodes = listPromoCodesOverview();
+  const referrals = readJson<ReferralRecord[]>(REFERRALS_FILE, []).sort(
+    (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)
+  );
+  const creditLedger = readJson<ReferralCreditEntry[]>(CREDIT_LEDGER_FILE, [])
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, 200);
+  const cfg = getMembershipConfig();
 
   const nowMs = Date.now();
   const in7d = nowMs + 7 * 86400000;
   const expiring7dCount = enrichedMemberships.filter(
     (m) => m.status === 'active' && Date.parse(m.expiresAt) > nowMs && Date.parse(m.expiresAt) <= in7d
   ).length;
+
+  const nonBlockedReferrals = referrals.filter((r) => r.status !== 'blocked');
+  const convertedReferralsCount = referrals.filter((r) => r.status === 'converted').length;
+  const approvedOrdersWithPromo = orders.filter((o) => o.status === 'approved' && Boolean(o.promoCode));
+  const totalDiscountGivenPkr = orders
+    .filter((o) => o.status === 'approved')
+    .reduce((sum, o) => sum + (Number(o.discountTotalPkr) || 0), 0);
+  const totalDiscountGivenUsd = Number(
+    orders
+      .filter((o) => o.status === 'approved')
+      .reduce((sum, o) => sum + (Number(o.discountTotalUsd) || 0), 0)
+      .toFixed(2)
+  );
+  const totalReferralRewardsPkr = referrals.reduce((sum, r) => sum + (Number(r.rewardAmountPkr) || 0), 0);
+  const totalReferralRewardsUsd = Number(
+    referrals.reduce((sum, r) => sum + (Number(r.rewardAmountUsd) || 0), 0).toFixed(2)
+  );
 
   const metrics = {
     totalMembers: members.length,
@@ -3591,6 +5411,20 @@ export function getAdminMembershipsOverview() {
     ).length,
     internationalOrders: orders.filter((o) => o.paymentRegion === 'international').length,
     failedEmails: emailNotifications.filter((n) => n.status === 'failed').length,
+    totalReferrals: nonBlockedReferrals.length,
+    convertedReferrals: convertedReferralsCount,
+    pendingReferrals: referrals.filter((r) => r.status === 'signed_up').length,
+    blockedReferrals: referrals.filter((r) => r.status === 'blocked').length,
+    referralConversionRate:
+      nonBlockedReferrals.length > 0
+        ? Math.round((convertedReferralsCount / nonBlockedReferrals.length) * 100)
+        : 0,
+    promoRedemptions: approvedOrdersWithPromo.length,
+    activePromoCodes: promoCodes.filter((p) => p.isActive).length,
+    totalDiscountGivenPkr,
+    totalDiscountGivenUsd,
+    totalReferralRewardsPkr,
+    totalReferralRewardsUsd,
   };
 
   return {
@@ -3603,7 +5437,11 @@ export function getAdminMembershipsOverview() {
     emailNotifications: emailNotifications.slice(0, 100),
     customerNotifications,
     schedulerRuns,
-    config: getMembershipConfig(),
+    promoCodes,
+    referrals,
+    creditLedger,
+    referralConfig: cfg.referralConfig,
+    config: cfg,
     plans: getResolvedPlans(),
     admins: listAdmins(),
     serverCloudConnected: isServerFirestoreEnabled(),
@@ -3629,6 +5467,9 @@ export async function syncServerFirestoreSnapshot(): Promise<ReturnType<typeof g
     for (const o of overview.requests) mirrorOrderServer(o);
     for (const s of overview.memberships) mirrorMembershipServer(s);
     for (const n of overview.customerNotifications) mirrorMemberNotificationServer(n);
+    for (const p of overview.promoCodes) mirrorPromoCodeServer(p);
+    for (const r of overview.referrals) mirrorReferralServer(r);
+    for (const c of overview.creditLedger) mirrorCreditEntryServer(c);
     mirrorConfigServer(overview.config);
     return overview;
   }

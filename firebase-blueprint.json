@@ -91,6 +91,27 @@
           "maxLength": 300,
           "description": "Salted PBKDF2 hash when registered via email and password."
         },
+        "referralCode": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "referredByMemberId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "referredByCode": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "creditBalancePkr": {
+          "type": "number"
+        },
+        "creditBalanceUsd": {
+          "type": "number"
+        },
         "createdAtIso": {
           "type": "string",
           "minLength": 10,
@@ -174,6 +195,61 @@
           "type": "number"
         },
         "amountUsd": {
+          "type": "number"
+        },
+        "originalAmountPkr": {
+          "type": "number"
+        },
+        "originalAmountUsd": {
+          "type": "number"
+        },
+        "promoCodeId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "promoCode": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 40
+        },
+        "promoDiscountPkr": {
+          "type": "number"
+        },
+        "promoDiscountUsd": {
+          "type": "number"
+        },
+        "referralId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "referralCodeUsed": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 32
+        },
+        "referralDiscountPkr": {
+          "type": "number"
+        },
+        "referralDiscountUsd": {
+          "type": "number"
+        },
+        "creditsUsedPkr": {
+          "type": "number"
+        },
+        "creditsUsedUsd": {
+          "type": "number"
+        },
+        "creditsRefundedAt": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "discountTotalPkr": {
+          "type": "number"
+        },
+        "discountTotalUsd": {
           "type": "number"
         },
         "expectedAmount": {
@@ -374,6 +450,41 @@
           "type": "number"
         },
         "priceUsd": {
+          "type": "number"
+        },
+        "originalAmountPkr": {
+          "type": "number"
+        },
+        "originalAmountUsd": {
+          "type": "number"
+        },
+        "promoCode": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 40
+        },
+        "promoDiscountPkr": {
+          "type": "number"
+        },
+        "promoDiscountUsd": {
+          "type": "number"
+        },
+        "referralDiscountPkr": {
+          "type": "number"
+        },
+        "referralDiscountUsd": {
+          "type": "number"
+        },
+        "creditsUsedPkr": {
+          "type": "number"
+        },
+        "creditsUsedUsd": {
+          "type": "number"
+        },
+        "discountTotalPkr": {
+          "type": "number"
+        },
+        "discountTotalUsd": {
           "type": "number"
         },
         "durationDays": {
@@ -647,6 +758,9 @@
           "minLength": 0,
           "maxLength": 1000
         },
+        "referralConfig": {
+          "type": "object"
+        },
         "updatedAtIso": {
           "type": "string",
           "minLength": 10,
@@ -862,6 +976,86 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "triggerSource", "ranAt", "checkedMemberships", "expiredCount", "remindersCreated", "summary", "createdAt", "updatedAt"]
+    },
+    "PromoCode": {
+      "title": "PromoCode",
+      "description": "Admin-managed promotional discount campaign code.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "code": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "description": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "discountType": { "type": "string", "enum": ["percentage", "fixed"] },
+        "discountPercent": { "type": "number" },
+        "discountAmountPkr": { "type": "number" },
+        "discountAmountUsd": { "type": "number" },
+        "maxDiscountPkr": { "type": "number" },
+        "maxDiscountUsd": { "type": "number" },
+        "minPurchasePkr": { "type": "number" },
+        "minPurchaseUsd": { "type": "number" },
+        "applicablePlanIds": { "type": "array" },
+        "usageLimit": { "type": "number" },
+        "perUserLimit": { "type": "number" },
+        "expiresAt": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "isActive": { "type": "boolean" },
+        "createdByAdminEmail": { "type": "string", "minLength": 0, "maxLength": 200 },
+        "rewardForReferrerMemberId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "updatedAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "code", "discountType", "isActive", "createdAtIso", "updatedAtIso", "createdAt", "updatedAt"]
+    },
+    "ReferralRecord": {
+      "title": "ReferralRecord",
+      "description": "Attributed signup and verified conversion reward record between referrer and referred member.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "referrerMemberId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "referrerCode": { "type": "string", "minLength": 2, "maxLength": 32 },
+        "referrerEmail": { "type": "string", "minLength": 5, "maxLength": 200 },
+        "referrerName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "referredMemberId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "referredOwnerUid": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "referredEmail": { "type": "string", "minLength": 5, "maxLength": 200 },
+        "referredName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "referredPhoneNormalized": { "type": "string", "minLength": 0, "maxLength": 32 },
+        "status": { "type": "string", "enum": ["signed_up", "converted", "blocked"] },
+        "blockReason": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "conversionOrderId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "convertedAt": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "rewardMode": { "type": "string", "minLength": 0, "maxLength": 32 },
+        "rewardAmountPkr": { "type": "number" },
+        "rewardAmountUsd": { "type": "number" },
+        "rewardPromoCode": { "type": "string", "minLength": 0, "maxLength": 40 },
+        "rewardIssuedAt": { "type": "string", "minLength": 0, "maxLength": 64 },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "updatedAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "referrerMemberId", "referrerCode", "referredMemberId", "status", "createdAtIso", "updatedAtIso", "createdAt", "updatedAt"]
+    },
+    "ReferralCreditEntry": {
+      "title": "ReferralCreditEntry",
+      "description": "Immutable ledger entry for member referral credits earned, spent, or refunded.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "memberId": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "type": { "type": "string", "enum": ["referral_bonus", "checkout_spent", "checkout_refund", "admin_adjustment"] },
+        "amountPkr": { "type": "number" },
+        "amountUsd": { "type": "number" },
+        "currency": { "type": "string", "enum": ["PKR", "USD"] },
+        "referralId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "orderId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "details": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "memberId", "type", "currency", "details", "createdAtIso", "createdAt"]
     }
   },
   "firestore": {
@@ -887,7 +1081,7 @@
     },
     "/membershipConfig/{configId}": {
       "schema": { "$ref": "#/entities/MembershipSettings" },
-      "description": "Admin-managed Bank QR, Binance USD QR, USD pricing, and support configuration."
+      "description": "Admin-managed Bank QR, Binance USD QR, USD pricing, referral config, and support configuration."
     },
     "/adminAuditLogs/{logId}": {
       "schema": { "$ref": "#/entities/AdminAuditItem" },
@@ -899,11 +1093,23 @@
     },
     "/memberNotifications/{notifId}": {
       "schema": { "$ref": "#/entities/MemberNotification" },
-      "description": "In-account customer renewal reminder, expiry, and payment notifications."
+      "description": "In-account customer renewal reminder, expiry, referral, and payment notifications."
     },
     "/schedulerRuns/{runId}": {
       "schema": { "$ref": "#/entities/SchedulerRun" },
       "description": "Execution logs for the automated membership expiry & renewal reminder scheduler."
+    },
+    "/promoCodes/{promoId}": {
+      "schema": { "$ref": "#/entities/PromoCode" },
+      "description": "Admin-managed promotional discount codes."
+    },
+    "/referrals/{referralId}": {
+      "schema": { "$ref": "#/entities/ReferralRecord" },
+      "description": "Customer referral attribution and verified conversion reward records."
+    },
+    "/referralCredits/{entryId}": {
+      "schema": { "$ref": "#/entities/ReferralCreditEntry" },
+      "description": "Immutable member referral wallet credit ledger entries."
     }
   }
 }

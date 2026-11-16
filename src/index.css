@@ -207,6 +207,17 @@ input[type=range].yt-range:hover::-webkit-slider-thumb {
   }
 }
 
+.admin-workspace,
+.admin-workspace h1,
+.admin-workspace h2,
+.admin-workspace h3,
+.admin-workspace h4,
+.admin-workspace h5,
+.admin-workspace h6 {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: normal;
+}
+
 @keyframes soundWave {
   0% {
     height: 100%;

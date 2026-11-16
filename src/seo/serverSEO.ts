@@ -1,5 +1,20 @@
 import { getSEOConfigForPath } from './seoStore';
 
+function escapeAttr(val: string): string {
+  return String(val || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function escapeHtmlText(val: string): string {
+  return String(val || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 export function transformHTMLForRoute(html: string, reqPath: string): string {
   let cleanPath = (reqPath || '/').split('?')[0].split('#')[0].toLowerCase();
   if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
@@ -12,13 +27,13 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   // 1. Title
   transformed = transformed.replace(
     /<title>.*?<\/title>/i,
-    `<title>${config.seoTitle}</title>`
+    `<title>${escapeHtmlText(config.seoTitle)}</title>`
   );
 
   // 2. Meta description
   transformed = transformed.replace(
-    /<meta\s+name=["']description["']\s+content=["'].*?["']\s*\/?>/i,
-    `<meta name="description" content="${config.metaDescription}" />`
+    /<meta\s+name=["']description["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="description" content="${escapeAttr(config.metaDescription)}" />`
   );
 
   // 2b. Meta keywords
@@ -28,43 +43,43 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
 
   if (/<meta\s+name=["']keywords["']/i.test(transformed)) {
     transformed = transformed.replace(
-      /<meta\s+name=["']keywords["']\s+content=["'].*?["']\s*\/?>/i,
-      `<meta name="keywords" content="${keywordsStr}" />`
+      /<meta\s+name=["']keywords["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+      `<meta name="keywords" content="${escapeAttr(keywordsStr)}" />`
     );
   } else {
-    transformed = transformed.replace('</head>', `  <meta name="keywords" content="${keywordsStr}" />\n  </head>`);
+    transformed = transformed.replace('</head>', `  <meta name="keywords" content="${escapeAttr(keywordsStr)}" />\n  </head>`);
   }
 
   // 3. OpenGraph Title, Description, URL, Image, Type
   transformed = transformed.replace(
-    /<meta\s+property=["']og:title["']\s+content=["'].*?["']\s*\/?>/i,
-    `<meta property="og:title" content="${config.ogTitle}" />`
+    /<meta\s+property=["']og:title["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta property="og:title" content="${escapeAttr(config.ogTitle)}" />`
   );
   transformed = transformed.replace(
-    /<meta\s+property=["']og:description["']\s+content=["'].*?["']\s*\/?>/i,
-    `<meta property="og:description" content="${config.ogDescription}" />`
+    /<meta\s+property=["']og:description["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta property="og:description" content="${escapeAttr(config.ogDescription)}" />`
   );
   transformed = transformed.replace(
-    /<meta\s+property=["']og:url["']\s+content=["'].*?["']\s*\/?>/i,
-    `<meta property="og:url" content="${config.canonicalUrl}" />`
+    /<meta\s+property=["']og:url["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta property="og:url" content="${escapeAttr(config.canonicalUrl)}" />`
   );
   transformed = transformed.replace(
-    /<meta\s+property=["']og:image["']\s+content=["'].*?["']\s*\/?>/i,
-    `<meta property="og:image" content="${config.ogImage}" />\n  <meta property="og:image:secure_url" content="${config.ogImage}" />`
+    /<meta\s+property=["']og:image["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta property="og:image" content="${escapeAttr(config.ogImage)}" />\n  <meta property="og:image:secure_url" content="${escapeAttr(config.ogImage)}" />`
   );
 
   // 3b. Twitter / X Cards Title, Description, Image
   transformed = transformed.replace(
-    /<meta\s+name=["']twitter:title["']\s+content=["'].*?["']\s*\/?>/i,
-    `<meta name="twitter:title" content="${config.ogTitle}" />`
+    /<meta\s+name=["']twitter:title["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="twitter:title" content="${escapeAttr(config.ogTitle)}" />`
   );
   transformed = transformed.replace(
-    /<meta\s+name=["']twitter:description["']\s+content=["'].*?["']\s*\/?>/i,
-    `<meta name="twitter:description" content="${config.ogDescription}" />`
+    /<meta\s+name=["']twitter:description["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="twitter:description" content="${escapeAttr(config.ogDescription)}" />`
   );
   transformed = transformed.replace(
-    /<meta\s+name=["']twitter:image["']\s+content=["'].*?["']\s*\/?>/i,
-    `<meta name="twitter:image" content="${config.ogImage}" />`
+    /<meta\s+name=["']twitter:image["']\s+content=["'][\s\S]*?["']\s*\/?>/i,
+    `<meta name="twitter:image" content="${escapeAttr(config.ogImage)}" />`
   );
 
   const ogType = cleanPath.includes('/episode-') ? 'video.episode' : 'website';
@@ -74,11 +89,12 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   );
 
   // 4. Inject Canonical Link & Robots Indexing Tags
-  transformed = transformed.replace(/<meta\s+name=["']robots["']\s+content=["'].*?["']\s*\/?>/gi, '');
-  transformed = transformed.replace(/<link\s+rel=["']canonical["']\s+href=["'].*?["']\s*\/?>/gi, '');
+  transformed = transformed.replace(/<meta\s+name=["']robots["']\s+content=["'][\s\S]*?["']\s*\/?>/gi, '');
+  transformed = transformed.replace(/<link\s+rel=["']canonical["']\s+href=["'][\s\S]*?["']\s*\/?>/gi, '');
+  transformed = transformed.replace(/<script\s+type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi, '');
 
-  const canonicalTag = `<link rel="canonical" href="${config.canonicalUrl}" />`;
-  const robotsTag = `<meta name="robots" content="${config.robots || 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}" />`;
+  const canonicalTag = `<link rel="canonical" href="${escapeAttr(config.canonicalUrl)}" />`;
+  const robotsTag = `<meta name="robots" content="${escapeAttr(config.robots || 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1')}" />`;
   transformed = transformed.replace('</head>', `  ${robotsTag}\n  ${canonicalTag}\n  </head>`);
 
   // 5. Inject Dynamic JSON-LD Schema
@@ -937,12 +953,42 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
   const jsonLdScript = `<script type="application/ld+json" id="feviqo-server-jsonld">${JSON.stringify(schemaObj)}</script>`;
   transformed = transformed.replace('</head>', `  ${jsonLdScript}\n  </head>`);
 
-  const routeArticle = cleanPath === '/membership'
-    ? `<article><h2>FEVIQO Premium Membership — Watch Turkish Dramas in Urdu HD</h2><p>Subscribe to unlock premium Urdu-dubbed episodes of Teşkilat, Mehmed: Fetihler Sultanı, and Güneşin Doğduğu Yer. Choose Starter (PKR 299 / $1.20 USD, 15 days), Standard (PKR 599 / $2.50 USD, 30 days), Plus (PKR 899 / $3.50 USD, 2 dramas), or VIP (PKR 1,299 / $5.00 USD, full VIP catalogue). Pay via Pakistani Bank QR or International Binance QR.</p></article>`
-    : `<article><h2>FEVIQO — Watch Online with Urdu Subtitles HD & Video Post-Production</h2><p>Experience full HD 1080p streaming with complete story recaps, character breakdowns, and official video streams on FEVIQO.</p></article>`;
+  const routeMainHtml =
+    cleanPath === '/membership'
+      ? `<article style="max-width:1120px;margin:0 auto;padding:32px 20px;color:#0B0B0D;background:#FFFFFF;font-family:Inter,system-ui,sans-serif;line-height:1.6;">
+          <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:#16A34A;margin:0 0 10px;">FEVIQO PREMIUM MEMBERSHIP · URDU HD TURKISH DRAMAS</p>
+          <h1 style="font-size:36px;line-height:1.15;font-weight:800;margin:0 0 14px;">FEVIQO Premium Membership — Watch Turkish Dramas in Urdu HD</h1>
+          <p style="font-size:16px;color:#3F3F46;margin:0 0 24px;">Unlock full Urdu-dubbed and Urdu-subtitled episodes of Teşkilat Season 7, Mehmed: Fetihler Sultanı Season 4, and Güneşin Doğduğu Yer in 1080p HD. Pay securely in Pakistan with Bank QR (PKR) or internationally worldwide via Binance QR in USD.</p>
+          <section style="margin:28px 0;">
+            <h2 style="font-size:24px;font-weight:700;margin:0 0 12px;">Membership Plans &amp; Pricing (Pakistan PKR &amp; International USD)</h2>
+            <ul>
+              <li><strong>Starter Plan</strong> — PKR 299 ($1.20 USD) · 15 Days · Access 1 selected Turkish drama</li>
+              <li><strong>Standard Plan (Most Popular)</strong> — PKR 599 ($2.50 USD) · 30 Days · Access 1 selected Turkish drama</li>
+              <li><strong>Plus Plan</strong> — PKR 899 ($3.50 USD) · 30 Days · Access 2 selected Turkish dramas</li>
+              <li><strong>VIP Plan</strong> — PKR 1,299 ($5.00 USD) · 30 Days · Full access to all eligible VIP catalogue dramas</li>
+            </ul>
+          </section>
+          <section style="margin:28px 0;">
+            <h2 style="font-size:24px;font-weight:700;margin:0 0 12px;">Turkish Dramas Included in FEVIQO Premium</h2>
+            <ul>
+              <li><a href="/teskilat">Teşkilat Season 7 (Urdu Dubbed &amp; Subtitles)</a> — <a href="/teskilat/episode-189">Latest Episode 189</a></li>
+              <li><a href="/mehmed-fetihler-sultani">Mehmed: Fetihler Sultanı Season 4 (Urdu)</a> — <a href="/mehmed-fetihler-sultani/episode-90">Latest Episode 90</a></li>
+              <li><a href="/gunesin-dogdugu-yer">Güneşin Doğduğu Yer (Urdu)</a> — <a href="/gunesin-dogdugu-yer/episode-7">Latest Episode 7</a></li>
+              <li><a href="/dramas">Browse All FEVIQO Turkish Dramas Directory</a></li>
+            </ul>
+          </section>
+          <section style="margin:28px 0;">
+            <h2 style="font-size:24px;font-weight:700;margin:0 0 12px;">Payment Verification &amp; Membership FAQ</h2>
+            <p><strong>How do Pakistan and international payments work?</strong> Select Pakistan (PKR) to scan your local Bank QR code, or International (USD) to scan the Binance QR code and pay the exact USD rate. Upload your screenshot receipt or share it via WhatsApp for quick administrator verification and instant episode unlocking across your account.</p>
+          </section>
+        </article>`
+      : `<article style="max-width:1120px;margin:0 auto;padding:28px 20px;color:#0B0B0D;background:#FFFFFF;font-family:Inter,system-ui,sans-serif;line-height:1.6;">
+          <h1 style="font-size:32px;line-height:1.2;font-weight:800;margin:0 0 12px;">${escapeHtmlText(config.seoTitle)}</h1>
+          <p style="font-size:16px;color:#3F3F46;margin:0 0 18px;">${escapeHtmlText(config.metaDescription)}</p>
+        </article>`;
 
-  // Inject prerendered semantic body content inside <noscript> inside <div id="root"> so search crawlers see full text & internal links without blocking human users with static splash screens
-  const prerenderedBody = `<div id="root"><noscript><div id="seo-crawler-content"><header><nav aria-label="FEVIQO Master Navigation"><a href="/">Home</a> | <a href="/unlimited-editing">Unlimited Video Editing</a> | <a href="/creators">Creators</a> | <a href="/agencies">Agencies</a> | <a href="/business">Business & Brands</a> | <a href="/gallery">Video Showcase</a> | <a href="/pricing">Pricing</a> | <a href="/membership">Premium Membership</a> | <a href="/about">About Us</a> | <a href="/dramas">Turkish Dramas Directory</a> | <a href="/turkish-drama">Turkish Series Hub</a> | <a href="/teskilat">Teskilat Season 7</a> | <a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani</a> | <a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer</a></nav></header><main><header><h1>${config.seoTitle}</h1><p>${config.metaDescription}</p></header>${routeArticle}<section><h2>Complete FEVIQO Sitemap Directory & Navigation Links</h2><ul><li><a href="/">FEVIQO Unlimited Video Editing Agency Home</a></li><li><a href="/membership">FEVIQO Premium Membership & Pricing</a></li><li><a href="/mehmed-fetihler-sultani">Mehmed Fetihler Sultani Main Hub</a></li><li><a href="/mehmed-fetihler-sultani/episode-90">Mehmed Fetihler Sultani Episode 90 (Bolum 90) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-89">Mehmed Fetihler Sultani Episode 89 (Bolum 89) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-88">Mehmed Fetihler Sultani Episode 88 (Bolum 88) Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani/episode-87">Mehmed Fetihler Sultani Episode 87 (Bolum 87) Urdu Subtitles</a></li><li><a href="/teskilat">Teskilat Season 7 Main Hub</a></li><li><a href="/teskilat/episode-189">Teskilat Season 7 Episode 189 (Bolum 189) Urdu Subtitles</a></li><li><a href="/teskilat/episode-188">Teskilat Season 7 Episode 188 (Bolum 188) Urdu Subtitles - Ender Rescue</a></li><li><a href="/teskilat/episode-187">Teskilat Season 7 Episode 187 (Bolum 187) Urdu Subtitles</a></li><li><a href="/teskilat/episode-186">Teskilat Season 7 Episode 186 (Bolum 186) Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer">Gunesin Dogdugu Yer Main Hub</a></li><li><a href="/gunesin-dogdugu-yer/episode-7">Gunesin Dogdugu Yer Episode 7 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-5">Gunesin Dogdugu Yer Episode 5 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-4">Gunesin Dogdugu Yer Episode 4 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer/episode-3">Gunesin Dogdugu Yer Episode 3 Urdu Subtitles</a></li><li><a href="/dramas">Turkish Drama Urdu Subtitles Directory</a></li><li><a href="/unlimited-editing">Unlimited Video Editing Subscription</a></li><li><a href="/creators">High-Retention Video Editing for Content Creators</a></li><li><a href="/agencies">White-Label Video Editing Pods for Agencies</a></li><li><a href="/business">Performance Ad Creatives for Business & Brands</a></li><li><a href="/gallery">FEVIQO Video Portfolio & Showreel Showcase</a></li><li><a href="/pricing">Transparent Flat-Rate Pricing Plans</a></li><li><a href="/about">About FEVIQO Creative Agency</a></li><li><a href="/booking">Book a Creative Strategy Call</a></li></ul></section></main></div></noscript></div>`;
+  // Inject visible semantic SSR fallback inside <div id="root"> (NOT inside <noscript>) so both initial HTML fetches and JS-enabled Googlebot WRS parse complete titles, copy, and internal links before React createRoot replaces #root children.
+  const prerenderedBody = `<div id="root"><div id="feviqo-ssr-shell" style="background:#FFFFFF;color:#0B0B0D;min-height:100vh;"><header style="background:#0B0B0D;color:#FFFFFF;padding:14px 20px;"><nav aria-label="FEVIQO Navigation" style="max-width:1120px;margin:0 auto;display:flex;flex-wrap:wrap;gap:14px;font-size:13px;font-family:Inter,system-ui,sans-serif;"><a href="/" style="color:#FFFFFF;text-decoration:none;font-weight:700;">FEVIQO Home</a> <a href="/membership" style="color:#22C55E;text-decoration:none;font-weight:700;">Premium Membership</a> <a href="/dramas" style="color:#FFFFFF;text-decoration:none;">Turkish Dramas</a> <a href="/teskilat" style="color:#FFFFFF;text-decoration:none;">Teşkilat Season 7</a> <a href="/mehmed-fetihler-sultani" style="color:#FFFFFF;text-decoration:none;">Mehmed: Fetihler Sultanı</a> <a href="/gunesin-dogdugu-yer" style="color:#FFFFFF;text-decoration:none;">Güneşin Doğduğu Yer</a> <a href="/pricing" style="color:#FFFFFF;text-decoration:none;">Agency Pricing</a> <a href="/about" style="color:#FFFFFF;text-decoration:none;">About</a></nav></header><main>${routeMainHtml}<section style="max-width:1120px;margin:0 auto;padding:0 20px 32px;font-family:Inter,system-ui,sans-serif;"><h2>FEVIQO Navigation Directory</h2><ul><li><a href="/">FEVIQO Unlimited Video Editing Agency Home</a></li><li><a href="/membership">FEVIQO Premium Membership &amp; Pricing</a></li><li><a href="/dramas">Turkish Drama Urdu Subtitles Directory</a></li><li><a href="/teskilat">Teşkilat Season 7 Main Hub</a></li><li><a href="/teskilat/episode-189">Teşkilat Season 7 Episode 189 Urdu Subtitles</a></li><li><a href="/mehmed-fetihler-sultani">Mehmed: Fetihler Sultanı Main Hub</a></li><li><a href="/mehmed-fetihler-sultani/episode-90">Mehmed Episode 90 Urdu Subtitles</a></li><li><a href="/gunesin-dogdugu-yer">Güneşin Doğduğu Yer Main Hub</a></li><li><a href="/gunesin-dogdugu-yer/episode-7">Güneşin Doğduğu Yer Episode 7 Urdu Subtitles</a></li><li><a href="/pricing">Agency Pricing Plans</a></li><li><a href="/about">About FEVIQO</a></li></ul></section></main></div></div>`;
 
   transformed = transformed.replace('<div id="root"></div>', prerenderedBody);
 

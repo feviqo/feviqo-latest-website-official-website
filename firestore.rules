@@ -68,13 +68,22 @@ service cloud.firestore {
 
     function isValidMemberAccount(data) {
       return data.keys().hasAll(['id', 'ownerUid', 'email', 'fullName', 'phone', 'createdAtIso', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['id', 'ownerUid', 'email', 'fullName', 'phone', 'passwordHash', 'createdAtIso', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'ownerUid', 'email', 'fullName', 'phone', 'passwordHash',
+          'referralCode', 'referredByMemberId', 'referredByCode', 'creditBalancePkr', 'creditBalanceUsd',
+          'createdAtIso', 'createdAt', 'updatedAt'
+        ])
         && isValidId(data.id)
         && isValidId(data.ownerUid)
         && isBoundedString(data.email, 5, 200)
         && isBoundedString(data.fullName, 2, 120)
         && isBoundedString(data.phone, 0, 32)
         && (!('passwordHash' in data) || isBoundedString(data.passwordHash, 0, 300))
+        && (!('referralCode' in data) || isBoundedString(data.referralCode, 0, 32))
+        && (!('referredByMemberId' in data) || isBoundedString(data.referredByMemberId, 0, 128))
+        && (!('referredByCode' in data) || isBoundedString(data.referredByCode, 0, 32))
+        && (!('creditBalancePkr' in data) || (data.creditBalancePkr is number && data.creditBalancePkr >= 0 && data.creditBalancePkr <= 1000000))
+        && (!('creditBalanceUsd' in data) || (data.creditBalanceUsd is number && data.creditBalanceUsd >= 0 && data.creditBalanceUsd <= 10000))
         && isBoundedString(data.createdAtIso, 10, 64)
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
@@ -89,6 +98,9 @@ service cloud.firestore {
         && data.keys().hasOnly([
           'id', 'memberId', 'ownerUid', 'customerName', 'customerEmail', 'customerPhone',
           'orderType', 'targetMembershipId', 'planId', 'planName', 'amountPkr', 'amountUsd',
+          'originalAmountPkr', 'originalAmountUsd', 'promoCodeId', 'promoCode', 'promoDiscountPkr', 'promoDiscountUsd',
+          'referralId', 'referralCodeUsed', 'referralDiscountPkr', 'referralDiscountUsd',
+          'creditsUsedPkr', 'creditsUsedUsd', 'creditsRefundedAt', 'discountTotalPkr', 'discountTotalUsd',
           'expectedAmount', 'currency', 'paymentRegion', 'paymentMethod', 'visitorCountryCode',
           'indicativeLocalDisplay', 'durationDays', 'selectedDramaIds',
           'status', 'provider', 'qrImageUrl', 'proofFileName', 'proofOriginalName',
@@ -108,6 +120,21 @@ service cloud.firestore {
         && isBoundedString(data.planName, 1, 64)
         && data.amountPkr is number && data.amountPkr >= 0 && data.amountPkr <= 1000000
         && (!('amountUsd' in data) || (data.amountUsd is number && data.amountUsd >= 0 && data.amountUsd <= 10000))
+        && (!('originalAmountPkr' in data) || (data.originalAmountPkr is number && data.originalAmountPkr >= 0 && data.originalAmountPkr <= 1000000))
+        && (!('originalAmountUsd' in data) || (data.originalAmountUsd is number && data.originalAmountUsd >= 0 && data.originalAmountUsd <= 10000))
+        && (!('promoCodeId' in data) || isBoundedString(data.promoCodeId, 0, 128))
+        && (!('promoCode' in data) || isBoundedString(data.promoCode, 0, 40))
+        && (!('promoDiscountPkr' in data) || (data.promoDiscountPkr is number && data.promoDiscountPkr >= 0 && data.promoDiscountPkr <= 1000000))
+        && (!('promoDiscountUsd' in data) || (data.promoDiscountUsd is number && data.promoDiscountUsd >= 0 && data.promoDiscountUsd <= 10000))
+        && (!('referralId' in data) || isBoundedString(data.referralId, 0, 128))
+        && (!('referralCodeUsed' in data) || isBoundedString(data.referralCodeUsed, 0, 32))
+        && (!('referralDiscountPkr' in data) || (data.referralDiscountPkr is number && data.referralDiscountPkr >= 0 && data.referralDiscountPkr <= 1000000))
+        && (!('referralDiscountUsd' in data) || (data.referralDiscountUsd is number && data.referralDiscountUsd >= 0 && data.referralDiscountUsd <= 10000))
+        && (!('creditsUsedPkr' in data) || (data.creditsUsedPkr is number && data.creditsUsedPkr >= 0 && data.creditsUsedPkr <= 1000000))
+        && (!('creditsUsedUsd' in data) || (data.creditsUsedUsd is number && data.creditsUsedUsd >= 0 && data.creditsUsedUsd <= 10000))
+        && (!('creditsRefundedAt' in data) || isBoundedString(data.creditsRefundedAt, 0, 64))
+        && (!('discountTotalPkr' in data) || (data.discountTotalPkr is number && data.discountTotalPkr >= 0 && data.discountTotalPkr <= 1000000))
+        && (!('discountTotalUsd' in data) || (data.discountTotalUsd is number && data.discountTotalUsd >= 0 && data.discountTotalUsd <= 10000))
         && (!('expectedAmount' in data) || (data.expectedAmount is number && data.expectedAmount >= 0 && data.expectedAmount <= 1000000))
         && (!('currency' in data) || (data.currency in ['PKR', 'USD']))
         && (!('paymentRegion' in data) || (data.paymentRegion in ['pakistan', 'international']))
@@ -146,7 +173,10 @@ service cloud.firestore {
         ])
         && data.keys().hasOnly([
           'id', 'memberId', 'ownerUid', 'orderId', 'customerName', 'customerEmail', 'customerPhone',
-          'planId', 'planName', 'pricePkr', 'priceUsd', 'durationDays', 'selectedDramaIds',
+          'planId', 'planName', 'pricePkr', 'priceUsd',
+          'originalAmountPkr', 'originalAmountUsd', 'promoCode', 'promoDiscountPkr', 'promoDiscountUsd',
+          'referralDiscountPkr', 'referralDiscountUsd', 'creditsUsedPkr', 'creditsUsedUsd',
+          'discountTotalPkr', 'discountTotalUsd', 'durationDays', 'selectedDramaIds',
           'status', 'activatedAt', 'expiresAt', 'cancelledAt', 'revokedByAdminEmail',
           'revokedReason', 'approvedByAdminEmail', 'paymentProvider', 'paymentRegion',
           'paymentMethod', 'currency', 'expectedAmount', 'paymentReference',
@@ -163,6 +193,17 @@ service cloud.firestore {
         && isBoundedString(data.planName, 1, 64)
         && data.pricePkr is number && data.pricePkr >= 0 && data.pricePkr <= 1000000
         && (!('priceUsd' in data) || (data.priceUsd is number && data.priceUsd >= 0 && data.priceUsd <= 10000))
+        && (!('originalAmountPkr' in data) || (data.originalAmountPkr is number && data.originalAmountPkr >= 0 && data.originalAmountPkr <= 1000000))
+        && (!('originalAmountUsd' in data) || (data.originalAmountUsd is number && data.originalAmountUsd >= 0 && data.originalAmountUsd <= 10000))
+        && (!('promoCode' in data) || isBoundedString(data.promoCode, 0, 40))
+        && (!('promoDiscountPkr' in data) || (data.promoDiscountPkr is number && data.promoDiscountPkr >= 0 && data.promoDiscountPkr <= 1000000))
+        && (!('promoDiscountUsd' in data) || (data.promoDiscountUsd is number && data.promoDiscountUsd >= 0 && data.promoDiscountUsd <= 10000))
+        && (!('referralDiscountPkr' in data) || (data.referralDiscountPkr is number && data.referralDiscountPkr >= 0 && data.referralDiscountPkr <= 1000000))
+        && (!('referralDiscountUsd' in data) || (data.referralDiscountUsd is number && data.referralDiscountUsd >= 0 && data.referralDiscountUsd <= 10000))
+        && (!('creditsUsedPkr' in data) || (data.creditsUsedPkr is number && data.creditsUsedPkr >= 0 && data.creditsUsedPkr <= 1000000))
+        && (!('creditsUsedUsd' in data) || (data.creditsUsedUsd is number && data.creditsUsedUsd >= 0 && data.creditsUsedUsd <= 10000))
+        && (!('discountTotalPkr' in data) || (data.discountTotalPkr is number && data.discountTotalPkr >= 0 && data.discountTotalPkr <= 1000000))
+        && (!('discountTotalUsd' in data) || (data.discountTotalUsd is number && data.discountTotalUsd >= 0 && data.discountTotalUsd <= 10000))
         && data.durationDays is number && data.durationDays >= 1 && data.durationDays <= 3650
         && isValidDramaIdList(data.selectedDramaIds)
         && (data.status in ['active', 'cancelled', 'expired'])
@@ -219,7 +260,7 @@ service cloud.firestore {
           'starterBinanceQrImage', 'standardBinanceQrImage', 'plusBinanceQrImage', 'vipBinanceQrImage',
           'usdPrices', 'internationalInstructionsEn', 'internationalInstructionsUr',
           'whatsappNumber', 'adminEmail', 'supportEmail', 'supportNoteEn',
-          'supportNoteUr', 'updatedAtIso', 'updatedAt'
+          'supportNoteUr', 'referralConfig', 'updatedAtIso', 'updatedAt'
         ])
         && isBoundedString(data.starterQrImage, 1, 512)
         && isBoundedString(data.standardQrImage, 1, 512)
@@ -237,6 +278,7 @@ service cloud.firestore {
         && isBoundedString(data.supportEmail, 5, 200)
         && (!('supportNoteEn' in data) || isBoundedString(data.supportNoteEn, 0, 1000))
         && (!('supportNoteUr' in data) || isBoundedString(data.supportNoteUr, 0, 1000))
+        && (!('referralConfig' in data) || data.referralConfig is map)
         && isBoundedString(data.updatedAtIso, 10, 64)
         && data.updatedAt is timestamp;
     }
@@ -337,6 +379,94 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function isValidPromoCode(data) {
+      return data.keys().hasAll(['id', 'code', 'discountType', 'isActive', 'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'id', 'code', 'description', 'discountType', 'discountPercent',
+          'discountAmountPkr', 'discountAmountUsd', 'maxDiscountPkr', 'maxDiscountUsd',
+          'minPurchasePkr', 'minPurchaseUsd', 'applicablePlanIds', 'usageLimit', 'perUserLimit',
+          'expiresAt', 'isActive', 'createdByAdminEmail', 'rewardForReferrerMemberId',
+          'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isBoundedString(data.code, 2, 40)
+        && (!('description' in data) || isBoundedString(data.description, 0, 300))
+        && (data.discountType in ['percentage', 'fixed'])
+        && (!('discountPercent' in data) || (data.discountPercent is number && data.discountPercent >= 0 && data.discountPercent <= 100))
+        && (!('discountAmountPkr' in data) || (data.discountAmountPkr is number && data.discountAmountPkr >= 0 && data.discountAmountPkr <= 1000000))
+        && (!('discountAmountUsd' in data) || (data.discountAmountUsd is number && data.discountAmountUsd >= 0 && data.discountAmountUsd <= 10000))
+        && (!('maxDiscountPkr' in data) || (data.maxDiscountPkr is number && data.maxDiscountPkr >= 0 && data.maxDiscountPkr <= 1000000))
+        && (!('maxDiscountUsd' in data) || (data.maxDiscountUsd is number && data.maxDiscountUsd >= 0 && data.maxDiscountUsd <= 10000))
+        && (!('minPurchasePkr' in data) || (data.minPurchasePkr is number && data.minPurchasePkr >= 0 && data.minPurchasePkr <= 1000000))
+        && (!('minPurchaseUsd' in data) || (data.minPurchaseUsd is number && data.minPurchaseUsd >= 0 && data.minPurchaseUsd <= 10000))
+        && (!('applicablePlanIds' in data) || (data.applicablePlanIds is list && data.applicablePlanIds.size() <= 10))
+        && (!('perUserLimit' in data) || (data.perUserLimit is number && data.perUserLimit >= 1 && data.perUserLimit <= 1000))
+        && (!('expiresAt' in data) || isBoundedString(data.expiresAt, 0, 64))
+        && data.isActive is bool
+        && (!('createdByAdminEmail' in data) || isBoundedString(data.createdByAdminEmail, 0, 200))
+        && (!('rewardForReferrerMemberId' in data) || isBoundedString(data.rewardForReferrerMemberId, 0, 128))
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && isBoundedString(data.updatedAtIso, 10, 64)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidReferralRecord(data) {
+      return data.keys().hasAll([
+          'id', 'referrerMemberId', 'referrerCode', 'referredMemberId', 'status',
+          'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'referrerMemberId', 'referrerCode', 'referrerEmail', 'referrerName',
+          'referredMemberId', 'referredOwnerUid', 'referredEmail', 'referredName',
+          'referredPhoneNormalized', 'status', 'blockReason', 'conversionOrderId', 'convertedAt',
+          'rewardMode', 'rewardAmountPkr', 'rewardAmountUsd', 'rewardPromoCode', 'rewardIssuedAt',
+          'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.referrerMemberId)
+        && isBoundedString(data.referrerCode, 2, 32)
+        && (!('referrerEmail' in data) || isBoundedString(data.referrerEmail, 0, 200))
+        && (!('referrerName' in data) || isBoundedString(data.referrerName, 0, 120))
+        && isValidId(data.referredMemberId)
+        && (!('referredOwnerUid' in data) || isBoundedString(data.referredOwnerUid, 0, 128))
+        && (!('referredEmail' in data) || isBoundedString(data.referredEmail, 0, 200))
+        && (!('referredName' in data) || isBoundedString(data.referredName, 0, 120))
+        && (!('referredPhoneNormalized' in data) || isBoundedString(data.referredPhoneNormalized, 0, 32))
+        && (data.status in ['signed_up', 'converted', 'blocked'])
+        && (!('blockReason' in data) || isBoundedString(data.blockReason, 0, 300))
+        && (!('conversionOrderId' in data) || isBoundedString(data.conversionOrderId, 0, 128))
+        && (!('convertedAt' in data) || isBoundedString(data.convertedAt, 0, 64))
+        && (!('rewardMode' in data) || isBoundedString(data.rewardMode, 0, 32))
+        && (!('rewardAmountPkr' in data) || (data.rewardAmountPkr is number && data.rewardAmountPkr >= 0 && data.rewardAmountPkr <= 1000000))
+        && (!('rewardAmountUsd' in data) || (data.rewardAmountUsd is number && data.rewardAmountUsd >= 0 && data.rewardAmountUsd <= 10000))
+        && (!('rewardPromoCode' in data) || isBoundedString(data.rewardPromoCode, 0, 40))
+        && (!('rewardIssuedAt' in data) || isBoundedString(data.rewardIssuedAt, 0, 64))
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && isBoundedString(data.updatedAtIso, 10, 64)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidReferralCreditEntry(data) {
+      return data.keys().hasAll(['id', 'memberId', 'type', 'currency', 'details', 'createdAtIso', 'createdAt'])
+        && data.keys().hasOnly([
+          'id', 'memberId', 'type', 'amountPkr', 'amountUsd', 'currency',
+          'referralId', 'orderId', 'details', 'createdAtIso', 'createdAt'
+        ])
+        && isValidId(data.id)
+        && isValidId(data.memberId)
+        && (data.type in ['referral_bonus', 'checkout_spent', 'checkout_refund', 'admin_adjustment'])
+        && (!('amountPkr' in data) || data.amountPkr is number)
+        && (!('amountUsd' in data) || data.amountUsd is number)
+        && (data.currency in ['PKR', 'USD'])
+        && (!('referralId' in data) || isBoundedString(data.referralId, 0, 128))
+        && (!('orderId' in data) || isBoundedString(data.orderId, 0, 128))
+        && isBoundedString(data.details, 1, 500)
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && data.createdAt is timestamp;
+    }
+
     // --- COLLECTION MATCH BLOCKS ---
     match /admins/{adminUid} {
       allow get: if isValidId(adminUid) && isVerifiedUser() && (request.auth.uid == adminUid || isAdmin());
@@ -373,7 +503,11 @@ service cloud.firestore {
         && incoming().updatedAt == request.time
         && (
           (existing().ownerUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'updatedAt']))
-          || (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'email', 'passwordHash', 'updatedAt']))
+          || (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'fullName', 'phone', 'email', 'passwordHash',
+            'referralCode', 'referredByMemberId', 'referredByCode',
+            'creditBalancePkr', 'creditBalanceUsd', 'updatedAt'
+          ]))
         );
       allow delete: if isValidId(memberId) && isAdmin();
     }
@@ -477,7 +611,7 @@ service cloud.firestore {
           'starterBinanceQrImage', 'standardBinanceQrImage', 'plusBinanceQrImage', 'vipBinanceQrImage',
           'usdPrices', 'internationalInstructionsEn', 'internationalInstructionsUr',
           'whatsappNumber', 'adminEmail', 'supportEmail', 'supportNoteEn',
-          'supportNoteUr', 'updatedAtIso', 'updatedAt'
+          'supportNoteUr', 'referralConfig', 'updatedAtIso', 'updatedAt'
         ]);
       allow delete: if false;
     }
@@ -541,6 +675,49 @@ service cloud.firestore {
         && incoming().id == runId
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /promoCodes/{promoId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(promoId) && isAdmin()
+        && isValidPromoCode(incoming())
+        && incoming().id == promoId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(promoId) && isAdmin()
+        && isValidPromoCode(incoming())
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().createdAtIso == existing().createdAtIso
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(promoId) && isAdmin();
+    }
+
+    match /referrals/{referralId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(referralId) && isAdmin()
+        && isValidReferralRecord(incoming())
+        && incoming().id == referralId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(referralId) && isAdmin()
+        && isValidReferralRecord(incoming())
+        && incoming().id == existing().id
+        && incoming().referrerMemberId == existing().referrerMemberId
+        && incoming().referredMemberId == existing().referredMemberId
+        && incoming().createdAt == existing().createdAt
+        && incoming().createdAtIso == existing().createdAtIso
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(referralId) && isAdmin();
+    }
+
+    match /referralCredits/{entryId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(entryId) && isAdmin()
+        && isValidReferralCreditEntry(incoming())
+        && incoming().id == entryId
+        && incoming().createdAt == request.time;
       allow update, delete: if false;
     }
   }

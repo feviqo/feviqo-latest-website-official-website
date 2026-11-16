@@ -18,6 +18,12 @@ import {
   Bell,
   ExternalLink,
   CheckCheck,
+  Gift,
+  Copy,
+  Check,
+  Users,
+  Wallet,
+  Tag,
 } from 'lucide-react';
 import {
   MemberAccountState,
@@ -69,6 +75,28 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
   const [notifLoadingId, setNotifLoadingId] = useState<string | null>(null);
   const [missingPhoneInput, setMissingPhoneInput] = useState('');
   const [savingMissingPhone, setSavingMissingPhone] = useState(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const handleCopyValue = async (text: string, key: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopiedKey(key);
+      window.setTimeout(() => {
+        setCopiedKey((prev) => (prev === key ? null : prev));
+      }, 2200);
+    } catch {}
+  };
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowTs(Date.now()), 30000);
@@ -261,6 +289,7 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
     history,
     notifications = [],
     unreadNotificationCount = 0,
+    referralSummary,
     publicConfig,
   } = account;
 
@@ -915,6 +944,23 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
                   <div className="text-xs text-zinc-500">
                     {ord.selectedDramaIds.map((d) => getDramaById(d)?.title || d).join(', ')}
                   </div>
+                  {(ord.promoCode || (ord.discountTotalPkr || 0) > 0 || (ord.discountTotalUsd || 0) > 0) && (
+                    <div className="text-[11px] text-[#16A34A] font-medium flex flex-wrap items-center gap-2">
+                      {ord.promoCode && (
+                        <span className="font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200" dir="ltr">
+                          {ord.promoCode}
+                        </span>
+                      )}
+                      {((ord.discountTotalPkr || 0) > 0 || (ord.discountTotalUsd || 0) > 0) && (
+                        <span dir="ltr">
+                          {isUrdu ? 'رعایت:' : 'Saved:'}{' '}
+                          {ord.currency === 'USD' || ord.paymentMethod === 'binance_qr'
+                            ? `$${Number(ord.discountTotalUsd || 0).toFixed(2)} USD`
+                            : `PKR ${Number(ord.discountTotalPkr || 0).toLocaleString()}`}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {ord.rejectionReason && (
                     <div className="text-[11px] text-red-600">
                       {t(MEMBERSHIP_COPY.account.rejectionReasonLabel)} {ord.rejectionReason}
@@ -943,6 +989,243 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
           )}
         </div>
       </div>
+
+      {/* Refer & Earn Rewards Dashboard */}
+      {referralSummary && (
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-7 space-y-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-zinc-100">
+            <div className="space-y-1.5 max-w-2xl">
+              <div className="text-xs font-bold uppercase tracking-[0.14em] text-[#16A34A] inline-flex items-center gap-1.5">
+                <Gift className="w-4 h-4" />
+                <span>{t(MEMBERSHIP_COPY.referral.heading)}</span>
+              </div>
+              <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
+                {t(MEMBERSHIP_COPY.referral.subheading)}
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-[#F8FAFC] border border-zinc-200 px-4 py-3 flex flex-wrap items-center justify-between gap-4 shrink-0">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                  <Wallet className="w-3.5 h-3.5 text-[#16A34A]" />
+                  <span>{t(MEMBERSHIP_COPY.referral.walletTitle)}</span>
+                </div>
+                <div className="text-base font-bold text-[#0B0B0D] mt-0.5 tabular-nums" dir="ltr">
+                  PKR {Math.round(referralSummary.creditBalancePkr).toLocaleString()} · $
+                  {Number(referralSummary.creditBalanceUsd || 0).toFixed(2)} USD
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onChoosePlanClick}
+                className="px-3.5 py-2 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold transition cursor-pointer whitespace-nowrap"
+              >
+                {t(MEMBERSHIP_COPY.referral.useCreditsCheckoutBtn)}
+              </button>
+            </div>
+          </div>
+
+          {/* Code & Shareable Link Row */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <div className="md:col-span-4 rounded-xl bg-[#F8FAFC] border border-zinc-200 p-4 space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                {t(MEMBERSHIP_COPY.referral.yourCodeLabel)}
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-mono text-lg font-bold tracking-wider text-[#0B0B0D]" dir="ltr">
+                  {referralSummary.referralCode}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyValue(referralSummary.referralCode, 'ref-code')}
+                  className="px-3 py-1.5 rounded-lg bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                >
+                  {copiedKey === 'ref-code' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>
+                    {copiedKey === 'ref-code'
+                      ? t(MEMBERSHIP_COPY.referral.copied)
+                      : t(MEMBERSHIP_COPY.referral.copyCode)}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="md:col-span-8 rounded-xl bg-[#F8FAFC] border border-zinc-200 p-4 space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                {t(MEMBERSHIP_COPY.referral.yourLinkLabel)}
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="font-mono text-xs text-zinc-700 bg-white border border-zinc-200 rounded-lg px-3 py-2 truncate flex-1" dir="ltr">
+                  {referralSummary.referralLink}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopyValue(referralSummary.referralLink, 'ref-link')}
+                  className="px-3.5 py-2 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 transition cursor-pointer shrink-0"
+                >
+                  {copiedKey === 'ref-link' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>
+                    {copiedKey === 'ref-link'
+                      ? t(MEMBERSHIP_COPY.referral.copied)
+                      : t(MEMBERSHIP_COPY.referral.copyLink)}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Referral KPI Stat Tiles */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 space-y-1">
+              <div className="text-xs font-medium text-zinc-500">{t(MEMBERSHIP_COPY.referral.kpiTotalReferrals)}</div>
+              <div className="text-2xl font-bold text-[#0B0B0D] tabular-nums">{referralSummary.totalReferrals}</div>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 space-y-1">
+              <div className="text-xs font-medium text-zinc-500">{t(MEMBERSHIP_COPY.referral.kpiCompletedPurchases)}</div>
+              <div className="text-2xl font-bold text-[#16A34A] tabular-nums">{referralSummary.completedPurchases}</div>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 space-y-1">
+              <div className="text-xs font-medium text-zinc-500">{t(MEMBERSHIP_COPY.referral.kpiPendingReferrals)}</div>
+              <div className="text-2xl font-bold text-amber-700 tabular-nums">{referralSummary.pendingReferrals}</div>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 space-y-1">
+              <div className="text-xs font-medium text-zinc-500">{t(MEMBERSHIP_COPY.referral.kpiTotalEarned)}</div>
+              <div className="text-base sm:text-lg font-bold text-[#0B0B0D] tabular-nums" dir="ltr">
+                PKR {Math.round(referralSummary.totalEarnedPkr).toLocaleString()} · $
+                {Number(referralSummary.totalEarnedUsd || 0).toFixed(2)}
+              </div>
+            </div>
+          </div>
+
+          {/* Personal Reward Promo Codes Strip */}
+          {referralSummary.personalRewardPromos && referralSummary.personalRewardPromos.length > 0 && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-[#16A34A]" />
+                <span>{t(MEMBERSHIP_COPY.referral.personalCodesHeading)}</span>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {referralSummary.personalRewardPromos.map((rp) => (
+                  <div
+                    key={rp.code}
+                    className="rounded-lg bg-white border border-emerald-200 px-3 py-2 flex items-center gap-3 text-xs"
+                  >
+                    <div>
+                      <span className="font-mono font-bold text-[#0B0B0D]" dir="ltr">{rp.code}</span>
+                      <span className="text-[#16A34A] font-semibold ml-2" dir="ltr">
+                        {rp.discountType === 'percentage'
+                          ? `${rp.discountPercent}% OFF`
+                          : `PKR ${rp.discountAmountPkr} / $${rp.discountAmountUsd} OFF`}
+                      </span>
+                      {rp.expiresAt && (
+                        <div className="text-[10px] text-zinc-500">
+                          {isUrdu ? 'میعاد:' : 'Exp:'} {formatDate(rp.expiresAt)}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyValue(rp.code, `rp-${rp.code}`)}
+                      className="px-2.5 py-1 rounded bg-emerald-100 hover:bg-[#22C55E] text-emerald-950 font-semibold text-[11px] cursor-pointer transition"
+                    >
+                      {copiedKey === `rp-${rp.code}`
+                        ? t(MEMBERSHIP_COPY.referral.copied)
+                        : t(MEMBERSHIP_COPY.referral.copyCode)}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Friends Activity & Credit Wallet Ledger */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 space-y-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-[#16A34A]" />
+                <span>{t(MEMBERSHIP_COPY.referral.historyHeading)}</span>
+              </div>
+              {referralSummary.referrals.length === 0 ? (
+                <p className="text-xs text-zinc-500 leading-relaxed">{t(MEMBERSHIP_COPY.referral.noReferralsYet)}</p>
+              ) : (
+                <div className="divide-y divide-zinc-100 max-h-64 overflow-y-auto">
+                  {referralSummary.referrals.map((refRow) => (
+                    <div key={refRow.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-[#0B0B0D] truncate">{refRow.referredName}</div>
+                        <div className="text-[11px] text-zinc-500 truncate" dir="ltr">
+                          {refRow.maskedEmail} · {formatDate(refRow.createdAt)}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 space-y-0.5">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                            refRow.status === 'converted'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : refRow.status === 'blocked'
+                              ? 'bg-red-50 text-red-700'
+                              : 'bg-amber-50 text-amber-800'
+                          }`}
+                        >
+                          {refRow.status === 'converted'
+                            ? t(MEMBERSHIP_COPY.referral.statusConverted)
+                            : refRow.status === 'blocked'
+                            ? t(MEMBERSHIP_COPY.referral.statusBlocked)
+                            : t(MEMBERSHIP_COPY.referral.statusSignedUp)}
+                        </span>
+                        {refRow.status === 'converted' && (refRow.rewardAmountPkr > 0 || refRow.rewardPromoCode) && (
+                          <div className="text-[11px] font-semibold text-[#16A34A]" dir="ltr">
+                            {refRow.rewardAmountPkr > 0
+                              ? `+PKR ${refRow.rewardAmountPkr} / +$${refRow.rewardAmountUsd.toFixed(2)}`
+                              : refRow.rewardPromoCode}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 space-y-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                <Wallet className="w-3.5 h-3.5 text-[#16A34A]" />
+                <span>{t(MEMBERSHIP_COPY.referral.ledgerHeading)}</span>
+              </div>
+              {referralSummary.creditLedger.length === 0 ? (
+                <p className="text-xs text-zinc-500 leading-relaxed">{t(MEMBERSHIP_COPY.referral.noLedgerYet)}</p>
+              ) : (
+                <div className="divide-y divide-zinc-100 max-h-64 overflow-y-auto">
+                  {referralSummary.creditLedger.slice(0, 15).map((entry) => {
+                    const isDeduction = entry.type === 'checkout_spent';
+                    return (
+                      <div key={entry.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                        <div className="min-w-0">
+                          <div className="font-medium text-[#0B0B0D] truncate">{entry.details}</div>
+                          <div className="text-[11px] text-zinc-400">{formatDate(entry.createdAt)}</div>
+                        </div>
+                        <div
+                          dir="ltr"
+                          className={`font-bold tabular-nums shrink-0 ${
+                            isDeduction ? 'text-red-600' : 'text-[#16A34A]'
+                          }`}
+                        >
+                          {isDeduction ? '-' : '+'}
+                          {entry.amountUsd > 0 && entry.amountPkr === 0
+                            ? `$${entry.amountUsd.toFixed(2)} USD`
+                            : `PKR ${Math.round(entry.amountPkr).toLocaleString()}${
+                                entry.amountUsd > 0 ? ` / $${entry.amountUsd.toFixed(2)}` : ''
+                              }`}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Authorized Member Video Theater (Matching FEVIQO Website Episode Player) */}
       {activeStream && (

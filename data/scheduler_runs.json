@@ -1,5 +1,31 @@
 [
   {
+    "id": "sched-1794777496762-3915",
+    "triggerSource": "startup",
+    "ranAt": "2026-11-15T21:18:16.762Z",
+    "durationMs": 1,
+    "checkedMemberships": 0,
+    "expiredCount": 0,
+    "remindersCreated": 0,
+    "emailsSent": 0,
+    "emailsFailed": 0,
+    "emailsNotConfigured": 0,
+    "summary": "Checked 0 membership(s): 0 expired, 0 notification(s) created (emails sent: 0, not configured: 0, failed: 0)."
+  },
+  {
+    "id": "sched-1794777489636-6584",
+    "triggerSource": "startup",
+    "ranAt": "2026-11-15T21:18:09.636Z",
+    "durationMs": 1,
+    "checkedMemberships": 0,
+    "expiredCount": 0,
+    "remindersCreated": 0,
+    "emailsSent": 0,
+    "emailsFailed": 0,
+    "emailsNotConfigured": 0,
+    "summary": "Checked 0 membership(s): 0 expired, 0 notification(s) created (emails sent: 0, not configured: 0, failed: 0)."
+  },
+  {
     "id": "sched-1794772965445-6a01",
     "triggerSource": "startup",
     "ranAt": "2026-11-15T20:02:45.445Z",
