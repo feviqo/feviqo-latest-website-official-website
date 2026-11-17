@@ -420,16 +420,13 @@ function getCachedMasterSitemapXml(): string {
   return generated;
 }
 
-app.get('/sitemap.xml', (req, res) => {
-  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, max-age=1800, s-maxage=86400, stale-while-revalidate=86400');
+app.get('/sitemap.xml', (_req, res) => {
   try {
     const xml = getCachedMasterSitemapXml();
-    const etag = `"feviqo-sitemap-${Buffer.byteLength(xml, 'utf8')}"`;
-    res.setHeader('ETag', etag);
-    if (req.headers['if-none-match'] === etag) {
-      return res.status(304).end();
-    }
+    const bodyLength = Buffer.byteLength(xml, 'utf8');
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
+    res.setHeader('Content-Length', String(bodyLength));
     return res.status(200).send(xml);
   } catch (err: any) {
     console.error('Error generating master sitemap:', err);

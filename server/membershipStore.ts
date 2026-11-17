@@ -5828,6 +5828,7 @@ export function authorizeEpisodePlayback(params: {
       statusCode: number;
       code:
         | 'UNAUTHENTICATED'
+        | 'PHONE_REQUIRED'
         | 'NO_ACTIVE_MEMBERSHIP'
         | 'MEMBERSHIP_CANCELLED'
         | 'MEMBERSHIP_EXPIRED'
@@ -5865,6 +5866,16 @@ export function authorizeEpisodePlayback(params: {
       statusCode: 401,
       code: 'UNAUTHENTICATED',
       error: 'Sign in with your FEVIQO member account to watch protected episodes.',
+    };
+  }
+
+  const currentMember = getMemberById(params.memberId);
+  if (currentMember && !isMemberPhoneValid(currentMember.phone)) {
+    return {
+      authorized: false,
+      statusCode: 403,
+      code: 'PHONE_REQUIRED',
+      error: 'Please add your WhatsApp / phone number to complete your Google account setup before watching.',
     };
   }
 

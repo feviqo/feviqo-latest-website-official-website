@@ -61,17 +61,25 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
   const [googleEnabledForDomain, setGoogleEnabledForDomain] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const stepRef = React.useRef<'auth' | 'phone'>('auth');
+  stepRef.current = step;
+
   useEffect(() => {
     setError(null);
-    if (isOpen) {
-      setReferralCodeInput((prev) => prev || getStoredReferralCode());
+    if (!isOpen) {
+      setStep('auth');
+      setPendingGoogleAccount(null);
+      setPendingGoogleUid(null);
+      setMode(initialMode);
+      return;
     }
-    if (isOpen && forcePhoneAccount && !hasValidPhoneNumber(forcePhoneAccount.member.phone)) {
+    setReferralCodeInput((prev) => prev || getStoredReferralCode());
+    if (forcePhoneAccount && !hasValidPhoneNumber(forcePhoneAccount.member.phone)) {
       setStep('phone');
       setPendingGoogleAccount(forcePhoneAccount);
       setPendingGoogleUid(forcePhoneAccount.member.ownerUid || null);
       setPhoneCompletionValue(forcePhoneAccount.member.phone || '');
-    } else if (!isOpen || !forcePhoneAccount) {
+    } else if (stepRef.current !== 'phone') {
       setStep('auth');
       setPendingGoogleAccount(null);
       setPendingGoogleUid(null);
@@ -111,6 +119,7 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
         idToken,
         email: cred.user.email || undefined,
         fullName: cred.user.displayName || undefined,
+        phone: mode === 'signup' && hasValidPhoneNumber(phone) ? phone.trim() : undefined,
         referralCode: normalizeReferralInput(referralCodeInput) || undefined,
       });
       if ('error' in result) {
@@ -119,12 +128,9 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
         return;
       }
       await syncMemberAccountToFirestore(result.member, cred.user.uid).catch(() => {});
-      notifyMembershipAuthChanged();
 
-      const hasActiveSubscription = Boolean(
-        result.activeMembership || (result.activeMemberships && result.activeMemberships.length > 0)
-      );
-      if (!hasValidPhoneNumber(result.member.phone) && !hasActiveSubscription) {
+      // Every Google sign-in / Google account creation must have a valid phone number on file
+      if (!hasValidPhoneNumber(result.member.phone)) {
         setPendingGoogleAccount(result);
         setPendingGoogleUid(cred.user.uid);
         setPhoneCompletionValue(result.member.phone || '');
@@ -133,6 +139,7 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
         return;
       }
 
+      notifyMembershipAuthChanged();
       onAuthenticated(result);
     } catch (err: any) {
       if (err?.code === 'auth/popup-closed-by-user') {
@@ -206,8 +213,11 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
     setStep('auth');
     setPendingGoogleAccount(null);
     setPendingGoogleUid(null);
-    onSignedOutDuringPhoneStep?.();
-    onClose();
+    if (onSignedOutDuringPhoneStep) {
+      onSignedOutDuringPhoneStep();
+    } else {
+      onClose();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -275,6 +285,15 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
 
       if ('error' in result) {
         setError(result.error || 'Authentication failed. Please check your details.');
+        setSubmitting(false);
+        return;
+      }
+
+      if (!hasValidPhoneNumber(result.member.phone)) {
+        setPendingGoogleAccount(result);
+        setPendingGoogleUid(result.member.ownerUid || null);
+        setPhoneCompletionValue(result.member.phone || '');
+        setStep('phone');
         setSubmitting(false);
         return;
       }
@@ -485,6 +504,10 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
                   : 'Continue with Google'}
               </span>
             </button>
+
+            <p className="mt-2 text-[11px] text-zinc-500 text-center leading-relaxed">
+              {t(MEMBERSHIP_COPY.auth.googlePhoneHint)}
+            </p>
 
             <div className="mt-4 flex items-center gap-3 text-[11px] uppercase tracking-wider text-zinc-400">
               <div className="flex-1 h-px bg-zinc-200" />

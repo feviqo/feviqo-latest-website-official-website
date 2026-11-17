@@ -23,6 +23,7 @@ import { CookieBanner } from './components/CookieBanner';
 import { VideoModal } from './components/VideoModal';
 import { BookCallModal } from './components/BookCallModal';
 import { MembershipPage } from './components/pages/MembershipPage';
+import { GlobalPhoneCompletionGuard } from './components/membership/GlobalPhoneCompletionGuard';
 import { LanguageProvider } from './i18n/LanguageContext';
 
 import { getSEOConfigForPath } from './seo/seoStore';
@@ -1044,6 +1045,9 @@ export default function App() {
           />
         )}
       </Suspense>
+
+      {/* Global Phone Completion Enforcement for Google Accounts */}
+      <GlobalPhoneCompletionGuard currentRoute={currentRoute} />
 
       {/* Global Cookie Consent Banner */}
       <CookieBanner />

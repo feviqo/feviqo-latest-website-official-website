@@ -126,6 +126,13 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     setShowAccountSection(initialViewAccount);
   }, [initialViewAccount]);
 
+  useEffect(() => {
+    if (account && !hasValidPhone(account)) {
+      setPhoneCompletionAccount(account);
+      setAuthModalOpen(true);
+    }
+  }, [account]);
+
   const applyUrlContextFromLocation = React.useCallback((currentAccount?: MemberAccountState | null) => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -649,6 +656,11 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     if (enrichedAccount.publicConfig) {
       setPublicConfig(enrichedAccount.publicConfig);
     }
+    if (!hasValidPhone(enrichedAccount)) {
+      setPhoneCompletionAccount(enrichedAccount);
+      setAuthModalOpen(true);
+      return;
+    }
     setAuthModalOpen(false);
     notifyMembershipAuthChanged();
 
@@ -703,6 +715,11 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     if (!account) {
       setPendingCheckoutAfterAuth(false);
       setAuthModalMode('signin');
+      setAuthModalOpen(true);
+      return;
+    }
+    if (!hasValidPhone(account)) {
+      setPhoneCompletionAccount(account);
       setAuthModalOpen(true);
       return;
     }
@@ -1938,6 +1955,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         initialMode={authModalMode}
         forcePhoneAccount={phoneCompletionAccount}
         onSignedOutDuringPhoneStep={() => {
+          setAuthModalOpen(false);
           setPhoneCompletionAccount(null);
           setAccount(null);
           setPendingCheckoutAfterAuth(false);
@@ -1952,6 +1970,12 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
             : undefined
         }
         onClose={() => {
+          if (
+            (account && !hasValidPhone(account)) ||
+            (phoneCompletionAccount && !hasValidPhone(phoneCompletionAccount))
+          ) {
+            return;
+          }
           setAuthModalOpen(false);
           setPhoneCompletionAccount(null);
           setPendingCheckoutAfterAuth(false);

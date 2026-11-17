@@ -266,6 +266,13 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
         return { allowed: true, streamUrl: result.streamUrl };
       }
 
+      if (account?.member && (!account.member.phone || account.member.phone.replace(/[^\d]/g, '').length < 10)) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('feviqo-require-phone-completion'));
+        }
+        return { allowed: false };
+      }
+
       const caseType = result.caseType || (account?.member ? 'B' : 'A');
       setGateState({
         isOpen: true,

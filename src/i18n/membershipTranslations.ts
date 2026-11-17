@@ -233,8 +233,12 @@ export const MEMBERSHIP_COPY = {
       ur: 'اپنا فون / واٹس ایپ نمبر درج کریں',
     },
     googlePhoneDesc: {
-      en: 'Required after Google Sign-In so our team can reach you about your membership verification or if you leave an unfinished order.',
-      ur: 'گوگل سائن ان مکمل کرنے کے لیے فون نمبر لازمی ہے تاکہ ادائیگی کی تصدیق یا نامکمل آرڈر کی صورت میں ہماری ٹیم آپ سے رابطہ کر سکے۔',
+      en: 'Required after Google Sign-In or account creation so our team can reach you about your membership verification, billing, or unfinished orders.',
+      ur: 'گوگل سائن ان یا نیا اکاؤنٹ مکمل کرنے کے لیے اپنا فون / واٹس ایپ نمبر درج کرنا لازمی ہے تاکہ ادائیگی کی تصدیق یا نامکمل آرڈر کی صورت میں ہماری ٹیم آپ سے رابطہ کر سکے۔',
+    },
+    googlePhoneHint: {
+      en: 'After continuing with Google, you will be asked to add your phone / WhatsApp number.',
+      ur: 'گوگل کے ساتھ جاری رکھنے کے بعد آپ سے اپنا فون / واٹس ایپ نمبر درج کرنے کو کہا جائے گا۔',
     },
     googlePhoneSaveBtn: {
       en: 'Save Phone & Continue',
