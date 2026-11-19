@@ -123,6 +123,11 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
         referralCode: normalizeReferralInput(referralCodeInput) || undefined,
       });
       if ('error' in result) {
+        if (result.code === 'ACCOUNT_BLOCKED' || result.blocked) {
+          await signOut(auth).catch(() => {});
+          await logoutMemberAccount().catch(() => {});
+          notifyMembershipAuthChanged();
+        }
         setError(result.error || 'Google sign-in failed.');
         setGoogleLoading(false);
         return;

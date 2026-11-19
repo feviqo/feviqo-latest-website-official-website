@@ -75,7 +75,7 @@
         },
         "fullName": {
           "type": "string",
-          "minLength": 2,
+          "minLength": 1,
           "maxLength": 120,
           "description": "Customer full name."
         },
@@ -1265,6 +1265,26 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "monthKey", "generatedAt", "generatedByAdminEmail", "totalMemberships", "rows", "createdAt", "updatedAt"]
+    },
+    "BlockedUser": {
+      "title": "BlockedUser",
+      "description": "Permanently blocked email address denied access across FEVIQO until unblocked by an administrator.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "minLength": 5, "maxLength": 200 },
+        "memberId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "fullName": { "type": "string", "minLength": 0, "maxLength": 120 },
+        "reason": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "blockedByAdminId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "blockedByAdminEmail": { "type": "string", "format": "email", "minLength": 5, "maxLength": 200 },
+        "blockedAt": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "updatedAtIso": { "type": "string", "minLength": 10, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "reason", "blockedByAdminId", "blockedByAdminEmail", "blockedAt", "createdAtIso", "updatedAtIso", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -1351,6 +1371,10 @@
     "/monthlyCommissionReports/{reportId}": {
       "schema": { "$ref": "#/entities/MonthlyCommissionReport" },
       "description": "Permanent monthly referral commission report snapshots."
+    },
+    "/blockedUsers/{blockId}": {
+      "schema": { "$ref": "#/entities/BlockedUser" },
+      "description": "Admin-managed permanently blocked user emails restricted from signing in or accessing FEVIQO until unblocked."
     }
   }
 }

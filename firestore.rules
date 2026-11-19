@@ -50,7 +50,7 @@ service cloud.firestore {
     }
 
     function isValidDramaIdList(listVal) {
-      return listVal is list && listVal.size() >= 1 && listVal.size() <= 10 && listVal[0] is string && listVal[0].size() <= 64;
+      return listVal is list && listVal.size() >= 1 && listVal.size() <= 20 && listVal[0] is string && listVal[0].size() <= 64;
     }
 
     // --- ENTITY VALIDATION BLUEPRINTS ---
@@ -76,7 +76,7 @@ service cloud.firestore {
         && isValidId(data.id)
         && isValidId(data.ownerUid)
         && isBoundedString(data.email, 5, 200)
-        && isBoundedString(data.fullName, 2, 120)
+        && isBoundedString(data.fullName, 1, 120)
         && isBoundedString(data.phone, 0, 32)
         && (!('passwordHash' in data) || isBoundedString(data.passwordHash, 0, 300))
         && (!('referralCode' in data) || isBoundedString(data.referralCode, 0, 32))
@@ -138,7 +138,7 @@ service cloud.firestore {
         && (!('expectedAmount' in data) || (data.expectedAmount is number && data.expectedAmount >= 0 && data.expectedAmount <= 1000000))
         && (!('currency' in data) || (data.currency in ['PKR', 'USD']))
         && (!('paymentRegion' in data) || (data.paymentRegion in ['pakistan', 'international']))
-        && (!('paymentMethod' in data) || (data.paymentMethod in ['bank_qr', 'binance_qr', 'admin_assigned']))
+        && (!('paymentMethod' in data) || (data.paymentMethod in ['bank_qr', 'binance_qr', 'admin_assigned', 'free']))
         && (!('visitorCountryCode' in data) || isBoundedString(data.visitorCountryCode, 0, 12))
         && (!('indicativeLocalDisplay' in data) || isBoundedString(data.indicativeLocalDisplay, 0, 64))
         && data.durationDays is number && data.durationDays >= 1 && data.durationDays <= 3650
@@ -215,7 +215,7 @@ service cloud.firestore {
         && (!('approvedByAdminEmail' in data) || isBoundedString(data.approvedByAdminEmail, 0, 200))
         && isBoundedString(data.paymentProvider, 1, 40)
         && (!('paymentRegion' in data) || (data.paymentRegion in ['pakistan', 'international']))
-        && (!('paymentMethod' in data) || (data.paymentMethod in ['bank_qr', 'binance_qr', 'admin_assigned']))
+        && (!('paymentMethod' in data) || (data.paymentMethod in ['bank_qr', 'binance_qr', 'admin_assigned', 'free']))
         && (!('currency' in data) || (data.currency in ['PKR', 'USD']))
         && (!('expectedAmount' in data) || (data.expectedAmount is number && data.expectedAmount >= 0 && data.expectedAmount <= 1000000))
         && (!('paymentReference' in data) || isBoundedString(data.paymentReference, 0, 400))
@@ -588,6 +588,30 @@ service cloud.firestore {
         && data.updatedAt is timestamp;
     }
 
+    function isValidBlockedUser(data) {
+      return data.keys().hasAll([
+          'id', 'email', 'reason', 'blockedByAdminId', 'blockedByAdminEmail',
+          'blockedAt', 'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'email', 'memberId', 'fullName', 'reason',
+          'blockedByAdminId', 'blockedByAdminEmail', 'blockedAt',
+          'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isBoundedString(data.email, 5, 200)
+        && (!('memberId' in data) || isBoundedString(data.memberId, 0, 128))
+        && (!('fullName' in data) || isBoundedString(data.fullName, 0, 120))
+        && isBoundedString(data.reason, 0, 500)
+        && isBoundedString(data.blockedByAdminId, 1, 128)
+        && isBoundedString(data.blockedByAdminEmail, 5, 200)
+        && isBoundedString(data.blockedAt, 10, 64)
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && isBoundedString(data.updatedAtIso, 10, 64)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
     // --- COLLECTION MATCH BLOCKS ---
     match /admins/{adminUid} {
       allow get: if isValidId(adminUid) && isVerifiedUser() && (request.auth.uid == adminUid || isAdmin());
@@ -681,7 +705,6 @@ service cloud.firestore {
       allow create: if isValidId(membershipId) && isAdmin()
         && isValidCustomerMembership(incoming())
         && incoming().id == membershipId
-        && exists(/databases/$(database)/documents/members/$(incoming().memberId))
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
       allow update: if isValidId(membershipId) && isVerifiedUser()
@@ -689,7 +712,6 @@ service cloud.firestore {
         && incoming().id == existing().id
         && incoming().memberId == existing().memberId
         && incoming().ownerUid == existing().ownerUid
-        && incoming().orderId == existing().orderId
         && incoming().createdAt == existing().createdAt
         && incoming().createdAtIso == existing().createdAtIso
         && incoming().updatedAt == request.time
@@ -697,6 +719,7 @@ service cloud.firestore {
           isAdmin()
           || (
             existing().ownerUid == request.auth.uid
+            && incoming().orderId == existing().orderId
             && existing().status == 'active'
             && incoming().status == 'cancelled'
             && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'cancelledAt', 'updatedAt'])
@@ -711,9 +734,14 @@ service cloud.firestore {
       allow create: if isValidId(historyId) && isVerifiedUser()
         && isValidMembershipHistoryItem(incoming())
         && incoming().id == historyId
-        && (incoming().ownerUid == request.auth.uid || isAdmin())
-        && exists(/databases/$(database)/documents/members/$(incoming().memberId))
-        && incoming().createdAt == request.time;
+        && incoming().createdAt == request.time
+        && (
+          isAdmin()
+          || (
+            incoming().ownerUid == request.auth.uid
+            && exists(/databases/$(database)/documents/members/$(incoming().memberId))
+          )
+        );
       allow update: if false;
       allow delete: if isValidId(historyId) && isAdmin();
     }
@@ -948,6 +976,29 @@ service cloud.firestore {
         && incoming().createdAt == existing().createdAt
         && incoming().updatedAt == request.time;
       allow delete: if false;
+    }
+
+    match /blockedUsers/{blockId} {
+      allow get: if isValidId(blockId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create: if isValidId(blockId) && isAdmin()
+        && isValidBlockedUser(incoming())
+        && incoming().id == blockId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(blockId) && isAdmin()
+        && isValidBlockedUser(incoming())
+        && incoming().id == existing().id
+        && incoming().email == existing().email
+        && incoming().createdAt == existing().createdAt
+        && incoming().createdAtIso == existing().createdAtIso
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'memberId', 'fullName', 'reason',
+          'blockedByAdminId', 'blockedByAdminEmail', 'blockedAt',
+          'updatedAtIso', 'updatedAt'
+        ]);
+      allow delete: if isValidId(blockId) && isAdmin();
     }
   }
 }

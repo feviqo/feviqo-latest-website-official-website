@@ -19,7 +19,7 @@
   "streamlinedProcessImage": "/images/3rd.jpeg",
   "structuredWorkflowImage": "/images/last.jpeg",
   "displaySettings": {
-    "logoHeight": 68,
+    "logoHeight": 36,
     "heroVideoMaxWidth": 1024,
     "heroVideoScale": 100,
     "heroVideoRadius": 16,

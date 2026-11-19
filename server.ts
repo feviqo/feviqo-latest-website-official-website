@@ -73,6 +73,7 @@ import {
   deleteMembershipRecordByAdmin,
   assignMembershipByAdmin,
   mergeCloudSyncSnapshot,
+  reconcileAndRecoverMissingMemberships,
   hydrateStoreFromFirestore,
   syncServerFirestoreSnapshot,
   getAdminMembershipsOverview,
@@ -105,6 +106,12 @@ import {
   updateReferralStatusByAdmin,
   getProtectedStreamsSecurityOverview,
   restoreMemberSessionFromSnapshot,
+  listBlockedUsers,
+  getBlockedUserByEmail,
+  getBlockedUserByMemberId,
+  buildBlockedAccountMessage,
+  blockUserEmailByAdmin,
+  unblockUserEmailByAdmin,
   LifecycleEmailDispatcher,
   SafeAdmin,
 } from './server/membershipStore';
@@ -1691,6 +1698,18 @@ app.post('/api/auth/login', (req, res) => {
     }
 
     if (effectiveRole === 'client') {
+      const blockedClient = getBlockedUserByEmail(cleanEmail);
+      if (blockedClient) {
+        return res.status(403).json({
+          success: false,
+          code: 'ACCOUNT_BLOCKED',
+          blocked: true,
+          email: blockedClient.email,
+          reason: blockedClient.reason,
+          error: buildBlockedAccountMessage(blockedClient),
+        });
+      }
+
       const client = getClientByEmail(cleanEmail);
       if (!client) {
         return res.status(401).json({ success: false, error: 'No client account found with this email address.' });
@@ -3189,6 +3208,26 @@ function getAuthenticatedMemberId(req: express.Request): string | null {
   return parsed?.memberId || null;
 }
 
+function getBlockedMemberResponse(req: express.Request, res: express.Response): boolean {
+  const token = extractMemberToken(req);
+  const parsed = verifyMemberSessionToken(token);
+  if (!parsed) return false;
+  const blocked =
+    getBlockedUserByMemberId(parsed.memberId) ||
+    getBlockedUserByEmail(parsed.email);
+  if (!blocked) return false;
+  res.clearCookie(MEMBER_COOKIE_NAME, { path: '/' });
+  res.status(403).json({
+    success: false,
+    code: 'ACCOUNT_BLOCKED',
+    blocked: true,
+    email: blocked.email,
+    reason: blocked.reason,
+    error: buildBlockedAccountMessage(blocked),
+  });
+  return true;
+}
+
 function extractAdminToken(req: express.Request): string | undefined {
   const adminHeader = req.headers['x-admin-authorization'];
   if (typeof adminHeader === 'string' && adminHeader.trim()) {
@@ -3411,7 +3450,17 @@ app.post('/api/membership/register', (req, res) => {
     const { email, password, confirmPassword, fullName, phone, referralCode, cachedSnapshot } = req.body || {};
     const result = registerMember({ email, phone, password, confirmPassword, fullName, referralCode, cachedSnapshot });
     if ('error' in result) {
-      return res.status(result.statusCode || 400).json({ success: false, error: result.error });
+      if (result.code === 'ACCOUNT_BLOCKED') {
+        res.clearCookie(MEMBER_COOKIE_NAME, { path: '/' });
+      }
+      return res.status(result.statusCode || 400).json({
+        success: false,
+        code: result.code,
+        blocked: result.code === 'ACCOUNT_BLOCKED',
+        email: result.blockedEmail,
+        reason: result.blockedReason,
+        error: result.error,
+      });
     }
     const campCtx = extractCampaignAttributionFromRequest(req);
     attachCampaignAttributionToUser({
@@ -3436,7 +3485,17 @@ app.post('/api/membership/login', (req, res) => {
     const { email, password, cachedSnapshot } = req.body || {};
     const result = loginMember({ email, password, cachedSnapshot });
     if ('error' in result) {
-      return res.status(401).json({ success: false, error: result.error });
+      if (result.code === 'ACCOUNT_BLOCKED') {
+        res.clearCookie(MEMBER_COOKIE_NAME, { path: '/' });
+      }
+      return res.status(result.statusCode || 401).json({
+        success: false,
+        code: result.code,
+        blocked: result.code === 'ACCOUNT_BLOCKED',
+        email: result.blockedEmail,
+        reason: result.blockedReason,
+        error: result.error,
+      });
     }
     setMemberSessionCookie(req, res, result.token);
     const account = getMemberAccountState(result.member.id);
@@ -3469,7 +3528,17 @@ app.post('/api/membership/google-auth', async (req, res) => {
       cachedSnapshot,
     });
     if ('error' in result) {
-      return res.status(400).json({ success: false, error: result.error });
+      if (result.code === 'ACCOUNT_BLOCKED') {
+        res.clearCookie(MEMBER_COOKIE_NAME, { path: '/' });
+      }
+      return res.status(result.statusCode || 400).json({
+        success: false,
+        code: result.code,
+        blocked: result.code === 'ACCOUNT_BLOCKED',
+        email: result.blockedEmail,
+        reason: result.blockedReason,
+        error: result.error,
+      });
     }
     if (Date.now() - Date.parse(result.member.createdAt) < 10 * 60 * 1000) {
       const campCtx = extractCampaignAttributionFromRequest(req);
@@ -3496,7 +3565,37 @@ app.post('/api/membership/logout', (_req, res) => {
   return res.json({ success: true });
 });
 
+app.post('/api/membership/check-access', async (req, res) => {
+  try {
+    if (getBlockedMemberResponse(req, res)) return;
+
+    const idToken = typeof req.body?.idToken === 'string' ? req.body.idToken.trim() : '';
+    if (idToken) {
+      const decoded = await verifyFirebaseIdToken(idToken);
+      if (decoded?.email) {
+        const blocked = getBlockedUserByEmail(decoded.email);
+        if (blocked) {
+          res.clearCookie(MEMBER_COOKIE_NAME, { path: '/' });
+          return res.status(403).json({
+            success: false,
+            code: 'ACCOUNT_BLOCKED',
+            blocked: true,
+            email: blocked.email,
+            reason: blocked.reason,
+            error: buildBlockedAccountMessage(blocked),
+          });
+        }
+      }
+    }
+
+    return res.json({ success: true, blocked: false });
+  } catch {
+    return res.json({ success: true, blocked: false });
+  }
+});
+
 app.get('/api/membership/account', (req, res) => {
+  if (getBlockedMemberResponse(req, res)) return;
   const memberId = getAuthenticatedMemberId(req);
   if (!memberId) {
     return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Not signed in.' });
@@ -3510,11 +3609,22 @@ app.get('/api/membership/account', (req, res) => {
 
 app.post('/api/membership/restore-session', (req, res) => {
   try {
+    if (getBlockedMemberResponse(req, res)) return;
     const memberId = getAuthenticatedMemberId(req);
     const cachedSnapshot = req.body?.cachedSnapshot;
     const restored = restoreMemberSessionFromSnapshot(cachedSnapshot, memberId);
     if ('error' in restored) {
-      return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: restored.error });
+      if (restored.code === 'ACCOUNT_BLOCKED') {
+        res.clearCookie(MEMBER_COOKIE_NAME, { path: '/' });
+      }
+      return res.status(restored.statusCode || 401).json({
+        success: false,
+        code: restored.code || 'UNAUTHENTICATED',
+        blocked: restored.code === 'ACCOUNT_BLOCKED',
+        email: restored.blockedEmail,
+        reason: restored.blockedReason,
+        error: restored.error,
+      });
     }
     setMemberSessionCookie(req, res, restored.token);
     const account = getMemberAccountState(restored.member.id);
@@ -3533,6 +3643,7 @@ app.post('/api/membership/restore-session', (req, res) => {
 
 app.post('/api/membership/profile/phone', (req, res) => {
   try {
+    if (getBlockedMemberResponse(req, res)) return;
     const memberId = getAuthenticatedMemberId(req);
     if (!memberId) {
       return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Not signed in.' });
@@ -3581,6 +3692,7 @@ app.post('/api/membership/promo/validate', (req, res) => {
 
 app.post('/api/membership/checkout', async (req, res) => {
   try {
+    if (getBlockedMemberResponse(req, res)) return;
     const memberId = getAuthenticatedMemberId(req);
     if (!memberId) {
       return res.status(401).json({
@@ -3654,6 +3766,7 @@ app.post('/api/membership/checkout', async (req, res) => {
 
 app.post('/api/membership/orders/:orderId/confirm-free', async (req, res) => {
   try {
+    if (getBlockedMemberResponse(req, res)) return;
     const memberId = getAuthenticatedMemberId(req);
     if (!memberId) {
       return res.status(401).json({
@@ -3726,6 +3839,7 @@ app.post(
   },
   async (req, res) => {
     try {
+      if (getBlockedMemberResponse(req, res)) return;
       const memberId = getAuthenticatedMemberId(req);
       if (!memberId) {
         return res.status(401).json({
@@ -3881,6 +3995,7 @@ app.post('/api/membership/notifications/read-all', (req, res) => {
 
 app.post('/api/membership/cancel', (req, res) => {
   try {
+    if (getBlockedMemberResponse(req, res)) return;
     const memberId = getAuthenticatedMemberId(req);
     if (!memberId) {
       return res.status(401).json({ success: false, error: 'Authentication required.' });
@@ -3899,6 +4014,7 @@ app.post('/api/membership/cancel', (req, res) => {
 
 // Server-enforced protected episode access endpoint (issues short-lived session + proxied HLS stream; never raw Mux URL)
 app.get('/api/membership/watch/:dramaId/:episodeSlug', (req, res) => {
+  if (getBlockedMemberResponse(req, res)) return;
   const { ip, ua } = extractSecurityRequestMeta(req);
   const { dramaId, episodeSlug } = req.params;
   const memberId = getAuthenticatedMemberId(req);
@@ -4616,14 +4732,33 @@ app.post('/api/admin/memberships/assign', requireAdmin, async (req: any, res) =>
 
 app.post('/api/admin/memberships/sync', requireAdmin, async (req: any, res) => {
   try {
-    mergeCloudSyncSnapshot(req.body || {});
-    const overview = await syncServerFirestoreSnapshot();
+    const merged = mergeCloudSyncSnapshot(req.body || {});
+    await syncServerFirestoreSnapshot();
+    const recovery = reconcileAndRecoverMissingMemberships();
     return res.json({
       success: true,
-      overview,
+      overview: getAdminMembershipsOverview(),
+      recovery: recovery.recoveredCount >= (merged.lastRecovery?.recoveredCount || 0) ? recovery : merged.lastRecovery,
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to synchronize cloud membership state.' });
+  }
+});
+
+app.post('/api/admin/memberships/recover', requireAdmin, async (req: any, res) => {
+  try {
+    if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+      mergeCloudSyncSnapshot(req.body);
+    }
+    await syncServerFirestoreSnapshot();
+    const recovery = reconcileAndRecoverMissingMemberships();
+    return res.json({
+      success: true,
+      recovery,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to run membership recovery scan.' });
   }
 });
 
@@ -4718,6 +4853,59 @@ app.delete('/api/admin/memberships/:membershipId', requireAdmin, (req: any, res)
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to delete membership record.' });
+  }
+});
+
+app.get('/api/admin/memberships/blocked-users', requireAdmin, (_req: any, res) => {
+  try {
+    return res.json({
+      success: true,
+      blockedUsers: listBlockedUsers(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to load blocked users.' });
+  }
+});
+
+app.post('/api/admin/memberships/blocked-users', requireAdmin, (req: any, res) => {
+  try {
+    const { email, memberId, reason } = req.body || {};
+    const result = blockUserEmailByAdmin({
+      email: typeof email === 'string' ? email : undefined,
+      memberId: typeof memberId === 'string' ? memberId : undefined,
+      reason: typeof reason === 'string' ? reason : undefined,
+      admin: req.admin,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.status(201).json({
+      success: true,
+      blockedUser: result.blockedUser,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to block email address.' });
+  }
+});
+
+app.delete('/api/admin/memberships/blocked-users/:identifier', requireAdmin, (req: any, res) => {
+  try {
+    const identifier = decodeURIComponent(req.params.identifier || '');
+    const result = unblockUserEmailByAdmin({
+      identifier,
+      admin: req.admin,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      unblockedUser: result.unblockedUser,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to unblock email address.' });
   }
 });
 

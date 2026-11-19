@@ -1,5 +1,23 @@
 [
   {
+    "adminId": "adm-1",
+    "adminEmail": "rexanmedia01@gmail.com",
+    "action": "user_unblocked",
+    "targetId": "blk-024ab1c04e4fae17e0f0ee68",
+    "details": "Unblocked email blocked-test@example.com and restored website access.",
+    "id": "aud-1795114545894-1f9b6c",
+    "createdAt": "2026-11-19T18:55:45.894Z"
+  },
+  {
+    "adminId": "adm-1",
+    "adminEmail": "rexanmedia01@gmail.com",
+    "action": "user_blocked",
+    "targetId": "blk-024ab1c04e4fae17e0f0ee68",
+    "details": "Permanently blocked email blocked-test@example.com. Reason: Test block",
+    "id": "aud-1795114545893-cba67d",
+    "createdAt": "2026-11-19T18:55:45.893Z"
+  },
+  {
     "adminId": "adm-1794577927114-c1a5a6",
     "adminEmail": "partner@feviqo.com",
     "action": "admin_bootstrapped",

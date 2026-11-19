@@ -98,7 +98,7 @@ export const Footer: React.FC<FooterProps> = ({
               className="inline-block group"
               aria-label="FEVIQO Home"
             >
-              <FeviqoHeaderLogo theme="dark" height={56} className="w-auto object-contain transition-opacity group-hover:opacity-90" />
+              <FeviqoHeaderLogo theme="dark" className="h-9 sm:h-10 w-auto object-contain transition-opacity group-hover:opacity-90" />
             </a>
             <p className="text-emerald-100/90 text-xs sm:text-sm leading-relaxed font-normal max-w-sm" dir={isUrdu ? 'rtl' : 'ltr'}>
               {t(MEMBERSHIP_COPY.footer.tagline)}

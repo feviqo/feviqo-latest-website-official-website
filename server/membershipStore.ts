@@ -49,6 +49,7 @@ const SCHEDULER_RUNS_FILE = path.join(DATA_DIR, 'scheduler_runs.json');
 const PROMO_CODES_FILE = path.join(DATA_DIR, 'promo_codes.json');
 const REFERRALS_FILE = path.join(DATA_DIR, 'referrals.json');
 const CREDIT_LEDGER_FILE = path.join(DATA_DIR, 'referral_credits.json');
+const BLOCKED_USERS_FILE = path.join(DATA_DIR, 'blocked_users.json');
 const SECRET_FILE = path.join(DATA_DIR, '.member_session_secret');
 
 for (const dir of [DATA_DIR, PRIVATE_PROOFS_DIR, PUBLIC_QR_DIR]) {
@@ -116,7 +117,24 @@ export interface SafeMember {
   referredByCode?: string;
   creditBalancePkr: number;
   creditBalanceUsd: number;
+  isBlocked?: boolean;
+  blockedAt?: string;
+  blockedReason?: string;
+  blockedByAdminEmail?: string;
   createdAt: string;
+}
+
+export interface BlockedUserRecord {
+  id: string;
+  email: string;
+  memberId?: string;
+  fullName?: string;
+  reason: string;
+  blockedByAdminId: string;
+  blockedByAdminEmail: string;
+  blockedAt: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type MembershipStatus = 'active' | 'cancelled' | 'expired';
@@ -540,7 +558,9 @@ export interface AdminAuditEntry {
     | 'referral_campaign_updated'
     | 'referral_commission_approved'
     | 'referral_commission_paid'
-    | 'referral_commission_reversed';
+    | 'referral_commission_reversed'
+    | 'user_blocked'
+    | 'user_unblocked';
   targetId?: string;
   details: string;
   createdAt: string;
@@ -760,6 +780,7 @@ function inferMemberAuthMethod(member: Pick<MemberRecord, 'ownerUid' | 'authMeth
 }
 
 function sanitizeMember(member: MemberRecord): SafeMember {
+  const blocked = getBlockedUserByEmail(member.email);
   return {
     id: member.id,
     ownerUid: member.ownerUid,
@@ -772,6 +793,10 @@ function sanitizeMember(member: MemberRecord): SafeMember {
     referredByCode: member.referredByCode,
     creditBalancePkr: Math.max(0, Math.round(Number(member.creditBalancePkr) || 0)),
     creditBalanceUsd: Math.max(0, Math.round((Number(member.creditBalanceUsd) || 0) * 100) / 100),
+    isBlocked: Boolean(blocked),
+    blockedAt: blocked?.blockedAt,
+    blockedReason: blocked?.reason,
+    blockedByAdminEmail: blocked?.blockedByAdminEmail,
     createdAt: member.createdAt,
   };
 }
@@ -2063,9 +2088,22 @@ export function reconcileAndRestoreMemberByEmail(
 export function restoreMemberSessionFromSnapshot(
   cachedSnapshot: any,
   authenticatedMemberId?: string | null
-): { success: true; member: SafeMember; token: string } | { success: false; error: string } {
+):
+  | { success: true; member: SafeMember; token: string }
+  | { success: false; error: string; statusCode?: number; code?: string; blockedReason?: string; blockedEmail?: string } {
   const rawEmail = String(cachedSnapshot?.member?.email || '').trim().toLowerCase();
   if (rawEmail) {
+    const blocked = getBlockedUserByEmail(rawEmail);
+    if (blocked) {
+      return {
+        success: false,
+        statusCode: 403,
+        code: 'ACCOUNT_BLOCKED',
+        blockedEmail: blocked.email,
+        blockedReason: blocked.reason,
+        error: buildBlockedAccountMessage(blocked),
+      };
+    }
     const restored = reconcileAndRestoreMemberByEmail(rawEmail, cachedSnapshot);
     if (restored) {
       return {
@@ -2076,6 +2114,17 @@ export function restoreMemberSessionFromSnapshot(
     }
   }
   if (authenticatedMemberId) {
+    const blockedById = getBlockedUserByMemberId(authenticatedMemberId);
+    if (blockedById) {
+      return {
+        success: false,
+        statusCode: 403,
+        code: 'ACCOUNT_BLOCKED',
+        blockedEmail: blockedById.email,
+        blockedReason: blockedById.reason,
+        error: buildBlockedAccountMessage(blockedById),
+      };
+    }
     const existing = getMemberById(authenticatedMemberId);
     if (existing) {
       reconcileAndRestoreMemberByEmail(existing.email, cachedSnapshot);
@@ -2097,7 +2146,9 @@ export function registerMember(params: {
   fullName?: string;
   referralCode?: string;
   cachedSnapshot?: any;
-}): { success: true; member: SafeMember; token: string } | { success: false; error: string; statusCode?: number } {
+}):
+  | { success: true; member: SafeMember; token: string }
+  | { success: false; error: string; statusCode?: number; code?: string; blockedReason?: string; blockedEmail?: string } {
   const email = (params.email || '').trim().toLowerCase();
   const password = params.password || '';
   const confirmPassword = params.confirmPassword;
@@ -2105,6 +2156,18 @@ export function registerMember(params: {
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { success: false, error: 'Please enter a valid email address.', statusCode: 400 };
+  }
+
+  const blocked = getBlockedUserByEmail(email);
+  if (blocked) {
+    return {
+      success: false,
+      statusCode: 403,
+      code: 'ACCOUNT_BLOCKED',
+      blockedEmail: blocked.email,
+      blockedReason: blocked.reason,
+      error: buildBlockedAccountMessage(blocked),
+    };
   }
 
   if (password.length < 6) {
@@ -2198,12 +2261,26 @@ export function loginMember(params: {
   email: string;
   password: string;
   cachedSnapshot?: any;
-}): { success: true; member: SafeMember; token: string } | { success: false; error: string } {
+}):
+  | { success: true; member: SafeMember; token: string }
+  | { success: false; error: string; statusCode?: number; code?: string; blockedReason?: string; blockedEmail?: string } {
   const email = (params.email || '').trim().toLowerCase();
   const password = params.password || '';
 
   if (!email || !password) {
-    return { success: false, error: 'Email and password are required.' };
+    return { success: false, error: 'Email and password are required.', statusCode: 400 };
+  }
+
+  const blocked = getBlockedUserByEmail(email);
+  if (blocked) {
+    return {
+      success: false,
+      statusCode: 403,
+      code: 'ACCOUNT_BLOCKED',
+      blockedEmail: blocked.email,
+      blockedReason: blocked.reason,
+      error: buildBlockedAccountMessage(blocked),
+    };
   }
 
   reconcileAndRestoreMemberByEmail(email, params.cachedSnapshot);
@@ -2211,7 +2288,7 @@ export function loginMember(params: {
   const members = readMembersEnsured();
   const foundIdx = members.findIndex((m) => m.email.toLowerCase() === email);
   if (foundIdx === -1) {
-    return { success: false, error: 'Invalid email or password.' };
+    return { success: false, error: 'Invalid email or password.', statusCode: 401 };
   }
 
   const found = members[foundIdx];
@@ -2227,7 +2304,7 @@ export function loginMember(params: {
       ));
 
   if (!passwordValid && !canAdoptPassword) {
-    return { success: false, error: 'Invalid email or password.' };
+    return { success: false, error: 'Invalid email or password.', statusCode: 401 };
   }
 
   if (canAdoptPassword) {
@@ -2249,10 +2326,24 @@ export function upsertGoogleMember(params: {
   phone?: string;
   referralCode?: string;
   cachedSnapshot?: any;
-}): { success: true; member: SafeMember; token: string } | { success: false; error: string } {
+}):
+  | { success: true; member: SafeMember; token: string }
+  | { success: false; error: string; statusCode?: number; code?: string; blockedReason?: string; blockedEmail?: string } {
   const email = (params.email || '').trim().toLowerCase();
   if (!email || !email.includes('@')) {
-    return { success: false, error: 'Verified Google email is required.' };
+    return { success: false, error: 'Verified Google email is required.', statusCode: 400 };
+  }
+
+  const blocked = getBlockedUserByEmail(email);
+  if (blocked) {
+    return {
+      success: false,
+      statusCode: 403,
+      code: 'ACCOUNT_BLOCKED',
+      blockedEmail: blocked.email,
+      blockedReason: blocked.reason,
+      error: buildBlockedAccountMessage(blocked),
+    };
   }
 
   reconcileAndRestoreMemberByEmail(email, params.cachedSnapshot);
@@ -4774,6 +4865,202 @@ export function deleteMembershipRecordByAdmin(params: {
   };
 }
 
+// --- PERMANENT USER EMAIL BLOCKING & UNBLOCKING ---
+const PROTECTED_ADMIN_EMAILS = new Set(['rexanmedia01@gmail.com', 'partner@feviqo.com']);
+
+export function normalizeBlockedEmail(email?: string | null): string {
+  return String(email || '').trim().toLowerCase();
+}
+
+export function buildBlockedUserDocId(email: string): string {
+  const normalized = normalizeBlockedEmail(email);
+  const digest = crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 24);
+  return `blk-${digest}`;
+}
+
+export function buildBlockedAccountMessage(record?: BlockedUserRecord | null): string {
+  if (record?.reason && record.reason.trim() && record.reason.trim() !== 'Blocked by FEVIQO administrator') {
+    return `This email address (${record.email}) has been permanently blocked from accessing FEVIQO. Reason: ${record.reason.trim()}`;
+  }
+  return 'This email address has been permanently blocked from accessing FEVIQO until an administrator restores access.';
+}
+
+function mirrorBlockedUserServer(record: BlockedUserRecord) {
+  if (!isServerFirestoreEnabled()) return;
+  void mirrorDocToFirestoreServer('blockedUsers', record.id, {
+    id: record.id,
+    email: record.email,
+    memberId: record.memberId || '',
+    fullName: record.fullName || '',
+    reason: record.reason || 'Blocked by FEVIQO administrator',
+    blockedByAdminId: record.blockedByAdminId,
+    blockedByAdminEmail: record.blockedByAdminEmail,
+    blockedAt: record.blockedAt,
+    createdAtIso: record.createdAt,
+    updatedAtIso: record.updatedAt,
+  });
+}
+
+export function listBlockedUsers(): BlockedUserRecord[] {
+  const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
+  return list
+    .filter((item) => item && item.email)
+    .sort((a, b) => Date.parse(b.blockedAt || b.createdAt || '') - Date.parse(a.blockedAt || a.createdAt || ''));
+}
+
+export function getBlockedUserByEmail(email?: string | null): BlockedUserRecord | null {
+  const normalized = normalizeBlockedEmail(email);
+  if (!normalized || !normalized.includes('@')) return null;
+  const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
+  return list.find((item) => normalizeBlockedEmail(item.email) === normalized) || null;
+}
+
+export function getBlockedUserByMemberId(memberId?: string | null): BlockedUserRecord | null {
+  if (!memberId) return null;
+  const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
+  const direct = list.find((item) => item.memberId === memberId);
+  if (direct) return direct;
+  const members = readMembersEnsured();
+  const member = members.find((m) => m.id === memberId);
+  if (!member?.email) return null;
+  return getBlockedUserByEmail(member.email);
+}
+
+export function isEmailBlocked(email?: string | null): boolean {
+  return Boolean(getBlockedUserByEmail(email));
+}
+
+export function blockUserEmailByAdmin(params: {
+  email?: string;
+  memberId?: string;
+  reason?: string;
+  admin: SafeAdmin;
+}):
+  | { success: true; blockedUser: BlockedUserRecord }
+  | { success: false; statusCode: number; error: string } {
+  const members = readMembersEnsured();
+  let targetMember = params.memberId
+    ? members.find((m) => m.id === params.memberId)
+    : undefined;
+
+  const normalizedEmail = normalizeBlockedEmail(params.email || targetMember?.email);
+  if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return {
+      success: false,
+      statusCode: 400,
+      error: 'Please provide a valid email address to block.',
+    };
+  }
+
+  if (!targetMember) {
+    targetMember = members.find((m) => normalizeBlockedEmail(m.email) === normalizedEmail);
+  }
+
+  // Prevent blocking protected or active administrators
+  const activeAdmins = readJson<AdminRecord[]>(ADMINS_FILE, []).filter((a) => a.isActive);
+  if (
+    PROTECTED_ADMIN_EMAILS.has(normalizedEmail) ||
+    normalizeBlockedEmail(params.admin.email) === normalizedEmail ||
+    activeAdmins.some((a) => normalizeBlockedEmail(a.email) === normalizedEmail)
+  ) {
+    return {
+      success: false,
+      statusCode: 400,
+      error: 'Administrator accounts cannot be blocked.',
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  const cleanReason =
+    String(params.reason || '').trim().slice(0, 500) || 'Blocked by FEVIQO administrator';
+  const id = buildBlockedUserDocId(normalizedEmail);
+
+  const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
+  const existingIdx = list.findIndex(
+    (item) => item.id === id || normalizeBlockedEmail(item.email) === normalizedEmail
+  );
+
+  const record: BlockedUserRecord = {
+    id,
+    email: normalizedEmail,
+    memberId: targetMember?.id || (existingIdx >= 0 ? list[existingIdx].memberId : undefined),
+    fullName: targetMember?.fullName || (existingIdx >= 0 ? list[existingIdx].fullName : undefined),
+    reason: cleanReason,
+    blockedByAdminId: params.admin.id,
+    blockedByAdminEmail: params.admin.email,
+    blockedAt: nowIso,
+    createdAt: existingIdx >= 0 ? list[existingIdx].createdAt : nowIso,
+    updatedAt: nowIso,
+  };
+
+  if (existingIdx >= 0) {
+    list[existingIdx] = record;
+  } else {
+    list.unshift(record);
+  }
+  writeJson(BLOCKED_USERS_FILE, list);
+  mirrorBlockedUserServer(record);
+
+  // Immediately revoke any active video playback sessions for all matching member accounts
+  for (const m of members) {
+    if (normalizeBlockedEmail(m.email) === normalizedEmail) {
+      revokePlaybackSessionsForMember(m.id, `Account permanently blocked: ${cleanReason}`);
+    }
+  }
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'user_blocked',
+    targetId: record.id,
+    details: `Permanently blocked email ${normalizedEmail}${targetMember ? ` (${targetMember.fullName})` : ''}. Reason: ${cleanReason}`,
+  });
+
+  return { success: true, blockedUser: record };
+}
+
+export function unblockUserEmailByAdmin(params: {
+  identifier: string;
+  admin: SafeAdmin;
+}):
+  | { success: true; unblockedUser: BlockedUserRecord }
+  | { success: false; statusCode: number; error: string } {
+  const raw = String(params.identifier || '').trim();
+  const normalized = normalizeBlockedEmail(raw);
+  if (!raw) {
+    return { success: false, statusCode: 400, error: 'Missing blocked user identifier.' };
+  }
+
+  const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
+  const idx = list.findIndex(
+    (item) =>
+      item.id === raw ||
+      normalizeBlockedEmail(item.email) === normalized ||
+      (item.memberId && item.memberId === raw)
+  );
+
+  if (idx === -1) {
+    return { success: false, statusCode: 404, error: 'Blocked user record not found.' };
+  }
+
+  const [removed] = list.splice(idx, 1);
+  writeJson(BLOCKED_USERS_FILE, list);
+
+  if (isServerFirestoreEnabled()) {
+    void deleteDocFromFirestoreServer('blockedUsers', removed.id);
+  }
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'user_unblocked',
+    targetId: removed.id,
+    details: `Unblocked email ${removed.email}${removed.fullName ? ` (${removed.fullName})` : ''} and restored website access.`,
+  });
+
+  return { success: true, unblockedUser: removed };
+}
+
 // --- EMAIL NOTIFICATION TRACKING ---
 export function saveEmailNotificationLog(entry: Omit<EmailNotificationLog, 'id' | 'createdAt' | 'lastAttemptAt'>): EmailNotificationLog {
   const logs = readJson<EmailNotificationLog[]>(EMAIL_NOTIFS_FILE, []);
@@ -5336,6 +5623,7 @@ export function mergeCloudSyncSnapshot(payload: {
   campaignCommissions?: Array<any>;
   commissionPayments?: Array<any>;
   monthlyCommissionReports?: Array<any>;
+  blockedUsers?: Array<Partial<BlockedUserRecord>>;
   config?: Partial<MembershipConfig> | null;
 }) {
   const members = readMembersEnsured();
@@ -5603,7 +5891,589 @@ export function mergeCloudSyncSnapshot(payload: {
     monthlyCommissionReports: payload.monthlyCommissionReports,
   });
 
-  return getAdminMembershipsOverview();
+  if (Array.isArray(payload.blockedUsers) && payload.blockedUsers.length > 0) {
+    const existingBlocked = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
+    const byEmail = new Map(existingBlocked.map((b) => [normalizeBlockedEmail(b.email), b]));
+    let changed = false;
+    for (const inc of payload.blockedUsers) {
+      const email = normalizeBlockedEmail(inc?.email);
+      if (!email || !email.includes('@')) continue;
+      if (!byEmail.has(email)) {
+        const nowIso = new Date().toISOString();
+        const rec: BlockedUserRecord = {
+          id: inc.id || buildBlockedUserDocId(email),
+          email,
+          memberId: inc.memberId || undefined,
+          fullName: inc.fullName || undefined,
+          reason: String(inc.reason || 'Blocked by FEVIQO administrator').slice(0, 500),
+          blockedByAdminId: inc.blockedByAdminId || 'admin',
+          blockedByAdminEmail: inc.blockedByAdminEmail || 'rexanmedia01@gmail.com',
+          blockedAt: inc.blockedAt || inc.createdAt || nowIso,
+          createdAt: inc.createdAt || inc.blockedAt || nowIso,
+          updatedAt: inc.updatedAt || inc.blockedAt || nowIso,
+        };
+        existingBlocked.push(rec);
+        byEmail.set(email, rec);
+        changed = true;
+      }
+    }
+    if (changed) {
+      writeJson(BLOCKED_USERS_FILE, existingBlocked);
+    }
+  }
+
+  const recovery = reconcileAndRecoverMissingMemberships();
+  return {
+    ...getAdminMembershipsOverview(),
+    lastRecovery: recovery,
+  };
+}
+
+export interface RecoveredMembershipSummary {
+  membershipId: string;
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  planId: MembershipPlanId;
+  planName: string;
+  status: MembershipStatus;
+  activatedAt: string;
+  expiresAt: string;
+  source: 'approved_order' | 'history_entry' | 'customer_notification' | 'renewal_reapplied';
+}
+
+export interface PendingBigPlanOrderDiagnostic {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  planId: MembershipPlanId;
+  planName: string;
+  status: string;
+  amountPkr: number;
+  amountUsd?: number;
+  currency: PaymentCurrency;
+  createdAt: string;
+}
+
+export interface MembershipRecoveryReport {
+  recoveredCount: number;
+  recoveredActiveCount: number;
+  relinkedMembersCount: number;
+  recoveredMemberships: RecoveredMembershipSummary[];
+  pendingBigPlanOrders: PendingBigPlanOrderDiagnostic[];
+  totalActiveMemberships: number;
+  totalMemberships: number;
+  totalOrders: number;
+  totalMembers: number;
+}
+
+function parseIsoOrUtcDateFromText(text?: string): string | null {
+  if (!text) return null;
+  const isoMatch = text.match(/(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)/);
+  if (isoMatch) {
+    const ms = Date.parse(isoMatch[1]);
+    if (!Number.isNaN(ms)) return new Date(ms).toISOString();
+  }
+  const utcMatch = text.match(/until\s+([A-Z][a-z]{2},\s+\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}\s+\d{2}:\d{2}:\d{2}\s+GMT)/i);
+  if (utcMatch) {
+    const ms = Date.parse(utcMatch[1]);
+    if (!Number.isNaN(ms)) return new Date(ms).toISOString();
+  }
+  return null;
+}
+
+function inferPlanIdFromText(rawPlanId?: string, text?: string): MembershipPlanId {
+  const lower = String(rawPlanId || '').trim().toLowerCase();
+  if (lower === 'vip' || lower === 'plus' || lower === 'standard' || lower === 'starter') {
+    return lower;
+  }
+  const blob = String(text || '').toLowerCase();
+  if (blob.includes('vip')) return 'vip';
+  if (blob.includes('plus')) return 'plus';
+  if (blob.includes('standard')) return 'standard';
+  return 'starter';
+}
+
+export function reconcileAndRecoverMissingMemberships(): MembershipRecoveryReport {
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  const resolvedPlans = getResolvedPlans();
+  const planById = new Map(resolvedPlans.map((p) => [p.id, p]));
+  const vipDramaIds = MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id);
+
+  const members = readMembersEnsured();
+  const memberById = new Map(members.map((m) => [m.id, m]));
+  const memberByEmail = new Map(members.map((m) => [m.email.toLowerCase(), m]));
+  const takenCodes = new Set<string>(
+    members.map((m) => (m.referralCode || '').toUpperCase()).filter(Boolean)
+  );
+  let membersChanged = false;
+  let relinkedMembersCount = 0;
+
+  const ensureMemberExists = (info: {
+    memberId?: string;
+    ownerUid?: string;
+    email?: string;
+    fullName?: string;
+    phone?: string;
+    createdAt?: string;
+  }): MemberRecord | null => {
+    const cleanEmail = String(info.email || '').trim().toLowerCase();
+    const byId = info.memberId ? memberById.get(info.memberId) : undefined;
+    if (byId) return byId;
+    const byEmail = cleanEmail && cleanEmail.includes('@') ? memberByEmail.get(cleanEmail) : undefined;
+    if (byEmail) {
+      if (info.memberId && !memberById.has(info.memberId)) {
+        memberById.set(info.memberId, byEmail);
+      }
+      return byEmail;
+    }
+    if (!info.memberId && (!cleanEmail || !cleanEmail.includes('@'))) return null;
+    const id = info.memberId || `mem-rec-${crypto.randomBytes(4).toString('hex')}`;
+    const email = cleanEmail && cleanEmail.includes('@') ? cleanEmail : `${id}@member.feviqo.com`;
+    const fullName = String(info.fullName || '').trim() || email.split('@')[0] || 'FEVIQO Member';
+    const created: MemberRecord = {
+      id,
+      ownerUid: info.ownerUid || 'admin_assigned',
+      email,
+      fullName,
+      phone: String(info.phone || '').trim(),
+      phoneNormalized: normalizePhoneCanonical(info.phone) || undefined,
+      passwordHash: hashMemberPassword(crypto.randomBytes(16).toString('hex')),
+      referralCode: generateUniqueReferralCode(fullName, takenCodes),
+      creditBalancePkr: 0,
+      creditBalanceUsd: 0,
+      createdAt: info.createdAt || nowIso,
+      updatedAt: nowIso,
+    };
+    members.push(created);
+    memberById.set(created.id, created);
+    memberByEmail.set(created.email, created);
+    membersChanged = true;
+    relinkedMembersCount += 1;
+    return created;
+  };
+
+  const orders = readAllOrders();
+  const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []);
+  const notifications = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+
+  // Ensure every order & existing membership has a linked member record
+  for (const ord of orders) {
+    ensureMemberExists({
+      memberId: ord.memberId,
+      ownerUid: ord.ownerUid,
+      email: ord.customerEmail,
+      fullName: ord.customerName,
+      phone: ord.customerPhone,
+      createdAt: ord.createdAt,
+    });
+  }
+  for (const sub of memberships) {
+    const linked = ensureMemberExists({
+      memberId: sub.memberId,
+      ownerUid: sub.ownerUid,
+      email: sub.customerEmail,
+      fullName: sub.customerName,
+      phone: sub.customerPhone,
+      createdAt: sub.createdAt,
+    });
+    if (linked) {
+      if (!sub.customerEmail && linked.email) sub.customerEmail = linked.email;
+      if (!sub.customerName && linked.fullName) sub.customerName = linked.fullName;
+      if (!sub.customerPhone && linked.phone) sub.customerPhone = linked.phone;
+    }
+  }
+
+  // Track explicitly deleted or revoked membershipIds/orderIds so we never resurrect intentional revocations
+  const intentionallyRemovedMembershipIds = new Set<string>();
+  const intentionallyRemovedOrderIds = new Set<string>();
+  const originalMembershipIdByOrderId = new Map<string, string>();
+
+  for (const h of history) {
+    if (h.orderId && h.membershipId && !originalMembershipIdByOrderId.has(h.orderId)) {
+      originalMembershipIdByOrderId.set(h.orderId, h.membershipId);
+    }
+    const ev = String(h.event || '').toLowerCase();
+    if (ev.includes('deleted') || ev.includes('revoked') || ev.includes('cancelled')) {
+      if (h.membershipId) intentionallyRemovedMembershipIds.add(h.membershipId);
+      if (h.orderId) intentionallyRemovedOrderIds.add(h.orderId);
+    }
+  }
+  for (const n of notifications) {
+    if (n.orderId && n.membershipId && !originalMembershipIdByOrderId.has(n.orderId)) {
+      originalMembershipIdByOrderId.set(n.orderId, n.membershipId);
+    }
+  }
+
+  const subById = new Map(memberships.map((s) => [s.id, s]));
+  const coveredOrderIds = new Set<string>();
+  for (const sub of memberships) {
+    if (sub.orderId) coveredOrderIds.add(sub.orderId);
+    for (const r of sub.renewalHistory || []) {
+      if (r?.orderId) coveredOrderIds.add(r.orderId);
+    }
+  }
+
+  const recoveredMemberships: RecoveredMembershipSummary[] = [];
+  let membershipsChanged = false;
+
+  // Step 1: Reconstruct missing memberships from ALL approved orders (oldest -> newest)
+  const approvedOrdersChrono = [...orders]
+    .filter((o) => o.status === 'approved')
+    .sort((a, b) => {
+      const ta = Date.parse(a.paidAt || a.reviewedAt || a.updatedAt || a.createdAt || '') || 0;
+      const tb = Date.parse(b.paidAt || b.reviewedAt || b.updatedAt || b.createdAt || '') || 0;
+      return ta - tb;
+    });
+
+  for (const ord of approvedOrdersChrono) {
+    if (coveredOrderIds.has(ord.id)) continue;
+    if (intentionallyRemovedOrderIds.has(ord.id)) continue;
+
+    const linkedMember =
+      memberById.get(ord.memberId) ||
+      (ord.customerEmail ? memberByEmail.get(ord.customerEmail.toLowerCase()) : undefined);
+    const plan = planById.get(ord.planId) || getPlanById(ord.planId) || resolvedPlans[0];
+    const durationDays = Math.max(1, Number(ord.durationDays) || plan.durationDays || 30);
+    const durationMs = durationDays * 24 * 60 * 60 * 1000;
+    const activatedIso = ord.paidAt || ord.reviewedAt || ord.updatedAt || ord.createdAt || nowIso;
+    const activatedMs = Date.parse(activatedIso) || nowMs;
+    const selectedDramaIds =
+      plan.dramaLimit === 'all' || ord.planId === 'vip'
+        ? vipDramaIds
+        : Array.isArray(ord.selectedDramaIds) && ord.selectedDramaIds.length > 0
+          ? ord.selectedDramaIds
+          : ['teskilat'];
+
+    // If this was a renewal order targeting an existing membership, re-apply extension
+    if (ord.orderType === 'renewal' && ord.targetMembershipId && subById.has(ord.targetMembershipId)) {
+      const target = subById.get(ord.targetMembershipId)!;
+      const prevExpMs = Date.parse(target.expiresAt) || activatedMs;
+      const baseMs = prevExpMs > activatedMs ? prevExpMs : activatedMs;
+      const newExpIso = new Date(baseMs + durationMs).toISOString();
+      target.expiresAt = newExpIso;
+      target.status = Date.parse(newExpIso) > nowMs ? 'active' : 'expired';
+      target.orderId = ord.id;
+      target.planId = plan.id;
+      target.planName = plan.name;
+      target.selectedDramaIds = selectedDramaIds;
+      target.renewalHistory = [
+        ...(target.renewalHistory || []),
+        {
+          id: `ren-rec-${ord.id}`,
+          orderId: ord.id,
+          renewedAt: activatedIso,
+          previousExpiresAt: new Date(prevExpMs).toISOString(),
+          newExpiresAt: newExpIso,
+          addedDays: durationDays,
+          planId: plan.id,
+          planName: plan.name,
+          paymentMethod: ord.paymentMethod || 'bank_qr',
+          currency: ord.currency || 'PKR',
+          amount: ord.currency === 'USD' ? Number(ord.amountUsd ?? plan.priceUsd) : Number(ord.amountPkr ?? plan.pricePkr),
+          approvedByAdminEmail: ord.reviewedByAdminEmail || 'rexanmedia01@gmail.com',
+          note: 'Recovered renewal from verified approved order',
+        },
+      ];
+      coveredOrderIds.add(ord.id);
+      membershipsChanged = true;
+      mirrorMembershipServer(target);
+      recoveredMemberships.push({
+        membershipId: target.id,
+        orderId: ord.id,
+        customerName: target.customerName || linkedMember?.fullName || ord.customerName || 'FEVIQO Member',
+        customerEmail: target.customerEmail || linkedMember?.email || ord.customerEmail || '',
+        planId: plan.id,
+        planName: plan.name,
+        status: target.status,
+        activatedAt: target.activatedAt,
+        expiresAt: target.expiresAt,
+        source: 'renewal_reapplied',
+      });
+      continue;
+    }
+
+    const preferredId = originalMembershipIdByOrderId.get(ord.id);
+    if (preferredId && intentionallyRemovedMembershipIds.has(preferredId)) continue;
+    const recoveredId =
+      preferredId && !subById.has(preferredId)
+        ? preferredId
+        : `sub-rec-${ord.id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 96)}`;
+    if (subById.has(recoveredId)) {
+      coveredOrderIds.add(ord.id);
+      continue;
+    }
+
+    const expiresAtIso = new Date(activatedMs + durationMs).toISOString();
+    const status: MembershipStatus = Date.parse(expiresAtIso) > nowMs ? 'active' : 'expired';
+    const paymentCurrency: PaymentCurrency = ord.currency === 'USD' ? 'USD' : 'PKR';
+    const paymentRegion: PaymentRegion = ord.paymentRegion === 'international' ? 'international' : 'pakistan';
+    const paymentMethod: PaymentMethod = ord.paymentMethod || (paymentRegion === 'international' ? 'binance_qr' : 'bank_qr');
+
+    const rebuilt: MembershipRecord = {
+      id: recoveredId,
+      memberId: linkedMember?.id || ord.memberId,
+      ownerUid: ord.ownerUid || linkedMember?.ownerUid || 'admin_assigned',
+      customerName: ord.customerName || linkedMember?.fullName || 'FEVIQO Member',
+      customerEmail: ord.customerEmail || linkedMember?.email || '',
+      customerPhone: ord.customerPhone || linkedMember?.phone || '',
+      orderId: ord.id,
+      planId: plan.id,
+      planName: ord.planName || plan.name,
+      pricePkr: Number(ord.amountPkr ?? plan.pricePkr) || 0,
+      priceUsd: ord.amountUsd ?? plan.priceUsd,
+      originalAmountPkr: ord.originalAmountPkr ?? plan.pricePkr,
+      originalAmountUsd: ord.originalAmountUsd ?? plan.priceUsd,
+      promoCode: ord.promoCode,
+      promoDiscountPkr: ord.promoDiscountPkr,
+      promoDiscountUsd: ord.promoDiscountUsd,
+      referralDiscountPkr: ord.referralDiscountPkr,
+      referralDiscountUsd: ord.referralDiscountUsd,
+      creditsUsedPkr: ord.creditsUsedPkr,
+      creditsUsedUsd: ord.creditsUsedUsd,
+      discountTotalPkr: ord.discountTotalPkr,
+      discountTotalUsd: ord.discountTotalUsd,
+      durationDays,
+      selectedDramaIds,
+      status,
+      activatedAt: activatedIso,
+      expiresAt: expiresAtIso,
+      approvedByAdminEmail: ord.reviewedByAdminEmail || 'rexanmedia01@gmail.com',
+      paymentProvider: ord.provider || paymentMethod,
+      paymentRegion,
+      paymentMethod,
+      currency: paymentCurrency,
+      expectedAmount:
+        ord.expectedAmount ?? (paymentCurrency === 'USD' ? Number(ord.amountUsd ?? plan.priceUsd) : Number(ord.amountPkr ?? plan.pricePkr)),
+      paymentReference: ord.paymentNote || ord.id,
+      renewalHistory: [],
+      createdAt: activatedIso,
+    };
+
+    memberships.unshift(rebuilt);
+    subById.set(rebuilt.id, rebuilt);
+    coveredOrderIds.add(ord.id);
+    membershipsChanged = true;
+    mirrorMembershipServer(rebuilt);
+
+    recoveredMemberships.push({
+      membershipId: rebuilt.id,
+      orderId: rebuilt.orderId,
+      customerName: rebuilt.customerName || 'FEVIQO Member',
+      customerEmail: rebuilt.customerEmail || '',
+      planId: rebuilt.planId,
+      planName: rebuilt.planName,
+      status: rebuilt.status,
+      activatedAt: rebuilt.activatedAt,
+      expiresAt: rebuilt.expiresAt,
+      source: 'approved_order',
+    });
+  }
+
+  // Step 2: Reconstruct any remaining missing memberships evidenced by membershipHistory
+  const orderById = new Map(orders.map((o) => [o.id, o]));
+  const recoveryHistoryEvents = new Set([
+    'payment_approved',
+    'membership_activated',
+    'membership_renewed',
+    'membership_extended',
+    'membership_assigned',
+  ]);
+  for (const h of history) {
+    if (!recoveryHistoryEvents.has(h.event)) continue;
+    const subId = h.membershipId;
+    if (!subId || subById.has(subId) || intentionallyRemovedMembershipIds.has(subId)) continue;
+    if (h.orderId && (coveredOrderIds.has(h.orderId) || intentionallyRemovedOrderIds.has(h.orderId))) continue;
+
+    const linkedOrder = h.orderId ? orderById.get(h.orderId) : undefined;
+    const linkedMember = memberById.get(h.memberId);
+    const planId = inferPlanIdFromText(h.planId || linkedOrder?.planId, `${h.planName || ''} ${h.details || ''}`);
+    const plan = planById.get(planId) || getPlanById(planId) || resolvedPlans[0];
+    const durationDays = Math.max(1, Number(linkedOrder?.durationDays) || plan.durationDays || 30);
+    const activatedIso = h.createdAt || linkedOrder?.paidAt || nowIso;
+    const activatedMs = Date.parse(activatedIso) || nowMs;
+    const parsedExp = parseIsoOrUtcDateFromText(h.details);
+    const expiresAtIso = parsedExp || new Date(activatedMs + durationDays * 24 * 60 * 60 * 1000).toISOString();
+    const status: MembershipStatus = Date.parse(expiresAtIso) > nowMs ? 'active' : 'expired';
+    const selectedDramaIds =
+      planId === 'vip'
+        ? vipDramaIds
+        : Array.isArray(h.selectedDramaIds) && h.selectedDramaIds.length > 0
+          ? h.selectedDramaIds
+          : Array.isArray(linkedOrder?.selectedDramaIds) && linkedOrder.selectedDramaIds.length > 0
+            ? linkedOrder.selectedDramaIds
+            : ['teskilat'];
+
+    const rebuilt: MembershipRecord = {
+      id: subId,
+      memberId: linkedMember?.id || h.memberId,
+      ownerUid: linkedOrder?.ownerUid || linkedMember?.ownerUid || 'admin_assigned',
+      customerName: linkedOrder?.customerName || linkedMember?.fullName || 'FEVIQO Member',
+      customerEmail: linkedOrder?.customerEmail || linkedMember?.email || '',
+      customerPhone: linkedOrder?.customerPhone || linkedMember?.phone || '',
+      orderId: h.orderId || `ord-rec-${subId}`,
+      planId: plan.id,
+      planName: h.planName || plan.name,
+      pricePkr: Number(h.amountPkr ?? linkedOrder?.amountPkr ?? plan.pricePkr) || 0,
+      priceUsd: h.amountUsd ?? linkedOrder?.amountUsd ?? plan.priceUsd,
+      durationDays,
+      selectedDramaIds,
+      status,
+      activatedAt: activatedIso,
+      expiresAt: expiresAtIso,
+      approvedByAdminEmail: linkedOrder?.reviewedByAdminEmail || 'rexanmedia01@gmail.com',
+      paymentProvider: linkedOrder?.provider || 'bank_qr',
+      paymentRegion: linkedOrder?.paymentRegion || 'pakistan',
+      paymentMethod: linkedOrder?.paymentMethod || 'bank_qr',
+      currency: h.currency || linkedOrder?.currency || 'PKR',
+      expectedAmount:
+        linkedOrder?.expectedAmount ?? (h.currency === 'USD' ? Number(h.amountUsd ?? plan.priceUsd) : Number(h.amountPkr ?? plan.pricePkr)),
+      paymentReference: h.orderId || subId,
+      renewalHistory: [],
+      createdAt: activatedIso,
+    };
+
+    memberships.unshift(rebuilt);
+    subById.set(rebuilt.id, rebuilt);
+    if (h.orderId) coveredOrderIds.add(h.orderId);
+    membershipsChanged = true;
+    mirrorMembershipServer(rebuilt);
+
+    recoveredMemberships.push({
+      membershipId: rebuilt.id,
+      orderId: rebuilt.orderId,
+      customerName: rebuilt.customerName || 'FEVIQO Member',
+      customerEmail: rebuilt.customerEmail || '',
+      planId: rebuilt.planId,
+      planName: rebuilt.planName,
+      status: rebuilt.status,
+      activatedAt: rebuilt.activatedAt,
+      expiresAt: rebuilt.expiresAt,
+      source: 'history_entry',
+    });
+  }
+
+  // Step 3: Reconstruct any remaining missing memberships evidenced by customer notifications
+  const recoveryNotifTypes = new Set(['membership_approved', 'membership_renewed', 'membership_extended']);
+  for (const n of notifications) {
+    if (!recoveryNotifTypes.has(n.type)) continue;
+    const subId = n.membershipId;
+    if (!subId || subById.has(subId) || intentionallyRemovedMembershipIds.has(subId)) continue;
+    if (n.orderId && (coveredOrderIds.has(n.orderId) || intentionallyRemovedOrderIds.has(n.orderId))) continue;
+
+    const linkedOrder = n.orderId ? orderById.get(n.orderId) : undefined;
+    const linkedMember =
+      memberById.get(n.memberId) ||
+      (n.customerEmail ? memberByEmail.get(n.customerEmail.toLowerCase()) : undefined);
+    const planId = inferPlanIdFromText(n.planId || linkedOrder?.planId, `${n.title || ''} ${n.message || ''}`);
+    const plan = planById.get(planId) || getPlanById(planId) || resolvedPlans[0];
+    const durationDays = Math.max(1, Number(linkedOrder?.durationDays) || plan.durationDays || 30);
+    const activatedIso = n.createdAt || nowIso;
+    const activatedMs = Date.parse(activatedIso) || nowMs;
+    const parsedExp = parseIsoOrUtcDateFromText(n.message) || parseIsoOrUtcDateFromText(n.dedupeKey);
+    const expiresAtIso = parsedExp || new Date(activatedMs + durationDays * 24 * 60 * 60 * 1000).toISOString();
+    const status: MembershipStatus = Date.parse(expiresAtIso) > nowMs ? 'active' : 'expired';
+    const selectedDramaIds =
+      planId === 'vip'
+        ? vipDramaIds
+        : Array.isArray(n.dramaIds) && n.dramaIds.length > 0
+          ? n.dramaIds
+          : ['teskilat'];
+
+    const rebuilt: MembershipRecord = {
+      id: subId,
+      memberId: linkedMember?.id || n.memberId,
+      ownerUid: n.ownerUid || linkedMember?.ownerUid || 'admin_assigned',
+      customerName: linkedOrder?.customerName || linkedMember?.fullName || 'FEVIQO Member',
+      customerEmail: n.customerEmail || linkedOrder?.customerEmail || linkedMember?.email || '',
+      customerPhone: linkedOrder?.customerPhone || linkedMember?.phone || '',
+      orderId: n.orderId || `ord-rec-${subId}`,
+      planId: plan.id,
+      planName: plan.name,
+      pricePkr: Number(linkedOrder?.amountPkr ?? plan.pricePkr) || 0,
+      priceUsd: linkedOrder?.amountUsd ?? plan.priceUsd,
+      durationDays,
+      selectedDramaIds,
+      status,
+      activatedAt: activatedIso,
+      expiresAt: expiresAtIso,
+      approvedByAdminEmail: linkedOrder?.reviewedByAdminEmail || 'rexanmedia01@gmail.com',
+      paymentProvider: linkedOrder?.provider || 'bank_qr',
+      paymentRegion: linkedOrder?.paymentRegion || 'pakistan',
+      paymentMethod: linkedOrder?.paymentMethod || 'bank_qr',
+      currency: linkedOrder?.currency || 'PKR',
+      expectedAmount: linkedOrder?.expectedAmount ?? plan.pricePkr,
+      paymentReference: n.orderId || subId,
+      renewalHistory: [],
+      createdAt: activatedIso,
+    };
+
+    memberships.unshift(rebuilt);
+    subById.set(rebuilt.id, rebuilt);
+    if (n.orderId) coveredOrderIds.add(n.orderId);
+    membershipsChanged = true;
+    mirrorMembershipServer(rebuilt);
+
+    recoveredMemberships.push({
+      membershipId: rebuilt.id,
+      orderId: rebuilt.orderId,
+      customerName: rebuilt.customerName || 'FEVIQO Member',
+      customerEmail: rebuilt.customerEmail || '',
+      planId: rebuilt.planId,
+      planName: rebuilt.planName,
+      status: rebuilt.status,
+      activatedAt: rebuilt.activatedAt,
+      expiresAt: rebuilt.expiresAt,
+      source: 'customer_notification',
+    });
+  }
+
+  if (membersChanged) {
+    writeJson(MEMBERS_FILE, members);
+  }
+  if (membershipsChanged) {
+    writeJson(
+      MEMBERSHIPS_FILE,
+      Array.from(subById.values()).sort((a, b) => Date.parse(b.activatedAt) - Date.parse(a.activatedAt))
+    );
+  }
+
+  const syncedSubs = syncMemberSubscriptions();
+  const pendingBigPlanOrders: PendingBigPlanOrderDiagnostic[] = orders
+    .filter(
+      (o) =>
+        (o.planId === 'vip' || o.planId === 'plus') &&
+        (o.status === 'pending_verification' || o.status === 'awaiting_payment')
+    )
+    .map((o) => {
+      const m = memberById.get(o.memberId);
+      return {
+        orderId: o.id,
+        customerName: o.customerName || m?.fullName || 'Unknown',
+        customerEmail: o.customerEmail || m?.email || 'Unknown',
+        planId: o.planId,
+        planName: o.planName || o.planId,
+        status: o.status,
+        amountPkr: Number(o.amountPkr) || 0,
+        amountUsd: o.amountUsd,
+        currency: o.currency || 'PKR',
+        createdAt: o.createdAt,
+      };
+    });
+
+  return {
+    recoveredCount: recoveredMemberships.length,
+    recoveredActiveCount: recoveredMemberships.filter((r) => r.status === 'active').length,
+    relinkedMembersCount,
+    recoveredMemberships,
+    pendingBigPlanOrders,
+    totalActiveMemberships: syncedSubs.filter((s) => s.status === 'active').length,
+    totalMemberships: syncedSubs.length,
+    totalOrders: orders.length,
+    totalMembers: members.length,
+  };
 }
 
 // --- ADMIN OVERVIEW DASHBOARD DATA ---
@@ -5685,8 +6555,11 @@ export function getAdminMembershipsOverview() {
     referrals.reduce((sum, r) => sum + (Number(r.rewardAmountUsd) || 0), 0).toFixed(2)
   );
 
+  const blockedUsers = listBlockedUsers();
+
   const metrics = {
     totalMembers: members.length,
+    blockedUsers: blockedUsers.length,
     activeMemberships: enrichedMemberships.filter((m) => m.status === 'active').length,
     pendingVerifications: orders.filter((o) => o.status === 'pending_verification').length,
     awaitingPayments: orders.filter((o) => o.status === 'awaiting_payment').length,
@@ -5718,6 +6591,7 @@ export function getAdminMembershipsOverview() {
   return {
     metrics,
     members,
+    blockedUsers,
     requests: orders,
     memberships: enrichedMemberships,
     history,
@@ -5758,6 +6632,7 @@ export async function syncServerFirestoreSnapshot(): Promise<ReturnType<typeof g
     for (const p of overview.promoCodes) mirrorPromoCodeServer(p);
     for (const r of overview.referrals) mirrorReferralServer(r);
     for (const c of overview.creditLedger) mirrorCreditEntryServer(c);
+    for (const b of overview.blockedUsers) mirrorBlockedUserServer(b);
     mirrorConfigServer(overview.config);
     syncCampaignDocsToFirestore();
     return overview;
@@ -5828,6 +6703,7 @@ export function authorizeEpisodePlayback(params: {
       statusCode: number;
       code:
         | 'UNAUTHENTICATED'
+        | 'ACCOUNT_BLOCKED'
         | 'PHONE_REQUIRED'
         | 'NO_ACTIVE_MEMBERSHIP'
         | 'MEMBERSHIP_CANCELLED'
@@ -5866,6 +6742,16 @@ export function authorizeEpisodePlayback(params: {
       statusCode: 401,
       code: 'UNAUTHENTICATED',
       error: 'Sign in with your FEVIQO member account to watch protected episodes.',
+    };
+  }
+
+  const blockedRecord = getBlockedUserByMemberId(params.memberId);
+  if (blockedRecord) {
+    return {
+      authorized: false,
+      statusCode: 403,
+      code: 'ACCOUNT_BLOCKED',
+      error: buildBlockedAccountMessage(blockedRecord),
     };
   }
 

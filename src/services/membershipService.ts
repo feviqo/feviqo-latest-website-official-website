@@ -19,7 +19,30 @@ export interface SafeMember {
   referredByCode?: string;
   creditBalancePkr?: number;
   creditBalanceUsd?: number;
+  isBlocked?: boolean;
+  blockedAt?: string;
+  blockedReason?: string;
+  blockedByAdminEmail?: string;
   createdAt: string;
+}
+
+export interface BlockedUserRecord {
+  id: string;
+  email: string;
+  memberId?: string;
+  fullName?: string;
+  reason: string;
+  blockedByAdminId: string;
+  blockedByAdminEmail: string;
+  blockedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountBlockedDetail {
+  email?: string;
+  reason?: string;
+  error: string;
 }
 
 export interface RenewalHistoryEntry {
@@ -538,8 +561,10 @@ export interface AdminMembershipsOverview {
     totalDiscountGivenUsd?: number;
     totalReferralRewardsPkr?: number;
     totalReferralRewardsUsd?: number;
+    blockedUsers?: number;
   };
   members: SafeMember[];
+  blockedUsers?: BlockedUserRecord[];
   requests: MembershipOrder[];
   memberships: AdminMembershipRecord[];
   history?: MembershipHistoryEntry[];
@@ -773,6 +798,30 @@ async function parseJsonSafe(res: Response) {
   }
 }
 
+export function notifyAccountBlocked(detail: AccountBlockedDetail): void {
+  writeStoredToken(MEMBER_TOKEN_KEY, null);
+  try {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('feviqo-account-blocked', { detail }));
+    }
+  } catch {}
+}
+
+function handleBlockedResponseIfNeeded(res: Response, data: any): boolean {
+  if (data?.code === 'ACCOUNT_BLOCKED' || (res.status === 403 && data?.blocked)) {
+    notifyAccountBlocked({
+      email: typeof data?.email === 'string' ? data.email : undefined,
+      reason: typeof data?.reason === 'string' ? data.reason : undefined,
+      error:
+        typeof data?.error === 'string' && data.error.trim()
+          ? data.error
+          : 'This email address has been permanently blocked from accessing FEVIQO until an administrator restores access.',
+    });
+    return true;
+  }
+  return false;
+}
+
 export async function fetchMembershipGeo(countryOverride?: string): Promise<{
   success: boolean;
   geo?: GeoPricingInfo;
@@ -868,8 +917,40 @@ export function getCachedMemberSnapshotForEmail(
   return undefined;
 }
 
+export async function checkMemberAccessStatus(idToken?: string): Promise<{
+  success: boolean;
+  blocked: boolean;
+  code?: string;
+  email?: string;
+  reason?: string;
+  error?: string;
+}> {
+  try {
+    const res = await fetch('/api/membership/check-access', {
+      method: 'POST',
+      credentials: 'include',
+      headers: memberHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(idToken ? { idToken } : {}),
+    });
+    const data = await parseJsonSafe(res);
+    if (handleBlockedResponseIfNeeded(res, data)) {
+      return {
+        success: false,
+        blocked: true,
+        code: 'ACCOUNT_BLOCKED',
+        email: data?.email,
+        reason: data?.reason,
+        error: data?.error,
+      };
+    }
+    return { success: true, blocked: false };
+  } catch {
+    return { success: true, blocked: false };
+  }
+}
+
 export async function fetchMemberAccount(): Promise<
-  ({ success: true } & MemberAccountState) | { success: false; code?: string; error?: string }
+  ({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; email?: string; reason?: string; error?: string }
 > {
   const hadToken = Boolean(getMemberToken());
   const res = await fetch('/api/membership/account', {
@@ -877,6 +958,10 @@ export async function fetchMemberAccount(): Promise<
     headers: memberHeaders(),
   });
   const data = await parseJsonSafe(res);
+
+  if (handleBlockedResponseIfNeeded(res, data)) {
+    return data;
+  }
 
   // If the server restarted while the user had an active token/session, or if the user's cached snapshot has subscriptions that the fresh server lacks, restore automatically
   const latestCached = getCachedMemberSnapshotForEmail(data?.member?.email);
@@ -895,15 +980,16 @@ export async function fetchMemberAccount(): Promise<
         headers: memberHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ cachedSnapshot: latestCached }),
       });
-      if (restoreRes.ok) {
-        const restoredData = await parseJsonSafe(restoreRes);
-        if (restoredData?.success) {
-          if (restoredData.token) {
-            writeStoredToken(MEMBER_TOKEN_KEY, restoredData.token);
-          }
-          saveCachedMemberAccountState(restoredData);
-          return restoredData;
+      const restoredData = await parseJsonSafe(restoreRes);
+      if (handleBlockedResponseIfNeeded(restoreRes, restoredData)) {
+        return restoredData;
+      }
+      if (restoreRes.ok && restoredData?.success) {
+        if (restoredData.token) {
+          writeStoredToken(MEMBER_TOKEN_KEY, restoredData.token);
         }
+        saveCachedMemberAccountState(restoredData);
+        return restoredData;
       }
     } catch {}
   }
@@ -924,7 +1010,7 @@ export async function registerMemberAccount(payload: {
   confirmPassword: string;
   referralCode?: string;
 }): Promise<
-  ({ success: true } & MemberAccountState) | { success: false; error: string }
+  ({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; email?: string; reason?: string; error: string }
 > {
   const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
   const cachedSnapshot = getCachedMemberSnapshotForEmail(payload.email);
@@ -941,6 +1027,9 @@ export async function registerMemberAccount(payload: {
     }),
   });
   const data = await parseJsonSafe(res);
+  if (handleBlockedResponseIfNeeded(res, data)) {
+    return data;
+  }
   if (data?.success && data?.token) {
     writeStoredToken(MEMBER_TOKEN_KEY, data.token);
     saveCachedMemberAccountState(data);
@@ -953,7 +1042,7 @@ export async function loginMemberAccount(payload: {
   email: string;
   password: string;
 }): Promise<
-  ({ success: true } & MemberAccountState) | { success: false; error: string }
+  ({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; email?: string; reason?: string; error: string }
 > {
   const cachedSnapshot = getCachedMemberSnapshotForEmail(payload.email);
   const res = await fetch('/api/membership/login', {
@@ -966,6 +1055,9 @@ export async function loginMemberAccount(payload: {
     }),
   });
   const data = await parseJsonSafe(res);
+  if (handleBlockedResponseIfNeeded(res, data)) {
+    return data;
+  }
   if (data?.success && data?.token) {
     writeStoredToken(MEMBER_TOKEN_KEY, data.token);
     saveCachedMemberAccountState(data);
@@ -980,7 +1072,7 @@ export async function authenticateMemberWithGoogle(payload: {
   referralCode?: string;
   email?: string;
 }): Promise<
-  ({ success: true } & MemberAccountState) | { success: false; error: string }
+  ({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; email?: string; reason?: string; error: string }
 > {
   const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
   const cachedSnapshot = getCachedMemberSnapshotForEmail(payload.email);
@@ -997,6 +1089,9 @@ export async function authenticateMemberWithGoogle(payload: {
     }),
   });
   const data = await parseJsonSafe(res);
+  if (handleBlockedResponseIfNeeded(res, data)) {
+    return data;
+  }
   if (data?.success && data?.token) {
     writeStoredToken(MEMBER_TOKEN_KEY, data.token);
     saveCachedMemberAccountState(data);
@@ -1007,7 +1102,7 @@ export async function authenticateMemberWithGoogle(payload: {
 export async function updateMemberPhone(
   phone: string,
   referralCode?: string
-): Promise<({ success: true } & MemberAccountState) | { success: false; error: string }> {
+): Promise<({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; error: string }> {
   const ref = normalizeReferralInput(referralCode) || getStoredReferralCode();
   const res = await fetch('/api/membership/profile/phone', {
     method: 'POST',
@@ -1016,6 +1111,9 @@ export async function updateMemberPhone(
     body: JSON.stringify({ phone, referralCode: ref || undefined }),
   });
   const data = await parseJsonSafe(res);
+  if (handleBlockedResponseIfNeeded(res, data)) {
+    return data;
+  }
   if (data?.success) {
     saveCachedMemberAccountState(data);
     if (ref) {
@@ -1087,6 +1185,9 @@ export async function createMembershipCheckout(payload: {
     }),
   });
   const data = await parseJsonSafe(res);
+  if (handleBlockedResponseIfNeeded(res, data)) {
+    return data;
+  }
   if (data?.account) {
     saveCachedMemberAccountState(data.account);
   }
@@ -1243,7 +1344,9 @@ export async function requestProtectedEpisodeStream(
       headers: memberHeaders(),
     }
   );
-  return parseJsonSafe(res);
+  const data = await parseJsonSafe(res);
+  handleBlockedResponseIfNeeded(res, data);
+  return data;
 }
 
 export async function sendPlaybackHeartbeat(
@@ -1268,6 +1371,7 @@ export async function sendPlaybackHeartbeat(
       }
     );
     const data = await parseJsonSafe(res);
+    handleBlockedResponseIfNeeded(res, data);
     if (!res.ok) {
       return {
         success: false,
@@ -1647,6 +1751,7 @@ export async function retryCustomerNotificationEmail(
 
 export async function syncAdminCloudState(snapshot: {
   members?: SafeMember[];
+  blockedUsers?: BlockedUserRecord[];
   orders?: MembershipOrder[];
   memberships?: AdminMembershipRecord[];
   history?: MembershipHistoryEntry[];
@@ -1661,7 +1766,10 @@ export async function syncAdminCloudState(snapshot: {
   campaignCommissions?: any[];
   commissionPayments?: any[];
   monthlyCommissionReports?: any[];
-}): Promise<{ success: true; overview: AdminMembershipsOverview } | { success: false; error: string }> {
+}): Promise<
+  | { success: true; overview: AdminMembershipsOverview; recovery?: MembershipRecoveryReport }
+  | { success: false; error: string }
+> {
   const vault = getStoredReferralCampaignsVault();
   const payload = {
     ...snapshot,
@@ -1679,6 +1787,123 @@ export async function syncAdminCloudState(snapshot: {
     headers: adminHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+export interface RecoveredMembershipSummary {
+  membershipId: string;
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  planId: MembershipPlanId;
+  planName: string;
+  status: 'active' | 'cancelled' | 'expired';
+  activatedAt: string;
+  expiresAt: string;
+  source: 'approved_order' | 'history_entry' | 'customer_notification' | 'renewal_reapplied';
+}
+
+export interface PendingBigPlanOrderDiagnostic {
+  orderId: string;
+  customerName: string;
+  customerEmail: string;
+  planId: MembershipPlanId;
+  planName: string;
+  status: string;
+  amountPkr: number;
+  amountUsd?: number;
+  currency: PaymentCurrency;
+  createdAt: string;
+}
+
+export interface MembershipRecoveryReport {
+  recoveredCount: number;
+  recoveredActiveCount: number;
+  relinkedMembersCount: number;
+  recoveredMemberships: RecoveredMembershipSummary[];
+  pendingBigPlanOrders: PendingBigPlanOrderDiagnostic[];
+  totalActiveMemberships: number;
+  totalMemberships: number;
+  totalOrders: number;
+  totalMembers: number;
+}
+
+const ADMIN_MEMBERSHIPS_VAULT_KEY = 'feviqo_admin_memberships_vault_v1';
+
+export interface StoredAdminMembershipsVault {
+  savedAt: string;
+  members: Array<SafeMember & { ownerUid?: string }>;
+  blockedUsers: BlockedUserRecord[];
+  orders: MembershipOrder[];
+  memberships: AdminMembershipRecord[];
+  history: MembershipHistoryEntry[];
+  customerNotifications: CustomerNotification[];
+}
+
+export function saveAdminMembershipsVault(overview: AdminMembershipsOverview | null | undefined): void {
+  if (typeof window === 'undefined' || !overview) return;
+  try {
+    const existing = getStoredAdminMembershipsVault();
+    const mergeById = <T extends { id: string }>(incoming: T[] = [], prev: T[] = []): T[] => {
+      const map = new Map<string, T>();
+      for (const item of prev) {
+        if (item?.id) map.set(item.id, item);
+      }
+      for (const item of incoming) {
+        if (item?.id) map.set(item.id, item);
+      }
+      return Array.from(map.values());
+    };
+
+    const lightweightOrders = (overview.requests || []).map(({ proofDataUrl: _omit, ...rest }) => rest);
+    const payload: StoredAdminMembershipsVault = {
+      savedAt: new Date().toISOString(),
+      members: mergeById(overview.members || [], existing?.members || []),
+      blockedUsers: mergeById(overview.blockedUsers || [], existing?.blockedUsers || []),
+      orders: mergeById(lightweightOrders, existing?.orders || []),
+      memberships: mergeById(overview.memberships || [], existing?.memberships || []),
+      history: mergeById(overview.history || [], existing?.history || []).slice(0, 300),
+      customerNotifications: mergeById(
+        overview.customerNotifications || [],
+        existing?.customerNotifications || []
+      ).slice(0, 200),
+    };
+    window.localStorage.setItem(ADMIN_MEMBERSHIPS_VAULT_KEY, JSON.stringify(payload));
+  } catch {
+    // Non-fatal if storage quota exceeded
+  }
+}
+
+export function getStoredAdminMembershipsVault(): StoredAdminMembershipsVault | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(ADMIN_MEMBERSHIPS_VAULT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed as StoredAdminMembershipsVault;
+  } catch {
+    return null;
+  }
+}
+
+export async function recoverAdminMemberships(snapshot?: {
+  members?: Array<SafeMember & { ownerUid?: string }>;
+  blockedUsers?: BlockedUserRecord[];
+  orders?: MembershipOrder[];
+  memberships?: AdminMembershipRecord[];
+  history?: MembershipHistoryEntry[];
+  notifications?: CustomerNotification[];
+}): Promise<
+  | { success: true; recovery: MembershipRecoveryReport; overview: AdminMembershipsOverview }
+  | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/recover', {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(snapshot || {}),
   });
   return parseJsonSafe(res);
 }
@@ -1755,6 +1980,48 @@ export async function deleteMembershipRecordByAdmin(
     credentials: 'include',
     headers: adminHeaders(),
   });
+  return parseJsonSafe(res);
+}
+
+export async function blockUserEmailByAdmin(payload: {
+  email?: string;
+  memberId?: string;
+  reason?: string;
+}): Promise<
+  | {
+      success: true;
+      blockedUser: BlockedUserRecord;
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/blocked-users', {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function unblockUserEmailByAdmin(
+  identifier: string
+): Promise<
+  | {
+      success: true;
+      unblockedUser: BlockedUserRecord;
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch(
+    `/api/admin/memberships/blocked-users/${encodeURIComponent(identifier)}`,
+    {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: adminHeaders(),
+    }
+  );
   return parseJsonSafe(res);
 }
 

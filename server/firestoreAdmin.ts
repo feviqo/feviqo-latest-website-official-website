@@ -184,6 +184,7 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
   campaignCommissions: any[];
   commissionPayments: any[];
   monthlyCommissionReports: any[];
+  blockedUsers: any[];
   config: Record<string, any> | null;
 } | null> {
   const db = getAdminFirestoreDb();
@@ -206,6 +207,7 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       commSnap,
       paySnap,
       reportSnap,
+      blockedSnap,
       cfgSnap,
     ] = await Promise.all([
       db.collection('members').get(),
@@ -224,6 +226,7 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       db.collection('campaignCommissions').get(),
       db.collection('commissionPayments').get(),
       db.collection('monthlyCommissionReports').get(),
+      db.collection('blockedUsers').get(),
       db.collection('membershipConfig').doc('public').get(),
     ]);
 
@@ -330,6 +333,7 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
     const campaignCommissions = normalizeGeneric(commSnap);
     const commissionPayments = normalizeGeneric(paySnap);
     const monthlyCommissionReports = normalizeGeneric(reportSnap);
+    const blockedUsers = normalizeGeneric(blockedSnap);
 
     let config: Record<string, any> | null = null;
     if (cfgSnap.exists) {
@@ -357,6 +361,7 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       campaignCommissions,
       commissionPayments,
       monthlyCommissionReports,
+      blockedUsers,
       config,
     };
   } catch (err: any) {

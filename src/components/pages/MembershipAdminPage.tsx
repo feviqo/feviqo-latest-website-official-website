@@ -26,6 +26,8 @@ import {
   Gift,
   Edit2,
   Link2,
+  Ban,
+  RotateCcw,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { ReferralCampaignsPanel } from '../admin/ReferralCampaignsPanel';
@@ -80,15 +82,24 @@ import {
   updateAdminReferralConfig,
   updateAdminReferralStatus,
   getStoredReferralCampaignsVault,
+  blockUserEmailByAdmin,
+  unblockUserEmailByAdmin,
+  MembershipRecoveryReport,
+  recoverAdminMemberships,
+  saveAdminMembershipsVault,
+  getStoredAdminMembershipsVault,
 } from '../../services/membershipService';
 import { auth, googleProvider } from '../../firebase';
 import {
   isFirebaseAdminUser,
   pullAllCloudDataFromFirestore,
   pushAdminSnapshotToFirestore,
+  CloudPushReport,
   deleteOrderInFirestore,
   deleteMemberCascadeInFirestore,
   deleteMembershipInFirestore,
+  syncBlockedUserToFirestore,
+  deleteBlockedUserInFirestore,
 } from '../../services/firestoreMembershipSync';
 
 interface MembershipAdminPageProps {
@@ -106,6 +117,7 @@ type AdminTab =
   | 'campaigns'
   | 'security'
   | 'accounts'
+  | 'blocked'
   | 'notifications'
   | 'config'
   | 'audit'
@@ -145,8 +157,20 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     'all' | 'active' | 'expiring_7d' | 'expired' | 'pending_renewal' | 'cancelled' | 'history'
   >('all');
   const [membershipSearch, setMembershipSearch] = useState('');
-  const [accountAuthFilter, setAccountAuthFilter] = useState<'all' | 'google' | 'email' | 'admin_assigned'>('all');
+  const [accountAuthFilter, setAccountAuthFilter] = useState<'all' | 'google' | 'email' | 'admin_assigned' | 'blocked'>('all');
   const [accountSearch, setAccountSearch] = useState('');
+
+  // Permanent User Email Blocking state
+  const [blockingMemberId, setBlockingMemberId] = useState<string | null>(null);
+  const [blockReasonInput, setBlockReasonInput] = useState('');
+  const [directBlockEmailInput, setDirectBlockEmailInput] = useState('');
+  const [directBlockReasonInput, setDirectBlockReasonInput] = useState('');
+  const [blockedSearch, setBlockedSearch] = useState('');
+
+  // Missing-Membership Recovery & Cloud Push Diagnostics state
+  const [recoveringMemberships, setRecoveringMemberships] = useState(false);
+  const [recoveryReport, setRecoveryReport] = useState<MembershipRecoveryReport | null>(null);
+  const [lastPushReport, setLastPushReport] = useState<CloudPushReport | null>(null);
 
   // Selected request detail & action state
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
@@ -319,12 +343,36 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       setCloudSyncing(true);
       try {
         const cloudSnap = await pullAllCloudDataFromFirestore();
+        const localVault = getStoredAdminMembershipsVault();
+
+        const mergeById = <T extends { id?: string }>(primary: T[] = [], fallback: T[] = []): T[] => {
+          const map = new Map<string, T>();
+          for (const item of fallback) {
+            if (item?.id) map.set(item.id, item);
+          }
+          for (const item of primary) {
+            if (item?.id) map.set(item.id, item);
+          }
+          return Array.from(map.values());
+        };
+
+        const mergedMembers = mergeById(cloudSnap.members, localVault?.members || []);
+        const mergedBlocked = mergeById(cloudSnap.blockedUsers, localVault?.blockedUsers || []);
+        const mergedOrders = mergeById(cloudSnap.orders, localVault?.orders || []);
+        const mergedMemberships = mergeById(cloudSnap.memberships, localVault?.memberships || []);
+        const mergedHistory = mergeById(cloudSnap.history, localVault?.history || []);
+        const mergedNotifications = mergeById(
+          cloudSnap.customerNotifications,
+          localVault?.customerNotifications || []
+        );
+
         const mergeRes = await syncAdminCloudState({
-          members: cloudSnap.members,
-          orders: cloudSnap.orders,
-          memberships: cloudSnap.memberships,
-          history: cloudSnap.history,
-          customerNotifications: cloudSnap.customerNotifications,
+          members: mergedMembers,
+          blockedUsers: mergedBlocked,
+          orders: mergedOrders,
+          memberships: mergedMemberships,
+          history: mergedHistory,
+          customerNotifications: mergedNotifications,
           schedulerRuns: cloudSnap.schedulerRuns,
           config: cloudSnap.config,
           referralCampaigns: cloudSnap.referralCampaigns,
@@ -337,10 +385,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
           monthlyCommissionReports: cloudSnap.monthlyCommissionReports,
         });
         let latestOverview = 'overview' in mergeRes ? mergeRes.overview : opts?.seedOverview || null;
+        if ('recovery' in mergeRes && mergeRes.recovery && mergeRes.recovery.recoveredCount > 0) {
+          setRecoveryReport(mergeRes.recovery);
+        }
         if (latestOverview) {
+          saveAdminMembershipsVault(latestOverview);
           const vault = getStoredReferralCampaignsVault();
-          await pushAdminSnapshotToFirestore({
+          const pushReport = await pushAdminSnapshotToFirestore({
             members: latestOverview.members,
+            blockedUsers: latestOverview.blockedUsers,
             orders: latestOverview.requests,
             memberships: latestOverview.memberships,
             history: latestOverview.history,
@@ -355,6 +408,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             commissionPayments: vault?.commissionPayments || cloudSnap.commissionPayments,
             monthlyCommissionReports: vault?.monthlyCommissionReports || cloudSnap.monthlyCommissionReports,
           });
+          setLastPushReport(pushReport);
           setOverview(latestOverview);
           syncSettingsFromOverview(latestOverview);
           setCloudSyncedAt(new Date().toISOString());
@@ -387,6 +441,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         }
       } else {
         setOverview(res);
+        saveAdminMembershipsVault(res);
         syncSettingsFromOverview(res);
         if (triggerCloudSync && isFirebaseAdminUser()) {
           runBidirectionalCloudSync({ seedOverview: res }).catch(() => {});
@@ -551,6 +606,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         try {
           const res = await syncAdminCloudState({
             members: overview.members,
+            blockedUsers: overview.blockedUsers,
             orders: overview.requests,
             memberships: overview.memberships,
             history: overview.history,
@@ -610,10 +666,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   };
 
   const mirrorToCloudQuietly = (ov: AdminMembershipsOverview) => {
+    saveAdminMembershipsVault(ov);
     if (isFirebaseAdminUser()) {
       const vault = getStoredReferralCampaignsVault();
       pushAdminSnapshotToFirestore({
         members: ov.members,
+        blockedUsers: ov.blockedUsers,
         orders: ov.requests,
         memberships: ov.memberships,
         history: ov.history,
@@ -628,8 +686,119 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         commissionPayments: vault?.commissionPayments,
         monthlyCommissionReports: vault?.monthlyCommissionReports,
       })
-        .then(() => setCloudSyncedAt(new Date().toISOString()))
+        .then((report) => {
+          setLastPushReport(report);
+          setCloudSyncedAt(new Date().toISOString());
+        })
         .catch(() => {});
+    }
+  };
+
+  const handleRecoverMissingMemberships = async () => {
+    setRecoveringMemberships(true);
+    setFeedbackBanner(null);
+    try {
+      let cloudSnap: Awaited<ReturnType<typeof pullAllCloudDataFromFirestore>> | null = null;
+      if (!isFirebaseAdminUser() && !overview?.serverCloudConnected) {
+        try {
+          await signInWithPopup(auth, googleProvider);
+          setFirebaseAdminConnected(isFirebaseAdminUser());
+        } catch (err: any) {
+          if (err?.code === 'auth/unauthorized-domain') {
+            setFeedbackBanner({ type: 'error', text: formatUnauthorizedDomainMessage() });
+          } else if (err?.code === 'auth/popup-closed-by-user') {
+            setFeedbackBanner({
+              type: 'error',
+              text: 'Google sign-in popup was closed. Running local + server recovery only.',
+            });
+          }
+        }
+      }
+
+      if (isFirebaseAdminUser()) {
+        cloudSnap = await pullAllCloudDataFromFirestore();
+      }
+      const localVault = getStoredAdminMembershipsVault();
+
+      const mergeById = <T extends { id?: string }>(primary: T[] = [], fallback: T[] = []): T[] => {
+        const map = new Map<string, T>();
+        for (const item of fallback) {
+          if (item?.id) map.set(item.id, item);
+        }
+        for (const item of primary) {
+          if (item?.id) map.set(item.id, item);
+        }
+        return Array.from(map.values());
+      };
+
+      const recoveryRes = await recoverAdminMemberships({
+        members: mergeById(cloudSnap?.members || [], localVault?.members || []),
+        blockedUsers: mergeById(cloudSnap?.blockedUsers || [], localVault?.blockedUsers || []),
+        orders: mergeById(cloudSnap?.orders || [], localVault?.orders || []),
+        memberships: mergeById(cloudSnap?.memberships || [], localVault?.memberships || []),
+        history: mergeById(cloudSnap?.history || [], localVault?.history || []),
+        notifications: mergeById(
+          cloudSnap?.customerNotifications || [],
+          localVault?.customerNotifications || []
+        ),
+      });
+
+      if ('error' in recoveryRes) {
+        setFeedbackBanner({ type: 'error', text: recoveryRes.error });
+        return;
+      }
+
+      setOverview(recoveryRes.overview);
+      saveAdminMembershipsVault(recoveryRes.overview);
+      syncSettingsFromOverview(recoveryRes.overview);
+      setRecoveryReport(recoveryRes.recovery);
+
+      let pushNote = '';
+      if (isFirebaseAdminUser()) {
+        const refVault = getStoredReferralCampaignsVault();
+        const pushReport = await pushAdminSnapshotToFirestore({
+          members: recoveryRes.overview.members,
+          blockedUsers: recoveryRes.overview.blockedUsers,
+          orders: recoveryRes.overview.requests,
+          memberships: recoveryRes.overview.memberships,
+          history: recoveryRes.overview.history,
+          customerNotifications: recoveryRes.overview.customerNotifications,
+          config: recoveryRes.overview.config,
+          referralCampaigns: refVault?.referralCampaigns || cloudSnap?.referralCampaigns,
+          referralVisits: refVault?.referralVisits || cloudSnap?.referralVisits,
+          referralUniqueVisitors: refVault?.referralUniqueVisitors || cloudSnap?.referralUniqueVisitors,
+          userCampaignAttributions: refVault?.userCampaignAttributions || cloudSnap?.userCampaignAttributions,
+          orderCampaignAttributions: refVault?.orderCampaignAttributions || cloudSnap?.orderCampaignAttributions,
+          campaignCommissions: refVault?.campaignCommissions || cloudSnap?.campaignCommissions,
+          commissionPayments: refVault?.commissionPayments || cloudSnap?.commissionPayments,
+          monthlyCommissionReports: refVault?.monthlyCommissionReports || cloudSnap?.monthlyCommissionReports,
+        });
+        setLastPushReport(pushReport);
+        setCloudSyncedAt(new Date().toISOString());
+        pushNote = ` Cloud Firestore synced (${pushReport.syncedMemberships} memberships, ${pushReport.syncedOrders} orders${
+          pushReport.failedCount > 0 ? `, ${pushReport.failedCount} skipped` : ''
+        }).`;
+      }
+
+      const r = recoveryRes.recovery;
+      setFeedbackBanner({
+        type: 'success',
+        text:
+          r.recoveredCount > 0
+            ? `Recovered ${r.recoveredCount} missing membership(s) (${r.recoveredActiveCount} active). Total active memberships now: ${r.totalActiveMemberships}.${pushNote}`
+            : `Recovery scan complete: ${r.totalActiveMemberships} active membership(s) verified across ${r.totalOrders} order(s) and ${r.totalMembers} member(s).${
+                r.pendingBigPlanOrders.length > 0
+                  ? ` Found ${r.pendingBigPlanOrders.length} Plus/VIP order(s) awaiting approval.`
+                  : ''
+              }${pushNote}`,
+      });
+    } catch (err: any) {
+      setFeedbackBanner({
+        type: 'error',
+        text: err?.message || 'Failed to recover missing memberships from Cloud Firestore.',
+      });
+    } finally {
+      setRecoveringMemberships(false);
     }
   };
 
@@ -787,6 +956,66 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
       }
     } catch {
       setFeedbackBanner({ type: 'error', text: 'Failed to delete customer account.' });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleBlockUserEmail = async (params: {
+    email?: string;
+    memberId?: string;
+    reason?: string;
+  }) => {
+    setActionBusy(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await blockUserEmailByAdmin(params);
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setBlockingMemberId(null);
+        setBlockReasonInput('');
+        setDirectBlockEmailInput('');
+        setDirectBlockReasonInput('');
+        if (isFirebaseAdminUser()) {
+          syncBlockedUserToFirestore(res.blockedUser)
+            .then(() => setCloudSyncedAt(new Date().toISOString()))
+            .catch(() => {});
+        }
+        setFeedbackBanner({
+          type: 'success',
+          text: `${res.blockedUser.email} has been permanently blocked from accessing FEVIQO until you unblock them.`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to block email address.' });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleUnblockUserEmail = async (identifier: string, displayEmail?: string) => {
+    setActionBusy(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await unblockUserEmailByAdmin(identifier);
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        if (isFirebaseAdminUser()) {
+          deleteBlockedUserInFirestore(res.unblockedUser.id)
+            .then(() => setCloudSyncedAt(new Date().toISOString()))
+            .catch(() => {});
+        }
+        setFeedbackBanner({
+          type: 'success',
+          text: `${displayEmail || res.unblockedUser.email} has been unblocked and website access is restored.`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to unblock email address.' });
     } finally {
       setActionBusy(false);
     }
@@ -1388,9 +1617,21 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
   const memberByIdMap = new Map((overview?.members || []).map((m) => [m.id, m]));
 
+  const blockedUsersList = overview?.blockedUsers || [];
+  const blockedEmailsSet = new Set(
+    blockedUsersList.map((b) => (b.email || '').trim().toLowerCase()).filter(Boolean)
+  );
+
   const filteredAccounts = (overview?.members || []).filter((member) => {
     const method = getMemberAuthMethod(member);
-    if (accountAuthFilter !== 'all' && method !== accountAuthFilter) return false;
+    const isMemberBlocked = Boolean(
+      member.isBlocked || blockedEmailsSet.has((member.email || '').trim().toLowerCase())
+    );
+    if (accountAuthFilter === 'blocked') {
+      if (!isMemberBlocked) return false;
+    } else if (accountAuthFilter !== 'all' && method !== accountAuthFilter) {
+      return false;
+    }
     if (!accountSearch.trim()) return true;
     const q = accountSearch.toLowerCase();
     const memberPlanDramas = [
@@ -1411,6 +1652,17 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     );
   });
 
+  const filteredBlockedUsers = blockedUsersList.filter((item) => {
+    if (!blockedSearch.trim()) return true;
+    const q = blockedSearch.toLowerCase();
+    return (
+      (item.email || '').toLowerCase().includes(q) ||
+      (item.fullName || '').toLowerCase().includes(q) ||
+      (item.reason || '').toLowerCase().includes(q) ||
+      (item.blockedByAdminEmail || '').toLowerCase().includes(q)
+    );
+  });
+
   const googleAccountsCount = (overview?.members || []).filter(
     (m) => getMemberAuthMethod(m) === 'google'
   ).length;
@@ -1419,6 +1671,9 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   ).length;
   const adminAssignedAccountsCount = (overview?.members || []).filter(
     (m) => getMemberAuthMethod(m) === 'admin_assigned'
+  ).length;
+  const blockedAccountsCount = (overview?.members || []).filter(
+    (m) => Boolean(m.isBlocked || blockedEmailsSet.has((m.email || '').trim().toLowerCase()))
   ).length;
 
   const formatDateTime = (iso?: string) => {
@@ -1606,8 +1861,18 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
               <div className="flex flex-wrap items-center gap-2.5 shrink-0">
                 <button
                   type="button"
+                  onClick={handleRecoverMissingMemberships}
+                  disabled={recoveringMemberships || cloudSyncing}
+                  className="px-4 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                  title="Scan Cloud Firestore orders, history, notifications & local backup to restore any missing active or big-plan memberships"
+                >
+                  <RotateCcw className={`w-3.5 h-3.5 shrink-0 ${recoveringMemberships ? 'animate-spin' : ''}`} />
+                  <span>{recoveringMemberships ? 'Recovering...' : 'Recover Missing & Sync'}</span>
+                </button>
+                <button
+                  type="button"
                   onClick={handleManualCloudSync}
-                  disabled={cloudSyncing}
+                  disabled={cloudSyncing || recoveringMemberships}
                   className={`px-4 py-2.5 rounded-xl text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0 ${
                     firebaseAdminConnected || overview?.serverCloudConnected
                       ? 'border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
@@ -1642,6 +1907,126 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 </button>
               </div>
             </div>
+
+            {!firebaseAdminConnected && !overview?.serverCloudConnected && (
+              <div className="p-4 rounded-xl border border-amber-300 bg-amber-50 text-amber-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5 text-[13px] leading-relaxed">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-semibold">Cloud Firestore Sync is not connected in this browser session.</strong>{' '}
+                    Connect with your authorized Google account (<span className="font-mono text-xs">rexanmedia01@gmail.com</span>) so every approved Plus/VIP membership is permanently saved to Cloud Firestore and recovered across website updates.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRecoverMissingMemberships}
+                  disabled={recoveringMemberships || cloudSyncing}
+                  className="px-3.5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap shrink-0"
+                >
+                  <Cloud className="w-3.5 h-3.5" />
+                  <span>Connect &amp; Recover Now</span>
+                </button>
+              </div>
+            )}
+
+            {recoveryReport && (
+              <div className="rounded-2xl bg-white border border-indigo-200 p-5 space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-indigo-700">
+                      Membership Recovery &amp; Cloud Audit Report
+                    </div>
+                    <div className="text-sm text-slate-700 mt-1">
+                      Active Memberships: <strong className="text-[#0F172A]">{recoveryReport.totalActiveMemberships}</strong> ·
+                      Total Memberships: <strong className="text-[#0F172A]">{recoveryReport.totalMemberships}</strong> ·
+                      Recovered Now: <strong className="text-emerald-700">{recoveryReport.recoveredCount}</strong>
+                      {lastPushReport && (
+                        <>
+                          {' '}· Cloud Synced: <strong className="text-emerald-700">{lastPushReport.syncedMemberships} memberships / {lastPushReport.syncedOrders} orders</strong>
+                          {lastPushReport.failedCount > 0 && (
+                            <span className="text-amber-700"> ({lastPushReport.failedCount} doc warning(s))</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRecoveryReport(null)}
+                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer"
+                    aria-label="Close recovery report"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {recoveryReport.recoveredMemberships.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-emerald-800">
+                      Restored Missing Memberships ({recoveryReport.recoveredMemberships.length})
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {recoveryReport.recoveredMemberships.map((rec) => (
+                        <div
+                          key={`${rec.membershipId}-${rec.orderId}`}
+                          className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-0.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-slate-900">{rec.customerName}</span>
+                            <span className="px-2 py-0.5 rounded bg-emerald-600 text-white font-semibold uppercase text-[10px]">
+                              {rec.planName} · {rec.status}
+                            </span>
+                          </div>
+                          <div className="text-slate-600">{rec.customerEmail || 'No email recorded'}</div>
+                          <div className="text-slate-500">
+                            Expires: {formatDateTime(rec.expiresAt)} · Source: {rec.source.replace(/_/g, ' ')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {recoveryReport.pendingBigPlanOrders.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-amber-800">
+                      Plus / VIP Big-Plan Orders Currently Pending or Awaiting Payment ({recoveryReport.pendingBigPlanOrders.length})
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {recoveryReport.pendingBigPlanOrders.map((ord) => (
+                        <div
+                          key={ord.orderId}
+                          className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-xs flex items-center justify-between gap-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900 truncate">
+                              {ord.customerName} ({ord.planName})
+                            </div>
+                            <div className="text-slate-600 truncate">{ord.customerEmail}</div>
+                            <div className="text-slate-500">
+                              Status: {ord.status.replace(/_/g, ' ')} ·{' '}
+                              {ord.currency === 'USD'
+                                ? `$${(ord.amountUsd ?? 0).toFixed(2)} USD`
+                                : `PKR ${ord.amountPkr.toLocaleString()}`}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab('requests');
+                              setSelectedRequestId(ord.orderId);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-[11px] shrink-0 cursor-pointer"
+                          >
+                            Review Order
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {feedbackBanner && (
               <div
@@ -1793,6 +2178,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   { id: 'campaigns', label: 'Referral Campaigns & Link Analytics', icon: Link2 },
                   { id: 'security', label: 'Mux Video Security', icon: Lock },
                   { id: 'accounts', label: 'Registered Accounts', icon: UserPlus },
+                  { id: 'blocked', label: 'Blocked Users', icon: Ban },
                   { id: 'notifications', label: 'Reminders & Scheduler', icon: Bell },
                   { id: 'config', label: 'QR & USD Settings', icon: Settings },
                   { id: 'audit', label: 'Email & Audit Logs', icon: ClipboardList },
@@ -1814,6 +2200,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   >
                     <Icon className="w-4 h-4 shrink-0" />
                     <span>{tab.label}</span>
+                    {tab.id === 'blocked' && blockedUsersList.length > 0 && (
+                      <span
+                        className={`px-1.5 py-0.5 rounded-md text-[11px] font-bold tabular-nums ${
+                          active ? 'bg-red-500 text-white' : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {blockedUsersList.length}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -3121,6 +3516,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       { id: 'google' as const, label: `Google Sign-In (${googleAccountsCount})` },
                       { id: 'email' as const, label: `Email & Password (${emailAccountsCount})` },
                       { id: 'admin_assigned' as const, label: `Admin Created (${adminAssignedAccountsCount})` },
+                      { id: 'blocked' as const, label: `Blocked (${blockedAccountsCount})` },
                     ].map((f) => (
                       <button
                         key={f.id}
@@ -3170,6 +3566,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       ) : (
                         filteredAccounts.map((member) => {
                           const method = getMemberAuthMethod(member);
+                          const isBlocked = Boolean(
+                            member.isBlocked ||
+                              blockedEmailsSet.has((member.email || '').trim().toLowerCase())
+                          );
                           const activeSubs = overview.memberships.filter(
                             (s) => s.memberId === member.id && s.status === 'active'
                           );
@@ -3177,12 +3577,30 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                           const latestSub = overview.memberships.find((s) => s.memberId === member.id);
                           const latestReq = overview.requests.find((r) => r.memberId === member.id);
                           return (
-                            <tr key={member.id} className="hover:bg-slate-50/70 transition-colors">
+                            <tr
+                              key={member.id}
+                              className={`transition-colors ${
+                                isBlocked ? 'bg-red-50/40 hover:bg-red-50/70' : 'hover:bg-slate-50/70'
+                              }`}
+                            >
                               <td className="py-4 px-5 align-top min-w-[220px]">
-                                <div className="font-semibold text-[#0F172A]">{member.fullName}</div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-[#0F172A]">{member.fullName}</span>
+                                  {isBlocked && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-100 text-red-700 text-[10px] font-bold uppercase tracking-wider">
+                                      <Ban className="w-3 h-3" />
+                                      Blocked
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-xs text-slate-600 mt-0.5">{member.email}</div>
                                 {member.phone && (
                                   <div className="text-xs text-slate-400 mt-0.5 tabular-nums">{member.phone}</div>
+                                )}
+                                {isBlocked && member.blockedReason && (
+                                  <div className="text-[11px] text-red-600 mt-1 max-w-[260px]">
+                                    Reason: {member.blockedReason}
+                                  </div>
                                 )}
                               </td>
                               <td className="py-4 px-5 align-top whitespace-nowrap">
@@ -3255,16 +3673,80 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                 {formatDateTime(member.createdAt)}
                               </td>
                               <td className="py-4 px-5 align-top text-right whitespace-nowrap">
-                                <div className="inline-flex items-center justify-end gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenAssignModal(member)}
-                                    className="px-3.5 py-2 rounded-lg bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
-                                  >
-                                    <Plus className="w-3.5 h-3.5 shrink-0" />
-                                    <span>Assign Plan</span>
-                                  </button>
-                                  {!activeSub && (
+                                <div className="inline-flex flex-wrap items-center justify-end gap-2">
+                                  {!isBlocked && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenAssignModal(member)}
+                                      className="px-3.5 py-2 rounded-lg bg-[#0F172A] hover:bg-[#22C55E] text-white hover:text-[#0F172A] text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
+                                    >
+                                      <Plus className="w-3.5 h-3.5 shrink-0" />
+                                      <span>Assign Plan</span>
+                                    </button>
+                                  )}
+
+                                  {isBlocked ? (
+                                    <button
+                                      type="button"
+                                      disabled={actionBusy}
+                                      onClick={() => handleUnblockUserEmail(member.email, member.email)}
+                                      className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 transition whitespace-nowrap"
+                                      title="Restore website access for this email"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                                      <span>Unblock</span>
+                                    </button>
+                                  ) : blockingMemberId === member.id ? (
+                                    <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
+                                      <input
+                                        type="text"
+                                        value={blockReasonInput}
+                                        onChange={(e) => setBlockReasonInput(e.target.value)}
+                                        placeholder="Reason (optional)"
+                                        className="w-40 px-2.5 py-1.5 rounded-lg border border-red-300 text-xs focus:outline-none focus:border-red-600"
+                                      />
+                                      <button
+                                        type="button"
+                                        disabled={actionBusy}
+                                        onClick={() =>
+                                          handleBlockUserEmail({
+                                            memberId: member.id,
+                                            email: member.email,
+                                            reason: blockReasonInput.trim() || undefined,
+                                          })
+                                        }
+                                        className="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-60 whitespace-nowrap"
+                                      >
+                                        {actionBusy ? 'Blocking...' : 'Confirm Block'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setBlockingMemberId(null);
+                                          setBlockReasonInput('');
+                                        }}
+                                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold cursor-pointer whitespace-nowrap"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setDeletingAccountId(null);
+                                        setBlockingMemberId(member.id);
+                                        setBlockReasonInput('');
+                                      }}
+                                      className="px-3 py-2 rounded-lg border border-red-300 bg-red-50/70 text-red-700 hover:bg-red-600 hover:text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition whitespace-nowrap"
+                                      title="Permanently block this email from accessing the website"
+                                    >
+                                      <Ban className="w-3.5 h-3.5 shrink-0" />
+                                      <span>Block</span>
+                                    </button>
+                                  )}
+
+                                  {!activeSub && blockingMemberId !== member.id && (
                                     deletingAccountId === member.id ? (
                                       <div className="inline-flex items-center gap-1.5">
                                         <button
@@ -3303,6 +3785,160 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: PERMANENTLY BLOCKED USERS BY EMAIL */}
+            {overview && activeTab === 'blocked' && (
+              <div className="space-y-6">
+                <div className="rounded-2xl bg-white border border-slate-200 p-6 space-y-4">
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold uppercase tracking-[0.06em] text-red-600 flex items-center gap-1.5">
+                      <Ban className="w-3.5 h-3.5 shrink-0" />
+                      <span>Permanent Email Access Control</span>
+                    </div>
+                    <h2 className="text-lg font-bold text-[#0F172A] leading-snug">
+                      Block Any Email Permanently
+                    </h2>
+                    <p className="text-[13px] text-slate-500 leading-relaxed max-w-3xl">
+                      Enter any email address (registered or unregistered) to permanently block it from signing in, creating an account, purchasing memberships, or watching streams. Active sessions are terminated immediately. Access remains blocked until you unblock the email below.
+                    </p>
+                  </div>
+
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!directBlockEmailInput.trim()) return;
+                      void handleBlockUserEmail({
+                        email: directBlockEmailInput.trim(),
+                        reason: directBlockReasonInput.trim() || undefined,
+                      });
+                    }}
+                    className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-1"
+                  >
+                    <div className="md:col-span-5">
+                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                        Email Address to Block *
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={directBlockEmailInput}
+                        onChange={(e) => setDirectBlockEmailInput(e.target.value)}
+                        placeholder="user@example.com"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-600"
+                      />
+                    </div>
+                    <div className="md:col-span-5">
+                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                        Reason (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={directBlockReasonInput}
+                        onChange={(e) => setDirectBlockReasonInput(e.target.value)}
+                        placeholder="e.g. Fake payment proof, policy violation, account sharing"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#0F172A]"
+                      />
+                    </div>
+                    <div className="md:col-span-2 flex items-end">
+                      <button
+                        type="submit"
+                        disabled={actionBusy || !directBlockEmailInput.trim()}
+                        className="w-full px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 transition"
+                      >
+                        <Ban className="w-3.5 h-3.5 shrink-0" />
+                        <span>{actionBusy ? 'Blocking...' : 'Block Email'}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <div className="rounded-2xl bg-white border border-slate-200 overflow-hidden">
+                  <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#0F172A]">
+                        Blocked Emails ({blockedUsersList.length})
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Blocked users cannot access FEVIQO until you click Unblock &amp; Restore Access.
+                      </p>
+                    </div>
+                    <div className="relative w-full sm:w-72 shrink-0">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={blockedSearch}
+                        onChange={(e) => setBlockedSearch(e.target.value)}
+                        placeholder="Search blocked email or reason"
+                        className="w-full pl-10 pr-3.5 py-2 text-[13px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-[13px] leading-relaxed">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-[0.06em] text-[11px] font-semibold">
+                        <tr>
+                          <th className="py-3.5 px-5 whitespace-nowrap">Blocked Email</th>
+                          <th className="py-3.5 px-5 whitespace-nowrap">Reason</th>
+                          <th className="py-3.5 px-5 whitespace-nowrap">Blocked By</th>
+                          <th className="py-3.5 px-5 whitespace-nowrap">Blocked On</th>
+                          <th className="py-3.5 px-5 text-right whitespace-nowrap">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredBlockedUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-12 text-center text-sm text-slate-500">
+                              {blockedUsersList.length === 0
+                                ? 'No emails are currently blocked.'
+                                : 'No blocked emails match your search.'}
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredBlockedUsers.map((entry) => (
+                            <tr key={entry.id} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="py-4 px-5 align-top min-w-[220px]">
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-red-100 text-red-700 shrink-0">
+                                    <Ban className="w-3.5 h-3.5" />
+                                  </span>
+                                  <div>
+                                    <div className="font-semibold text-[#0F172A]">{entry.email}</div>
+                                    {entry.fullName && (
+                                      <div className="text-xs text-slate-500">{entry.fullName}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 px-5 align-top text-xs text-slate-700 max-w-[300px]">
+                                {entry.reason || 'Blocked by FEVIQO administrator'}
+                              </td>
+                              <td className="py-4 px-5 align-top text-xs text-slate-500 whitespace-nowrap">
+                                {entry.blockedByAdminEmail || 'Administrator'}
+                              </td>
+                              <td className="py-4 px-5 align-top text-xs text-slate-500 whitespace-nowrap tabular-nums">
+                                {formatDateTime(entry.blockedAt || entry.createdAt)}
+                              </td>
+                              <td className="py-4 px-5 align-top text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  disabled={actionBusy}
+                                  onClick={() => handleUnblockUserEmail(entry.id, entry.email)}
+                                  className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 transition whitespace-nowrap"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                                  <span>Unblock &amp; Restore Access</span>
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}

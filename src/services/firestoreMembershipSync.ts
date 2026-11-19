@@ -14,6 +14,7 @@ import {
 import { auth, db, OperationType, handleFirestoreError } from '../firebase';
 import type {
   SafeMember,
+  BlockedUserRecord,
   MembershipOrder,
   AdminMembershipRecord,
   MembershipRecord,
@@ -106,8 +107,53 @@ export async function compressProofImageToDataUrl(file: File, maxDataUrlLength =
   });
 }
 
+const DEFAULT_VIP_DRAMA_IDS = ['teskilat', 'mehmed-fetihler-sultani', 'gunesin-dogdugu-yer'];
+
 function clampStr(val: unknown, maxLen: number): string {
   return String(val ?? '').slice(0, maxLen);
+}
+
+function clampNonEmpty(val: unknown, fallback: string, maxLen: number): string {
+  const cleaned = String(val ?? '').trim();
+  return (cleaned.length > 0 ? cleaned : fallback).slice(0, maxLen);
+}
+
+function clampEmail(val: unknown, fallback = 'member@feviqo.com'): string {
+  const cleaned = String(val ?? '').trim().toLowerCase();
+  if (cleaned.length >= 5 && cleaned.includes('@')) return cleaned.slice(0, 200);
+  return fallback;
+}
+
+function ensureValidDramaIds(ids: unknown, planId?: string): string[] {
+  const raw = Array.isArray(ids)
+    ? ids
+        .map((x) => String(x || '').trim().slice(0, 64))
+        .filter((x) => x.length > 0)
+    : [];
+  const unique = Array.from(new Set(raw));
+  if (planId === 'vip') {
+    const merged = Array.from(new Set([...DEFAULT_VIP_DRAMA_IDS, ...unique]));
+    return merged.slice(0, 20);
+  }
+  return unique.length > 0 ? unique.slice(0, 20) : ['teskilat'];
+}
+
+function stripUndefinedDeep<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => item !== undefined)
+      .map((item) => stripUndefinedDeep(item)) as unknown as T;
+  }
+  if (value && typeof value === 'object' && !(value instanceof Timestamp) && !(value instanceof Date)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v !== undefined) {
+        out[k] = stripUndefinedDeep(v);
+      }
+    }
+    return out as T;
+  }
+  return value;
 }
 
 function sanitizeId(raw: string): string {
@@ -159,36 +205,40 @@ export async function syncMemberAccountToFirestore(member: SafeMember, ownerUidO
   try {
     const ref = doc(db, 'members', memberId);
     const snap = await getDoc(ref);
+    const safeFullName = clampNonEmpty(member.fullName, 'FEVIQO Member', 120);
+    const safeEmail = clampEmail(member.email);
+    const safeCreatedAtIso = clampNonEmpty(member.createdAt, new Date().toISOString(), 64);
+
     if (!snap.exists()) {
       await setDoc(ref, {
         id: memberId,
         ownerUid,
-        email: clampStr(member.email, 200),
-        fullName: clampStr(member.fullName, 120),
+        email: safeEmail,
+        fullName: safeFullName,
         phone: clampStr(member.phone || '', 32),
         referralCode: clampStr(member.referralCode || '', 32),
         referredByMemberId: clampStr(member.referredByMemberId || '', 128),
         referredByCode: clampStr(member.referredByCode || '', 32),
-        creditBalancePkr: Number(member.creditBalancePkr) || 0,
-        creditBalanceUsd: Number(member.creditBalanceUsd) || 0,
-        createdAtIso: clampStr(member.createdAt || new Date().toISOString(), 64),
+        creditBalancePkr: Math.max(0, Number(member.creditBalancePkr) || 0),
+        creditBalanceUsd: Math.max(0, Number(member.creditBalanceUsd) || 0),
+        createdAtIso: safeCreatedAtIso,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
     } else if (isFirebaseAdminUser()) {
       await updateDoc(ref, {
-        fullName: clampStr(member.fullName, 120),
+        fullName: safeFullName,
         phone: clampStr(member.phone || '', 32),
         referralCode: clampStr(member.referralCode || '', 32),
         referredByMemberId: clampStr(member.referredByMemberId || '', 128),
         referredByCode: clampStr(member.referredByCode || '', 32),
-        creditBalancePkr: Number(member.creditBalancePkr) || 0,
-        creditBalanceUsd: Number(member.creditBalanceUsd) || 0,
+        creditBalancePkr: Math.max(0, Number(member.creditBalancePkr) || 0),
+        creditBalanceUsd: Math.max(0, Number(member.creditBalanceUsd) || 0),
         updatedAt: serverTimestamp(),
       });
     } else if (snap.data()?.ownerUid === user.uid) {
       await updateDoc(ref, {
-        fullName: clampStr(member.fullName, 120),
+        fullName: safeFullName,
         phone: clampStr(member.phone || '', 32),
         updatedAt: serverTimestamp(),
       });
@@ -221,47 +271,51 @@ export async function syncOrderToFirestore(
     if (!snap.exists()) {
       const isNonAdminDirectProof = !isFirebaseAdminUser() && order.status !== 'awaiting_payment';
       const initialStatus = isNonAdminDirectProof ? 'awaiting_payment' : order.status;
+      const safeDramaIds = ensureValidDramaIds(order.selectedDramaIds, order.planId);
+      const safePaymentMethod =
+        order.paymentMethod === 'binance_qr'
+          ? 'binance_qr'
+          : order.paymentMethod === 'admin_assigned'
+            ? 'admin_assigned'
+            : (order.paymentMethod as string) === 'free'
+              ? 'free'
+              : 'bank_qr';
       const payload: Record<string, unknown> = {
         id: orderId,
         memberId: sanitizeId(order.memberId),
         ownerUid,
-        customerName: clampStr(order.customerName || options?.member?.fullName || 'FEVIQO Member', 120),
-        customerEmail: clampStr(order.customerEmail || options?.member?.email || user.email || '', 200),
+        customerName: clampNonEmpty(order.customerName || options?.member?.fullName, 'FEVIQO Member', 120),
+        customerEmail: clampEmail(order.customerEmail || options?.member?.email || user.email),
         customerPhone: clampStr(order.customerPhone || options?.member?.phone || '', 32),
         orderType: order.orderType === 'renewal' ? 'renewal' : 'new',
         targetMembershipId: clampStr(order.targetMembershipId || '', 128),
         planId: order.planId,
-        planName: clampStr(order.planName, 64),
-        originalAmountPkr: Number(order.originalAmountPkr ?? order.amountPkr) || 0,
-        originalAmountUsd: Number(order.originalAmountUsd ?? order.amountUsd ?? 0) || 0,
-        amountPkr: Number(order.amountPkr) || 0,
-        amountUsd: Number(order.amountUsd) || 0,
+        planName: clampNonEmpty(order.planName, order.planId, 64),
+        originalAmountPkr: Math.max(0, Number(order.originalAmountPkr ?? order.amountPkr) || 0),
+        originalAmountUsd: Math.max(0, Number(order.originalAmountUsd ?? order.amountUsd ?? 0) || 0),
+        amountPkr: Math.max(0, Number(order.amountPkr) || 0),
+        amountUsd: Math.max(0, Number(order.amountUsd) || 0),
         promoCodeId: clampStr(order.promoCodeId || '', 128),
-        promoCode: clampStr(order.promoCode || '', 32),
-        promoDiscountPkr: Number(order.promoDiscountPkr) || 0,
-        promoDiscountUsd: Number(order.promoDiscountUsd) || 0,
+        promoCode: clampStr(order.promoCode || '', 40),
+        promoDiscountPkr: Math.max(0, Number(order.promoDiscountPkr) || 0),
+        promoDiscountUsd: Math.max(0, Number(order.promoDiscountUsd) || 0),
         referralCodeUsed: clampStr(order.referralCodeUsed || '', 32),
-        referralDiscountPkr: Number(order.referralDiscountPkr) || 0,
-        referralDiscountUsd: Number(order.referralDiscountUsd) || 0,
-        creditsUsedPkr: Number(order.creditsUsedPkr) || 0,
-        creditsUsedUsd: Number(order.creditsUsedUsd) || 0,
-        discountTotalPkr: Number(order.discountTotalPkr) || 0,
-        discountTotalUsd: Number(order.discountTotalUsd) || 0,
-        expectedAmount: Number(order.expectedAmount ?? (order.currency === 'USD' ? order.amountUsd : order.amountPkr)) || 0,
+        referralDiscountPkr: Math.max(0, Number(order.referralDiscountPkr) || 0),
+        referralDiscountUsd: Math.max(0, Number(order.referralDiscountUsd) || 0),
+        creditsUsedPkr: Math.max(0, Number(order.creditsUsedPkr) || 0),
+        creditsUsedUsd: Math.max(0, Number(order.creditsUsedUsd) || 0),
+        discountTotalPkr: Math.max(0, Number(order.discountTotalPkr) || 0),
+        discountTotalUsd: Math.max(0, Number(order.discountTotalUsd) || 0),
+        expectedAmount: Math.max(0, Number(order.expectedAmount ?? (order.currency === 'USD' ? order.amountUsd : order.amountPkr)) || 0),
         currency: order.currency === 'USD' ? 'USD' : 'PKR',
         paymentRegion: order.paymentRegion === 'international' ? 'international' : 'pakistan',
-        paymentMethod:
-          order.paymentMethod === 'binance_qr'
-            ? 'binance_qr'
-            : order.paymentMethod === 'admin_assigned'
-              ? 'admin_assigned'
-              : 'bank_qr',
+        paymentMethod: safePaymentMethod,
         visitorCountryCode: clampStr(order.visitorCountryCode || '', 12),
         indicativeLocalDisplay: clampStr(order.indicativeLocalDisplay || '', 64),
-        durationDays: Math.max(1, Number(order.durationDays) || 15),
-        selectedDramaIds: (order.selectedDramaIds || []).slice(0, 10),
+        durationDays: Math.max(1, Math.min(3650, Number(order.durationDays) || 15)),
+        selectedDramaIds: safeDramaIds,
         status: initialStatus,
-        provider: clampStr(order.provider || 'bank_qr', 40),
+        provider: clampNonEmpty(order.provider, 'bank_qr', 40),
         qrImageUrl: clampStr(order.qrImageUrl || '', 512),
         proofFileName: isNonAdminDirectProof ? '' : clampStr(order.proofFileName || '', 256),
         proofOriginalName: isNonAdminDirectProof ? '' : clampStr(order.proofOriginalName || '', 256),
@@ -274,8 +328,8 @@ export async function syncOrderToFirestore(
         reviewedByAdminEmail: clampStr(order.reviewedByAdminEmail || '', 200),
         reviewedAt: clampStr(order.reviewedAt || '', 64),
         paidAt: clampStr(order.paidAt || '', 64),
-        createdAtIso: clampStr(order.createdAt || new Date().toISOString(), 64),
-        updatedAtIso: clampStr(order.updatedAt || new Date().toISOString(), 64),
+        createdAtIso: clampNonEmpty(order.createdAt, new Date().toISOString(), 64),
+        updatedAtIso: clampNonEmpty(order.updatedAt, new Date().toISOString(), 64),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -347,58 +401,95 @@ export async function syncMembershipToFirestore(
   try {
     const ref = doc(db, 'memberships', membershipId);
     const snap = await getDoc(ref);
+    const nowIso = new Date().toISOString();
+    const safeDramaIds = ensureValidDramaIds(membership.selectedDramaIds, membership.planId);
+    const safeRenewalHistory = Array.isArray(membership.renewalHistory)
+      ? stripUndefinedDeep(membership.renewalHistory.slice(0, 100))
+      : [];
+    const safePaymentMethod =
+      membership.paymentMethod === 'binance_qr'
+        ? 'binance_qr'
+        : membership.paymentMethod === 'admin_assigned'
+          ? 'admin_assigned'
+          : (membership.paymentMethod as string) === 'free'
+            ? 'free'
+            : 'bank_qr';
+    const safeStatus =
+      membership.status === 'cancelled' || membership.status === 'expired'
+        ? membership.status
+        : 'active';
+
     if (!snap.exists()) {
       await setDoc(ref, {
         id: membershipId,
         memberId: sanitizeId(membership.memberId),
         ownerUid,
-        orderId: sanitizeId(membership.orderId),
-        customerName: clampStr(membership.customerName || 'FEVIQO Member', 120),
-        customerEmail: clampStr(membership.customerEmail || 'member@feviqo.com', 200),
+        orderId: sanitizeId(membership.orderId || membershipId),
+        customerName: clampNonEmpty(membership.customerName, 'FEVIQO Member', 120),
+        customerEmail: clampEmail(membership.customerEmail),
         customerPhone: clampStr(membership.customerPhone || '', 32),
         planId: membership.planId,
-        planName: clampStr(membership.planName, 64),
-        pricePkr: Number(membership.pricePkr) || 0,
-        priceUsd: Number(membership.priceUsd) || 0,
-        durationDays: Math.max(1, Number(membership.durationDays) || 15),
-        selectedDramaIds: (membership.selectedDramaIds || []).slice(0, 10),
-        status: membership.status,
-        activatedAt: clampStr(membership.activatedAt, 64),
-        expiresAt: clampStr(membership.expiresAt, 64),
+        planName: clampNonEmpty(membership.planName, membership.planId, 64),
+        pricePkr: Math.max(0, Number(membership.pricePkr) || 0),
+        priceUsd: Math.max(0, Number(membership.priceUsd) || 0),
+        originalAmountPkr: Math.max(0, Number(membership.originalAmountPkr ?? membership.pricePkr) || 0),
+        originalAmountUsd: Math.max(0, Number(membership.originalAmountUsd ?? membership.priceUsd) || 0),
+        promoCode: clampStr(membership.promoCode || '', 40),
+        promoDiscountPkr: Math.max(0, Number(membership.promoDiscountPkr) || 0),
+        promoDiscountUsd: Math.max(0, Number(membership.promoDiscountUsd) || 0),
+        referralDiscountPkr: Math.max(0, Number(membership.referralDiscountPkr) || 0),
+        referralDiscountUsd: Math.max(0, Number(membership.referralDiscountUsd) || 0),
+        creditsUsedPkr: Math.max(0, Number(membership.creditsUsedPkr) || 0),
+        creditsUsedUsd: Math.max(0, Number(membership.creditsUsedUsd) || 0),
+        discountTotalPkr: Math.max(0, Number(membership.discountTotalPkr) || 0),
+        discountTotalUsd: Math.max(0, Number(membership.discountTotalUsd) || 0),
+        durationDays: Math.max(1, Math.min(3650, Number(membership.durationDays) || 15)),
+        selectedDramaIds: safeDramaIds,
+        status: safeStatus,
+        activatedAt: clampNonEmpty(membership.activatedAt, nowIso, 64),
+        expiresAt: clampNonEmpty(membership.expiresAt, nowIso, 64),
         cancelledAt: clampStr(membership.cancelledAt || '', 64),
         revokedByAdminEmail: clampStr(membership.revokedByAdminEmail || '', 200),
         revokedReason: clampStr(membership.revokedReason || '', 500),
         approvedByAdminEmail: clampStr(membership.approvedByAdminEmail || '', 200),
-        paymentProvider: clampStr(membership.paymentProvider || 'bank_qr', 40),
+        paymentProvider: clampNonEmpty(membership.paymentProvider, 'bank_qr', 40),
         paymentRegion: membership.paymentRegion === 'international' ? 'international' : 'pakistan',
-        paymentMethod:
-          membership.paymentMethod === 'binance_qr'
-            ? 'binance_qr'
-            : membership.paymentMethod === 'admin_assigned'
-              ? 'admin_assigned'
-              : 'bank_qr',
+        paymentMethod: safePaymentMethod,
         currency: membership.currency === 'USD' ? 'USD' : 'PKR',
-        expectedAmount: Number(membership.expectedAmount ?? membership.pricePkr ?? 0) || 0,
+        expectedAmount: Math.max(0, Number(membership.expectedAmount ?? membership.pricePkr ?? 0) || 0),
         paymentReference: clampStr(membership.paymentReference || '', 400),
-        renewalHistory: Array.isArray(membership.renewalHistory) ? membership.renewalHistory.slice(0, 100) : [],
+        renewalHistory: safeRenewalHistory,
         lastExtendedAt: clampStr(membership.lastExtendedAt || '', 64),
-        createdAtIso: clampStr(membership.createdAt || new Date().toISOString(), 64),
+        createdAtIso: clampNonEmpty(membership.createdAt, nowIso, 64),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
     } else {
       await updateDoc(ref, {
+        orderId: sanitizeId(membership.orderId || snap.data()?.orderId || membershipId),
+        customerName: clampNonEmpty(membership.customerName || snap.data()?.customerName, 'FEVIQO Member', 120),
+        customerEmail: clampEmail(membership.customerEmail || snap.data()?.customerEmail),
+        customerPhone: clampStr(membership.customerPhone || snap.data()?.customerPhone || '', 32),
         planId: membership.planId,
-        planName: clampStr(membership.planName, 64),
-        durationDays: Math.max(1, Number(membership.durationDays) || 15),
-        selectedDramaIds: (membership.selectedDramaIds || []).slice(0, 10),
-        status: membership.status,
-        activatedAt: clampStr(membership.activatedAt, 64),
-        expiresAt: clampStr(membership.expiresAt, 64),
+        planName: clampNonEmpty(membership.planName, membership.planId, 64),
+        pricePkr: Math.max(0, Number(membership.pricePkr) || 0),
+        priceUsd: Math.max(0, Number(membership.priceUsd) || 0),
+        durationDays: Math.max(1, Math.min(3650, Number(membership.durationDays) || 15)),
+        selectedDramaIds: safeDramaIds,
+        status: safeStatus,
+        activatedAt: clampNonEmpty(membership.activatedAt, nowIso, 64),
+        expiresAt: clampNonEmpty(membership.expiresAt, nowIso, 64),
         cancelledAt: clampStr(membership.cancelledAt || '', 64),
         revokedByAdminEmail: clampStr(membership.revokedByAdminEmail || '', 200),
         revokedReason: clampStr(membership.revokedReason || '', 500),
-        renewalHistory: Array.isArray(membership.renewalHistory) ? membership.renewalHistory.slice(0, 100) : [],
+        approvedByAdminEmail: clampStr(membership.approvedByAdminEmail || snap.data()?.approvedByAdminEmail || '', 200),
+        paymentProvider: clampNonEmpty(membership.paymentProvider || snap.data()?.paymentProvider, 'bank_qr', 40),
+        paymentRegion: membership.paymentRegion === 'international' ? 'international' : 'pakistan',
+        paymentMethod: safePaymentMethod,
+        currency: membership.currency === 'USD' ? 'USD' : 'PKR',
+        expectedAmount: Math.max(0, Number(membership.expectedAmount ?? membership.pricePkr ?? 0) || 0),
+        paymentReference: clampStr(membership.paymentReference || snap.data()?.paymentReference || '', 400),
+        renewalHistory: safeRenewalHistory,
         lastExtendedAt: clampStr(membership.lastExtendedAt || '', 64),
         updatedAt: serverTimestamp(),
       });
@@ -576,8 +667,39 @@ export async function deleteMembershipInFirestore(
   }
 }
 
+export async function syncBlockedUserToFirestore(record: BlockedUserRecord): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !user.emailVerified || !isFirebaseAdminUser()) return;
+  const blockId = sanitizeId(record.id);
+  const path = `blockedUsers/${blockId}`;
+  try {
+    await setDoc(doc(db, 'blockedUsers', blockId), {
+      id: blockId,
+      email: clampStr(record.email.trim().toLowerCase(), 200),
+      memberId: clampStr(record.memberId || '', 128),
+      fullName: clampStr(record.fullName || '', 120),
+      reason: clampStr(record.reason || 'Blocked by FEVIQO administrator', 500),
+      blockedByAdminId: clampStr(record.blockedByAdminId || user.uid, 128),
+      blockedByAdminEmail: clampStr(record.blockedByAdminEmail || user.email || '', 200),
+      blockedAt: clampStr(record.blockedAt || new Date().toISOString(), 64),
+      createdAtIso: clampStr(record.createdAt || new Date().toISOString(), 64),
+      updatedAtIso: clampStr(record.updatedAt || new Date().toISOString(), 64),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteBlockedUserInFirestore(blockId: string): Promise<void> {
+  if (!isFirebaseAdminUser() || !blockId) return;
+  await deleteFirestoreDocSafely('blockedUsers', blockId);
+}
+
 export interface CloudMembershipSnapshot {
   members: Array<SafeMember & { ownerUid?: string }>;
+  blockedUsers: BlockedUserRecord[];
   orders: MembershipOrder[];
   memberships: AdminMembershipRecord[];
   history: MembershipHistoryEntry[];
@@ -602,6 +724,7 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
   await ensureAdminProfileInFirestore();
 
   const members: Array<SafeMember & { ownerUid?: string }> = [];
+  const blockedUsers: BlockedUserRecord[] = [];
   const orders: MembershipOrder[] = [];
   const memberships: AdminMembershipRecord[] = [];
   const history: MembershipHistoryEntry[] = [];
@@ -616,6 +739,8 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
   const campaignCommissions: any[] = [];
   const commissionPayments: any[] = [];
   const monthlyCommissionReports: any[] = [];
+
+  const pullErrors: string[] = [];
 
   try {
     const snap = await getDocs(collection(db, 'members'));
@@ -636,7 +761,8 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
       });
     });
   } catch (err) {
-    handleFirestoreError(err, OperationType.LIST, 'members');
+    console.error('[Firestore pull] members failed:', err);
+    pullErrors.push(`members: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   try {
@@ -697,7 +823,8 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
       });
     });
   } catch (err) {
-    handleFirestoreError(err, OperationType.LIST, 'membershipOrders');
+    console.error('[Firestore pull] membershipOrders failed:', err);
+    pullErrors.push(`membershipOrders: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   try {
@@ -737,7 +864,8 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
       });
     });
   } catch (err) {
-    handleFirestoreError(err, OperationType.LIST, 'memberships');
+    console.error('[Firestore pull] memberships failed:', err);
+    pullErrors.push(`memberships: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   try {
@@ -761,7 +889,8 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
       });
     });
   } catch (err) {
-    handleFirestoreError(err, OperationType.LIST, 'membershipHistory');
+    console.error('[Firestore pull] membershipHistory failed:', err);
+    pullErrors.push(`membershipHistory: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   try {
@@ -794,7 +923,8 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
       });
     });
   } catch (err) {
-    handleFirestoreError(err, OperationType.LIST, 'memberNotifications');
+    console.error('[Firestore pull] memberNotifications failed:', err);
+    pullErrors.push(`memberNotifications: ${err instanceof Error ? err.message : String(err)}`);
   }
 
   try {
@@ -816,7 +946,7 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
       });
     });
   } catch (err) {
-    handleFirestoreError(err, OperationType.LIST, 'schedulerRuns');
+    console.error('[Firestore pull] schedulerRuns failed:', err);
   }
 
   const readCampaignCollectionSafely = async (colName: string, target: any[]) => {
@@ -867,11 +997,40 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
       };
     }
   } catch (err) {
-    handleFirestoreError(err, OperationType.GET, 'membershipConfig/public');
+    console.error('[Firestore pull] membershipConfig/public failed:', err);
+  }
+
+  try {
+    const snap = await getDocs(collection(db, 'blockedUsers'));
+    snap.forEach((d) => {
+      const data = d.data();
+      const email = String(data.email || '').trim().toLowerCase();
+      if (!email) return;
+      const nowIso = new Date().toISOString();
+      blockedUsers.push({
+        id: data.id || d.id,
+        email,
+        memberId: data.memberId || undefined,
+        fullName: data.fullName || undefined,
+        reason: data.reason || 'Blocked by FEVIQO administrator',
+        blockedByAdminId: data.blockedByAdminId || '',
+        blockedByAdminEmail: data.blockedByAdminEmail || '',
+        blockedAt: toIsoString(data.blockedAt || data.createdAtIso || data.createdAt, nowIso),
+        createdAt: toIsoString(data.createdAtIso || data.createdAt, nowIso),
+        updatedAt: toIsoString(data.updatedAtIso || data.updatedAt, nowIso),
+      });
+    });
+  } catch (err) {
+    console.error('[Firestore pull] blockedUsers failed:', err);
+  }
+
+  if (pullErrors.length >= 4 && members.length === 0 && orders.length === 0 && memberships.length === 0) {
+    throw new Error(`Firestore read failed across collections: ${pullErrors.join(' | ')}`);
   }
 
   return {
     members,
+    blockedUsers,
     orders,
     memberships,
     history,
@@ -889,8 +1048,20 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
   };
 }
 
+export interface CloudPushReport {
+  syncedMembers: number;
+  syncedOrders: number;
+  syncedMemberships: number;
+  syncedHistory: number;
+  syncedNotifications: number;
+  syncedBlockedUsers: number;
+  failedCount: number;
+  errors: string[];
+}
+
 export async function pushAdminSnapshotToFirestore(snapshot: {
   members: Array<SafeMember & { ownerUid?: string }>;
+  blockedUsers?: BlockedUserRecord[];
   orders: MembershipOrder[];
   memberships: AdminMembershipRecord[];
   history?: MembershipHistoryEntry[];
@@ -906,38 +1077,98 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
   campaignCommissions?: any[];
   commissionPayments?: any[];
   monthlyCommissionReports?: any[];
-}): Promise<void> {
-  if (!isFirebaseAdminUser()) return;
-  await ensureAdminProfileInFirestore();
+}): Promise<CloudPushReport> {
+  const report: CloudPushReport = {
+    syncedMembers: 0,
+    syncedOrders: 0,
+    syncedMemberships: 0,
+    syncedHistory: 0,
+    syncedNotifications: 0,
+    syncedBlockedUsers: 0,
+    failedCount: 0,
+    errors: [],
+  };
+
+  if (!isFirebaseAdminUser()) return report;
+  try {
+    await ensureAdminProfileInFirestore();
+  } catch (err) {
+    report.failedCount += 1;
+    report.errors.push(`adminProfile: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   const memberOwnerMap = new Map<string, string>();
-  for (const m of snapshot.members) {
+  for (const m of snapshot.members || []) {
     const ownerUid = sanitizeId(m.ownerUid || 'admin_assigned');
     memberOwnerMap.set(m.id, ownerUid);
-    await syncMemberAccountToFirestore(m, ownerUid);
+    try {
+      await syncMemberAccountToFirestore(m, ownerUid);
+      report.syncedMembers += 1;
+    } catch (err) {
+      report.failedCount += 1;
+      report.errors.push(`member(${m.id}): ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
-  for (const ord of snapshot.orders) {
+  for (const ord of snapshot.orders || []) {
     const ownerUid = sanitizeId(ord.ownerUid || memberOwnerMap.get(ord.memberId) || 'admin_assigned');
-    await syncOrderToFirestore(ord, { ownerUidOverride: ownerUid, proofDataUrl: ord.proofDataUrl });
+    try {
+      await syncOrderToFirestore(ord, { ownerUidOverride: ownerUid, proofDataUrl: ord.proofDataUrl });
+      report.syncedOrders += 1;
+    } catch (err) {
+      report.failedCount += 1;
+      report.errors.push(`order(${ord.id}): ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
-  for (const sub of snapshot.memberships) {
+  for (const sub of snapshot.memberships || []) {
     const ownerUid = sanitizeId(sub.ownerUid || memberOwnerMap.get(sub.memberId) || 'admin_assigned');
-    await syncMembershipToFirestore(sub, ownerUid);
+    try {
+      await syncMembershipToFirestore(sub, ownerUid);
+      report.syncedMemberships += 1;
+    } catch (err) {
+      report.failedCount += 1;
+      report.errors.push(`membership(${sub.id}): ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
 
   if (snapshot.history) {
-    for (const h of snapshot.history.slice(0, 150)) {
+    for (const h of snapshot.history.slice(0, 200)) {
       const ownerUid = sanitizeId(memberOwnerMap.get(h.memberId) || 'admin_assigned');
-      await syncHistoryEntryToFirestore(h, ownerUid);
+      try {
+        await syncHistoryEntryToFirestore(h, ownerUid);
+        report.syncedHistory += 1;
+      } catch (err) {
+        report.failedCount += 1;
+        report.errors.push(`history(${h.id}): ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
 
   if (snapshot.customerNotifications) {
-    for (const n of snapshot.customerNotifications.slice(0, 150)) {
+    for (const n of snapshot.customerNotifications.slice(0, 200)) {
       const ownerUid = sanitizeId(n.ownerUid || memberOwnerMap.get(n.memberId) || 'admin_assigned');
-      await syncMemberNotificationToFirestore(n, ownerUid);
+      try {
+        await syncMemberNotificationToFirestore(n, ownerUid);
+        report.syncedNotifications += 1;
+      } catch (err) {
+        report.failedCount += 1;
+        report.errors.push(`notif(${n.id}): ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+  }
+
+  if (Array.isArray(snapshot.blockedUsers)) {
+    for (const b of snapshot.blockedUsers) {
+      if (b && b.email) {
+        try {
+          await syncBlockedUserToFirestore(b);
+          report.syncedBlockedUsers += 1;
+        } catch (err) {
+          report.failedCount += 1;
+          report.errors.push(`blocked(${b.email}): ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
     }
   }
 
@@ -947,7 +1178,7 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
       if (!item || !item.id) continue;
       try {
         await setDoc(doc(db, colName, sanitizeId(String(item.id))), {
-          ...item,
+          ...stripUndefinedDeep(item),
           updatedAt: serverTimestamp(),
         });
       } catch {
@@ -970,10 +1201,10 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
   if (snapshot.config) {
     try {
       await setDoc(doc(db, 'membershipConfig', 'public'), {
-        starterQrImage: clampStr(snapshot.config.starterQrImage, 512),
-        standardQrImage: clampStr(snapshot.config.standardQrImage, 512),
-        plusQrImage: clampStr(snapshot.config.plusQrImage, 512),
-        vipQrImage: clampStr(snapshot.config.vipQrImage, 512),
+        starterQrImage: clampNonEmpty(snapshot.config.starterQrImage, '/qr-starter.png', 512),
+        standardQrImage: clampNonEmpty(snapshot.config.standardQrImage, '/qr-standard.png', 512),
+        plusQrImage: clampNonEmpty(snapshot.config.plusQrImage, '/qr-plus.png', 512),
+        vipQrImage: clampNonEmpty(snapshot.config.vipQrImage, '/qr-vip.png', 512),
         starterBinanceQrImage: clampStr(snapshot.config.starterBinanceQrImage || '', 512),
         standardBinanceQrImage: clampStr(snapshot.config.standardBinanceQrImage || '', 512),
         plusBinanceQrImage: clampStr(snapshot.config.plusBinanceQrImage || '', 512),
@@ -982,17 +1213,20 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
         internationalInstructionsEn: clampStr(snapshot.config.internationalInstructionsEn || '', 1500),
         internationalInstructionsUr: clampStr(snapshot.config.internationalInstructionsUr || '', 1500),
         whatsappNumber: clampStr(snapshot.config.whatsappNumber || '', 40),
-        adminEmail: clampStr(snapshot.config.adminEmail, 200),
-        supportEmail: clampStr(snapshot.config.supportEmail, 200),
+        adminEmail: clampEmail(snapshot.config.adminEmail, 'rexanmedia01@gmail.com'),
+        supportEmail: clampEmail(snapshot.config.supportEmail, 'support@feviqo.com'),
         supportNoteEn: clampStr(snapshot.config.supportNoteEn || '', 1000),
         supportNoteUr: clampStr(snapshot.config.supportNoteUr || '', 1000),
-        updatedAtIso: clampStr(snapshot.config.updatedAt || new Date().toISOString(), 64),
+        updatedAtIso: clampNonEmpty(snapshot.config.updatedAt, new Date().toISOString(), 64),
         updatedAt: serverTimestamp(),
       });
     } catch (err) {
-      handleFirestoreError(err, OperationType.WRITE, 'membershipConfig/public');
+      report.failedCount += 1;
+      report.errors.push(`config: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
+
+  return report;
 }
 
 export async function fetchMemberCloudOrders(memberId: string): Promise<MembershipOrder[]> {

@@ -25,11 +25,7 @@ export const FeviqoHeaderLogo: React.FC<{
   }, []);
 
   const customLogoUrl = assets.headerLogo;
-  const adminOverrideHeight = assets.displaySettings?.logoHeight && assets.displaySettings.logoHeight > 72
-    ? assets.displaySettings.logoHeight
-    : undefined;
-  const customHeight = height || adminOverrideHeight;
-  const inlineStyle = customHeight ? { height: `${customHeight}px`, width: 'auto', maxWidth: '46vw' } : undefined;
+  const inlineStyle = height ? { height: `${height}px`, width: 'auto' } : undefined;
 
   // If user uploaded a custom logo image or SVG
   if (customLogoUrl && customLogoUrl !== '/images/feviqo-logo.svg') {

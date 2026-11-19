@@ -63,13 +63,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header 
       id="feviqo-global-header" 
-      className={`sticky top-0 z-50 transition-colors duration-200 ${
+      className={`font-neue sticky top-0 z-50 transition-colors duration-200 ${
         scrolled 
           ? 'bg-[#032415]/95 backdrop-blur-md border-b border-[#064e3b]/90 shadow-lg py-1.5 sm:py-2' 
           : 'bg-gradient-to-r from-[#032415] via-[#064e3b] to-[#032415] border-b border-[#064e3b]/60 py-1.5 sm:py-2'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2">
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-5 lg:px-6 flex items-center justify-between gap-2">
         
         {/* Brand Logo */}
         <div className="flex items-center shrink-0">
@@ -81,18 +81,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <FeviqoHeaderLogo 
               theme="dark" 
-              className="h-12 sm:h-16 md:h-[72px] w-auto transition-opacity group-hover:opacity-90" 
+              className="h-7 sm:h-8 lg:h-9 w-auto transition-opacity group-hover:opacity-90" 
             />
           </a>
         </div>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-1 xl:gap-2 text-[13px] font-semibold text-white">
+        <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1.5 text-[13px] xl:text-sm font-semibold text-white">
           
           {/* Work / Gallery */}
           <button 
             onClick={() => onNavigatePage('gallery')}
-            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
+            className="px-2.5 xl:px-3 py-1.5 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
           >
             {t(MEMBERSHIP_COPY.nav.work)}
           </button>
@@ -104,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onMouseLeave={() => setSolutionsOpen(false)}
           >
             <button 
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium"
+              className="flex items-center gap-1 px-2 xl:px-3 py-1.5 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
             >
               Solutions
               <ChevronDown className={`w-3.5 h-3.5 transition-transform text-emerald-200 ${solutionsOpen ? 'rotate-180 text-white' : ''}`} />
@@ -163,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onMouseLeave={() => setServicesOpen(false)}
           >
             <button 
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
+              className="flex items-center gap-1 px-2 xl:px-3 py-1.5 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
             >
               Services
               <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${servicesOpen ? 'rotate-180 text-white' : ''}`} />
@@ -221,7 +221,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Pricing */}
           <button 
             onClick={onNavigatePricing}
-            className="px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer font-semibold text-white whitespace-nowrap shrink-0"
+            className="px-2 xl:px-3 py-1.5 rounded-full hover:bg-white/15 transition cursor-pointer font-semibold text-white whitespace-nowrap shrink-0"
           >
             Pricing
           </button>
@@ -234,7 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onMouseLeave={() => setResourcesOpen(false)}
           >
             <button 
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
+              className="flex items-center gap-1 px-2 xl:px-3 py-1.5 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium whitespace-nowrap shrink-0"
             >
               Resources
               <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${resourcesOpen ? 'rotate-180 text-white' : ''}`} />
@@ -276,7 +276,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onNavigatePage('dramas');
                 }
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300 whitespace-nowrap shrink-0"
+              className="flex items-center gap-1 px-2 xl:px-3 py-1.5 rounded-full hover:bg-white/15 transition cursor-pointer text-white font-medium hover:text-emerald-300 whitespace-nowrap shrink-0"
             >
               <span>{t(MEMBERSHIP_COPY.nav.dramas)}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform text-slate-300 ${dramasOpen ? 'rotate-180 text-white' : ''}`} />
@@ -382,14 +382,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onNavigatePage('membership');
               }
             }}
-            className="px-3 py-2 rounded-full hover:bg-white/15 transition cursor-pointer text-emerald-300 hover:text-white font-semibold whitespace-nowrap shrink-0"
+            className="px-2 xl:px-3 py-1.5 rounded-full hover:bg-white/15 transition cursor-pointer text-emerald-300 hover:text-white font-semibold whitespace-nowrap shrink-0"
           >
             {t(MEMBERSHIP_COPY.nav.membership)}
           </a>
         </nav>
 
         {/* Right CTA & Access */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        <div className="flex items-center gap-1.5 xl:gap-2 shrink-0">
           {/* Global EN | اردو Switcher */}
           <div
             role="group"
@@ -400,7 +400,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={() => setLang('en')}
               aria-pressed={lang === 'en'}
-              className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
+              className={`px-2 py-1 rounded-full text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
                 lang === 'en'
                   ? 'bg-[#22C55E] text-slate-950'
                   : 'text-white/85 hover:text-white'
@@ -412,7 +412,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={() => setLang('ur')}
               aria-pressed={lang === 'ur'}
-              className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
+              className={`px-2 py-1 rounded-full text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
                 lang === 'ur'
                   ? 'bg-[#22C55E] text-slate-950'
                   : 'text-white/85 hover:text-white'
@@ -425,7 +425,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Desktop About Us in the Corner */}
           <button 
             onClick={() => onNavigatePage('about')}
-            className="hidden lg:inline-flex items-center gap-1 px-3 py-2 rounded-full text-xs font-semibold text-white/90 hover:bg-white/15 hover:text-emerald-300 transition cursor-pointer whitespace-nowrap shrink-0"
+            className="hidden lg:inline-flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-full text-xs font-semibold text-white/90 hover:bg-white/15 hover:text-emerald-300 transition cursor-pointer whitespace-nowrap shrink-0"
             title="About FEVIQO"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -435,7 +435,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Client Portal Login */}
           <button 
             onClick={() => onNavigateFlow('login')}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/25 transition cursor-pointer whitespace-nowrap shrink-0"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-full text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/25 transition cursor-pointer whitespace-nowrap shrink-0"
             title="Login to FEVIQO Flow"
           >
             <Lock className="w-3.5 h-3.5 text-emerald-300" />
@@ -451,7 +451,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onNavigatePage('membership');
               }
             }}
-            className="lg:hidden px-2 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-emerald-400/35 text-emerald-300 text-[10px] sm:text-[11px] font-bold transition whitespace-nowrap shrink-0"
+            className="lg:hidden px-2 sm:px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-emerald-400/35 text-emerald-300 text-[11px] font-bold transition whitespace-nowrap shrink-0"
           >
             {t(MEMBERSHIP_COPY.nav.membership)}
           </a>
@@ -460,7 +460,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onBookCall}
             id="nav-start-project-btn"
-            className="hidden sm:inline-flex items-center justify-center bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 whitespace-nowrap shrink-0"
+            className="inline-flex items-center justify-center bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black px-2.5 sm:px-4 xl:px-4.5 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs tracking-wide uppercase transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 whitespace-nowrap shrink-0"
           >
             {t(MEMBERSHIP_COPY.nav.startProject)}
           </button>
@@ -468,7 +468,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Mobile menu toggle */}
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-1.5 sm:p-2 rounded-full text-white hover:bg-white/15 transition cursor-pointer shrink-0"
+            className="lg:hidden p-1.5 rounded-full text-white hover:bg-white/15 transition cursor-pointer shrink-0"
             aria-label="Toggle navigation"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
