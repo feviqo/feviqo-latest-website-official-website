@@ -4,12 +4,6 @@ import App from './App.tsx';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
 
-declare global {
-  interface Window {
-    __FEVIQO_MOUNTED__?: boolean;
-  }
-}
-
 // Recover automatically when a newly deployed build invalidates a lazy-loaded Vite chunk
 if (typeof window !== 'undefined') {
   window.addEventListener('vite:preloadError', (event) => {
@@ -41,7 +35,6 @@ if (container) {
         </ErrorBoundary>
       </StrictMode>
     );
-    window.__FEVIQO_MOUNTED__ = true;
   } catch (err) {
     console.error('[FEVIQO] Error mounting React application:', err);
     container.innerHTML = `

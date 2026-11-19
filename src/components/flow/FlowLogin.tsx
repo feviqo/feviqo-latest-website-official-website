@@ -76,7 +76,7 @@ export const FlowLogin: React.FC<FlowLoginProps> = ({
         </button>
 
         <div className="flex items-center gap-2.5">
-          <FeviqoHeaderLogo theme="dark" className="h-6 sm:h-7 w-auto" />
+          <FeviqoHeaderLogo theme="dark" className="h-11 sm:h-14 w-auto" />
           <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-[#22C55E]/20 text-[#22C55E] border border-emerald-500/30 tracking-wider">
             FLOW
           </span>

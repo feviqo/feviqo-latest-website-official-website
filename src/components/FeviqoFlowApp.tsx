@@ -923,7 +923,7 @@ export const FeviqoFlowApp: React.FC<FeviqoFlowAppProps> = ({
           <div className="h-4 w-[1px] bg-[#143B27]" />
 
           <div className="flex items-center gap-2">
-            <FeviqoHeaderLogo theme="dark" className="h-6 sm:h-7 w-auto" />
+            <FeviqoHeaderLogo theme="dark" className="h-11 sm:h-14 w-auto" />
             <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-full tracking-wider bg-[#0C2D1C] text-[#22C55E] border border-[#174B30]">
               FLOW
             </span>

@@ -65,23 +65,23 @@ export const Navbar: React.FC<NavbarProps> = ({
       id="feviqo-global-header" 
       className={`sticky top-0 z-50 transition-colors duration-200 ${
         scrolled 
-          ? 'bg-[#032415]/95 backdrop-blur-md border-b border-[#064e3b]/90 shadow-lg py-3.5' 
-          : 'bg-gradient-to-r from-[#032415] via-[#064e3b] to-[#032415] border-b border-[#064e3b]/60 py-3.5'
+          ? 'bg-[#032415]/95 backdrop-blur-md border-b border-[#064e3b]/90 shadow-lg py-1.5 sm:py-2' 
+          : 'bg-gradient-to-r from-[#032415] via-[#064e3b] to-[#032415] border-b border-[#064e3b]/60 py-1.5 sm:py-2'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2">
         
         {/* Brand Logo */}
-        <div className="flex items-center gap-8">
+        <div className="flex items-center shrink-0">
           <a 
-            href="#" 
+            href="/" 
             onClick={(e) => { e.preventDefault(); onNavigatePage('home'); }}
-            className="flex items-center group py-0.5"
+            className="flex items-center shrink-0 group py-0.5"
             aria-label="FEVIQO Home"
           >
             <FeviqoHeaderLogo 
               theme="dark" 
-              className="h-7 sm:h-8 w-auto transition-opacity group-hover:opacity-85" 
+              className="h-12 sm:h-16 md:h-[72px] w-auto transition-opacity group-hover:opacity-90" 
             />
           </a>
         </div>
@@ -389,7 +389,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         {/* Right CTA & Access */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Global EN | اردو Switcher */}
           <div
             role="group"
@@ -400,7 +400,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={() => setLang('en')}
               aria-pressed={lang === 'en'}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
+              className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
                 lang === 'en'
                   ? 'bg-[#22C55E] text-slate-950'
                   : 'text-white/85 hover:text-white'
@@ -412,7 +412,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={() => setLang('ur')}
               aria-pressed={lang === 'ur'}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
+              className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
                 lang === 'ur'
                   ? 'bg-[#22C55E] text-slate-950'
                   : 'text-white/85 hover:text-white'
@@ -451,7 +451,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onNavigatePage('membership');
               }
             }}
-            className="lg:hidden px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-emerald-400/35 text-emerald-300 text-[11px] font-bold transition whitespace-nowrap shrink-0"
+            className="lg:hidden px-2 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-emerald-400/35 text-emerald-300 text-[10px] sm:text-[11px] font-bold transition whitespace-nowrap shrink-0"
           >
             {t(MEMBERSHIP_COPY.nav.membership)}
           </a>
@@ -460,7 +460,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onBookCall}
             id="nav-start-project-btn"
-            className="bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black px-4 sm:px-5 py-2.5 rounded-full text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 whitespace-nowrap shrink-0"
+            className="hidden sm:inline-flex items-center justify-center bg-[#22C55E] hover:bg-[#16a34a] text-slate-950 font-black px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs tracking-wider uppercase transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg hover:-translate-y-0.5 whitespace-nowrap shrink-0"
           >
             {t(MEMBERSHIP_COPY.nav.startProject)}
           </button>
@@ -468,7 +468,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Mobile menu toggle */}
           <button 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 rounded-full text-white hover:bg-white/15 transition cursor-pointer"
+            className="lg:hidden p-1.5 sm:p-2 rounded-full text-white hover:bg-white/15 transition cursor-pointer shrink-0"
             aria-label="Toggle navigation"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

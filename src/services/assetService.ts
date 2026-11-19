@@ -352,7 +352,7 @@ export const DEFAULT_AUDIENCE_VIDEOS: AudienceVideoItem[] = [
 ];
 
 export const DEFAULT_DISPLAY_SETTINGS: AssetDisplaySettings = {
-  logoHeight: 32,
+  logoHeight: 60,
   heroVideoMaxWidth: 1024,
   heroVideoScale: 100,
   heroVideoRadius: 16,
@@ -476,6 +476,9 @@ export function sanitizeWebsiteAssets(assets: Partial<WebsiteAssets>): WebsiteAs
   const cleanDisplaySettings: AssetDisplaySettings = {
     ...DEFAULT_DISPLAY_SETTINGS,
     ...(assets.displaySettings || {}),
+    logoHeight: (!assets.displaySettings?.logoHeight || assets.displaySettings.logoHeight <= 44)
+      ? DEFAULT_DISPLAY_SETTINGS.logoHeight
+      : assets.displaySettings.logoHeight,
     pillarImageHeight: (assets.displaySettings?.pillarImageHeight === 550) 
       ? 1000 
       : (assets.displaySettings?.pillarImageHeight ?? DEFAULT_DISPLAY_SETTINGS.pillarImageHeight),

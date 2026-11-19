@@ -25,8 +25,11 @@ export const FeviqoHeaderLogo: React.FC<{
   }, []);
 
   const customLogoUrl = assets.headerLogo;
-  const customHeight = height || assets.displaySettings?.logoHeight;
-  const inlineStyle = customHeight ? { height: `${customHeight}px`, width: 'auto' } : undefined;
+  const adminOverrideHeight = assets.displaySettings?.logoHeight && assets.displaySettings.logoHeight > 72
+    ? assets.displaySettings.logoHeight
+    : undefined;
+  const customHeight = height || adminOverrideHeight;
+  const inlineStyle = customHeight ? { height: `${customHeight}px`, width: 'auto', maxWidth: '46vw' } : undefined;
 
   // If user uploaded a custom logo image or SVG
   if (customLogoUrl && customLogoUrl !== '/images/feviqo-logo.svg') {
@@ -34,10 +37,15 @@ export const FeviqoHeaderLogo: React.FC<{
       <img
         src={customLogoUrl}
         alt="FEVIQO Brand Logo"
+        fetchPriority="high"
+        loading="eager"
+        decoding="async"
         style={inlineStyle}
-        className={`${className} object-contain transition-all duration-200`}
+        className={`${className} object-contain shrink-0 transition-all duration-200`}
         onError={(e) => {
-          e.currentTarget.src = "/HEADER-removebg-preview.png";
+          if (!e.currentTarget.src.endsWith('/HEADER-removebg-preview.svg')) {
+            e.currentTarget.src = "/HEADER-removebg-preview.svg";
+          }
         }}
       />
     );
@@ -46,17 +54,17 @@ export const FeviqoHeaderLogo: React.FC<{
   if (theme === 'dark') {
     return (
       <img
-        src="/HEADER-removebg-preview.webp"
+        src="/HEADER-removebg-preview.png"
         alt="FEVIQO Logo"
-        width={150}
-        height={32}
         fetchPriority="high"
         loading="eager"
         decoding="async"
         style={inlineStyle}
-        className={`${className} object-contain transition-all duration-200`}
+        className={`${className} object-contain shrink-0 transition-all duration-200`}
         onError={(e) => {
-          e.currentTarget.src = "/HEADER-removebg-preview.png";
+          if (!e.currentTarget.src.endsWith('/HEADER-removebg-preview.svg')) {
+            e.currentTarget.src = "/HEADER-removebg-preview.svg";
+          }
         }}
       />
     );

@@ -22,6 +22,24 @@ import { CookieBanner } from './components/CookieBanner';
 // Synchronous critical routes for instant zero-wait boot on / and /membership/*
 import { VideoModal } from './components/VideoModal';
 import { BookCallModal } from './components/BookCallModal';
+import { PricingPage } from './components/PricingPage';
+import { BookingPage } from './components/pages/BookingPage';
+import { VideoGalleryPage } from './components/pages/VideoGalleryPage';
+import { ContentCreatorsPage } from './components/pages/ContentCreatorsPage';
+import { BusinessOwnersPage } from './components/pages/BusinessOwnersPage';
+import { AgenciesPage } from './components/pages/AgenciesPage';
+import { TestimonialsPage } from './components/pages/TestimonialsPage';
+import { CaseStudiesPage } from './components/pages/CaseStudiesPage';
+import { UnlimitedEditingPage } from './components/pages/UnlimitedEditingPage';
+import { PlatformOverviewPage } from './components/pages/PlatformOverviewPage';
+import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
+import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
+import { GunesinDramaPage } from './components/pages/GunesinDramaPage';
+import { MehmedDramaPage } from './components/pages/MehmedDramaPage';
+import { DramasPage } from './components/pages/DramasPage';
+import { AboutUsPage } from './components/pages/AboutUsPage';
+import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
+import { TermsPage } from './components/pages/TermsPage';
 import { MembershipPage } from './components/pages/MembershipPage';
 import { GlobalPhoneCompletionGuard } from './components/membership/GlobalPhoneCompletionGuard';
 import { LanguageProvider } from './i18n/LanguageContext';
@@ -61,65 +79,12 @@ function lazyWithRetry<T extends ComponentType<any>>(
   });
 }
 
-const PricingPage = lazyWithRetry(() =>
-  import('./components/PricingPage').then((m) => ({ default: m.PricingPage }))
-);
+// Keep internal/admin portals lazy-loaded so public bundle stays lean
 const FeviqoFlowApp = lazyWithRetry(() =>
   import('./components/FeviqoFlowApp').then((m) => ({ default: m.FeviqoFlowApp }))
 );
-const BookingPage = lazyWithRetry(() =>
-  import('./components/pages/BookingPage').then((m) => ({ default: m.BookingPage }))
-);
-const VideoGalleryPage = lazyWithRetry(() =>
-  import('./components/pages/VideoGalleryPage').then((m) => ({ default: m.VideoGalleryPage }))
-);
-const ContentCreatorsPage = lazyWithRetry(() =>
-  import('./components/pages/ContentCreatorsPage').then((m) => ({ default: m.ContentCreatorsPage }))
-);
-const BusinessOwnersPage = lazyWithRetry(() =>
-  import('./components/pages/BusinessOwnersPage').then((m) => ({ default: m.BusinessOwnersPage }))
-);
-const AgenciesPage = lazyWithRetry(() =>
-  import('./components/pages/AgenciesPage').then((m) => ({ default: m.AgenciesPage }))
-);
-const TestimonialsPage = lazyWithRetry(() =>
-  import('./components/pages/TestimonialsPage').then((m) => ({ default: m.TestimonialsPage }))
-);
-const CaseStudiesPage = lazyWithRetry(() =>
-  import('./components/pages/CaseStudiesPage').then((m) => ({ default: m.CaseStudiesPage }))
-);
-const UnlimitedEditingPage = lazyWithRetry(() =>
-  import('./components/pages/UnlimitedEditingPage').then((m) => ({ default: m.UnlimitedEditingPage }))
-);
-const PlatformOverviewPage = lazyWithRetry(() =>
-  import('./components/pages/PlatformOverviewPage').then((m) => ({ default: m.PlatformOverviewPage }))
-);
-const TurkishDramaPage = lazyWithRetry(() =>
-  import('./components/pages/TurkishDramaPage').then((m) => ({ default: m.TurkishDramaPage }))
-);
-const TeskilatDramaPage = lazyWithRetry(() =>
-  import('./components/pages/TeskilatDramaPage').then((m) => ({ default: m.TeskilatDramaPage }))
-);
-const GunesinDramaPage = lazyWithRetry(() =>
-  import('./components/pages/GunesinDramaPage').then((m) => ({ default: m.GunesinDramaPage }))
-);
-const MehmedDramaPage = lazyWithRetry(() =>
-  import('./components/pages/MehmedDramaPage').then((m) => ({ default: m.MehmedDramaPage }))
-);
-const DramasPage = lazyWithRetry(() =>
-  import('./components/pages/DramasPage').then((m) => ({ default: m.DramasPage }))
-);
 const MembershipAdminPage = lazyWithRetry(() =>
   import('./components/pages/MembershipAdminPage').then((m) => ({ default: m.MembershipAdminPage }))
-);
-const AboutUsPage = lazyWithRetry(() =>
-  import('./components/pages/AboutUsPage').then((m) => ({ default: m.AboutUsPage }))
-);
-const PrivacyPolicyPage = lazyWithRetry(() =>
-  import('./components/pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage }))
-);
-const TermsPage = lazyWithRetry(() =>
-  import('./components/pages/TermsPage').then((m) => ({ default: m.TermsPage }))
 );
 const SEOAdminModal = lazyWithRetry(() =>
   import('./components/admin/SEOAdminModal').then((m) => ({ default: m.SEOAdminModal }))
@@ -1011,7 +976,7 @@ export default function App() {
     <LanguageProvider>
       <SEOHead pathname={seoPath} />
 
-      <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <Suspense fallback={null}>
         <div className="w-full">
           {renderCurrentRoute()}
         </div>
