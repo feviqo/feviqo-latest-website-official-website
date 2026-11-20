@@ -90,6 +90,7 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
     preferredTime: '14:00',
   });
 
+  const [whatsappConsent, setWhatsappConsent] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
 
@@ -189,7 +190,7 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
       const apiRes = await fetch('/api/strategy-calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newLead),
+        body: JSON.stringify({ ...newLead, whatsappConsent }),
       });
       if (apiRes.ok) {
         setSendSuccess(true);
@@ -666,6 +667,19 @@ export const BookCallModal: React.FC<BookCallModalProps> = ({ isOpen, onClose, p
                   </select>
                 </div>
               </div>
+
+              {/* Explicit Optional WhatsApp Consent (never pre-checked) */}
+              <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={whatsappConsent}
+                  onChange={(e) => setWhatsappConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#16a34a] focus:ring-[#22C55E] shrink-0"
+                />
+                <span className="text-[11px] text-slate-600 leading-relaxed">
+                  Optional: Send me WhatsApp updates and follow-ups about my video editing enquiry. Reply STOP anytime to opt out.
+                </span>
+              </label>
 
               <button
                 type="submit"

@@ -1285,6 +1285,93 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "email", "reason", "blockedByAdminId", "blockedByAdminEmail", "blockedAt", "createdAtIso", "updatedAtIso", "createdAt", "updatedAt"]
+    },
+    "WhatsAppAutomationSettings": {
+      "title": "WhatsAppAutomationSettings",
+      "description": "Backend-managed WhatsApp Cloud API automation toggles, delays, Meta template approval registry, and AI support configuration.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "updatedAt"]
+    },
+    "WhatsAppPreference": {
+      "title": "WhatsAppPreference",
+      "description": "Explicit per-user WhatsApp notification consent categories and STOP opt-out status.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "phoneE164": { "type": "string", "minLength": 8, "maxLength": 24 },
+        "membershipUpdates": { "type": "boolean" },
+        "renewalReminders": { "type": "boolean" },
+        "newEpisodeAlerts": { "type": "boolean" },
+        "promotionalMessages": { "type": "boolean" },
+        "optedOut": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "phoneE164", "optedOut", "updatedAt"]
+    },
+    "WhatsAppMessageLog": {
+      "title": "WhatsAppMessageLog",
+      "description": "Outbound and inbound WhatsApp Cloud API message delivery, read, and failure audit log.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "direction": { "type": "string", "enum": ["outbound", "inbound"] },
+        "status": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "direction", "status", "createdAt"]
+    },
+    "AutomationScheduledJob": {
+      "title": "AutomationScheduledJob",
+      "description": "Scheduled delayed WhatsApp reminders (30-min incomplete signup, checkout abandonment, expiry reminders, lead follow-ups).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "jobType": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "status": { "type": "string", "enum": ["pending", "processing", "completed", "cancelled", "failed"] },
+        "runAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "jobType", "status", "runAt"]
+    },
+    "EpisodeBroadcastRecord": {
+      "title": "EpisodeBroadcastRecord",
+      "description": "Audit log of published Urdu episode WhatsApp alerts sent to entitled active subscribers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "dramaId": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "episodeNumber": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "dramaId", "episodeNumber", "createdAt"]
+    },
+    "VideoEditingLead": {
+      "title": "VideoEditingLead",
+      "description": "FEVIQO Creative video editing enquiry and CRM pipeline record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fullName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "minLength": 5, "maxLength": 200 },
+        "stage": { "type": "string", "enum": ["new", "contacted", "qualified", "quote_sent", "booked", "won", "lost"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "fullName", "email", "stage", "createdAt"]
+    },
+    "WhatsAppConversationThread": {
+      "title": "WhatsAppConversationThread",
+      "description": "Unified customer WhatsApp conversation history with AI classification and human takeover state.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "phoneE164": { "type": "string", "minLength": 8, "maxLength": 24 },
+        "humanTakeover": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "phoneE164", "humanTakeover", "updatedAt"]
     }
   },
   "firestore": {
@@ -1375,6 +1462,34 @@
     "/blockedUsers/{blockId}": {
       "schema": { "$ref": "#/entities/BlockedUser" },
       "description": "Admin-managed permanently blocked user emails restricted from signing in or accessing FEVIQO until unblocked."
+    },
+    "/whatsappSettings/{docId}": {
+      "schema": { "$ref": "#/entities/WhatsAppAutomationSettings" },
+      "description": "Backend-managed WhatsApp Cloud API automation rules, templates, and AI settings."
+    },
+    "/whatsappPreferences/{prefId}": {
+      "schema": { "$ref": "#/entities/WhatsAppPreference" },
+      "description": "Per-customer WhatsApp notification consent preferences and opt-out records."
+    },
+    "/whatsappMessages/{msgId}": {
+      "schema": { "$ref": "#/entities/WhatsAppMessageLog" },
+      "description": "Outbound and inbound WhatsApp Cloud API message logs and delivery receipts."
+    },
+    "/automationJobs/{jobId}": {
+      "schema": { "$ref": "#/entities/AutomationScheduledJob" },
+      "description": "Scheduled reminder and follow-up automation jobs."
+    },
+    "/episodeBroadcasts/{broadcastId}": {
+      "schema": { "$ref": "#/entities/EpisodeBroadcastRecord" },
+      "description": "Deduplicated history of new Urdu episode WhatsApp broadcasts."
+    },
+    "/videoEditingLeads/{leadId}": {
+      "schema": { "$ref": "#/entities/VideoEditingLead" },
+      "description": "FEVIQO Creative video editing leads CRM pipeline."
+    },
+    "/whatsappConversations/{convId}": {
+      "schema": { "$ref": "#/entities/WhatsAppConversationThread" },
+      "description": "Unified customer WhatsApp support inbox threads and human takeover flags."
     }
   }
 }

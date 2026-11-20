@@ -68,8 +68,8 @@ export const AdminPortalAuthGate: React.FC<AdminPortalAuthGateProps> = ({
     setSubmitting(true);
     try {
       const res = await loginAdminAccount({ email: email.trim(), password });
-      if (!res.success || !res.admin) {
-        setError(res.error || 'Invalid administrator credentials.');
+      if (!res.success || !('admin' in res) || !res.admin) {
+        setError(('error' in res ? res.error : undefined) || 'Invalid administrator credentials.');
         return;
       }
       setAdmin(res.admin);
@@ -88,9 +88,9 @@ export const AdminPortalAuthGate: React.FC<AdminPortalAuthGateProps> = ({
       const cred = await signInWithPopup(auth, googleProvider);
       const idToken = await cred.user.getIdToken();
       const res = await authenticateAdminWithGoogle(idToken);
-      if (!res.success || !res.admin) {
+      if (!res.success || !('admin' in res) || !res.admin) {
         await signOut(auth).catch(() => {});
-        setError(res.error || 'This Google account does not have FEVIQO admin access.');
+        setError(('error' in res ? res.error : undefined) || 'This Google account does not have FEVIQO admin access.');
         return;
       }
       setAdmin(res.admin);

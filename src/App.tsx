@@ -86,6 +86,12 @@ const FeviqoFlowApp = lazyWithRetry(() =>
 const MembershipAdminPage = lazyWithRetry(() =>
   import('./components/pages/MembershipAdminPage').then((m) => ({ default: m.MembershipAdminPage }))
 );
+const AdminAutomationPage = lazyWithRetry(() =>
+  import('./components/pages/AdminAutomationPage').then((m) => ({ default: m.AdminAutomationPage }))
+);
+const AdminAutomationLeadsPage = lazyWithRetry(() =>
+  import('./components/pages/AdminAutomationLeadsPage').then((m) => ({ default: m.AdminAutomationLeadsPage }))
+);
 const SEOAdminModal = lazyWithRetry(() =>
   import('./components/admin/SEOAdminModal').then((m) => ({ default: m.SEOAdminModal }))
 );
@@ -114,6 +120,8 @@ export default function App() {
         return 'membership';
       }
 
+      if (path.startsWith('/admin/automation/leads')) return 'admin-automation-leads';
+      if (path.startsWith('/admin/automation')) return 'admin-automation';
       if (path.startsWith('/admin/memberships')) return 'admin-memberships';
       if (path.includes('/admin') || hash.includes('#admin')) return 'flow';
       if (path.includes('/flow') || hash.includes('#flow')) return 'flow';
@@ -145,7 +153,11 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (!path.startsWith('/admin/memberships') && (path.includes('/admin') || hash.includes('#admin'))) return 'admin';
+      if (
+        !path.startsWith('/admin/memberships') &&
+        !path.startsWith('/admin/automation') &&
+        (path.includes('/admin') || hash.includes('#admin'))
+      ) return 'admin';
     }
     return 'login';
   });
@@ -225,7 +237,11 @@ export default function App() {
         setCurrentRoute('gallery');
       }
 
-      if (path.startsWith('/admin/memberships')) {
+      if (path.startsWith('/admin/automation/leads')) {
+        setCurrentRoute('admin-automation-leads');
+      } else if (path.startsWith('/admin/automation')) {
+        setCurrentRoute('admin-automation');
+      } else if (path.startsWith('/admin/memberships')) {
         setCurrentRoute('admin-memberships');
       } else if (path.includes('/admin') || hash.includes('#admin')) {
         setCurrentRoute('flow');
@@ -332,6 +348,8 @@ export default function App() {
       'membership': 'FEVIQO Premium Membership & Pricing | Watch Turkish Dramas in Urdu',
       'account': 'My Account | FEVIQO Premium Membership',
       'admin-memberships': 'FEVIQO Membership & Payment Verification Admin',
+      'admin-automation': 'FEVIQO WhatsApp Cloud API & Automation Admin',
+      'admin-automation-leads': 'FEVIQO Video Editing Leads & WhatsApp Inbox',
       'privacy': 'Privacy Policy & Cookie Disclosure | FEVIQO',
       'terms': 'Terms of Service & Usage Agreement | FEVIQO'
     };
@@ -370,6 +388,10 @@ export default function App() {
         ? '/'
         : route === 'admin-memberships'
         ? '/admin/memberships'
+        : route === 'admin-automation'
+        ? '/admin/automation'
+        : route === 'admin-automation-leads'
+        ? '/admin/automation/leads'
         : route === 'membership' && currentPartnerSlug
         ? `/membership/${encodeURIComponent(normalizePartnerSlugForUrl(currentPartnerSlug))}`
         : `/${route}`;
@@ -794,6 +816,28 @@ export default function App() {
           />
         );
 
+      case 'admin-automation':
+        return (
+          <AdminAutomationPage
+            onBookCall={() => handleOpenBookCall()}
+            onNavigateSection={handleNavigateSection}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
+            onNavigatePage={(route) => navigateTo(route)}
+          />
+        );
+
+      case 'admin-automation-leads':
+        return (
+          <AdminAutomationLeadsPage
+            onBookCall={() => handleOpenBookCall()}
+            onNavigateSection={handleNavigateSection}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
+            onNavigatePage={(route) => navigateTo(route)}
+          />
+        );
+
       case 'gunesin-dogdugu-yer':
         return (
           <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white text-slate-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col">
@@ -938,6 +982,8 @@ export default function App() {
         return '/membership';
       case 'account': return '/account';
       case 'admin-memberships': return '/admin/memberships';
+      case 'admin-automation': return '/admin/automation';
+      case 'admin-automation-leads': return '/admin/automation/leads';
       case 'privacy': return '/privacy';
       case 'terms': return '/terms';
       case 'teskilat-urdu':

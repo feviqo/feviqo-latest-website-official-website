@@ -1359,7 +1359,7 @@ export async function triggerEpisodePublishedBroadcast(params: {
   const settings = getAutomationSettings();
   const entitled = getEntitledActiveMembersForDrama(drama.id);
   const episodeUrl =
-    params.episodeUrl || `https://feviqo.com/${drama.slug}/${cleanSlug}`;
+    params.episodeUrl || `https://feviqo.com${drama.hubPath.replace(/\/+$/, '')}/${cleanSlug}`;
   const resendSuffix = params.forceResend ? `:resend:${Date.now()}` : '';
 
   const recipients: EpisodeBroadcastRecipient[] = [];
@@ -1730,8 +1730,8 @@ export async function sendAdminManualWhatsAppReply(params: {
     ...conv.messages,
     {
       id: makeId('cmsg'),
-      direction: 'outbound',
-      sender: 'admin',
+      direction: 'outbound' as const,
+      sender: 'admin' as const,
       text,
       wamid: sendRes.messageId,
       createdAt: now,
@@ -1935,8 +1935,8 @@ export async function processIncomingWhatsAppWebhookPayload(payload: any): Promi
           ...conv.messages,
           {
             id: makeId('cmsg'),
-            direction: 'inbound',
-            sender: 'customer',
+            direction: 'inbound' as const,
+            sender: 'customer' as const,
             text: String(incomingText),
             wamid,
             createdAt: now,
@@ -2116,8 +2116,8 @@ export async function processIncomingWhatsAppWebhookPayload(payload: any): Promi
               ...conv.messages,
               {
                 id: makeId('cmsg'),
-                direction: 'outbound',
-                sender: 'ai',
+                direction: 'outbound' as const,
+                sender: 'ai' as const,
                 text: aiResult.replyText,
                 wamid: sendRes.messageId,
                 intent: aiResult.intent,
@@ -2516,7 +2516,7 @@ export function getAdminAutomationOverview() {
   const dramasCatalog = MEMBERSHIP_DRAMAS.map((d) => ({
     id: d.id,
     title: d.title,
-    slug: d.slug,
+    slug: d.hubPath.replace(/^\/+|\/+$/g, '') || d.id,
     vipEligible: d.vipEligible,
     episodes: d.episodes.map((ep) => ({
       slug: ep.slug,

@@ -1000,5 +1000,51 @@ service cloud.firestore {
         ]);
       allow delete: if isValidId(blockId) && isAdmin();
     }
+
+    // Backend-managed WhatsApp Cloud API, Business Automation, Episode Alerts & Video Leads CRM
+    // All writes are executed exclusively by the authenticated Render backend via Firebase Admin SDK.
+    // Direct client writes are denied to isolate PII (phone numbers, leads, chat transcripts) and prevent tampering.
+    match /whatsappSettings/{docId} {
+      allow get: if isValidId(docId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /whatsappPreferences/{prefId} {
+      allow get: if isValidId(prefId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /whatsappMessages/{msgId} {
+      allow get: if isValidId(msgId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /automationJobs/{jobId} {
+      allow get: if isValidId(jobId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /episodeBroadcasts/{broadcastId} {
+      allow get: if isValidId(broadcastId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /videoEditingLeads/{leadId} {
+      allow get: if isValidId(leadId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /whatsappConversations/{convId} {
+      allow get: if isValidId(convId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
   }
 }
+

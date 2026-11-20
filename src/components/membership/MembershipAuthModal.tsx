@@ -56,6 +56,8 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [referralCodeInput, setReferralCodeInput] = useState(() => getStoredReferralCode());
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
+  const [promotionalOptIn, setPromotionalOptIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleEnabledForDomain, setGoogleEnabledForDomain] = useState(false);
@@ -121,6 +123,8 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
         fullName: cred.user.displayName || undefined,
         phone: mode === 'signup' && hasValidPhoneNumber(phone) ? phone.trim() : undefined,
         referralCode: normalizeReferralInput(referralCodeInput) || undefined,
+        whatsappOptIn: whatsappOptIn === true,
+        promotionalOptIn: promotionalOptIn === true,
       });
       if ('error' in result) {
         if (result.code === 'ACCOUNT_BLOCKED' || result.blocked) {
@@ -285,6 +289,8 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
               password,
               confirmPassword,
               referralCode: normalizeReferralInput(referralCodeInput) || undefined,
+              whatsappOptIn: whatsappOptIn === true,
+              promotionalOptIn: promotionalOptIn === true,
             })
           : await loginMemberAccount({ email: email.trim(), password });
 
@@ -675,6 +681,37 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
                     {t(MEMBERSHIP_COPY.promo.authReferralAppliedNote)}
                   </p>
                 )}
+              </div>
+
+              {/* Explicit, optional, never pre-checked WhatsApp notification consent */}
+              <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200 space-y-2.5">
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={whatsappOptIn}
+                    onChange={(e) => setWhatsappOptIn(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#16A34A] focus:ring-[#22C55E] shrink-0"
+                  />
+                  <span className="text-[11px] text-zinc-700 leading-relaxed">
+                    {isUrdu
+                      ? 'اختیاری: مجھے واٹس ایپ پر ممبرشپ اپ ڈیٹس، ادائیگی کی تصدیق، تجدید کی یاد دہانی اور نئی اردو اقساط کی اطلاعات بھیجیں۔ آپ کسی بھی وقت STOP لکھ کر بند کر سکتے ہیں۔'
+                      : 'Optional: Send me WhatsApp notifications for membership updates, payment verification, renewal reminders, and new Urdu episodes. You can opt out anytime by replying STOP.'}
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={promotionalOptIn}
+                    onChange={(e) => setPromotionalOptIn(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-[#16A34A] focus:ring-[#22C55E] shrink-0"
+                  />
+                  <span className="text-[11px] text-zinc-600 leading-relaxed">
+                    {isUrdu
+                      ? 'اختیاری: مجھے واٹس ایپ پر FEVIQO Premium کی خصوصی پیشکشیں اور یاد دہانیاں بھیجیں۔'
+                      : 'Optional: Send me occasional FEVIQO Premium offers and package reminders on WhatsApp.'}
+                  </span>
+                </label>
               </div>
             </>
           )}

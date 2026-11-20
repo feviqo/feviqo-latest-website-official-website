@@ -590,6 +590,34 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     ogImage: 'https://feviqo.com/feviqo1.png',
     robots: 'noindex, nofollow',
     schemaType: 'WebSite'
+  },
+  '/admin/automation': {
+    path: '/admin/automation',
+    pageName: 'FEVIQO WhatsApp & Automation Admin',
+    seoTitle: 'FEVIQO WhatsApp Cloud API & Business Automation Admin',
+    metaDescription: 'Private FEVIQO administration dashboard for WhatsApp Cloud API integration, membership automation rules, episode broadcasts, and AI support.',
+    focusKeyword: 'feviqo admin automation',
+    secondaryKeywords: [],
+    canonicalUrl: 'https://feviqo.com/admin/automation',
+    ogTitle: 'FEVIQO WhatsApp & Automation Admin',
+    ogDescription: 'Private WhatsApp Cloud API and automation management portal.',
+    ogImage: 'https://feviqo.com/feviqo1.png',
+    robots: 'noindex, nofollow',
+    schemaType: 'WebSite'
+  },
+  '/admin/automation/leads': {
+    path: '/admin/automation/leads',
+    pageName: 'FEVIQO Video Editing Leads & WhatsApp Inbox',
+    seoTitle: 'FEVIQO Video Editing Leads CRM & WhatsApp Inbox',
+    metaDescription: 'Private FEVIQO administration dashboard for video editing leads, follow-up pipelines, and unified WhatsApp inbox with human takeover.',
+    focusKeyword: 'feviqo admin automation leads',
+    secondaryKeywords: [],
+    canonicalUrl: 'https://feviqo.com/admin/automation/leads',
+    ogTitle: 'FEVIQO Video Editing Leads & Inbox',
+    ogDescription: 'Private video editing CRM and WhatsApp inbox.',
+    ogImage: 'https://feviqo.com/feviqo1.png',
+    robots: 'noindex, nofollow',
+    schemaType: 'WebSite'
   }
 };
 

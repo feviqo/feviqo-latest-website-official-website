@@ -28,6 +28,8 @@ import {
   Link2,
   Ban,
   RotateCcw,
+  MessageSquare,
+  Bot,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { ReferralCampaignsPanel } from '../admin/ReferralCampaignsPanel';
@@ -1859,6 +1861,24 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onNavigatePage('admin-automation')}
+                  className="px-4 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                  title="Manage WhatsApp Cloud API, membership automation, episode broadcasts & AI assistant"
+                >
+                  <Bot className="w-3.5 h-3.5 shrink-0 text-emerald-700" />
+                  <span>WhatsApp Automation</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigatePage('admin-automation-leads')}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                  title="Open Video Editing Leads CRM & Unified WhatsApp Inbox"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 shrink-0 text-slate-600" />
+                  <span>Video Leads &amp; Inbox</span>
+                </button>
                 <button
                   type="button"
                   onClick={handleRecoverMissingMemberships}

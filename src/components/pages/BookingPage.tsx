@@ -102,6 +102,7 @@ export const BookingPage: React.FC<BookingPageProps> = ({
     preferredTime: '02:00 PM (EST)',
     notes: '',
   });
+  const [whatsappConsent, setWhatsappConsent] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -164,7 +165,7 @@ export const BookingPage: React.FC<BookingPageProps> = ({
       const apiRes = await fetch('/api/strategy-calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, whatsappConsent }),
       });
       if (!apiRes.ok) {
         await sendNotificationEmail({
@@ -629,6 +630,19 @@ export const BookingPage: React.FC<BookingPageProps> = ({
                         className="w-full px-4 py-3 rounded-xl bg-white border border-slate-200 text-slate-950 placeholder-slate-400 text-sm focus:outline-none focus:border-[#22C55E] focus:ring-2 focus:ring-[#22C55E]/20 transition"
                       />
                     </div>
+
+                    {/* Explicit Optional WhatsApp Consent (never pre-checked) */}
+                    <label className="flex items-start gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={whatsappConsent}
+                        onChange={(e) => setWhatsappConsent(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#16a34a] focus:ring-[#22C55E] shrink-0"
+                      />
+                      <span className="text-xs text-slate-600 leading-relaxed">
+                        Optional: Yes, contact me on WhatsApp at the number above with confirmation, quote follow-ups, and scheduling updates for my video editing enquiry. Reply STOP anytime to opt out.
+                      </span>
+                    </label>
 
                     {/* Submit Button */}
                     <button
