@@ -372,3 +372,63 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
     return null;
   }
 }
+
+export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
+  settings: Record<string, any> | null;
+  preferences: any[];
+  messages: any[];
+  jobs: any[];
+  episodeBroadcasts: any[];
+  leads: any[];
+  conversations: any[];
+} | null> {
+  const db = getAdminFirestoreDb();
+  if (!db) return null;
+  try {
+    const [
+      settingsSnap,
+      prefsSnap,
+      msgsSnap,
+      jobsSnap,
+      epSnap,
+      leadsSnap,
+      convSnap,
+    ] = await Promise.all([
+      db.collection('whatsappSettings').doc('main').get(),
+      db.collection('whatsappPreferences').get(),
+      db.collection('whatsappMessages').get(),
+      db.collection('automationJobs').get(),
+      db.collection('episodeBroadcasts').get(),
+      db.collection('videoEditingLeads').get(),
+      db.collection('whatsappConversations').get(),
+    ]);
+
+    const normalizeList = (snap: { docs: Array<{ id: string; data: () => Record<string, any> }> }) =>
+      snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          ...data,
+          id: data.id || d.id,
+          createdAt: toIso(data.createdAtIso || data.createdAt) || new Date().toISOString(),
+          updatedAt: toIso(data.updatedAtIso || data.updatedAt) || new Date().toISOString(),
+        };
+      });
+
+    return {
+      settings: settingsSnap.exists ? (settingsSnap.data() || null) : null,
+      preferences: normalizeList(prefsSnap),
+      messages: normalizeList(msgsSnap),
+      jobs: normalizeList(jobsSnap),
+      episodeBroadcasts: normalizeList(epSnap),
+      leads: normalizeList(leadsSnap),
+      conversations: normalizeList(convSnap),
+    };
+  } catch (err: any) {
+    if (err?.code === 7 || String(err?.message || '').includes('PERMISSION_DENIED')) {
+      firestoreWriteDisabled = true;
+    }
+    console.warn('[FirestoreAdmin] Pull automation snapshot failed:', err?.message || err);
+    return null;
+  }
+}
+

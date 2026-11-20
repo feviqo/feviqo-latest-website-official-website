@@ -1009,6 +1009,8 @@ export async function registerMemberAccount(payload: {
   password: string;
   confirmPassword: string;
   referralCode?: string;
+  whatsappOptIn?: boolean;
+  promotionalOptIn?: boolean;
 }): Promise<
   ({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; email?: string; reason?: string; error: string }
 > {
@@ -1071,6 +1073,8 @@ export async function authenticateMemberWithGoogle(payload: {
   phone?: string;
   referralCode?: string;
   email?: string;
+  whatsappOptIn?: boolean;
+  promotionalOptIn?: boolean;
 }): Promise<
   ({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; email?: string; reason?: string; error: string }
 > {

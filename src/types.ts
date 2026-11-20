@@ -201,6 +201,8 @@ export type AppRoute =
   | 'membership'
   | 'account'
   | 'admin-memberships'
+  | 'admin-automation'
+  | 'admin-automation-leads'
   | 'privacy'
   | 'terms';
 

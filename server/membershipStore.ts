@@ -6870,3 +6870,183 @@ export function authorizeEpisodePlayback(params: {
 export function getProtectedStreamsSecurityOverview() {
   return getMuxSecurityAdminOverview(PROTECTED_EPISODE_STREAMS, MEMBERSHIP_DRAMAS);
 }
+
+// --- READ-ONLY AUTOMATION & ENTITLEMENT HELPERS ---
+export function getAutomationMembershipSnapshot(): {
+  members: SafeMember[];
+  orders: MembershipOrder[];
+  memberships: MembershipRecord[];
+} {
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []).map((m) => toSafeMember(m));
+  const orders = readAllOrders();
+  const memberships = syncMemberSubscriptions();
+  return { members, orders, memberships };
+}
+
+export function getEntitledActiveMembersForDrama(dramaId: string): Array<{
+  member: SafeMember;
+  membership: MembershipRecord;
+}> {
+  const drama = getDramaById(dramaId);
+  if (!drama) return [];
+
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const memberMap = new Map(members.map((m) => [m.id, m]));
+  const memberships = syncMemberSubscriptions();
+  const now = Date.now();
+  const seenMemberIds = new Set<string>();
+  const results: Array<{ member: SafeMember; membership: MembershipRecord }> = [];
+
+  for (const sub of memberships) {
+    if (sub.status !== 'active') continue;
+    const expMs = Date.parse(sub.expiresAt);
+    if (Number.isNaN(expMs) || expMs <= now) continue;
+
+    const isEntitled =
+      (sub.planId === 'vip' && drama.vipEligible) ||
+      (Array.isArray(sub.selectedDramaIds) && sub.selectedDramaIds.includes(drama.id));
+    if (!isEntitled) continue;
+
+    const memberRec = memberMap.get(sub.memberId);
+    if (!memberRec) continue;
+    if (getBlockedUserByEmail(memberRec.email) || getBlockedUserByMemberId(memberRec.id)) {
+      continue;
+    }
+    if (seenMemberIds.has(memberRec.id)) continue;
+    seenMemberIds.add(memberRec.id);
+    results.push({ member: toSafeMember(memberRec), membership: sub });
+  }
+
+  return results;
+}
+
+export function findMemberContextByPhoneDigits(rawPhoneDigits: string): {
+  member: SafeMember;
+  activeMemberships: MembershipRecord[];
+  latestPendingOrder?: MembershipOrder;
+} | null {
+  const targetDigits = String(rawPhoneDigits || '').replace(/[^\d]/g, '');
+  if (targetDigits.length < 8) return null;
+  const targetTail = targetDigits.slice(-10);
+
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const matched = members.find((m) => {
+    const mDigits = String(m.phone || '').replace(/[^\d]/g, '');
+    if (mDigits.length < 8) return false;
+    return mDigits === targetDigits || mDigits.slice(-10) === targetTail;
+  });
+
+  if (!matched) return null;
+  if (getBlockedUserByEmail(matched.email) || getBlockedUserByMemberId(matched.id)) {
+    return null;
+  }
+
+  const memberships = syncMemberSubscriptions(matched.id);
+  const now = Date.now();
+  const activeMemberships = memberships.filter(
+    (sub) => sub.status === 'active' && Date.parse(sub.expiresAt) > now
+  );
+  const orders = readAllOrders()
+    .filter((o) => o.memberId === matched.id)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const latestPendingOrder = orders.find(
+    (o) => o.status === 'awaiting_payment' || o.status === 'pending_verification'
+  );
+
+  return {
+    member: toSafeMember(matched),
+    activeMemberships,
+    latestPendingOrder,
+  };
+}
+
+
+// --- READ-ONLY AUTOMATION & ENTITLEMENT HELPERS ---
+export function getAutomationMembershipSnapshot(): {
+  members: SafeMember[];
+  orders: MembershipOrder[];
+  memberships: MembershipRecord[];
+} {
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []).map((m) => toSafeMember(m));
+  const orders = readAllOrders();
+  const memberships = syncMemberSubscriptions();
+  return { members, orders, memberships };
+}
+
+export function getEntitledActiveMembersForDrama(dramaId: string): Array<{
+  member: SafeMember;
+  membership: MembershipRecord;
+}> {
+  const drama = getDramaById(dramaId);
+  if (!drama) return [];
+
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const memberMap = new Map(members.map((m) => [m.id, m]));
+  const memberships = syncMemberSubscriptions();
+  const now = Date.now();
+  const seenMemberIds = new Set<string>();
+  const results: Array<{ member: SafeMember; membership: MembershipRecord }> = [];
+
+  for (const sub of memberships) {
+    if (sub.status !== 'active') continue;
+    const expMs = Date.parse(sub.expiresAt);
+    if (Number.isNaN(expMs) || expMs <= now) continue;
+
+    const isEntitled =
+      (sub.planId === 'vip' && drama.vipEligible) ||
+      (Array.isArray(sub.selectedDramaIds) && sub.selectedDramaIds.includes(drama.id));
+    if (!isEntitled) continue;
+
+    const memberRec = memberMap.get(sub.memberId);
+    if (!memberRec) continue;
+    if (getBlockedUserByEmail(memberRec.email) || getBlockedUserByMemberId(memberRec.id)) {
+      continue;
+    }
+    if (seenMemberIds.has(memberRec.id)) continue;
+    seenMemberIds.add(memberRec.id);
+    results.push({ member: toSafeMember(memberRec), membership: sub });
+  }
+
+  return results;
+}
+
+export function findMemberContextByPhoneDigits(rawPhoneDigits: string): {
+  member: SafeMember;
+  activeMemberships: MembershipRecord[];
+  latestPendingOrder?: MembershipOrder;
+} | null {
+  const targetDigits = String(rawPhoneDigits || '').replace(/[^\d]/g, '');
+  if (targetDigits.length < 8) return null;
+  const targetTail = targetDigits.slice(-10);
+
+  const members = readJson<MemberRecord[]>(MEMBERS_FILE, []);
+  const matched = members.find((m) => {
+    const mDigits = String(m.phone || '').replace(/[^\d]/g, '');
+    if (mDigits.length < 8) return false;
+    return mDigits === targetDigits || mDigits.slice(-10) === targetTail;
+  });
+
+  if (!matched) return null;
+  if (getBlockedUserByEmail(matched.email) || getBlockedUserByMemberId(matched.id)) {
+    return null;
+  }
+
+  const memberships = syncMemberSubscriptions(matched.id);
+  const now = Date.now();
+  const activeMemberships = memberships.filter(
+    (sub) => sub.status === 'active' && Date.parse(sub.expiresAt) > now
+  );
+  const orders = readAllOrders()
+    .filter((o) => o.memberId === matched.id)
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+  const latestPendingOrder = orders.find(
+    (o) => o.status === 'awaiting_payment' || o.status === 'pending_verification'
+  );
+
+  return {
+    member: toSafeMember(matched),
+    activeMemberships,
+    latestPendingOrder,
+  };
+}
+
