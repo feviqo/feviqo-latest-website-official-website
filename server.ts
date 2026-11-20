@@ -2881,27 +2881,6 @@ app.post('/api/strategy-calls', async (req, res) => {
       }).catch(() => {});
     } catch {}
 
-    // 5. Mirror strategy call enquiry into unified FEVIQO Video Editing Leads automation pipeline (non-blocking)
-    try {
-      const fullPhone = `${newLead.countryCode || ''}${newLead.phoneNumber || newLead.phone || ''}`.trim();
-      void createVideoEditingLead({
-        fullName: clientFullName,
-        email: newLead.email || '',
-        whatsappNumber: fullPhone,
-        whatsappConsent: Boolean(req.body?.whatsappConsent),
-        companyOrAgency: newLead.company || newLead.businessName || '',
-        editingService: newLead.editingService || newLead.videoType || selectedPlan,
-        numberOfVideos: newLead.numberOfVideos || newLead.monthlyVolume || '',
-        videoDuration: newLead.videoDuration || '',
-        referenceLinks: newLead.referenceLinks || newLead.website || '',
-        projectDeadline: newLead.projectDeadline || `${bookingDate} ${bookingTime}`.trim(),
-        budgetRange: newLead.budgetRange || selectedPlan,
-        additionalInstructions: clientNotes === 'None provided' ? '' : clientNotes,
-        source: 'strategy_call_booking',
-        initialStage: 'new',
-      }).catch(() => {});
-    } catch {}
-
     return res.json({ success: true, lead: newLead, adminEmailDelivered, clientEmailDelivered });
   } catch (err) {
     console.error('Failed to save strategy call:', err);
@@ -4730,19 +4709,6 @@ app.post('/api/admin/memberships/requests/:orderId/approve', requireAdmin, async
       wasRenewal,
     });
 
-    void emitAutomationEvent('membership.approved', {
-      memberId: member?.id || membership.memberId,
-      fullName: member?.fullName || membership.customerName,
-      phone: member?.phone || membership.customerPhone,
-      orderId: order.id,
-      membershipId: membership.id,
-      planName: membership.planName,
-      dramaTitles,
-      activatedAt: membership.activatedAt,
-      expiresAt: membership.expiresAt,
-      wasRenewal,
-    });
-
     return res.json({
       success: true,
       order,
@@ -4796,15 +4762,6 @@ app.post('/api/admin/memberships/requests/:orderId/reject', requireAdmin, async 
         type: 'member_payment_rejected',
       });
     }
-
-    void emitAutomationEvent('membership.rejected', {
-      memberId: member?.id || order.memberId,
-      fullName: member?.fullName || order.customerName,
-      phone: member?.phone || order.customerPhone,
-      orderId: order.id,
-      rejectionReason: order.rejectionReason,
-      reviewedAt: order.reviewedAt || order.updatedAt,
-    });
 
     void emitAutomationEvent('membership.rejected', {
       memberId: member?.id || order.memberId,
@@ -4900,18 +4857,6 @@ app.post('/api/admin/memberships/assign', requireAdmin, async (req: any, res) =>
       expiresAt: membership.expiresAt,
     });
 
-    void emitAutomationEvent('membership.approved', {
-      memberId: member.id,
-      fullName: member.fullName,
-      phone: member.phone,
-      orderId: order.id,
-      membershipId: membership.id,
-      planName: membership.planName,
-      dramaTitles,
-      activatedAt: membership.activatedAt,
-      expiresAt: membership.expiresAt,
-    });
-
     return res.status(201).json({
       success: true,
       member,
@@ -4969,14 +4914,6 @@ app.post('/api/admin/memberships/:membershipId/extend', requireAdmin, (req: any,
     if ('error' in result) {
       return res.status(result.statusCode).json({ success: false, error: result.error });
     }
-    void emitAutomationEvent('membership.revoked', {
-      memberId: result.membership.memberId,
-      membershipId: result.membership.id,
-    });
-    void emitAutomationEvent('membership.revoked', {
-      memberId: result.membership.memberId,
-      membershipId: result.membership.id,
-    });
     return res.json({
       success: true,
       membership: result.membership,
@@ -4995,6 +4932,10 @@ app.post('/api/admin/memberships/:membershipId/revoke', requireAdmin, (req: any,
     if ('error' in result) {
       return res.status(result.statusCode).json({ success: false, error: result.error });
     }
+    void emitAutomationEvent('membership.revoked', {
+      memberId: result.membership.memberId,
+      membershipId: result.membership.id,
+    });
     return res.json({
       success: true,
       membership: result.membership,
@@ -6104,13 +6045,14 @@ function checkAutomationRateLimit(key: string, maxPerMinute: number): boolean {
 
 // 1. Official Meta WhatsApp Cloud API Webhook Verification (GET)
 app.get('/api/webhooks/whatsapp', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   const mode = String(req.query['hub.mode'] || '');
   const token = String(req.query['hub.verify_token'] || '');
   const challenge = String(req.query['hub.challenge'] || '');
 
   if (mode === 'subscribe' && verifyWebhookChallengeToken(token)) {
     saveAutomationSettings({ lastWebhookVerifiedAt: new Date().toISOString() });
-    return res.status(200).type('text/plain').send(challenge);
+    return res.status(200).type('text/plain; charset=utf-8').send(challenge);
   }
   return res.status(403).json({
     success: false,
@@ -6120,6 +6062,7 @@ app.get('/api/webhooks/whatsapp', (req, res) => {
 
 // 2. Official Meta WhatsApp Cloud API Incoming Webhook Handler (POST)
 app.post('/api/webhooks/whatsapp', async (req: any, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   try {
     const ip = String(req.ip || req.headers['x-forwarded-for'] || 'meta').slice(0, 64);
     if (!checkAutomationRateLimit(`wa_webhook:${ip}`, 240)) {
@@ -6457,11 +6400,12 @@ app.post('/api/admin/automation/episodes/publish-notify', requireAdmin, async (r
     });
 
     if (!result.ok) {
-      return res.status(result.duplicate ? 409 : 400).json({
+      const errRes = result as { ok: false; error: string; duplicate?: boolean; existingBroadcast?: unknown };
+      return res.status(errRes.duplicate ? 409 : 400).json({
         success: false,
-        duplicate: result.duplicate,
-        existingBroadcast: result.existingBroadcast,
-        error: result.error,
+        duplicate: errRes.duplicate,
+        existingBroadcast: errRes.existingBroadcast,
+        error: errRes.error,
       });
     }
 
@@ -6543,531 +6487,8 @@ app.put('/api/admin/automation/leads/:leadId', requireAdmin, (req: any, res) => 
       admin: req.admin,
     });
     if (!result.ok) {
-      return res.status(404).json({ success: false, error: result.error });
-    }
-    return res.json({
-      success: true,
-      lead: result.lead,
-      leads: listVideoEditingLeads(),
-      conversations: listWhatsAppConversations(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to update lead.' });
-  }
-});
-
-app.post('/api/admin/automation/conversations/:phone/takeover', requireAdmin, (req: any, res) => {
-  try {
-    const phone = decodeURIComponent(req.params.phone || '');
-    const conv = setConversationHumanTakeover(
-      phone,
-      Boolean(req.body?.humanTakeover),
-      req.admin.email
-    );
-    if (!conv) {
-      return res.status(404).json({ success: false, error: 'Conversation not found.' });
-    }
-    return res.json({
-      success: true,
-      conversation: conv,
-      conversations: listWhatsAppConversations(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to toggle human takeover.' });
-  }
-});
-
-app.post('/api/admin/automation/conversations/:phone/reply', requireAdmin, async (req: any, res) => {
-  try {
-    const phone = decodeURIComponent(req.params.phone || '');
-    const result = await sendAdminManualWhatsAppReply({
-      phoneRaw: phone,
-      text: String(req.body?.text || ''),
-      admin: req.admin,
-    });
-    return res.status(result.ok ? 200 : 400).json({
-      success: result.ok,
-      error: result.error,
-      conversation: result.conversation,
-      messageLog: result.messageLog,
-      conversations: listWhatsAppConversations(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to send manual WhatsApp reply.' });
-  }
-});
-
-// 9. External Cron Trigger for Render / Automation Worker
-app.post('/api/internal/cron/automation', async (req, res) => {
-  const admin = getAuthenticatedAdmin(req);
-  const cronSecret = process.env.FEVIQO_CRON_SECRET || '';
-  const providedSecret = String(req.headers['x-cron-secret'] || req.query.secret || '').trim();
-  if (!admin && (!cronSecret || providedSecret !== cronSecret)) {
-    return res.status(401).json({ success: false, error: 'Unauthorized automation cron trigger.' });
-  }
-  const summary = await runAutomationWorkerCycle();
-  return res.json({ success: true, summary });
-});
-
-// ============================================================================
-// FEVIQO BUSINESS AUTOMATION, WHATSAPP CLOUD API, LEADS & AI SUPPORT ROUTES
-// ============================================================================
-
-const automationRateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
-function checkAutomationRateLimit(key: string, maxPerMinute: number): boolean {
-  const now = Date.now();
-  const bucket = automationRateLimitBuckets.get(key);
-  if (!bucket || now > bucket.resetAt) {
-    automationRateLimitBuckets.set(key, { count: 1, resetAt: now + 60_000 });
-    return true;
-  }
-  if (bucket.count >= maxPerMinute) return false;
-  bucket.count += 1;
-  return true;
-}
-
-// 1. Official Meta WhatsApp Cloud API Webhook Verification (GET)
-app.get('/api/webhooks/whatsapp', (req, res) => {
-  const mode = String(req.query['hub.mode'] || '');
-  const token = String(req.query['hub.verify_token'] || '');
-  const challenge = String(req.query['hub.challenge'] || '');
-
-  if (mode === 'subscribe' && verifyWebhookChallengeToken(token)) {
-    saveAutomationSettings({ lastWebhookVerifiedAt: new Date().toISOString() });
-    return res.status(200).type('text/plain').send(challenge);
-  }
-  return res.status(403).json({
-    success: false,
-    error: 'WhatsApp webhook verification failed. Ensure WHATSAPP_VERIFY_TOKEN matches Meta Dashboard.',
-  });
-});
-
-// 2. Official Meta WhatsApp Cloud API Incoming Webhook Handler (POST)
-app.post('/api/webhooks/whatsapp', async (req: any, res) => {
-  try {
-    const ip = String(req.ip || req.headers['x-forwarded-for'] || 'meta').slice(0, 64);
-    if (!checkAutomationRateLimit(`wa_webhook:${ip}`, 240)) {
-      return res.status(429).json({ success: false, error: 'Webhook rate limit exceeded.' });
-    }
-
-    const sigHeader = req.headers['x-hub-signature-256'] as string | undefined;
-    const verification = verifyMetaWebhookSignature(req.rawBody, sigHeader);
-    if (!verification.valid) {
-      return res.status(401).json({
-        success: false,
-        code: verification.secretConfigured ? 'INVALID_WEBHOOK_SIGNATURE' : 'WEBHOOK_SECRET_NOT_CONFIGURED',
-        error: verification.reason || 'Meta webhook signature verification failed.',
-      });
-    }
-
-    const summary = await processIncomingWhatsAppWebhookPayload(req.body || {});
-    return res.status(200).json({ success: true, ...summary });
-  } catch (err: any) {
-    console.error('[WhatsAppWebhook] Processing error:', err);
-    return res.status(500).json({ success: false, error: 'Webhook processing error.' });
-  }
-});
-
-// 3. Authenticated Customer Notification Preferences (FEVIQO Premium /account)
-app.get('/api/membership/notification-preferences', (req, res) => {
-  if (getBlockedMemberResponse(req, res)) return;
-  const memberId = getAuthenticatedMemberId(req);
-  if (!memberId) {
-    return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Sign in required.' });
-  }
-  const account = getMemberAccountState(memberId);
-  if (!account) {
-    return res.status(404).json({ success: false, error: 'Account not found.' });
-  }
-  const pref = getMemberNotificationPreferences({
-    memberId,
-    phone: account.member.phone,
-  });
-  return res.json({
-    success: true,
-    preferences: pref || {
-      id: memberId,
-      memberId,
-      phoneE164: normalizePhoneE164(account.member.phone) || account.member.phone || '',
-      membershipUpdates: false,
-      renewalReminders: false,
-      newEpisodeAlerts: false,
-      promotionalMessages: false,
-      leadEnquiryConsent: false,
-      optedOut: false,
-      history: [],
-    },
-  });
-});
-
-app.put('/api/membership/notification-preferences', (req, res) => {
-  try {
-    if (getBlockedMemberResponse(req, res)) return;
-    const memberId = getAuthenticatedMemberId(req);
-    if (!memberId) {
-      return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Sign in required.' });
-    }
-    const account = getMemberAccountState(memberId);
-    if (!account) {
-      return res.status(404).json({ success: false, error: 'Account not found.' });
-    }
-    const {
-      phone,
-      membershipUpdates,
-      renewalReminders,
-      newEpisodeAlerts,
-      promotionalMessages,
-      optedOut,
-    } = req.body || {};
-
-    const resolvedPhone = String(phone || account.member.phone || '').trim();
-    const updated = upsertMemberNotificationPreferences({
-      memberId,
-      ownerUid: account.member.ownerUid,
-      email: account.member.email,
-      fullName: account.member.fullName,
-      phone: resolvedPhone,
-      membershipUpdates: Boolean(membershipUpdates),
-      renewalReminders: Boolean(renewalReminders),
-      newEpisodeAlerts: Boolean(newEpisodeAlerts),
-      promotionalMessages: Boolean(promotionalMessages),
-      optedOut: Boolean(optedOut),
-      source: optedOut ? 'account_settings_opt_out' : 'account_settings',
-    });
-
-    if ('error' in updated) {
-      return res.status(400).json({ success: false, error: updated.error });
-    }
-
-    return res.json({ success: true, preferences: updated });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to save notification preferences.' });
-  }
-});
-
-// 4. Public FEVIQO Video Editing Enquiry Capture (Rate-Limited, Validated, Non-Blocking WhatsApp)
-app.post('/api/leads/video-editing', async (req, res) => {
-  try {
-    const ip = String(req.ip || req.headers['x-forwarded-for'] || 'visitor').slice(0, 64);
-    if (!checkAutomationRateLimit(`lead_submit:${ip}`, 15)) {
-      return res.status(429).json({
-        success: false,
-        error: 'Too many submissions. Please wait a minute and try again.',
-      });
-    }
-
-    const body = req.body || {};
-    const fullName = String(body.fullName || '').trim();
-    const email = String(body.email || '').trim().toLowerCase();
-    const whatsappNumber = String(body.whatsappNumber || '').trim();
-
-    if (fullName.length < 2 || fullName.length > 120) {
-      return res.status(400).json({ success: false, error: 'Please enter your full name.' });
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ success: false, error: 'Please enter a valid email address.' });
-    }
-    if (body.whatsappConsent === true && !normalizePhoneE164(whatsappNumber)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Please enter a valid WhatsApp number with country code to receive WhatsApp updates.',
-      });
-    }
-
-    const lead = await createVideoEditingLead({
-      fullName,
-      email,
-      whatsappNumber,
-      whatsappConsent: body.whatsappConsent === true,
-      companyOrAgency: body.companyOrAgency,
-      editingService: body.editingService,
-      numberOfVideos: body.numberOfVideos,
-      videoDuration: body.videoDuration,
-      referenceLinks: body.referenceLinks,
-      projectDeadline: body.projectDeadline,
-      budgetRange: body.budgetRange,
-      additionalInstructions: body.additionalInstructions,
-      source: String(body.source || 'website_video_enquiry').slice(0, 64),
-    });
-
-    return res.status(201).json({ success: true, lead });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to submit video editing enquiry.' });
-  }
-});
-
-// 5. Admin Automation Dashboard Routes (strictly requireAdmin)
-app.get('/api/admin/automation/overview', requireAdmin, (req: any, res) => {
-  try {
-    return res.json({
-      success: true,
-      currentAdmin: req.admin,
-      ...getAdminAutomationOverview(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to load automation overview.' });
-  }
-});
-
-app.get('/api/admin/automation/whatsapp-status', requireAdmin, async (_req: any, res) => {
-  try {
-    const envStatus = getWhatsAppEnvConfigStatus();
-    const liveCheck = await testWhatsAppGraphConnectivity();
-    return res.json({ success: true, envStatus, liveCheck });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to check WhatsApp connectivity.' });
-  }
-});
-
-app.put('/api/admin/automation/settings', requireAdmin, (req: any, res) => {
-  try {
-    const updated = saveAutomationSettings(req.body || {}, req.admin);
-    return res.json({
-      success: true,
-      settings: updated,
-      overview: getAdminAutomationOverview(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to update automation settings.' });
-  }
-});
-
-app.post('/api/admin/automation/test-message', requireAdmin, async (req: any, res) => {
-  try {
-    const { toPhone, mode, templateName, bodyParameters, textBody } = req.body || {};
-    const phoneE164 = normalizePhoneE164(toPhone);
-    if (!phoneE164) {
-      return res.status(400).json({
-        success: false,
-        error: 'Enter a valid international E.164 WhatsApp number (e.g. +923001234567 or +17823333653).',
-      });
-    }
-
-    if (mode === 'text') {
-      const result = await sendWhatsAppTextMessage({
-        toPhone: phoneE164,
-        body: String(textBody || 'FEVIQO Admin WhatsApp Cloud API connectivity test.').trim(),
-      });
-      return res.status(result.ok ? 200 : 400).json({
-        success: result.ok,
-        result,
-        overview: getAdminAutomationOverview(),
-      });
-    }
-
-    const log = await dispatchTemplateWhatsAppNotification({
-      idempotencyKey: `admin_test:${phoneE164}:${Date.now()}`,
-      eventType: 'admin.test_message',
-      templateName: String(templateName || 'feviqo_welcome'),
-      bodyParameters: Array.isArray(bodyParameters)
-        ? bodyParameters.map((v: any) => String(v))
-        : ['FEVIQO Admin Test', 'https://feviqo.com/membership'],
-      recipientPhone: phoneE164,
-      recipientName: 'Admin Test',
-      ruleEnabled: true,
-      bypassConsentForAdminTest: true,
-      bypassTemplateApprovalCheck: Boolean(req.body?.bypassApprovalCheck),
-    });
-
-    return res.json({
-      success: log?.status === 'sent',
-      messageLog: log,
-      error: log?.status === 'sent' ? undefined : log?.errorMessage,
-      overview: getAdminAutomationOverview(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to dispatch test WhatsApp message.' });
-  }
-});
-
-app.post('/api/admin/automation/messages/:messageId/retry', requireAdmin, async (req: any, res) => {
-  try {
-    const result = await retryFailedWhatsAppMessage(req.params.messageId);
-    return res.status(result.ok ? 200 : 400).json({
-      success: result.ok,
-      message: result.message,
-      error: result.error,
-      overview: getAdminAutomationOverview(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to retry WhatsApp message.' });
-  }
-});
-
-app.post('/api/admin/automation/worker/run', requireAdmin, async (req: any, res) => {
-  try {
-    const summary = await runAutomationWorkerCycle();
-    appendAdminAudit({
-      adminId: req.admin.id,
-      adminEmail: req.admin.email,
-      action: 'automation_worker_manual_run',
-      targetId: 'automationWorker',
-      details: `jobsProcessed=${summary.jobsProcessed}, cancelled=${summary.jobsCancelled}, retries=${summary.retriesAttempted}`,
-    });
-    return res.json({
-      success: true,
-      summary,
-      overview: getAdminAutomationOverview(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to execute automation worker cycle.' });
-  }
-});
-
-app.put('/api/admin/automation/preferences/:prefId', requireAdmin, (req: any, res) => {
-  try {
-    const all = listAllNotificationPreferences();
-    const target = all.find((p) => p.id === req.params.prefId);
-    if (!target) {
-      return res.status(404).json({ success: false, error: 'Preference record not found.' });
-    }
-    const updated = upsertMemberNotificationPreferences({
-      memberId: target.memberId,
-      ownerUid: target.ownerUid,
-      email: target.email,
-      fullName: target.fullName,
-      phone: req.body?.phoneE164 || target.phoneE164,
-      membershipUpdates: req.body?.membershipUpdates ?? target.membershipUpdates,
-      renewalReminders: req.body?.renewalReminders ?? target.renewalReminders,
-      newEpisodeAlerts: req.body?.newEpisodeAlerts ?? target.newEpisodeAlerts,
-      promotionalMessages: req.body?.promotionalMessages ?? target.promotionalMessages,
-      leadEnquiryConsent: req.body?.leadEnquiryConsent ?? target.leadEnquiryConsent,
-      optedOut: req.body?.optedOut ?? target.optedOut,
-      source: `admin:${req.admin.email}`,
-    });
-    if ('error' in updated) {
-      return res.status(400).json({ success: false, error: updated.error });
-    }
-    return res.json({
-      success: true,
-      preference: updated,
-      overview: getAdminAutomationOverview(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to update customer consent record.' });
-  }
-});
-
-// 6. Episode Publishing Notification Endpoint (Entitled active subscribers only, anti-duplicate + deliberate resend)
-app.post('/api/admin/automation/episodes/publish-notify', requireAdmin, async (req: any, res) => {
-  try {
-    const {
-      dramaId,
-      episodeSlug,
-      seasonNumber,
-      episodeNumber,
-      episodeTitle,
-      episodeUrl,
-      forceResend,
-    } = req.body || {};
-
-    if (!dramaId || !episodeNumber) {
-      return res.status(400).json({
-        success: false,
-        error: 'dramaId and episodeNumber are required.',
-      });
-    }
-
-    const result = await triggerEpisodePublishedBroadcast({
-      dramaId: String(dramaId),
-      episodeSlug: String(episodeSlug || `episode-${episodeNumber}`),
-      seasonNumber: Number(seasonNumber) || 1,
-      episodeNumber: Number(episodeNumber),
-      episodeTitle: String(episodeTitle || `Episode ${episodeNumber}`),
-      episodeUrl: episodeUrl ? String(episodeUrl) : undefined,
-      adminEmail: req.admin.email,
-      adminId: req.admin.id,
-      forceResend: forceResend === true,
-    });
-
-    if (!result.ok) {
-      return res.status(result.duplicate ? 409 : 400).json({
-        success: false,
-        duplicate: result.duplicate,
-        existingBroadcast: result.existingBroadcast,
-        error: result.error,
-      });
-    }
-
-    return res.json({
-      success: true,
-      broadcast: result.broadcast,
-      overview: getAdminAutomationOverview(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to trigger episode broadcast.' });
-  }
-});
-
-// 7. Admin AI Assistant Live Test Simulator (Gemini server-side)
-app.post('/api/admin/automation/ai-test', requireAdmin, async (req: any, res) => {
-  try {
-    const { userMessage, contactName, testPhone } = req.body || {};
-    if (!userMessage || !String(userMessage).trim()) {
-      return res.status(400).json({ success: false, error: 'userMessage is required.' });
-    }
-    const settings = getAutomationSettings();
-    const memberCtx = testPhone ? findMemberContextByPhoneDigits(String(testPhone)) : null;
-    const scopedCustomer = memberCtx
-      ? {
-          memberName: memberCtx.member.fullName,
-          hasActiveMembership: memberCtx.activeMemberships.length > 0,
-          activePlanName: memberCtx.activeMemberships[0]?.planName,
-          activeExpiresAt: memberCtx.activeMemberships[0]?.expiresAt,
-          activeDramas: memberCtx.activeMemberships
-            .flatMap((s) => s.selectedDramaIds)
-            .map((id) => getDramaById(id)?.title || id),
-          hasPendingOrder: Boolean(memberCtx.latestPendingOrder),
-          pendingOrderPlan: memberCtx.latestPendingOrder?.planName,
-          pendingOrderStatus: memberCtx.latestPendingOrder?.status,
-        }
-      : null;
-
-    const aiResult = await generateFeviqoAiReply({
-      userMessage: String(userMessage),
-      contactName: contactName ? String(contactName) : 'Admin Simulator',
-      scopedCustomer,
-      bookingUrl: settings.ai.bookingUrl,
-      escalationKeywords: settings.ai.escalationKeywords,
-    });
-
-    if (!aiResult.ok) {
-      return res.status(503).json({ success: false, error: aiResult.error, aiResult });
-    }
-    return res.json({ success: true, aiResult });
-  } catch {
-    return res.status(500).json({ success: false, error: 'AI assistant test failed.' });
-  }
-});
-
-// 8. Admin Video Editing Leads & Unified WhatsApp Inbox Routes
-app.get('/api/admin/automation/leads', requireAdmin, (req: any, res) => {
-  try {
-    return res.json({
-      success: true,
-      currentAdmin: req.admin,
-      leads: listVideoEditingLeads(),
-      conversations: listWhatsAppConversations(),
-      overview: getAdminAutomationOverview(),
-    });
-  } catch {
-    return res.status(500).json({ success: false, error: 'Failed to load video editing leads.' });
-  }
-});
-
-app.put('/api/admin/automation/leads/:leadId', requireAdmin, (req: any, res) => {
-  try {
-    const result = updateVideoEditingLeadByAdmin({
-      leadId: req.params.leadId,
-      stage: req.body?.stage,
-      humanTakeover: req.body?.humanTakeover,
-      followUpPaused: req.body?.followUpPaused,
-      addNote: req.body?.addNote,
-      scheduleFollowUpType: req.body?.scheduleFollowUpType,
-      admin: req.admin,
-    });
-    if (!result.ok) {
-      return res.status(404).json({ success: false, error: result.error });
+      const errRes = result as { ok: false; error: string };
+      return res.status(404).json({ success: false, error: errRes.error });
     }
     return res.json({
       success: true,
@@ -7172,9 +6593,6 @@ if (!process.env.CONTROL_PLANE_PORT) {
 async function startServer() {
   void hydrateStoreFromFirestore().catch((err) => {
     console.warn('Initial Firestore hydration skipped:', (err as Error)?.message || err);
-  });
-  void hydrateAutomationStoreFromFirestore().catch((err) => {
-    console.warn('Initial automation Firestore hydration skipped:', (err as Error)?.message || err);
   });
   void hydrateAutomationStoreFromFirestore().catch((err) => {
     console.warn('Initial automation Firestore hydration skipped:', (err as Error)?.message || err);

@@ -120,7 +120,7 @@ async function proxyWhatsAppWebhook(context: PagesContext): Promise<Response> {
 
   const incomingUrl = new URL(request.url);
   const resolved = resolveRenderOrigin(env, incomingUrl.hostname);
-  if (!resolved.ok) {
+  if ('error' in resolved) {
     return new Response(
       JSON.stringify({
         success: false,
