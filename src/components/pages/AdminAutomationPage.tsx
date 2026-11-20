@@ -119,11 +119,11 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
   // Admin test message sender
   const [testPhone, setTestPhone] = useState('');
   const [testMode, setTestMode] = useState<'text' | 'template'>('text');
-  const [testTemplateName, setTestTemplateName] = useState('feviqo_premium_welcome');
+  const [testTemplateName, setTestTemplateName] = useState('feviqo_welcome');
   const [testTextBody, setTestTextBody] = useState(
     'Hello from FEVIQO! This is a test WhatsApp Cloud API message.'
   );
-  const [testParamsInput, setTestParamsInput] = useState('Test User');
+  const [testParamsInput, setTestParamsInput] = useState('Test User | https://feviqo.com/membership');
   const [testBypassApproval, setTestBypassApproval] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
 
@@ -995,10 +995,33 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
 
                   <div className="space-y-2 text-xs">
                     <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2">
-                      <span className="text-slate-600">Callback URL</span>
-                      <span className="font-mono font-semibold text-[#0F172A]">
-                        https://feviqo.com{overview.envStatus.webhookEndpoint}
+                      <span className="text-slate-600">Official Callback URL</span>
+                      <span className="font-mono font-semibold text-[#0F172A] break-all text-right">
+                        {overview.envStatus.webhookEndpoint.startsWith('http')
+                          ? overview.envStatus.webhookEndpoint
+                          : `https://feviqo.com${overview.envStatus.webhookEndpoint}`}
                       </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="text-[11px] text-slate-500">Phone Number ID</div>
+                        <div className="font-mono font-semibold text-[#0F172A] mt-0.5 truncate">
+                          {overview.envStatus.phoneNumberId || '1203691806151162'}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="text-[11px] text-slate-500">Business Account ID</div>
+                        <div className="font-mono font-semibold text-[#0F172A] mt-0.5 truncate">
+                          {overview.envStatus.businessAccountId || '2221497198598821'}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="text-[11px] text-slate-500">Meta App ID · Fields</div>
+                        <div className="font-mono font-semibold text-[#0F172A] mt-0.5 truncate">
+                          {overview.envStatus.metaAppId || '995554719768043'} ·{' '}
+                          {(overview.envStatus.subscribedFields || ['messages']).join(', ')}
+                        </div>
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2.5">
                       <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
@@ -1033,6 +1056,123 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Meta App Publishing Readiness & Recent Webhook Diagnostics */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                <div className="lg:col-span-6 bg-white rounded-2xl border border-amber-200 p-6 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+                        Meta App Publishing Readiness
+                      </div>
+                      <h3 className="text-base font-bold text-[#0F172A] mt-0.5">
+                        Webhook Verification vs. App Live Mode
+                      </h3>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-[11px] font-bold text-amber-800 shrink-0">
+                      Action Required in Meta
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Verifying <span className="font-mono">https://feviqo.com/api/webhooks/whatsapp</span> connects your server to Meta, but <strong>apps in Development mode only receive test webhooks from the App Dashboard</strong>. Live customer WhatsApp messages arrive only after switching the Meta App to Live mode.
+                  </p>
+                  <ul className="space-y-1.5 text-xs text-slate-700">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0 mt-0.5" />
+                      <span>
+                        Callback URL <span className="font-mono">https://feviqo.com/api/webhooks/whatsapp</span> &amp; <span className="font-mono">messages</span> subscription field configured
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                      <span>
+                        Meta App Dashboard → <strong>App Settings → Basic</strong>: set Privacy Policy URL (<span className="font-mono">https://feviqo.com/privacy</span>) and Terms URL (<span className="font-mono">https://feviqo.com/terms</span>)
+                      </span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                      <span>
+                        Toggle Meta App from <strong>Development → Live</strong> and submit Business Verification / Advanced Access if prompted for <span className="font-mono">whatsapp_business_messaging</span>
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="lg:col-span-6 bg-white rounded-2xl border border-slate-200 p-6 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Webhook Verification &amp; Failure Diagnostics
+                      </div>
+                      <h3 className="text-base font-bold text-[#0F172A] mt-0.5">
+                        Recent Webhook Events ({(overview.webhookEvents || []).length})
+                      </h3>
+                    </div>
+                    <span
+                      className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold ${
+                        (overview.failedWebhookEvents || []).length > 0
+                          ? 'bg-red-50 border-red-200 text-red-700'
+                          : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      }`}
+                    >
+                      {(overview.failedWebhookEvents || []).length} Failed
+                    </span>
+                  </div>
+                  {(overview.webhookEvents || []).length === 0 ? (
+                    <p className="text-xs text-slate-500 py-3">
+                      No webhook GET/POST requests recorded on this server yet. Click &ldquo;Verify and Save&rdquo; or &ldquo;Test&rdquo; in Meta Developer Dashboard to log live webhook verification here.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                      {(overview.webhookEvents || []).slice(0, 8).map((ev) => (
+                        <div
+                          key={ev.id}
+                          className={`p-2.5 rounded-xl border text-xs flex items-start justify-between gap-2 ${
+                            ev.status === 'rejected' || ev.status === 'error'
+                              ? 'bg-red-50/70 border-red-200'
+                              : 'bg-slate-50 border-slate-200'
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <div className="font-mono font-semibold text-[#0F172A] flex items-center gap-1.5">
+                              <span>{ev.eventType}</span>
+                              <span className="text-slate-400">·</span>
+                              <span>HTTP {ev.httpStatus}</span>
+                              {typeof ev.durationMs === 'number' && (
+                                <span className="text-[11px] text-slate-500">({ev.durationMs}ms)</span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-600 truncate mt-0.5">
+                              {ev.reason ||
+                                (ev.status === 'processed'
+                                  ? `Messages: ${ev.processedMessages ?? 0}, Statuses: ${ev.processedStatuses ?? 0}, Duplicates skipped: ${ev.duplicatesIgnored ?? 0}`
+                                  : ev.status === 'duplicate'
+                                  ? `Duplicate webhook replay ignored (${ev.duplicatesIgnored ?? 1})`
+                                  : 'Accepted asynchronously')}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span
+                              className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${statusBadgeClass(
+                                ev.status === 'verified' || ev.status === 'processed' || ev.status === 'accepted'
+                                  ? 'approved'
+                                  : ev.status === 'rejected' || ev.status === 'error'
+                                  ? 'failed'
+                                  : 'pending'
+                              )}`}
+                            >
+                              {ev.status}
+                            </span>
+                            <div className="text-[10px] text-slate-400 mt-0.5 tabular-nums">
+                              {formatDt(ev.createdAt)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -2186,9 +2326,37 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
             </div>
           )}
 
-          {/* TAB 7: MESSAGE LOGS & FAILED RETRY QUEUE */}
+          {/* TAB 7: MESSAGE LOGS, FAILED WEBHOOKS & RETRY QUEUE */}
           {activeTab === 'logs' && (
             <div className="space-y-6">
+              {/* Failed Webhook Events Audit */}
+              {(overview.failedWebhookEvents || []).length > 0 && (
+                <div className="bg-white rounded-2xl border border-amber-200 p-6 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-bold text-amber-900">
+                    <AlertCircle className="w-4 h-4 text-amber-700" />
+                    <span>Failed Webhook Events ({(overview.failedWebhookEvents || []).length})</span>
+                  </div>
+                  <div className="space-y-2">
+                    {(overview.failedWebhookEvents || []).slice(0, 20).map((ev) => (
+                      <div
+                        key={ev.id}
+                        className="p-3 rounded-xl bg-amber-50/60 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
+                      >
+                        <div>
+                          <div className="font-mono font-bold text-[#0F172A]">
+                            {ev.eventType} · HTTP {ev.httpStatus} · {ev.status.toUpperCase()}
+                          </div>
+                          <div className="text-amber-900 mt-0.5">{ev.reason || 'Webhook rejected or failed'}</div>
+                        </div>
+                        <div className="text-[11px] text-slate-500 tabular-nums shrink-0">
+                          {formatDt(ev.createdAt)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Failed Message Retry Queue */}
               {overview.retryQueue.length > 0 && (
                 <div className="bg-white rounded-2xl border border-red-200 p-6 space-y-4">

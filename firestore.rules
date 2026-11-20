@@ -1045,6 +1045,18 @@ service cloud.firestore {
       allow list: if isBootstrappedAdmin();
       allow create, update, delete: if false;
     }
+
+    match /whatsappWebhookEvents/{eventId} {
+      allow get: if isValidId(eventId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
+
+    match /whatsappWebhookDedupe/{dedupeId} {
+      allow get: if isValidId(dedupeId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
   }
 }
 

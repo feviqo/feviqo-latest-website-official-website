@@ -40,6 +40,47 @@ const EPISODE_BROADCASTS_FILE = path.join(DATA_DIR, 'episode_broadcasts.json');
 const VIDEO_LEADS_FILE = path.join(DATA_DIR, 'video_editing_leads.json');
 const WA_CONVERSATIONS_FILE = path.join(DATA_DIR, 'whatsapp_conversations.json');
 const WEBHOOK_DEDUPE_FILE = path.join(DATA_DIR, 'whatsapp_webhook_dedupe.json');
+const WA_WEBHOOK_EVENTS_FILE = path.join(DATA_DIR, 'whatsapp_webhook_events.json');
+
+export interface WebhookEventRecord {
+  id: string;
+  eventType: 'verification_get' | 'webhook_post';
+  status: 'verified' | 'rejected' | 'accepted' | 'processed' | 'duplicate' | 'error';
+  httpStatus: number;
+  reason?: string;
+  sourceIp?: string;
+  signatureValid?: boolean;
+  processedMessages?: number;
+  processedStatuses?: number;
+  duplicatesIgnored?: number;
+  durationMs?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+type HighIntentLeadNotifier = (
+  lead: VideoEditingLead,
+  context: { source: string; reason?: string }
+) => Promise<void> | void;
+
+let highIntentLeadNotifier: HighIntentLeadNotifier | null = null;
+const notifiedHighIntentLeadIds = new Set<string>();
+
+export function registerHighIntentLeadNotifier(fn: HighIntentLeadNotifier): void {
+  highIntentLeadNotifier = fn;
+}
+
+function triggerHighIntentLeadNotification(
+  lead: VideoEditingLead,
+  context: { source: string; reason?: string }
+): void {
+  if (!highIntentLeadNotifier) return;
+  if (notifiedHighIntentLeadIds.has(lead.id)) return;
+  notifiedHighIntentLeadIds.add(lead.id);
+  Promise.resolve(highIntentLeadNotifier(lead, context)).catch((err) => {
+    console.warn('[AutomationStore] High-intent lead admin notification failed:', err?.message || err);
+  });
+}
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -1519,6 +1560,19 @@ export async function createVideoEditingLead(input: {
 
   saveVideoEditingLead(lead);
 
+  const combinedText = `${lead.budgetRange} ${lead.numberOfVideos} ${lead.companyOrAgency} ${lead.additionalInstructions}`.toLowerCase();
+  const looksHighIntent =
+    Boolean(input.initialStage === 'qualified') ||
+    /agency|monthly|retainer|white.?label|urgent|\$[1-9]\d{2,}|10\+|20\+|30\+/.test(combinedText);
+  if (looksHighIntent) {
+    lead.isHighIntent = true;
+    saveVideoEditingLead(lead);
+    triggerHighIntentLeadNotification(lead, {
+      source: lead.source,
+      reason: 'High-intent FEVIQO Creative video editing enquiry submitted',
+    });
+  }
+
   if (consented && phoneE164) {
     upsertMemberNotificationPreferences({
       fullName: lead.fullName,
@@ -1747,7 +1801,68 @@ export async function sendAdminManualWhatsAppReply(params: {
   };
 }
 
-// --- WEBHOOK DUPLICATE PROTECTION & EVENT PROCESSOR ---
+// --- WEBHOOK AUDIT EVENTS & PERSISTENT DUPLICATE PROTECTION ---
+export function listWebhookEvents(limit = 100): WebhookEventRecord[] {
+  return readJson<WebhookEventRecord[]>(WA_WEBHOOK_EVENTS_FILE, []).slice(0, limit);
+}
+
+export function recordWebhookEvent(
+  entry: Omit<WebhookEventRecord, 'id' | 'createdAt' | 'updatedAt'> & {
+    id?: string;
+    createdAt?: string;
+  }
+): WebhookEventRecord {
+  const now = entry.createdAt || new Date().toISOString();
+  const record: WebhookEventRecord = {
+    id: entry.id || makeId('wh'),
+    eventType: entry.eventType,
+    status: entry.status,
+    httpStatus: entry.httpStatus,
+    reason: entry.reason ? String(entry.reason).slice(0, 300) : undefined,
+    sourceIp: entry.sourceIp ? String(entry.sourceIp).slice(0, 64) : undefined,
+    signatureValid: entry.signatureValid,
+    processedMessages: entry.processedMessages,
+    processedStatuses: entry.processedStatuses,
+    duplicatesIgnored: entry.duplicatesIgnored,
+    durationMs: entry.durationMs,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const all = readJson<WebhookEventRecord[]>(WA_WEBHOOK_EVENTS_FILE, []);
+  all.unshift(record);
+  writeJson(WA_WEBHOOK_EVENTS_FILE, all.slice(0, 300));
+  void mirrorDocToFirestoreServer('whatsappWebhookEvents', record.id, {
+    ...record,
+    createdAtIso: record.createdAt,
+    updatedAtIso: record.updatedAt,
+  });
+  return record;
+}
+
+export function updateWebhookEvent(
+  eventId: string,
+  patch: Partial<WebhookEventRecord>
+): WebhookEventRecord | null {
+  const all = readJson<WebhookEventRecord[]>(WA_WEBHOOK_EVENTS_FILE, []);
+  const idx = all.findIndex((e) => e.id === eventId);
+  if (idx < 0) return null;
+  const updated: WebhookEventRecord = {
+    ...all[idx],
+    ...patch,
+    id: all[idx].id,
+    createdAt: all[idx].createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+  all[idx] = updated;
+  writeJson(WA_WEBHOOK_EVENTS_FILE, all.slice(0, 300));
+  void mirrorDocToFirestoreServer('whatsappWebhookEvents', updated.id, {
+    ...updated,
+    createdAtIso: updated.createdAt,
+    updatedAtIso: updated.updatedAt,
+  });
+  return updated;
+}
+
 function isWebhookEventProcessed(eventKey: string): boolean {
   const seen = readJson<string[]>(WEBHOOK_DEDUPE_FILE, []);
   return seen.includes(eventKey);
@@ -1758,6 +1873,14 @@ function markWebhookEventProcessed(eventKey: string): void {
   if (seen.includes(eventKey)) return;
   seen.unshift(eventKey);
   writeJson(WEBHOOK_DEDUPE_FILE, seen.slice(0, 3000));
+  const docId = `dedupe_${crypto.createHash('sha256').update(eventKey).digest('hex').slice(0, 40)}`;
+  const now = new Date().toISOString();
+  void mirrorDocToFirestoreServer('whatsappWebhookDedupe', docId, {
+    id: docId,
+    eventKey,
+    createdAtIso: now,
+    updatedAtIso: now,
+  });
 }
 
 const STOP_KEYWORDS = new Set([
@@ -2063,6 +2186,14 @@ export async function processIncomingWhatsAppWebhookPayload(payload: any): Promi
                 if (aiResult.escalateToHuman) matchedLead.humanTakeover = true;
                 matchedLead.updatedAt = new Date().toISOString();
                 saveVideoEditingLead(matchedLead);
+                if (aiResult.isHighIntentLead || aiResult.escalateToHuman) {
+                  triggerHighIntentLeadNotification(matchedLead, {
+                    source: 'whatsapp_ai_assistant',
+                    reason:
+                      aiResult.escalationReason ||
+                      'High-intent FEVIQO Creative inquiry detected on WhatsApp',
+                  });
+                }
               } else {
                 const newLead = await createVideoEditingLead({
                   fullName: conv.contactName,
@@ -2081,6 +2212,14 @@ export async function processIncomingWhatsAppWebhookPayload(payload: any): Promi
                   initialStage: aiResult.isHighIntentLead ? 'qualified' : 'new',
                 });
                 conv.leadId = newLead.id;
+                if (aiResult.isHighIntentLead || aiResult.escalateToHuman) {
+                  triggerHighIntentLeadNotification(newLead, {
+                    source: 'whatsapp_ai_assistant',
+                    reason:
+                      aiResult.escalationReason ||
+                      'High-intent FEVIQO Creative inquiry detected on WhatsApp',
+                  });
+                }
               }
             }
 
@@ -2466,6 +2605,18 @@ export async function hydrateAutomationStoreFromFirestore(): Promise<void> {
     mergeById(EPISODE_BROADCASTS_FILE, snap.episodeBroadcasts);
     mergeById(VIDEO_LEADS_FILE, snap.leads);
     mergeById(WA_CONVERSATIONS_FILE, snap.conversations);
+    mergeById(WA_WEBHOOK_EVENTS_FILE, snap.webhookEvents || []);
+
+    if (Array.isArray(snap.webhookDedupe) && snap.webhookDedupe.length > 0) {
+      const localKeys = readJson<string[]>(WEBHOOK_DEDUPE_FILE, []);
+      const keySet = new Set(localKeys);
+      for (const item of snap.webhookDedupe) {
+        if (typeof item?.eventKey === 'string' && item.eventKey) {
+          keySet.add(item.eventKey);
+        }
+      }
+      writeJson(WEBHOOK_DEDUPE_FILE, Array.from(keySet).slice(0, 3000));
+    }
   } catch (err) {
     console.warn('[AutomationStore] Firestore hydration skipped:', (err as Error)?.message || err);
   }
@@ -2481,6 +2632,10 @@ export function getAdminAutomationOverview() {
   const episodeBroadcasts = listEpisodeBroadcasts(100);
   const leads = listVideoEditingLeads();
   const conversations = listWhatsAppConversations();
+  const webhookEvents = listWebhookEvents(100);
+  const failedWebhookEvents = webhookEvents.filter(
+    (e) => e.status === 'rejected' || e.status === 'error'
+  );
 
   const outbound = messages.filter((m) => m.direction === 'outbound');
   const sentCount = outbound.filter((m) => m.status === 'sent').length;
@@ -2543,6 +2698,7 @@ export function getAdminAutomationOverview() {
       skipped: skippedCount,
       pendingJobs: pendingJobs.length,
       retryQueueCount: retryQueue.length,
+      failedWebhooks: failedWebhookEvents.length,
       optedInUsers: preferences.filter((p) => !p.optedOut).length,
       optedOutUsers: preferences.filter((p) => p.optedOut).length,
       totalLeads: leads.length,
@@ -2554,6 +2710,8 @@ export function getAdminAutomationOverview() {
     templates,
     messages,
     retryQueue,
+    webhookEvents,
+    failedWebhookEvents,
     jobs,
     preferences,
     episodeBroadcasts,

@@ -21,6 +21,10 @@ export interface WhatsAppTemplateDraft {
 }
 
 export const DEFAULT_BUSINESS_WHATSAPP_NUMBER = '+17823333653';
+export const DEFAULT_WHATSAPP_PHONE_NUMBER_ID = '1203691806151162';
+export const DEFAULT_WHATSAPP_BUSINESS_ACCOUNT_ID = '2221497198598821';
+export const META_WHATSAPP_APP_ID = '995554719768043';
+export const OFFICIAL_WEBHOOK_CALLBACK_URL = 'https://feviqo.com/api/webhooks/whatsapp';
 
 /**
  * Official Meta WhatsApp Business Template drafts for FEVIQO.
@@ -337,6 +341,12 @@ export function phoneToMetaWaId(raw?: string | null): string | null {
 
 export interface WhatsAppEnvConfigStatus {
   businessPhoneDisplay: string;
+  phoneNumberId: string;
+  phoneNumberIdConfiguredInEnv: boolean;
+  businessAccountId: string;
+  businessAccountIdConfiguredInEnv: boolean;
+  metaAppId: string;
+  subscribedFields: string[];
   apiVersion: string;
   apiVersionExplicitlySet: boolean;
   hasAccessToken: boolean;
@@ -358,6 +368,7 @@ export function getWhatsAppEnvConfigStatus(): WhatsAppEnvConfigStatus {
   const wabaId = (process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || '').trim();
   const appSecret = (process.env.WHATSAPP_APP_SECRET || '').trim();
   const apiVersionEnv = (process.env.WHATSAPP_API_VERSION || '').trim();
+  const metaAppIdEnv = (process.env.META_APP_ID || '').trim();
   const businessPhoneDisplay =
     normalizePhoneE164(process.env.WHATSAPP_BUSINESS_NUMBER || DEFAULT_BUSINESS_WHATSAPP_NUMBER) ||
     DEFAULT_BUSINESS_WHATSAPP_NUMBER;
@@ -372,6 +383,12 @@ export function getWhatsAppEnvConfigStatus(): WhatsAppEnvConfigStatus {
 
   return {
     businessPhoneDisplay,
+    phoneNumberId: phoneNumberId || DEFAULT_WHATSAPP_PHONE_NUMBER_ID,
+    phoneNumberIdConfiguredInEnv: Boolean(phoneNumberId),
+    businessAccountId: wabaId || DEFAULT_WHATSAPP_BUSINESS_ACCOUNT_ID,
+    businessAccountIdConfiguredInEnv: Boolean(wabaId),
+    metaAppId: metaAppIdEnv || META_WHATSAPP_APP_ID,
+    subscribedFields: ['messages'],
     apiVersion: apiVersionEnv || 'not_set',
     apiVersionExplicitlySet: Boolean(apiVersionEnv),
     hasAccessToken: Boolean(accessToken),
@@ -383,7 +400,7 @@ export function getWhatsAppEnvConfigStatus(): WhatsAppEnvConfigStatus {
     canVerifyWebhookChallenge: Boolean(verifyToken),
     canVerifyWebhookSignature: Boolean(appSecret),
     missingEnvVars,
-    webhookEndpoint: 'https://feviqo.com/api/webhooks/whatsapp',
+    webhookEndpoint: OFFICIAL_WEBHOOK_CALLBACK_URL,
   };
 }
 

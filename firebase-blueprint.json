@@ -1372,6 +1372,31 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "phoneE164", "humanTakeover", "updatedAt"]
+    },
+    "WhatsAppWebhookEvent": {
+      "title": "WhatsAppWebhookEvent",
+      "description": "Sanitized audit record of incoming Meta WhatsApp Cloud API GET verification challenges and POST webhook deliveries/failures.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "eventType": { "type": "string", "enum": ["verification_get", "webhook_post"] },
+        "status": { "type": "string", "enum": ["verified", "rejected", "accepted", "processed", "duplicate", "error"] },
+        "httpStatus": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "eventType", "status", "httpStatus", "createdAt"]
+    },
+    "WhatsAppWebhookDedupe": {
+      "title": "WhatsAppWebhookDedupe",
+      "description": "Idempotent deduplication key stored in Firestore to prevent duplicate webhook replay processing across Render restarts.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "eventKey": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "eventKey", "createdAt"]
     }
   },
   "firestore": {
@@ -1490,6 +1515,14 @@
     "/whatsappConversations/{convId}": {
       "schema": { "$ref": "#/entities/WhatsAppConversationThread" },
       "description": "Unified customer WhatsApp support inbox threads and human takeover flags."
+    },
+    "/whatsappWebhookEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/WhatsAppWebhookEvent" },
+      "description": "Sanitized audit log of incoming Meta WhatsApp Cloud API verification challenges, accepted events, and webhook failures."
+    },
+    "/whatsappWebhookDedupe/{dedupeId}": {
+      "schema": { "$ref": "#/entities/WhatsAppWebhookDedupe" },
+      "description": "Persistent deduplication markers preventing duplicate processing of Meta webhook retries across restarts."
     }
   }
 }

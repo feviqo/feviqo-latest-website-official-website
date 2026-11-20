@@ -24,6 +24,12 @@ export interface CustomerNotificationPreferences {
 
 export interface WhatsAppEnvStatus {
   businessPhoneDisplay: string;
+  phoneNumberId?: string;
+  phoneNumberIdConfiguredInEnv?: boolean;
+  businessAccountId?: string;
+  businessAccountIdConfiguredInEnv?: boolean;
+  metaAppId?: string;
+  subscribedFields?: string[];
   apiVersion: string;
   apiVersionExplicitlySet: boolean;
   hasAccessToken: boolean;
@@ -36,6 +42,22 @@ export interface WhatsAppEnvStatus {
   canVerifyWebhookSignature: boolean;
   missingEnvVars: string[];
   webhookEndpoint: string;
+}
+
+export interface WebhookEventView {
+  id: string;
+  eventType: 'verification_get' | 'webhook_post';
+  status: 'verified' | 'rejected' | 'accepted' | 'processed' | 'duplicate' | 'error';
+  httpStatus: number;
+  reason?: string;
+  sourceIp?: string;
+  signatureValid?: boolean;
+  processedMessages?: number;
+  processedStatuses?: number;
+  duplicatesIgnored?: number;
+  durationMs?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AutomationRulesConfig {
@@ -251,6 +273,7 @@ export interface AdminAutomationOverview {
     skipped: number;
     pendingJobs: number;
     retryQueueCount: number;
+    failedWebhooks?: number;
     optedInUsers: number;
     optedOutUsers: number;
     totalLeads: number;
@@ -262,6 +285,8 @@ export interface AdminAutomationOverview {
   templates: WhatsAppTemplateView[];
   messages: WhatsAppMessageLogView[];
   retryQueue: WhatsAppMessageLogView[];
+  webhookEvents?: WebhookEventView[];
+  failedWebhookEvents?: WebhookEventView[];
   jobs: AutomationJobView[];
   preferences: CustomerNotificationPreferences[];
   episodeBroadcasts: EpisodeBroadcastView[];

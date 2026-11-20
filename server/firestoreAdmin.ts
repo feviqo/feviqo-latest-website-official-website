@@ -381,6 +381,8 @@ export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
   episodeBroadcasts: any[];
   leads: any[];
   conversations: any[];
+  webhookEvents: any[];
+  webhookDedupe: any[];
 } | null> {
   const db = getAdminFirestoreDb();
   if (!db) return null;
@@ -393,6 +395,8 @@ export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
       epSnap,
       leadsSnap,
       convSnap,
+      webhookEventsSnap,
+      webhookDedupeSnap,
     ] = await Promise.all([
       db.collection('whatsappSettings').doc('main').get(),
       db.collection('whatsappPreferences').get(),
@@ -401,6 +405,8 @@ export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
       db.collection('episodeBroadcasts').get(),
       db.collection('videoEditingLeads').get(),
       db.collection('whatsappConversations').get(),
+      db.collection('whatsappWebhookEvents').get(),
+      db.collection('whatsappWebhookDedupe').get(),
     ]);
 
     const normalizeList = (snap: { docs: Array<{ id: string; data: () => Record<string, any> }> }) =>
@@ -422,6 +428,8 @@ export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
       episodeBroadcasts: normalizeList(epSnap),
       leads: normalizeList(leadsSnap),
       conversations: normalizeList(convSnap),
+      webhookEvents: normalizeList(webhookEventsSnap),
+      webhookDedupe: normalizeList(webhookDedupeSnap),
     };
   } catch (err: any) {
     if (err?.code === 7 || String(err?.message || '').includes('PERMISSION_DENIED')) {

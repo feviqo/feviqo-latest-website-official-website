@@ -178,6 +178,9 @@ import {
   hydrateAutomationStoreFromFirestore,
   getAdminAutomationOverview,
   listWhatsAppConversations,
+  recordWebhookEvent,
+  updateWebhookEvent,
+  registerHighIntentLeadNotifier,
 } from './server/automationStore';
 import { generateFeviqoAiReply } from './server/aiSupportAgent';
 import { findMemberContextByPhoneDigits } from './server/membershipStore';
@@ -6043,17 +6046,77 @@ function checkAutomationRateLimit(key: string, maxPerMinute: number): boolean {
   return true;
 }
 
+// Register non-blocking admin notification for high-intent FEVIQO Creative leads & escalations
+registerHighIntentLeadNotifier(async (lead, context) => {
+  try {
+    const recipients = getStudioNotificationRecipients();
+    if (!recipients.length) return;
+    const html = `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:640px;margin:0 auto;padding:24px;background:#0F172A;color:#F8FAFC;border-radius:12px;">
+        <h2 style="margin:0 0 12px 0;color:#22C55E;">FEVIQO Creative — High-Intent Lead Alert</h2>
+        <p style="margin:0 0 16px 0;color:#CBD5E1;font-size:14px;">${escapeHtml(context.reason || 'High-intent video editing inquiry captured.')}</p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;color:#E2E8F0;">
+          <tr><td style="padding:6px 0;color:#94A3B8;">Name:</td><td><strong>${escapeHtml(lead.fullName)}</strong></td></tr>
+          <tr><td style="padding:6px 0;color:#94A3B8;">WhatsApp / Phone:</td><td>${escapeHtml(lead.whatsappE164 || lead.whatsappNumber || 'Not provided')}</td></tr>
+          <tr><td style="padding:6px 0;color:#94A3B8;">Email:</td><td>${escapeHtml(lead.email || 'Not provided')}</td></tr>
+          <tr><td style="padding:6px 0;color:#94A3B8;">Agency / Brand:</td><td>${escapeHtml(lead.companyOrAgency || '—')}</td></tr>
+          <tr><td style="padding:6px 0;color:#94A3B8;">Service:</td><td>${escapeHtml(lead.editingService || '—')}</td></tr>
+          <tr><td style="padding:6px 0;color:#94A3B8;">Budget / Volume:</td><td>${escapeHtml([lead.budgetRange, lead.numberOfVideos].filter(Boolean).join(' · ') || '—')}</td></tr>
+          <tr><td style="padding:6px 0;color:#94A3B8;">Source:</td><td>${escapeHtml(context.source)}</td></tr>
+        </table>
+        <p style="margin:18px 0 0 0;">
+          <a href="https://feviqo.com/admin/automation/leads" style="display:inline-block;padding:10px 18px;background:#22C55E;color:#0F172A;font-weight:700;text-decoration:none;border-radius:8px;">Open Lead CRM &amp; Inbox</a>
+        </p>
+      </div>
+    `;
+    for (const adminEmail of recipients) {
+      await sendServerEmail({
+        to: adminEmail,
+        subject: `[FEVIQO High-Intent Lead] ${lead.fullName} — ${lead.editingService || 'Video Editing'}`,
+        html,
+        type: 'high_intent_creative_lead',
+      });
+    }
+  } catch (err: any) {
+    console.warn('[Automation] Failed sending high-intent lead email:', err?.message || err);
+  }
+});
+
 // 1. Official Meta WhatsApp Cloud API Webhook Verification (GET)
 app.get('/api/webhooks/whatsapp', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   const mode = String(req.query['hub.mode'] || '');
   const token = String(req.query['hub.verify_token'] || '');
   const challenge = String(req.query['hub.challenge'] || '');
+  const ip = String(req.ip || req.headers['x-forwarded-for'] || 'meta').slice(0, 64);
 
   if (mode === 'subscribe' && verifyWebhookChallengeToken(token)) {
     saveAutomationSettings({ lastWebhookVerifiedAt: new Date().toISOString() });
+    recordWebhookEvent({
+      eventType: 'verification_get',
+      status: 'verified',
+      httpStatus: 200,
+      reason: 'Meta hub.mode=subscribe challenge verified',
+      sourceIp: ip,
+    });
     return res.status(200).type('text/plain; charset=utf-8').send(challenge);
   }
+
+  const hasVerifyEnv = Boolean((process.env.WHATSAPP_VERIFY_TOKEN || '').trim());
+  const reason = !hasVerifyEnv
+    ? 'WHATSAPP_VERIFY_TOKEN is not configured on backend.'
+    : mode !== 'subscribe'
+    ? 'Invalid or missing hub.mode parameter.'
+    : 'Verify token mismatch.';
+
+  recordWebhookEvent({
+    eventType: 'verification_get',
+    status: 'rejected',
+    httpStatus: 403,
+    reason,
+    sourceIp: ip,
+  });
+
   return res.status(403).json({
     success: false,
     error: 'WhatsApp webhook verification failed. Ensure WHATSAPP_VERIFY_TOKEN matches Meta Dashboard.',
@@ -6061,17 +6124,32 @@ app.get('/api/webhooks/whatsapp', (req, res) => {
 });
 
 // 2. Official Meta WhatsApp Cloud API Incoming Webhook Handler (POST)
-app.post('/api/webhooks/whatsapp', async (req: any, res) => {
+app.post('/api/webhooks/whatsapp', (req: any, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  const ip = String(req.ip || req.headers['x-forwarded-for'] || 'meta').slice(0, 64);
   try {
-    const ip = String(req.ip || req.headers['x-forwarded-for'] || 'meta').slice(0, 64);
     if (!checkAutomationRateLimit(`wa_webhook:${ip}`, 240)) {
+      recordWebhookEvent({
+        eventType: 'webhook_post',
+        status: 'rejected',
+        httpStatus: 429,
+        reason: 'Webhook rate limit exceeded.',
+        sourceIp: ip,
+      });
       return res.status(429).json({ success: false, error: 'Webhook rate limit exceeded.' });
     }
 
     const sigHeader = req.headers['x-hub-signature-256'] as string | undefined;
     const verification = verifyMetaWebhookSignature(req.rawBody, sigHeader);
     if (!verification.valid) {
+      recordWebhookEvent({
+        eventType: 'webhook_post',
+        status: 'rejected',
+        httpStatus: 401,
+        signatureValid: false,
+        reason: verification.reason || 'Meta webhook signature verification failed.',
+        sourceIp: ip,
+      });
       return res.status(401).json({
         success: false,
         code: verification.secretConfigured ? 'INVALID_WEBHOOK_SIGNATURE' : 'WEBHOOK_SECRET_NOT_CONFIGURED',
@@ -6079,10 +6157,73 @@ app.post('/api/webhooks/whatsapp', async (req: any, res) => {
       });
     }
 
-    const summary = await processIncomingWhatsAppWebhookPayload(req.body || {});
-    return res.status(200).json({ success: true, ...summary });
+    if (!req.body || typeof req.body !== 'object' || !Array.isArray(req.body.entry)) {
+      recordWebhookEvent({
+        eventType: 'webhook_post',
+        status: 'error',
+        httpStatus: 400,
+        signatureValid: true,
+        reason: 'Malformed WhatsApp webhook payload: missing entry array.',
+        sourceIp: ip,
+      });
+      return res.status(400).json({
+        success: false,
+        error: 'Malformed WhatsApp webhook payload.',
+      });
+    }
+
+    const startedMs = Date.now();
+    const payload = req.body;
+    const eventRecord = recordWebhookEvent({
+      eventType: 'webhook_post',
+      status: 'accepted',
+      httpStatus: 200,
+      signatureValid: true,
+      sourceIp: ip,
+    });
+
+    // Respond immediately with HTTP 200 so Meta never times out or triggers needless retries
+    res.status(200).json({
+      success: true,
+      received: true,
+      status: 'accepted',
+      eventId: eventRecord.id,
+    });
+
+    // Execute heavier inbound message / AI reply / Graph API processing asynchronously
+    setImmediate(async () => {
+      try {
+        const summary = await processIncomingWhatsAppWebhookPayload(payload);
+        const allDuplicates =
+          summary.processedMessages === 0 &&
+          summary.processedStatuses === 0 &&
+          summary.duplicatesIgnored > 0;
+        updateWebhookEvent(eventRecord.id, {
+          status: allDuplicates ? 'duplicate' : 'processed',
+          processedMessages: summary.processedMessages,
+          processedStatuses: summary.processedStatuses,
+          duplicatesIgnored: summary.duplicatesIgnored,
+          durationMs: Date.now() - startedMs,
+        });
+      } catch (asyncErr: any) {
+        console.error('[WhatsAppWebhook] Async processing error:', asyncErr?.message || asyncErr);
+        updateWebhookEvent(eventRecord.id, {
+          status: 'error',
+          reason: String(asyncErr?.message || 'Async webhook processing failed').slice(0, 300),
+          durationMs: Date.now() - startedMs,
+        });
+      }
+    });
+    return;
   } catch (err: any) {
-    console.error('[WhatsAppWebhook] Processing error:', err);
+    console.error('[WhatsAppWebhook] Handler error:', err?.message || err);
+    recordWebhookEvent({
+      eventType: 'webhook_post',
+      status: 'error',
+      httpStatus: 500,
+      reason: String(err?.message || 'Webhook processing error').slice(0, 300),
+      sourceIp: ip,
+    });
     return res.status(500).json({ success: false, error: 'Webhook processing error.' });
   }
 });
