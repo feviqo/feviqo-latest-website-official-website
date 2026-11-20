@@ -5898,6 +5898,7 @@ if (!process.env.CONTROL_PLANE_PORT) {
         'https://feviqo.com/teskilat/episode-187',
         'https://feviqo.com/teskilat/episode-186',
         'https://feviqo.com/mehmed-fetihler-sultani',
+        'https://feviqo.com/mehmed-fetihler-sultani/episode-92',
         'https://feviqo.com/mehmed-fetihler-sultani/episode-91',
         'https://feviqo.com/mehmed-fetihler-sultani/episode-90',
         'https://feviqo.com/mehmed-fetihler-sultani/episode-89',

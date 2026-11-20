@@ -66,6 +66,21 @@ export const MEHMED_SERIES_DATA: MehmedSeries = {
 
 export const MEHMED_EPISODES: MehmedEpisode[] = [
   {
+    number: 92,
+    season: 4,
+    seasonEpisodeNumber: 9,
+    slug: "episode-92",
+    title: "Mehmed Season 4 Episode 92 Urdu | Bolum 92 — Premium Access",
+    airDate: "2026-11-20T04:00:00.000Z",
+    thumbnail: "https://lh3.googleusercontent.com/d/1Sbsk_-Vt-pU9iXU32sPF6l_c6w_jPNNe",
+    duration: "2h 35m",
+    shortSummary: "Mehmed: Fetihler Sultani Season 4 Episode 92 in Urdu HD is exclusively unlocked for active FEVIQO Premium Members.",
+    recap: `Mehmed Season 4 Episode 92 (Bolum 92) continues Sultan Mehmed II's decisive campaign with full Urdu HD access.\n\nThis episode is protected by FEVIQO Premium. Sign in or subscribe to an eligible plan covering Mehmed: Fetihler Sultani or VIP to unlock instant playback directly on this page.`,
+    recapUrdu: `مہمد فتحلر سلطان سیزن 4 قسط 92 مکمل اردو میں صرف FEVIQO پریمیم ممبرز کے لیے دستیاب ہے۔ مکمل قسط دیکھنے کے لیے پریمیم سبسکرپشن حاصل کریں یا اپنے ممبر اکاؤنٹ میں سائن ان کریں۔`,
+    embeds: [],
+    isLockedPremium: true,
+  },
+  {
     number: 91,
     season: 4,
     seasonEpisodeNumber: 8,

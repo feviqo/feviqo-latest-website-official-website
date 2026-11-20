@@ -1,5 +1,15 @@
 [
   {
+    "id": "mxs-1795171397543-5c7685",
+    "type": "downloader_ua_blocked",
+    "severity": "warning",
+    "dramaId": "mehmed-fetihler-sultani",
+    "episodeSlug": "episode-92",
+    "userAgent": "curl/7.88.1",
+    "details": "Blocked automated downloader / ripper client (\\bcurl\\b) on /api/membership/watch/mehmed-fetihler-sultani/episode-92",
+    "createdAt": "2026-11-20T10:43:17.544Z"
+  },
+  {
     "id": "mxs-1794850014339-a87e42",
     "type": "downloader_ua_blocked",
     "severity": "warning",

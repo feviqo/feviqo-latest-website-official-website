@@ -228,6 +228,19 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
     hubPath: '/mehmed-fetihler-sultani',
     episodes: [
       {
+        slug: 'episode-92',
+        number: 92,
+        title: 'Mehmed: Fetihler Sultanı Episode 92 (Bolum 92) — Urdu',
+        duration: '2h 35m',
+        releaseDate: '2026-11-20',
+        thumbnail: 'https://lh3.googleusercontent.com/d/1Sbsk_-Vt-pU9iXU32sPF6l_c6w_jPNNe',
+        shortSummary:
+          'Sultan Mehmed II advances the next decisive chapter in Urdu HD — exclusive for FEVIQO Premium Members.',
+        accessType: 'premium',
+        isPublished: true,
+        requiredPlanLevel: 'any_active',
+      },
+      {
         slug: 'episode-91',
         number: 91,
         title: 'Mehmed: Fetihler Sultanı Episode 91 (Bolum 91) — Urdu Dubbed',

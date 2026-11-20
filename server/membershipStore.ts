@@ -70,6 +70,7 @@ const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
     'episode-186': 'https://stream.mux.com/E86ii2Lygy3OfAk01CPlos02ln008Gkl9ar3gQJBQtd8WU.m3u8',
   },
   'mehmed-fetihler-sultani': {
+    'episode-92': 'https://stream.mux.com/tMTD9Oqyv001otJN3qLeix01U4u5zT3675V1J9mG01Yy5I.m3u8',
     'episode-91': 'https://stream.mux.com/iZwLfzcSIyWE302WmxZ39wVyGRbT00hw2gYJsdmKosn7s.m3u8',
     'episode-90': 'https://stream.mux.com/iZwLfzcSIyWE302WmxZ39wVyGRbT00hw2gYJsdmKosn7s.m3u8',
     'episode-89': 'https://stream.mux.com/q3MFc527rZ7V0101YFeDLV8aCbWBk5oSnRsNQscKjDRuQ.m3u8',
