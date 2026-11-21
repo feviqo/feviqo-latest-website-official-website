@@ -1096,6 +1096,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                                 ? 'Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu'
                                 : `Teskilat Urdu Episode ${ep.episodeNumber} Subtitles`
                             }
+                            referrerPolicy="no-referrer"
                             className={`w-full h-full object-cover transition duration-300 ${
                               isLocked
                                 ? 'brightness-50 group-hover:brightness-40 group-hover:scale-105'
@@ -1117,7 +1118,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           <>
                             <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded bg-[#0B0B0D]/90 border border-[#22C55E]/40 text-[#22C55E] text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1">
                               <Lock className="w-2.5 h-2.5" />
-                              <span>PREMIUM EPISODE</span>
+                              <span>URDU DUBBED · LOCKED</span>
                             </div>
                             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/30 flex flex-col items-center justify-center p-3 text-center">
                               <div className="w-11 h-11 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/60 text-[#22C55E] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform mb-2">

@@ -29,6 +29,9 @@ export interface SafeMember {
 export interface BlockedUserRecord {
   id: string;
   email: string;
+  phone?: string;
+  phoneNormalized?: string;
+  additionalPhones?: string[];
   memberId?: string;
   fullName?: string;
   reason: string;
@@ -1105,14 +1108,20 @@ export async function authenticateMemberWithGoogle(payload: {
 
 export async function updateMemberPhone(
   phone: string,
-  referralCode?: string
+  referralCode?: string,
+  options?: { whatsappOptIn?: boolean; promotionalOptIn?: boolean }
 ): Promise<({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; error: string }> {
   const ref = normalizeReferralInput(referralCode) || getStoredReferralCode();
   const res = await fetch('/api/membership/profile/phone', {
     method: 'POST',
     headers: memberHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
-    body: JSON.stringify({ phone, referralCode: ref || undefined }),
+    body: JSON.stringify({
+      phone,
+      referralCode: ref || undefined,
+      whatsappOptIn: options?.whatsappOptIn === true,
+      promotionalOptIn: options?.promotionalOptIn === true,
+    }),
   });
   const data = await parseJsonSafe(res);
   if (handleBlockedResponseIfNeeded(res, data)) {
@@ -1989,12 +1998,22 @@ export async function deleteMembershipRecordByAdmin(
 
 export async function blockUserEmailByAdmin(payload: {
   email?: string;
+  phone?: string;
   memberId?: string;
   reason?: string;
 }): Promise<
   | {
       success: true;
       blockedUser: BlockedUserRecord;
+      cleanup?: {
+        deletedPendingOrdersCount: number;
+        revokedMembershipsCount: number;
+        affectedMemberIds: string[];
+        blockedPhones: string[];
+        cancelledJobsCount?: number;
+        cancelledManualNotificationsCount?: number;
+        optedOutPreferencesCount?: number;
+      };
       overview: AdminMembershipsOverview;
     }
   | { success: false; error: string }

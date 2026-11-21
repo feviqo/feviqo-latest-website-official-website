@@ -192,7 +192,8 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
     try {
       const updated = await updateMemberPhone(
         trimmed,
-        normalizeReferralInput(referralCodeInput) || undefined
+        normalizeReferralInput(referralCodeInput) || undefined,
+        { whatsappOptIn: whatsappOptIn === true }
       );
       if ('error' in updated) {
         setError(updated.error || 'Unable to save phone number.');
@@ -396,6 +397,20 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
                 )}
               </div>
             )}
+
+            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={whatsappOptIn}
+                onChange={(e) => setWhatsappOptIn(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#16A34A] focus:ring-[#16A34A]"
+              />
+              <span className="text-[11px] text-slate-600 leading-relaxed">
+                {isUrdu
+                  ? 'مجھے WhatsApp پر FEVIQO ممبرشپ اپڈیٹس، رینیول ریمائنڈرز اور نئی اقساط کے الرٹس موصول ہونے پر رضامندی ہے (اختیاری — کسی بھی وقت STOP لکھ کر بند کر سکتے ہیں)۔'
+                  : 'Yes, send me FEVIQO membership updates, renewal reminders, and new episode alerts on WhatsApp (optional — reply STOP anytime to opt out).'}
+              </span>
+            </label>
 
             {error && (
               <div

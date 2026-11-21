@@ -132,8 +132,8 @@ function ensureValidDramaIds(ids: unknown, planId?: string): string[] {
     : [];
   const unique = Array.from(new Set(raw));
   if (planId === 'vip') {
-    const merged = Array.from(new Set([...DEFAULT_VIP_DRAMA_IDS, ...unique]));
-    return merged.slice(0, 20);
+    if (unique.length > 0) return unique.slice(0, 3);
+    return DEFAULT_VIP_DRAMA_IDS.slice(0, 3);
   }
   return unique.length > 0 ? unique.slice(0, 20) : ['teskilat'];
 }

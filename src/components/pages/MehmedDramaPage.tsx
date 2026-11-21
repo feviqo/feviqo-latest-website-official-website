@@ -390,7 +390,11 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                         </div>
                       )}
                       <a 
-                        href={`/mehmed-fetihler-sultani/${latestEpisode.slug}`}
+                        href={
+                          Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && !isDramaUnlocked
+                            ? `/membership?drama=mehmed-fetihler-sultani&episode=${latestEpisode.slug}`
+                            : `/mehmed-fetihler-sultani/${latestEpisode.slug}`
+                        }
                         onClick={(e) => {
                           e.preventDefault();
                           handleSelectEpisode(latestEpisode);
@@ -432,92 +436,137 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                 <div className="border border-slate-100 bg-slate-50/50 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-center text-left relative overflow-hidden select-none shadow-sm">
                   
                   {/* Thumbnail Cover */}
-                  <a 
-                    href={`/mehmed-fetihler-sultani/${latestEpisode.slug}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSelectEpisode(latestEpisode);
-                    }}
-                    className="relative w-full md:w-[320px] aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0 cursor-pointer group shadow-sm block"
-                  >
-                    <img 
-                      src={latestEpisode.thumbnail} 
-                      alt={`Mehmed Fetihler Sultani Episode ${latestEpisode.number}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                    />
-                    {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) ? (
-                      <div className={`absolute top-3 left-3 px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${isDramaUnlocked ? 'bg-emerald-500 text-slate-950' : 'bg-[#0B0B0D]/90 text-[#22C55E] border border-[#22C55E]/40'}`}>
-                        {isDramaUnlocked ? <ShieldCheck className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                        <span>{isDramaUnlocked ? 'Unlocked · Urdu Dubbed' : 'Urdu Dubbed · Premium'}</span>
-                      </div>
-                    ) : (
-                      <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
-                        NEW
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
-                      <div className="w-11 h-11 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                        <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
-                      </div>
-                    </div>
-                  </a>
+                  {(() => {
+                    const isLatestPremium = Boolean(
+                      latestEpisode.isLockedPremium ||
+                        isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)
+                    );
+                    const isLatestLocked = isLatestPremium && !isDramaUnlocked;
+                    const latestHref = isLatestLocked
+                      ? `/membership?drama=mehmed-fetihler-sultani&episode=${latestEpisode.slug}`
+                      : `/mehmed-fetihler-sultani/${latestEpisode.slug}`;
+                    return (
+                      <>
+                        <a 
+                          href={latestHref}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSelectEpisode(latestEpisode);
+                          }}
+                          className="relative w-full md:w-[320px] aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-200 shrink-0 cursor-pointer group shadow-sm block"
+                        >
+                          <img 
+                            src={latestEpisode.thumbnail} 
+                            alt={`Mehmed Fetihler Sultani Episode ${latestEpisode.number}`}
+                            referrerPolicy="no-referrer"
+                            className={`w-full h-full object-cover transition duration-300 ${
+                              isLatestLocked
+                                ? 'brightness-50 group-hover:brightness-40 group-hover:scale-105'
+                                : 'group-hover:scale-105'
+                            }`}
+                          />
+                          {isLatestLocked ? (
+                            <>
+                              <div className="absolute top-3 left-3 px-2.5 py-1 rounded bg-[#0B0B0D]/90 text-[#22C55E] border border-[#22C55E]/40 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-lg">
+                                <Lock className="w-3 h-3" />
+                                <span>URDU DUBBED · LOCKED</span>
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/30 flex flex-col items-center justify-center p-3 text-center">
+                                <div className="w-12 h-12 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/60 text-[#22C55E] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform mb-2">
+                                  <Lock className="w-5 h-5" />
+                                </div>
+                                <span className="text-[11px] font-black uppercase tracking-wider text-white">
+                                  {checkingEpisodeKey === `mehmed-fetihler-sultani:${latestEpisode.slug}`
+                                    ? 'Checking Access...'
+                                    : 'Unlock with FEVIQO Premium'}
+                                </span>
+                              </div>
+                            </>
+                          ) : isLatestPremium ? (
+                            <>
+                              <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded bg-emerald-500 text-slate-950 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                                <ShieldCheck className="w-3 h-3" />
+                                <span>Unlocked · Urdu Dubbed</span>
+                              </div>
+                              <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
+                                <div className="w-11 h-11 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
+                                  <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
+                                NEW
+                              </div>
+                              <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
+                                <div className="w-11 h-11 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
+                                  <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </a>
 
-                  {/* Details Block */}
-                  <div className="flex-1 space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 font-bold uppercase tracking-wider">
-                        <span>LATEST RELEASE</span>
-                        <span>·</span>
-                        <span>EPISODE {latestEpisode.number} (BOLUM {latestEpisode.number})</span>
-                        {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && (
-                          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-[10px] font-black">
-                            {isDramaUnlocked ? 'MEMBERSHIP UNLOCKED' : 'FEVIQO PREMIUM'}
-                          </span>
-                        )}
-                      </div>
-                      <a 
-                        href={`/mehmed-fetihler-sultani/${latestEpisode.slug}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleSelectEpisode(latestEpisode);
-                        }}
-                        className="block"
-                      >
-                        <h2 className="text-2xl font-black text-slate-900 hover:text-[#22C55E] cursor-pointer transition">
-                          {latestEpisode.title}
-                        </h2>
-                      </a>
-                      <p className="text-xs text-slate-500 flex items-center gap-3">
-                        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> October 2026</span>
-                        <span>·</span>
-                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {latestEpisode.duration}</span>
-                      </p>
-                    </div>
+                        {/* Details Block */}
+                        <div className="flex-1 space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 font-bold uppercase tracking-wider">
+                              <span>LATEST RELEASE</span>
+                              <span>·</span>
+                              <span>EPISODE {latestEpisode.number} (BOLUM {latestEpisode.number})</span>
+                              {isLatestPremium && (
+                                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-[10px] font-black">
+                                  {isDramaUnlocked ? 'MEMBERSHIP UNLOCKED' : 'FEVIQO PREMIUM'}
+                                </span>
+                              )}
+                            </div>
+                            <a 
+                              href={latestHref}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleSelectEpisode(latestEpisode);
+                              }}
+                              className="block"
+                            >
+                              <h2 className="text-2xl font-black text-slate-900 hover:text-[#22C55E] cursor-pointer transition">
+                                {latestEpisode.title}
+                              </h2>
+                            </a>
+                            <p className="text-xs text-slate-500 flex items-center gap-3">
+                              <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> November 2026</span>
+                              <span>·</span>
+                              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {latestEpisode.duration}</span>
+                            </p>
+                          </div>
 
-                    <p className="text-slate-600 text-sm leading-relaxed max-w-3xl">
-                      {latestEpisode.shortSummary}
-                    </p>
+                          <p className="text-slate-600 text-sm leading-relaxed max-w-3xl">
+                            {latestEpisode.shortSummary}
+                          </p>
 
-                    <a 
-                      href={`/mehmed-fetihler-sultani/${latestEpisode.slug}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleSelectEpisode(latestEpisode);
-                      }}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-lg transition duration-150 cursor-pointer"
-                    >
-                      {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && !isDramaUnlocked ? (
-                        <Lock className="w-3.5 h-3.5" />
-                      ) : (
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                      )}
-                      <span>
-                        {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && !isDramaUnlocked
-                          ? `Unlock Episode ${latestEpisode.number} with Premium`
-                          : `Watch Episode ${latestEpisode.number} Now`}
-                      </span>
-                    </a>
-                  </div>
+                          <a 
+                            href={latestHref}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleSelectEpisode(latestEpisode);
+                            }}
+                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-lg transition duration-150 cursor-pointer"
+                          >
+                            {isLatestLocked ? (
+                              <Lock className="w-3.5 h-3.5" />
+                            ) : (
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                            )}
+                            <span>
+                              {isLatestLocked
+                                ? `Unlock Episode ${latestEpisode.number} with Premium`
+                                : `Watch Episode ${latestEpisode.number} Now`}
+                            </span>
+                          </a>
+                        </div>
+                      </>
+                    );
+                  })()}
 
                 </div>
               </div>
@@ -574,57 +623,83 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {filteredEpisodes.map((ep) => {
                       const epPremium = Boolean(ep.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', ep.slug));
+                      const isLocked = epPremium && !isDramaUnlocked;
+                      const isCheckingThis = checkingEpisodeKey === `mehmed-fetihler-sultani:${ep.slug}`;
                       return (
                         <a 
                           key={ep.slug}
-                          href={`/mehmed-fetihler-sultani/${ep.slug}`}
+                          href={isLocked ? `/membership?drama=mehmed-fetihler-sultani&episode=${ep.slug}` : `/mehmed-fetihler-sultani/${ep.slug}`}
                           onClick={(e) => {
                             e.preventDefault();
                             handleSelectEpisode(ep);
                           }}
-                          className="group bg-slate-50/20 hover:bg-slate-50/50 border border-slate-100 hover:border-slate-300 rounded-2xl overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition duration-200 text-left select-none cursor-pointer flex flex-col h-full shadow-sm"
+                          className={`group rounded-2xl overflow-hidden hover:scale-[1.02] active:scale-[0.99] transition duration-200 text-left select-none cursor-pointer flex flex-col h-full shadow-sm border ${
+                            isLocked
+                              ? 'bg-[#0B0B0D] text-white border-zinc-800 hover:border-[#22C55E]'
+                              : 'bg-slate-50/20 hover:bg-slate-50/50 border-slate-100 hover:border-slate-300'
+                          }`}
                         >
                           
                           {/* 16:9 Rectangle aspect-video Thumbnail Cover */}
-                          <div className="relative aspect-video bg-slate-100 border-b border-slate-100 overflow-hidden">
+                          <div className="relative aspect-video bg-slate-950 border-b border-slate-100/10 overflow-hidden">
                             <img 
                               src={ep.thumbnail} 
-                              alt={ep.title} 
-                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                              alt={ep.title}
+                              referrerPolicy="no-referrer"
+                              className={`w-full h-full object-cover transition duration-300 ${
+                                isLocked
+                                  ? 'brightness-50 group-hover:brightness-40 group-hover:scale-105'
+                                  : 'group-hover:scale-105'
+                              }`}
                             />
-                            {epPremium && (
-                              <div className={`absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md ${isDramaUnlocked ? 'bg-[#22C55E] text-[#0B0B0D]' : 'bg-[#0B0B0D]/90 text-[#22C55E] border border-[#22C55E]/40'}`}>
-                                {isDramaUnlocked ? <ShieldCheck className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                                <span>{isDramaUnlocked ? 'Unlocked · Membership' : 'Premium · Urdu Dubbed'}</span>
-                              </div>
-                            )}
-                            <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
-                              <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                                {epPremium && !isDramaUnlocked ? (
-                                  <Lock className="w-4 h-4 text-slate-950" />
-                                ) : (
-                                  <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                            {isLocked ? (
+                              <>
+                                <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md bg-[#0B0B0D]/90 text-[#22C55E] border border-[#22C55E]/40">
+                                  <Lock className="w-3 h-3" />
+                                  <span>URDU DUBBED · LOCKED</span>
+                                </div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/30 flex flex-col items-center justify-center p-3 text-center">
+                                  <div className="w-11 h-11 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/60 text-[#22C55E] flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform mb-2">
+                                    <Lock className="w-5 h-5" />
+                                  </div>
+                                  <span className="text-[11px] font-black uppercase tracking-wider text-white">
+                                    {isCheckingThis ? 'Checking Access...' : 'Unlock with FEVIQO Premium'}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                {epPremium && (
+                                  <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md bg-[#22C55E] text-[#0B0B0D]">
+                                    <ShieldCheck className="w-3 h-3" />
+                                    <span>Unlocked · Urdu Dubbed</span>
+                                  </div>
                                 )}
-                              </div>
-                            </div>
+                                <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
+                                  <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
+                                    <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
 
                           {/* Details */}
                           <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider ${isLocked ? 'text-zinc-400' : 'text-slate-400'}`}>
                                 <span>EPISODE {ep.number}</span>
                                 <span>·</span>
                                 <span>{ep.duration}</span>
                               </div>
-                              <h3 className="text-sm sm:text-base font-black text-slate-900 group-hover:text-[#22C55E] transition line-clamp-2">
+                              <h3 className={`text-sm sm:text-base font-black group-hover:text-[#22C55E] transition line-clamp-2 ${isLocked ? 'text-white' : 'text-slate-900'}`}>
                                 {ep.title}
                               </h3>
                             </div>
                             
                             <div className="pt-2 flex items-center justify-between text-xs text-[#22C55E] font-bold">
                               <span>
-                                {epPremium && !isDramaUnlocked
+                                {isLocked
                                   ? 'Unlock with FEVIQO Premium'
                                   : epPremium
                                   ? 'Unlocked with Membership'
@@ -744,7 +819,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                 <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center gap-2 sm:gap-3">
                   <span>Duration: {selectedEpisode.duration}</span>
                   <span>&bull;</span>
-                  <span>Urdu Subtitles</span>
+                  <span>{isSelectedPremium ? 'Urdu Dubbed' : 'Urdu Subtitles'}</span>
                   <span>&bull;</span>
                   <span>HD 1080p Streaming</span>
                 </p>
@@ -1027,7 +1102,11 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   <div className="flex items-center gap-3">
                     {prevEpisode && (
                       <a
-                        href={`/mehmed-fetihler-sultani/${prevEpisode.slug}/`}
+                        href={
+                          Boolean(prevEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', prevEpisode.slug)) && !isDramaUnlocked
+                            ? `/membership?drama=mehmed-fetihler-sultani&episode=${prevEpisode.slug}`
+                            : `/mehmed-fetihler-sultani/${prevEpisode.slug}`
+                        }
                         onClick={(e) => {
                           e.preventDefault();
                           handleSelectEpisode(prevEpisode);
@@ -1042,7 +1121,11 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     )}
                     {nextEpisode && (
                       <a
-                        href={`/mehmed-fetihler-sultani/${nextEpisode.slug}/`}
+                        href={
+                          Boolean(nextEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', nextEpisode.slug)) && !isDramaUnlocked
+                            ? `/membership?drama=mehmed-fetihler-sultani&episode=${nextEpisode.slug}`
+                            : `/mehmed-fetihler-sultani/${nextEpisode.slug}`
+                        }
                         onClick={(e) => {
                           e.preventDefault();
                           handleSelectEpisode(nextEpisode);

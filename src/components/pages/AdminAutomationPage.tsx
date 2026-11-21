@@ -2,15 +2,19 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlertCircle,
+  AlertTriangle,
   Bot,
   CheckCircle2,
   Clock,
   Copy,
   Check,
   DollarSign,
+  ExternalLink,
   FileText,
+  Megaphone,
   MessageSquare,
   Play,
+  Power,
   Radio,
   RefreshCw,
   RotateCcw,
@@ -18,6 +22,7 @@ import {
   Settings,
   ShieldCheck,
   Sliders,
+  Square,
   Tv,
   Users,
   Wifi,
@@ -28,8 +33,12 @@ import { AppRoute } from '../../types';
 import { AdminPortalAuthGate } from '../admin/AdminPortalAuthGate';
 import {
   AdminAutomationOverview,
+  AutomationCategoryKey,
   AutomationRulesConfig,
+  EpisodeAudiencePreviewResult,
+  HistoricalCampaignSegment,
   TemplateApprovalStatus,
+  WhatsAppSendingMode,
   fetchAdminAutomationOverview,
   checkAdminWhatsAppLiveStatus,
   updateAdminAutomationSettings,
@@ -39,6 +48,12 @@ import {
   updateAdminCustomerPreference,
   triggerAdminEpisodePublishNotify,
   testAdminAiSupportAssistant,
+  startAdminAutomationBot,
+  stopAdminAutomationBot,
+  syncAdminMetaTemplates,
+  fetchAdminEpisodeAudiencePreview,
+  previewAdminHistoricalCampaign,
+  launchAdminHistoricalCampaign,
 } from '../../services/automationService';
 
 interface AdminAutomationPageProps {
@@ -79,12 +94,19 @@ function statusBadgeClass(status: string): string {
     case 'completed':
     case 'approved':
       return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+    case 'api_accepted':
+    case 'processing':
+      return 'bg-sky-50 text-sky-800 border-sky-200';
     case 'failed':
     case 'rejected':
+    case 'no_eligible_recipients':
       return 'bg-red-50 text-red-700 border-red-200';
     case 'pending':
     case 'pending_meta_review':
     case 'queued':
+    case 'queued_waiting_start':
+    case 'partially_completed':
+    case 'paused':
       return 'bg-amber-50 text-amber-800 border-amber-200';
     case 'not_configured':
       return 'bg-indigo-50 text-indigo-800 border-indigo-200';
@@ -92,6 +114,23 @@ function statusBadgeClass(status: string): string {
       return 'bg-slate-100 text-slate-700 border-slate-200';
   }
 }
+
+const SENDING_MODE_LABELS: Record<WhatsAppSendingMode, string> = {
+  automatic_with_fallback: 'Automatic + Manual Fallback (Recommended)',
+  automatic: 'Automatic Cloud API Only',
+  manual: 'Manual WhatsApp Only',
+  disabled: 'Disabled',
+};
+
+const CATEGORY_LABELS: Record<AutomationCategoryKey, string> = {
+  registration: 'New Customer Registration & Welcome',
+  unpaid_followup: 'Never-Purchased & Unpaid Checkout Reminders',
+  payment_updates: 'Payment Submitted / Approved / Renewed / Rejected',
+  membership_expiry: 'Membership Expiry Reminders (7d / 3d / 1d / Expired)',
+  episode_alerts: 'New Episode Broadcast Alerts (Free & Premium)',
+  security_alerts: 'Account Security Alerts (Sanitized, No Secrets)',
+  creative_enquiries: 'Video Editing & Creative Enquiries',
+};
 
 export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
   onBookCall,
@@ -137,19 +176,60 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
   const [draftMktCost, setDraftMktCost] = useState('0.055');
   const [savingSettings, setSavingSettings] = useState(false);
 
+  // Master Bot & Meta Template Sync
+  const [botBusy, setBotBusy] = useState(false);
+  const [botConfirmAction, setBotConfirmAction] = useState<'start' | 'stop' | null>(null);
+  const [syncingMetaTemplates, setSyncingMetaTemplates] = useState(false);
+
   // Worker & retries
   const [runningWorker, setRunningWorker] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
 
-  // Episode alert publisher
+  // Episode alert publisher (Free & Premium, selectable recipients, sending modes, confirmation modal)
   const [selectedDramaId, setSelectedDramaId] = useState('mehmed-fetihler-sultani');
   const [selectedEpisodeSlug, setSelectedEpisodeSlug] = useState('');
+  const [episodeAccessType, setEpisodeAccessType] = useState<'free' | 'premium'>('premium');
+  const [episodeSendingMode, setEpisodeSendingMode] =
+    useState<WhatsAppSendingMode>('automatic_with_fallback');
+  const [episodeSendInAppFallback, setEpisodeSendInAppFallback] = useState(true);
+  const [episodeAudiencePreview, setEpisodeAudiencePreview] =
+    useState<EpisodeAudiencePreviewResult | null>(null);
+  const [loadingEpisodePreview, setLoadingEpisodePreview] = useState(false);
+  const [selectedEpisodeMemberIds, setSelectedEpisodeMemberIds] = useState<string[]>([]);
+  const [episodeConfirmOpen, setEpisodeConfirmOpen] = useState(false);
   const [customSeasonNum, setCustomSeasonNum] = useState('4');
   const [customEpNum, setCustomEpNum] = useState('');
   const [customEpTitle, setCustomEpTitle] = useState('');
   const [customEpUrl, setCustomEpUrl] = useState('');
   const [forceResendEpisode, setForceResendEpisode] = useState(false);
   const [publishingEpisode, setPublishingEpisode] = useState(false);
+
+  // Historical Customer Campaigns
+  const [campaignSegment, setCampaignSegment] = useState<HistoricalCampaignSegment>(
+    'registered_never_purchased'
+  );
+  const [campaignSendingMode, setCampaignSendingMode] =
+    useState<WhatsAppSendingMode>('automatic_with_fallback');
+  const [campaignPreview, setCampaignPreview] = useState<{
+    segment: HistoricalCampaignSegment;
+    totalMatching: number;
+    eligibleAutomaticCount: number;
+    validPhoneManualCount: number;
+    optedOutCount: number;
+    recipients: Array<{
+      memberId: string;
+      fullName: string;
+      email: string;
+      phoneE164?: string;
+      phoneValid: boolean;
+      optedIn: boolean;
+      optedOut: boolean;
+      eligibleForAutomatic: boolean;
+      detail: string;
+    }>;
+  } | null>(null);
+  const [campaignBusy, setCampaignBusy] = useState(false);
+  const [campaignConfirmOpen, setCampaignConfirmOpen] = useState(false);
 
   // Templates filter & copy state
   const [templateFilter, setTemplateFilter] = useState<'all' | 'UTILITY' | 'MARKETING'>('all');
@@ -197,11 +277,17 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
         const latestEp = currentDrama.episodes[0];
         setSelectedDramaId(currentDrama.id);
         setSelectedEpisodeSlug(latestEp.slug);
+        setEpisodeAccessType(latestEp.accessType === 'free' ? 'free' : 'premium');
         setCustomEpNum(String(latestEp.number));
         setCustomEpTitle(latestEp.title);
         const dramaPath = currentDrama.id === 'teskilat' ? 'teskilat' : currentDrama.id;
         setCustomEpUrl(`https://feviqo.com/${dramaPath}/${latestEp.slug}`);
       }
+    }
+    if (ov.settings.rules.categorySendingModes?.episode_alerts) {
+      setEpisodeSendingMode(ov.settings.rules.categorySendingModes.episode_alerts);
+    } else if (ov.settings.rules.sendingMode) {
+      setEpisodeSendingMode(ov.settings.rules.sendingMode);
     }
   }, [selectedDramaId, selectedEpisodeSlug]);
 
@@ -384,6 +470,136 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
     }
   };
 
+  const loadEpisodeAudiencePreview = useCallback(
+    async (dramaId: string, accessType: 'free' | 'premium', epSlug?: string) => {
+      if (!dramaId) return;
+      setLoadingEpisodePreview(true);
+      try {
+        const res = await fetchAdminEpisodeAudiencePreview({
+          dramaId,
+          accessType,
+          episodeSlug: epSlug,
+        });
+        if (res.success && res.preview) {
+          setEpisodeAudiencePreview(res.preview);
+          const defaultSelectable = res.preview.recipients
+            .filter((r) => (r.eligibleForAutomatic || r.eligibleForManual) && !r.alreadyNotified)
+            .map((r) => r.memberId);
+          setSelectedEpisodeMemberIds(defaultSelectable);
+        }
+      } catch {
+        // non-blocking
+      } finally {
+        setLoadingEpisodePreview(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (overview && activeTab === 'episodes' && selectedDramaId) {
+      void loadEpisodeAudiencePreview(selectedDramaId, episodeAccessType, selectedEpisodeSlug);
+    }
+  }, [overview, activeTab, selectedDramaId, episodeAccessType, selectedEpisodeSlug, loadEpisodeAudiencePreview]);
+
+  const handleConfirmBotToggle = async () => {
+    if (!botConfirmAction) return;
+    setBotBusy(true);
+    setBanner(null);
+    try {
+      const res =
+        botConfirmAction === 'start'
+          ? await startAdminAutomationBot()
+          : await stopAdminAutomationBot();
+      if (res.overview) {
+        setOverview(res.overview);
+        hydrateDraftsFromOverview(res.overview);
+      }
+      if (res.success) {
+        setBanner({
+          type: 'success',
+          text:
+            botConfirmAction === 'start'
+              ? 'Master Automation Bot STARTED. Background worker is now running continuously on the server.'
+              : 'Master Automation Bot STOPPED. Automatic sending is paused safely; pending jobs are preserved and Manual WhatsApp Center remains active.',
+        });
+      } else {
+        setBanner({ type: 'error', text: res.error || 'Failed to toggle automation bot.' });
+      }
+    } catch {
+      setBanner({ type: 'error', text: 'Network error toggling automation bot.' });
+    } finally {
+      setBotBusy(false);
+      setBotConfirmAction(null);
+    }
+  };
+
+  const handleSyncMetaTemplates = async () => {
+    setSyncingMetaTemplates(true);
+    setBanner(null);
+    try {
+      const res = await syncAdminMetaTemplates();
+      if (res.overview) setOverview(res.overview);
+      if (res.success) {
+        setBanner({
+          type: 'success',
+          text: `Synced ${res.syncedCount || 0} template approval status(es) directly from Meta WhatsApp Manager.`,
+        });
+      } else {
+        setBanner({
+          type: 'error',
+          text: res.error || 'Could not sync templates from Meta Graph API.',
+        });
+      }
+    } catch {
+      setBanner({ type: 'error', text: 'Network error syncing templates from Meta.' });
+    } finally {
+      setSyncingMetaTemplates(false);
+    }
+  };
+
+  const handlePreviewCampaign = async () => {
+    setCampaignBusy(true);
+    setBanner(null);
+    try {
+      const res = await previewAdminHistoricalCampaign(campaignSegment);
+      if (res.success && res.preview) {
+        setCampaignPreview(res.preview);
+      } else {
+        setBanner({ type: 'error', text: res.error || 'Failed to preview historical campaign.' });
+      }
+    } catch {
+      setBanner({ type: 'error', text: 'Network error previewing historical campaign.' });
+    } finally {
+      setCampaignBusy(false);
+    }
+  };
+
+  const handleLaunchCampaign = async () => {
+    setCampaignBusy(true);
+    setBanner(null);
+    try {
+      const res = await launchAdminHistoricalCampaign({
+        segment: campaignSegment,
+        sendingMode: campaignSendingMode,
+      });
+      if (res.overview) setOverview(res.overview);
+      if (res.success && res.campaign) {
+        setBanner({
+          type: 'success',
+          text: `Historical campaign queued: ${res.campaign.queuedAutomatic} automatic job(s), ${res.campaign.queuedManual} manual WhatsApp message(s), ${res.campaign.skipped} skipped.`,
+        });
+      } else {
+        setBanner({ type: 'error', text: res.error || 'Failed to launch historical campaign.' });
+      }
+    } catch {
+      setBanner({ type: 'error', text: 'Network error launching historical campaign.' });
+    } finally {
+      setCampaignBusy(false);
+      setCampaignConfirmOpen(false);
+    }
+  };
+
   const handleDramaSelect = (dramaId: string) => {
     setSelectedDramaId(dramaId);
     setForceResendEpisode(false);
@@ -391,6 +607,7 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
     if (drama && drama.episodes.length > 0) {
       const ep = drama.episodes[0];
       setSelectedEpisodeSlug(ep.slug);
+      setEpisodeAccessType(ep.accessType === 'free' ? 'free' : 'premium');
       setCustomEpNum(String(ep.number));
       setCustomEpTitle(ep.title);
       const pathSlug = drama.id === 'teskilat' ? 'teskilat' : drama.id;
@@ -407,6 +624,7 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
     const drama = overview?.dramasCatalog.find((d) => d.id === selectedDramaId);
     const ep = drama?.episodes.find((e) => e.slug === epSlug);
     if (drama && ep) {
+      setEpisodeAccessType(ep.accessType === 'free' ? 'free' : 'premium');
       setCustomEpNum(String(ep.number));
       setCustomEpTitle(ep.title);
       const pathSlug = drama.id === 'teskilat' ? 'teskilat' : drama.id;
@@ -414,12 +632,16 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
     }
   };
 
-  const handlePublishEpisodeBroadcast = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeEpisodeBroadcast = async (options?: {
+    overrideMode?: WhatsAppSendingMode;
+    startAutomationIfStopped?: boolean;
+  }) => {
     if (!selectedDramaId || !selectedEpisodeSlug.trim()) return;
     setPublishingEpisode(true);
+    setEpisodeConfirmOpen(false);
     setBanner(null);
     try {
+      const effectiveMode = options?.overrideMode || episodeSendingMode;
       const res = await triggerAdminEpisodePublishNotify({
         dramaId: selectedDramaId,
         episodeSlug: selectedEpisodeSlug.trim(),
@@ -427,22 +649,43 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
         episodeNumber: Number(customEpNum) || 1,
         episodeTitle: customEpTitle.trim() || `Episode ${customEpNum}`,
         episodeUrl: customEpUrl.trim() || undefined,
+        accessType: episodeAccessType,
+        sendingMode: effectiveMode,
+        selectedMemberIds: selectedEpisodeMemberIds.length > 0 ? selectedEpisodeMemberIds : undefined,
+        sendInAppFallback: episodeSendInAppFallback,
+        startAutomationIfStopped: options?.startAutomationIfStopped === true,
         forceResend: forceResendEpisode,
       });
-      if (res.overview) setOverview(res.overview);
+      if (res.overview) {
+        setOverview(res.overview);
+        hydrateDraftsFromOverview(res.overview);
+      }
       if (res.duplicate) {
         setBanner({
           type: 'error',
           text:
             res.error ||
-            'Duplicate protection blocked resend. Enable "Force deliberate resend" if you intentionally want to notify entitled members again.',
+            'Duplicate protection blocked resend. Enable "Force deliberate resend" if you intentionally want to notify members again.',
         });
       } else if (res.success && res.broadcast) {
         setForceResendEpisode(false);
+        const b = res.broadcast;
+        const anyDeliveredOrQueued =
+          (b.apiAcceptedCount || 0) +
+            b.sentCount +
+            (b.manualQueuedCount || 0) +
+            (b.inAppNotifiedCount || 0) >
+          0;
+        const waitingForBot = b.broadcastStatus === 'queued_waiting_start';
         setBanner({
-          type: 'success',
-          text: `Episode broadcast recorded: ${res.broadcast.entitledCount} entitled active members · ${res.broadcast.sentCount} sent · ${res.broadcast.skippedCount} skipped · ${res.broadcast.failedCount} failed/unconfigured.`,
+          type: anyDeliveredOrQueued || waitingForBot ? 'success' : 'error',
+          text:
+            b.diagnosticSummary ||
+            (anyDeliveredOrQueued
+              ? `Episode broadcast (${b.broadcastStatus || 'completed'}): ${b.apiAcceptedCount || 0} API accepted · ${b.manualQueuedCount || 0} queued for manual WhatsApp · ${b.inAppNotifiedCount || 0} in-app · ${b.skippedCount} skipped · ${b.failedCount} failed.`
+              : 'No messages were sent. Review recipient eligibility, WhatsApp consent records, template approval status, and sending mode below.'),
         });
+        void loadEpisodeAudiencePreview(selectedDramaId, episodeAccessType, selectedEpisodeSlug);
       } else {
         setBanner({ type: 'error', text: res.error || 'Episode notification failed.' });
       }
@@ -451,6 +694,12 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
     } finally {
       setPublishingEpisode(false);
     }
+  };
+
+  const handlePublishEpisodeBroadcast = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDramaId || !selectedEpisodeSlug.trim()) return;
+    setEpisodeConfirmOpen(true);
   };
 
   const handleRunAiSimulator = async (e: React.FormEvent) => {
@@ -599,11 +848,30 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
             onRunWorkerNow={handleRunWorkerNow}
             retryingId={retryingId}
             onRetryMessage={handleRetryMessage}
+            botBusy={botBusy}
+            botConfirmAction={botConfirmAction}
+            setBotConfirmAction={setBotConfirmAction}
+            onConfirmBotToggle={handleConfirmBotToggle}
+            syncingMetaTemplates={syncingMetaTemplates}
+            onSyncMetaTemplates={handleSyncMetaTemplates}
             selectedDramaId={selectedDramaId}
             onSelectDrama={handleDramaSelect}
             selectedDramaCatalog={selectedDramaCatalog}
             selectedEpisodeSlug={selectedEpisodeSlug}
             onSelectEpisode={handleEpisodeSelect}
+            episodeAccessType={episodeAccessType}
+            setEpisodeAccessType={setEpisodeAccessType}
+            episodeSendingMode={episodeSendingMode}
+            setEpisodeSendingMode={setEpisodeSendingMode}
+            episodeSendInAppFallback={episodeSendInAppFallback}
+            setEpisodeSendInAppFallback={setEpisodeSendInAppFallback}
+            episodeAudiencePreview={episodeAudiencePreview}
+            loadingEpisodePreview={loadingEpisodePreview}
+            selectedEpisodeMemberIds={selectedEpisodeMemberIds}
+            setSelectedEpisodeMemberIds={setSelectedEpisodeMemberIds}
+            episodeConfirmOpen={episodeConfirmOpen}
+            setEpisodeConfirmOpen={setEpisodeConfirmOpen}
+            onExecuteEpisodeBroadcast={executeEpisodeBroadcast}
             customSeasonNum={customSeasonNum}
             setCustomSeasonNum={setCustomSeasonNum}
             customEpNum={customEpNum}
@@ -617,6 +885,16 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
             alreadySentForSelectedEpisode={alreadySentForSelectedEpisode}
             publishingEpisode={publishingEpisode}
             onPublishEpisode={handlePublishEpisodeBroadcast}
+            campaignSegment={campaignSegment}
+            setCampaignSegment={setCampaignSegment}
+            campaignSendingMode={campaignSendingMode}
+            setCampaignSendingMode={setCampaignSendingMode}
+            campaignPreview={campaignPreview}
+            campaignBusy={campaignBusy}
+            campaignConfirmOpen={campaignConfirmOpen}
+            setCampaignConfirmOpen={setCampaignConfirmOpen}
+            onPreviewCampaign={handlePreviewCampaign}
+            onLaunchCampaign={handleLaunchCampaign}
             templateFilter={templateFilter}
             setTemplateFilter={setTemplateFilter}
             filteredTemplates={filteredTemplates}
@@ -699,11 +977,33 @@ interface InnerProps {
   onRunWorkerNow: () => void;
   retryingId: string | null;
   onRetryMessage: (id: string) => void;
+  botBusy: boolean;
+  botConfirmAction: 'start' | 'stop' | null;
+  setBotConfirmAction: (v: 'start' | 'stop' | null) => void;
+  onConfirmBotToggle: () => void;
+  syncingMetaTemplates: boolean;
+  onSyncMetaTemplates: () => void;
   selectedDramaId: string;
   onSelectDrama: (id: string) => void;
   selectedDramaCatalog: AdminAutomationOverview['dramasCatalog'][number] | null;
   selectedEpisodeSlug: string;
   onSelectEpisode: (slug: string) => void;
+  episodeAccessType: 'free' | 'premium';
+  setEpisodeAccessType: (v: 'free' | 'premium') => void;
+  episodeSendingMode: WhatsAppSendingMode;
+  setEpisodeSendingMode: (v: WhatsAppSendingMode) => void;
+  episodeSendInAppFallback: boolean;
+  setEpisodeSendInAppFallback: (v: boolean) => void;
+  episodeAudiencePreview: EpisodeAudiencePreviewResult | null;
+  loadingEpisodePreview: boolean;
+  selectedEpisodeMemberIds: string[];
+  setSelectedEpisodeMemberIds: React.Dispatch<React.SetStateAction<string[]>>;
+  episodeConfirmOpen: boolean;
+  setEpisodeConfirmOpen: (v: boolean) => void;
+  onExecuteEpisodeBroadcast: (opts?: {
+    overrideMode?: WhatsAppSendingMode;
+    startAutomationIfStopped?: boolean;
+  }) => void;
   customSeasonNum: string;
   setCustomSeasonNum: (v: string) => void;
   customEpNum: string;
@@ -717,6 +1017,16 @@ interface InnerProps {
   alreadySentForSelectedEpisode: boolean;
   publishingEpisode: boolean;
   onPublishEpisode: (e: React.FormEvent) => void;
+  campaignSegment: HistoricalCampaignSegment;
+  setCampaignSegment: (v: HistoricalCampaignSegment) => void;
+  campaignSendingMode: WhatsAppSendingMode;
+  setCampaignSendingMode: (v: WhatsAppSendingMode) => void;
+  campaignPreview: any;
+  campaignBusy: boolean;
+  campaignConfirmOpen: boolean;
+  setCampaignConfirmOpen: (v: boolean) => void;
+  onPreviewCampaign: () => void;
+  onLaunchCampaign: () => void;
   templateFilter: 'all' | 'UTILITY' | 'MARKETING';
   setTemplateFilter: (v: 'all' | 'UTILITY' | 'MARKETING') => void;
   filteredTemplates: AdminAutomationOverview['templates'];
@@ -888,6 +1198,88 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
           {/* TAB 1: OVERVIEW & STATUS */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
+              {/* MASTER AUTOMATION BOT CONTROL PANEL */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                <div className="space-y-2 max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      FEVIQO Master Automation Bot
+                    </span>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-md border text-[11px] font-bold uppercase ${
+                        overview.settings.automationRunning
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                          : 'bg-amber-50 border-amber-200 text-amber-800'
+                      }`}
+                    >
+                      {overview.settings.automationRunning ? 'RUNNING' : 'STOPPED'}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold">
+                      Mode: {SENDING_MODE_LABELS[overview.settings.rules.sendingMode || 'automatic_with_fallback']}
+                    </span>
+                  </div>
+                  <h2 className="text-lg font-bold text-[#0F172A]">
+                    {overview.settings.automationRunning
+                      ? 'Background Automation Worker Active on Server'
+                      : 'Automatic Bot Paused — Manual WhatsApp Sending Remains Active'}
+                  </h2>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {overview.settings.automationRunning
+                      ? 'The Render backend worker continuously processes episode broadcasts, signup/checkout reminders, payment updates, and expiry reminders even when you close this dashboard.'
+                      : 'Click START AUTOMATION to activate live server-side automatic WhatsApp sending and process pending jobs. Historical users are never messaged automatically without an explicit campaign launch.'}
+                  </p>
+                  <div className="flex flex-wrap gap-4 text-[11px] text-slate-500 pt-1">
+                    <span>
+                      Last Heartbeat:{' '}
+                      <strong className="text-slate-700 tabular-nums">
+                        {formatDt(overview.settings.lastWorkerHeartbeatAt || overview.settings.lastWorkerRunAt)}
+                      </strong>
+                    </span>
+                    <span>
+                      Last Successful Run:{' '}
+                      <strong className="text-slate-700 tabular-nums">
+                        {formatDt(overview.settings.lastSuccessfulRunAt)}
+                      </strong>
+                    </span>
+                    {overview.settings.lastWorkerSummary && (
+                      <span className="text-slate-600">{overview.settings.lastWorkerSummary}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                  {overview.settings.automationRunning ? (
+                    <button
+                      type="button"
+                      disabled={props.botBusy}
+                      onClick={() => props.setBotConfirmAction('stop')}
+                      className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold inline-flex items-center gap-2 cursor-pointer transition disabled:opacity-60"
+                    >
+                      <Square className="w-3.5 h-3.5" />
+                      <span>STOP AUTOMATION</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={props.botBusy}
+                      onClick={() => props.setBotConfirmAction('start')}
+                      className="px-5 py-3 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0B0B0D] hover:text-white text-xs font-bold inline-flex items-center gap-2 cursor-pointer transition disabled:opacity-60"
+                    >
+                      <Power className="w-4 h-4" />
+                      <span>START AUTOMATION</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => props.onNavigatePage('admin-automation-whatsapp')}
+                    className="px-4 py-3 rounded-xl bg-[#0B0B0D] hover:bg-slate-800 text-white text-xs font-bold inline-flex items-center gap-2 cursor-pointer transition"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Open Manual WhatsApp Center</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Connection & Webhook Status Strip */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
@@ -1176,12 +1568,14 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                 </div>
               </div>
 
-              {/* KPI Metrics Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+              {/* Honest Delivery & Queue KPI Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
                 {[
-                  { label: 'Total Outbound', value: overview.stats.totalOutbound, accent: 'text-[#0F172A]' },
+                  { label: 'API Accepted', value: overview.stats.apiAccepted ?? overview.stats.sent, accent: 'text-sky-700' },
                   { label: 'Delivered', value: overview.stats.delivered, accent: 'text-[#16A34A]' },
                   { label: 'Read', value: overview.stats.read, accent: 'text-emerald-700' },
+                  { label: 'Opened Manual', value: overview.stats.manualOpened ?? 0, accent: 'text-sky-700' },
+                  { label: 'Confirmed Manual', value: overview.stats.manualConfirmedSent ?? 0, accent: 'text-[#16A34A]' },
                   { label: 'Failed / Retry', value: overview.stats.failed, accent: 'text-red-600' },
                   { label: 'Pending Jobs', value: overview.stats.pendingJobs, accent: 'text-amber-700' },
                   {
@@ -1190,11 +1584,134 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                     accent: 'text-[#0F172A]',
                   },
                 ].map((kpi) => (
-                  <div key={kpi.label} className="bg-white rounded-2xl border border-slate-200 p-4">
+                  <div key={kpi.label} className="bg-white rounded-2xl border border-slate-200 p-3.5">
                     <div className="text-[11px] font-medium text-slate-500">{kpi.label}</div>
-                    <div className={`text-2xl font-bold tabular-nums mt-1 ${kpi.accent}`}>{kpi.value}</div>
+                    <div className={`text-xl font-bold tabular-nums mt-1 ${kpi.accent}`}>{kpi.value}</div>
                   </div>
                 ))}
+              </div>
+
+              {/* Real Firestore Customer Audience Segments */}
+              {overview.audienceSegments && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-[#16A34A]">
+                        Live Firestore Customer Segments
+                      </div>
+                      <h3 className="text-base font-bold text-[#0F172A]">
+                        Real Audience Breakdown ({overview.audienceSegments.totalRegistered} Non-Blocked Customers ·{' '}
+                        {overview.audienceSegments.blockedExcluded} Blocked Excluded)
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => props.onNavigatePage('admin-automation-whatsapp')}
+                      className="px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+                    >
+                      Message Segments Manually &rarr;
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                    {[
+                      { label: 'WhatsApp Eligible', value: overview.audienceSegments.whatsappEligible, cls: 'text-[#16A34A]' },
+                      { label: 'No WhatsApp Consent', value: overview.audienceSegments.noWhatsAppPermission, cls: 'text-amber-700' },
+                      { label: 'Opted Out (STOP)', value: overview.audienceSegments.optedOut, cls: 'text-red-600' },
+                      { label: 'Invalid Phone', value: overview.audienceSegments.invalidPhone, cls: 'text-red-600' },
+                      { label: 'Never Purchased', value: overview.audienceSegments.registeredNeverPurchased, cls: 'text-[#0F172A]' },
+                      { label: 'Selected Plan Unpaid', value: overview.audienceSegments.selectedPlanUnpaid, cls: 'text-amber-700' },
+                      { label: 'Pending Approval', value: overview.audienceSegments.pendingPaymentApproval, cls: 'text-sky-700' },
+                      { label: 'Active Paid Members', value: overview.audienceSegments.activePaidMembers, cls: 'text-[#16A34A]' },
+                      { label: 'Expired Memberships', value: overview.audienceSegments.expiredMemberships, cls: 'text-slate-700' },
+                      { label: 'Renewals Due (<=7d)', value: overview.audienceSegments.renewalsDueSoon, cls: 'text-amber-700' },
+                      { label: 'Creative Enquiries', value: overview.audienceSegments.creativeEnquiries, cls: 'text-indigo-700' },
+                      { label: 'Manual Queue Pending', value: overview.stats.manualPending ?? 0, cls: 'text-[#0F172A]' },
+                    ].map((seg) => (
+                      <div key={seg.label} className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="text-[11px] text-slate-500">{seg.label}</div>
+                        <div className={`text-lg font-bold tabular-nums mt-0.5 ${seg.cls}`}>{seg.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Admin-Controlled Historical Customer Campaign Launcher */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                      <Megaphone className="w-3.5 h-3.5 text-[#16A34A]" />
+                      <span>Explicit Historical Outreach (Never Auto-Triggered on Deploy)</span>
+                    </div>
+                    <h3 className="text-base font-bold text-[#0F172A] mt-0.5">
+                      Preview &amp; Launch Historical Customer Campaign
+                    </h3>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                  <div className="md:col-span-5 space-y-1">
+                    <label className="block text-xs font-semibold text-slate-700">Target Customer Segment</label>
+                    <select
+                      value={props.campaignSegment}
+                      onChange={(e) => props.setCampaignSegment(e.target.value as HistoricalCampaignSegment)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold"
+                    >
+                      <option value="registered_never_purchased">Registered Customers Who Never Purchased</option>
+                      <option value="selected_plan_unpaid">Selected Membership Plan — Unpaid</option>
+                      <option value="expired_memberships">Expired Memberships (Renewal Offer)</option>
+                      <option value="active_members">Active Paid Members</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-4 space-y-1">
+                    <label className="block text-xs font-semibold text-slate-700">Campaign Sending Method</label>
+                    <select
+                      value={props.campaignSendingMode}
+                      onChange={(e) => props.setCampaignSendingMode(e.target.value as WhatsAppSendingMode)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs"
+                    >
+                      <option value="automatic_with_fallback">Automatic + Manual Fallback</option>
+                      <option value="automatic">Automatic Cloud API Only</option>
+                      <option value="manual">Manual WhatsApp Queue Only</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-3 flex gap-2">
+                    <button
+                      type="button"
+                      disabled={props.campaignBusy}
+                      onClick={props.onPreviewCampaign}
+                      className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      {props.campaignBusy ? 'Loading...' : 'Preview Audience'}
+                    </button>
+                    {props.campaignPreview && props.campaignPreview.totalMatching > 0 && (
+                      <button
+                        type="button"
+                        disabled={props.campaignBusy}
+                        onClick={() => props.setCampaignConfirmOpen(true)}
+                        className="px-4 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] hover:text-[#0B0B0D] text-white text-xs font-bold cursor-pointer transition"
+                      >
+                        Launch
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {props.campaignPreview && (
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                    <div className="flex flex-wrap gap-4">
+                      <span>Matching: <strong className="tabular-nums">{props.campaignPreview.totalMatching}</strong></span>
+                      <span className="text-[#16A34A]">
+                        Eligible Auto API: <strong className="tabular-nums">{props.campaignPreview.eligibleAutomaticCount}</strong>
+                      </span>
+                      <span className="text-sky-700">
+                        Valid Phone for Manual: <strong className="tabular-nums">{props.campaignPreview.validPhoneManualCount}</strong>
+                      </span>
+                      <span className="text-red-600">
+                        Opted Out Excluded: <strong className="tabular-nums">{props.campaignPreview.optedOutCount}</strong>
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Cost Breakdown & Consent Summary + Test Message Sender */}
@@ -1383,21 +1900,91 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                   </button>
                 </div>
 
-                {/* Master Switch */}
-                <label className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
-                  <div>
-                    <div className="text-sm font-bold text-[#0F172A]">Master Automation Switch</div>
-                    <div className="text-xs text-slate-600">
-                      Turn off to immediately pause all automated WhatsApp outbound messages globally.
+                {/* Master Switch & Global + Per-Category Sending Modes */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <label className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer">
+                    <div>
+                      <div className="text-sm font-bold text-[#0F172A]">Master Automation Rule Switch</div>
+                      <div className="text-xs text-slate-600">
+                        Enable event triggers globally. Use START / STOP AUTOMATION on Overview to run or pause the background worker.
+                      </div>
                     </div>
+                    <input
+                      type="checkbox"
+                      checked={props.draftRules.masterEnabled}
+                      onChange={(e) => updateRule('masterEnabled', e.target.checked)}
+                      className="w-5 h-5 accent-[#16A34A]"
+                    />
+                  </label>
+
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+                    <label className="block text-xs font-bold text-[#0F172A]">
+                      Global Default WhatsApp Sending Mode
+                    </label>
+                    <select
+                      value={props.draftRules.sendingMode || 'automatic_with_fallback'}
+                      onChange={(e) =>
+                        updateRule('sendingMode', e.target.value as WhatsAppSendingMode)
+                      }
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold"
+                    >
+                      {(Object.keys(SENDING_MODE_LABELS) as WhatsAppSendingMode[]).map((m) => (
+                        <option key={m} value={m}>
+                          {SENDING_MODE_LABELS[m]}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={props.draftRules.masterEnabled}
-                    onChange={(e) => updateRule('masterEnabled', e.target.checked)}
-                    className="w-5 h-5 accent-[#16A34A]"
-                  />
-                </label>
+                </div>
+
+                {/* Per-Category Sending Modes */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Individual Sending Mode Per Notification Category (Prevents Accidental Double-Sending)
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {(Object.keys(CATEGORY_LABELS) as AutomationCategoryKey[]).map((cat) => (
+                      <div key={cat} className="space-y-1">
+                        <label className="block text-[11px] font-semibold text-slate-700">
+                          {CATEGORY_LABELS[cat]}
+                        </label>
+                        <select
+                          value={
+                            props.draftRules?.categorySendingModes?.[cat] ||
+                            props.draftRules?.sendingMode ||
+                            'automatic_with_fallback'
+                          }
+                          onChange={(e) => {
+                            const val = e.target.value as WhatsAppSendingMode;
+                            props.setDraftRules((prev) =>
+                              prev
+                                ? {
+                                    ...prev,
+                                    categorySendingModes: {
+                                      registration: prev.categorySendingModes?.registration || prev.sendingMode || 'automatic_with_fallback',
+                                      unpaid_followup: prev.categorySendingModes?.unpaid_followup || prev.sendingMode || 'automatic_with_fallback',
+                                      payment_updates: prev.categorySendingModes?.payment_updates || prev.sendingMode || 'automatic_with_fallback',
+                                      membership_expiry: prev.categorySendingModes?.membership_expiry || prev.sendingMode || 'automatic_with_fallback',
+                                      episode_alerts: prev.categorySendingModes?.episode_alerts || prev.sendingMode || 'automatic_with_fallback',
+                                      security_alerts: prev.categorySendingModes?.security_alerts || prev.sendingMode || 'automatic_with_fallback',
+                                      creative_enquiries: prev.categorySendingModes?.creative_enquiries || prev.sendingMode || 'automatic_with_fallback',
+                                      [cat]: val,
+                                    },
+                                  }
+                                : prev
+                            );
+                          }}
+                          className="w-full px-2.5 py-2 rounded-lg border border-slate-300 bg-white text-xs"
+                        >
+                          <option value="automatic_with_fallback">Automatic + Manual Fallback</option>
+                          <option value="automatic">Automatic Only</option>
+                          <option value="manual">Manual Only</option>
+                          <option value="disabled">Disabled</option>
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Membership Lifecycle Rules */}
@@ -1463,8 +2050,33 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                       },
                       {
                         key: 'episodePublishedAlerts' as const,
-                        label: 'H. New Episode Notifications (Entitled Active Members Only)',
-                        desc: 'VIP = all eligible dramas; other plans = selected dramas only.',
+                        label: 'H. New Episode Notifications (Free & Premium Access Control)',
+                        desc: 'Free episodes = registered consented customers; Premium = active entitled members only.',
+                      },
+                      {
+                        key: 'signupFollowUp24h' as const,
+                        label: 'I1. Never-Purchased Follow-Up (24 Hours After Signup)',
+                        desc: 'Cancels automatically if customer purchases a plan before 24h.',
+                      },
+                      {
+                        key: 'signupFollowUp72h' as const,
+                        label: 'I2. Never-Purchased Follow-Up (72 Hours After Signup)',
+                        desc: 'Final gentle reminder if customer still has not started a plan.',
+                      },
+                      {
+                        key: 'unpaidCheckoutReminder2h' as const,
+                        label: 'J1. Unpaid Checkout Follow-Up (2 Hours)',
+                        desc: 'Cancels immediately upon payment proof upload or order cancellation.',
+                      },
+                      {
+                        key: 'unpaidCheckoutReminder24h' as const,
+                        label: 'J2. Unpaid Checkout Follow-Up (24 Hours)',
+                        desc: 'Reminds customer to complete payment verification.',
+                      },
+                      {
+                        key: 'accountSecurityAlerts' as const,
+                        label: 'K. Account Security Alerts (Sanitized — Never Includes Passwords)',
+                        desc: 'Notifies customer via WhatsApp + In-App notification on password/email/suspicious login events.',
                       },
                     ].map((r) => (
                       <div
@@ -1696,9 +2308,34 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
             </div>
           )}
 
-          {/* TAB 3: NEW EPISODE NOTIFICATIONS */}
+          {/* TAB 3: NEW EPISODE NOTIFICATIONS (FIXED — FREE & PREMIUM, AUDIENCE BREAKDOWN, SENDING MODES) */}
           {activeTab === 'episodes' && (
             <div className="space-y-6">
+              {overview.templates.find((t) => t.name === 'feviqo_new_episode')?.approvalStatus !== 'approved' && (
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-950">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Template Gate Notice:</strong>{' '}
+                      <span className="font-mono font-semibold">feviqo_new_episode</span> is currently marked{' '}
+                      <strong className="uppercase">
+                        {overview.templates.find((t) => t.name === 'feviqo_new_episode')?.approvalStatus || 'draft'}
+                      </strong>
+                      . If this template is approved in Meta WhatsApp Manager, click{' '}
+                      <strong>Sync from Meta</strong> now so Automatic Cloud API sending can dispatch immediately (or use Automatic + Manual Fallback / Manual mode).
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={props.syncingMetaTemplates}
+                    onClick={props.onSyncMetaTemplates}
+                    className="px-3.5 py-2 rounded-xl bg-[#0B0B0D] text-white text-xs font-bold shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    {props.syncingMetaTemplates ? 'Syncing...' : 'Sync from Meta'}
+                  </button>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 <form
                   onSubmit={props.onPublishEpisode}
@@ -1709,7 +2346,8 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                       Publish New Episode WhatsApp Alert
                     </h2>
                     <p className="text-xs text-slate-600 mt-0.5">
-                      Notifies ONLY active, paid members entitled to the selected drama (VIP = all eligible dramas; Starter/Standard/Plus = selected dramas only) who opted in to New Episode Alerts. Excludes expired, cancelled, revoked, rejected, and blocked accounts.
+                      <strong>Premium episodes</strong> notify ONLY active paid members entitled to this drama (never sent to free, expired, revoked, or blocked users).{' '}
+                      <strong>Free episodes</strong> notify registered non-blocked customers according to consent and sending mode.
                     </p>
                   </div>
 
@@ -1731,7 +2369,7 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
 
                     <div className="space-y-1">
                       <label className="block text-xs font-semibold text-slate-700">
-                        Select Existing Episode (or enter custom below)
+                        Select Existing Episode
                       </label>
                       <select
                         value={props.selectedEpisodeSlug}
@@ -1743,6 +2381,42 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                             Ep {ep.number} — {ep.title} ({ep.accessType})
                           </option>
                         ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Episode Access Type & Sending Mode */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Episode Access Type
+                      </label>
+                      <select
+                        value={props.episodeAccessType}
+                        onChange={(e) =>
+                          props.setEpisodeAccessType(e.target.value === 'free' ? 'free' : 'premium')
+                        }
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold"
+                      >
+                        <option value="premium">Premium — Active Entitled Members Only</option>
+                        <option value="free">Free — All Registered Customers</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Sending Method for This Broadcast
+                      </label>
+                      <select
+                        value={props.episodeSendingMode}
+                        onChange={(e) =>
+                          props.setEpisodeSendingMode(e.target.value as WhatsAppSendingMode)
+                        }
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold"
+                      >
+                        <option value="automatic_with_fallback">Automatic Cloud API + Manual Fallback</option>
+                        <option value="automatic">Automatic Cloud API Only</option>
+                        <option value="manual">Manual WhatsApp Center Only</option>
                       </select>
                     </div>
                   </div>
@@ -1805,6 +2479,18 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                     </div>
                   </div>
 
+                  <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={props.episodeSendInAppFallback}
+                      onChange={(e) => props.setEpisodeSendInAppFallback(e.target.checked)}
+                      className="mt-0.5 accent-[#16A34A]"
+                    />
+                    <span className="text-slate-700">
+                      Also deliver an <strong>In-App Account Notification</strong> to eligible members who do not have WhatsApp consent (counted separately, never reported as WhatsApp sent).
+                    </span>
+                  </label>
+
                   {props.alreadySentForSelectedEpisode && (
                     <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 space-y-2 text-xs text-amber-950">
                       <div className="font-bold flex items-center gap-1.5">
@@ -1812,7 +2498,7 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                         <span>Duplicate Broadcast Protection Active</span>
                       </div>
                       <p>
-                        A broadcast was already sent for <strong>{props.selectedEpisodeSlug}</strong>. Editing or republishing an episode will not spam members unless you explicitly check the deliberate resend box below.
+                        A broadcast was already recorded for <strong>{props.selectedEpisodeSlug}</strong>. Check below only if you deliberately want to resend.
                       </p>
                       <label className="flex items-center gap-2 font-semibold cursor-pointer">
                         <input
@@ -1821,106 +2507,298 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                           onChange={(e) => props.setForceResendEpisode(e.target.checked)}
                           className="accent-amber-700"
                         />
-                        <span>Deliberate Admin Resend: notify entitled members again</span>
+                        <span>Deliberate Admin Resend: notify members again</span>
                       </label>
                     </div>
                   )}
 
-                  <button
-                    type="submit"
-                    disabled={props.publishingEpisode}
-                    className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#22C55E] hover:text-[#0F172A] text-white text-xs font-bold inline-flex items-center gap-2 transition cursor-pointer disabled:opacity-60"
-                  >
-                    <Tv className="w-4 h-4" />
-                    <span>
-                      {props.publishingEpisode
-                        ? 'Dispatching Episode Alerts...'
-                        : props.forceResendEpisode
-                        ? 'Resend Episode Notification'
-                        : 'Trigger Episode Published Notification'}
-                    </span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="submit"
+                      disabled={props.publishingEpisode}
+                      className="px-5 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#22C55E] hover:text-[#0F172A] text-white text-xs font-bold inline-flex items-center gap-2 transition cursor-pointer disabled:opacity-60"
+                    >
+                      <Tv className="w-4 h-4" />
+                      <span>
+                        {props.publishingEpisode
+                          ? 'Dispatching Episode Alerts...'
+                          : props.forceResendEpisode
+                          ? 'Resend Episode Notification'
+                          : 'Trigger Episode Published Notification'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => props.onNavigatePage('admin-automation-whatsapp')}
+                      className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open Manual WhatsApp Center</span>
+                    </button>
+                  </div>
                 </form>
 
-                {/* Entitled Audience Preview */}
+                {/* Live Audience Breakdown & Message Preview */}
                 <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-                  <h3 className="text-base font-bold text-[#0F172A]">
-                    Entitlement &amp; Consent Audience Preview
-                  </h3>
-                  {props.selectedDramaCatalog ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-base font-bold text-[#0F172A]">
+                      Live Audience Breakdown &amp; Preview
+                    </h3>
+                    {props.loadingEpisodePreview && (
+                      <span className="text-[11px] text-slate-500">Refreshing...</span>
+                    )}
+                  </div>
+
+                  {props.episodeAudiencePreview ? (
                     <div className="space-y-3 text-xs">
-                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                        <div className="text-slate-500">Selected Drama</div>
-                        <div className="text-base font-bold text-[#0F172A] mt-0.5">
-                          {props.selectedDramaCatalog.title}
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-1">
-                          VIP Eligible: {props.selectedDramaCatalog.vipEligible ? 'Yes (includes VIP members)' : 'No'}
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2.5">
-                        <div className="p-3 rounded-xl border border-slate-200">
-                          <div className="text-[11px] text-slate-500">Entitled Active</div>
-                          <div className="text-xl font-bold text-[#0F172A] tabular-nums">
-                            {props.selectedDramaCatalog.audience.entitledActiveCount}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50">
+                          <div className="text-[10px] text-slate-500 uppercase">
+                            {props.episodeAccessType === 'free' ? 'Registered Pool' : 'Entitled Active'}
+                          </div>
+                          <div className="text-lg font-bold text-[#0F172A] tabular-nums">
+                            {props.episodeAudiencePreview.audiencePoolCount}
                           </div>
                         </div>
-                        <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/60">
-                          <div className="text-[11px] text-emerald-800">Will Notify</div>
-                          <div className="text-xl font-bold text-[#16A34A] tabular-nums">
-                            {props.selectedDramaCatalog.audience.consentedCount}
+                        <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/70">
+                          <div className="text-[10px] text-emerald-800 uppercase">Eligible Auto API</div>
+                          <div className="text-lg font-bold text-[#16A34A] tabular-nums">
+                            {props.episodeAudiencePreview.eligibleAutomaticCount}
                           </div>
                         </div>
-                        <div className="p-3 rounded-xl border border-slate-200">
-                          <div className="text-[11px] text-slate-500">No Consent / Opt-Out</div>
-                          <div className="text-xl font-bold text-slate-600 tabular-nums">
-                            {props.selectedDramaCatalog.audience.optedOutOrNoConsentCount}
+                        <div className="p-2.5 rounded-xl border border-sky-200 bg-sky-50/70">
+                          <div className="text-[10px] text-sky-800 uppercase">Eligible Manual</div>
+                          <div className="text-lg font-bold text-sky-700 tabular-nums">
+                            {props.episodeAudiencePreview.eligibleManualCount}
                           </div>
                         </div>
                       </div>
-                      <p className="text-[11px] text-slate-500 leading-relaxed">
-                        Unpaid users, expired memberships, rejected orders, cancelled/revoked plans, and blocked emails are automatically excluded on the server.
-                      </p>
+
+                      <div className="grid grid-cols-4 gap-2 text-center">
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                          <div className="text-[10px] text-slate-500">No Consent</div>
+                          <div className="font-bold tabular-nums text-amber-700">
+                            {props.episodeAudiencePreview.missingConsentCount}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                          <div className="text-[10px] text-slate-500">Opted Out</div>
+                          <div className="font-bold tabular-nums text-red-600">
+                            {props.episodeAudiencePreview.optedOutCount}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                          <div className="text-[10px] text-slate-500">Bad Phone</div>
+                          <div className="font-bold tabular-nums text-red-600">
+                            {props.episodeAudiencePreview.invalidPhoneCount}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
+                          <div className="text-[10px] text-slate-500">Selected</div>
+                          <div className="font-bold tabular-nums text-[#0F172A]">
+                            {props.selectedEpisodeMemberIds.length}
+                          </div>
+                        </div>
+                      </div>
+
+                      {props.episodeAudiencePreview.eligibleAutomaticCount === 0 &&
+                        props.episodeAudiencePreview.audiencePoolCount > 0 && (
+                          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
+                            <strong>Why 0 Automatic API Eligible?</strong>{' '}
+                            {props.episodeAudiencePreview.missingConsentCount} member(s) do not have explicit WhatsApp opt-in consent recorded yet (existing members are never silently opted in). Switch Sending Method to{' '}
+                            <strong>Manual WhatsApp Center Only</strong> or keep <strong>Automatic + Manual Fallback</strong> + In-App Notifications enabled.
+                          </div>
+                        )}
+
+                      <div className="space-y-1">
+                        <div className="text-[11px] font-semibold text-slate-600">
+                          Complete Personalized Message Preview
+                        </div>
+                        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-[#0B0B0D] whitespace-pre-wrap leading-relaxed">
+                          {`New Urdu-Dubbed Episode Available on FEVIQO! 🎬\n\nDrama: ${
+                            props.selectedDramaCatalog?.title || props.selectedDramaId
+                          }\nEpisode: ${props.customEpNum || '1'}\nAccess: ${
+                            props.episodeAccessType === 'free'
+                              ? 'Free Episode'
+                              : 'Premium Membership'
+                          }\nWatch now: ${
+                            props.customEpUrl || 'https://feviqo.com/dramas'
+                          }\n\nThank you for watching on FEVIQO.`}
+                        </div>
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-slate-500">Select a drama to preview audience.</p>
+                    <p className="text-xs text-slate-500">Select a drama to load live audience diagnostics.</p>
                   )}
                 </div>
               </div>
 
-              {/* Broadcast History */}
+              {/* Selectable Recipient Eligibility Table */}
+              {props.episodeAudiencePreview && props.episodeAudiencePreview.recipients.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                  <div className="p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#0F172A]">
+                        Recipient Eligibility Directory ({props.episodeAudiencePreview.recipients.length} in pool ·{' '}
+                        {props.selectedEpisodeMemberIds.length} selected)
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Select specific recipients or all eligible customers. Exact skip reasons are shown transparently per customer.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allEligible = props.episodeAudiencePreview!.recipients
+                          .filter((r) => r.eligibleForAutomatic || r.eligibleForManual)
+                          .map((r) => r.memberId);
+                        const allChecked =
+                          allEligible.length > 0 &&
+                          allEligible.every((id) => props.selectedEpisodeMemberIds.includes(id));
+                        props.setSelectedEpisodeMemberIds(allChecked ? [] : allEligible);
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+                    >
+                      Toggle Select All Eligible
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto max-h-80 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 sticky top-0">
+                        <tr>
+                          <th className="py-2.5 px-4 w-10">Sel</th>
+                          <th className="py-2.5 px-4">Customer</th>
+                          <th className="py-2.5 px-4">Phone</th>
+                          <th className="py-2.5 px-4">Plan / Status</th>
+                          <th className="py-2.5 px-4">Eligibility &amp; Consent Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {props.episodeAudiencePreview.recipients.map((r) => {
+                          const selectable = r.eligibleForAutomatic || r.eligibleForManual;
+                          return (
+                            <tr key={r.memberId} className="hover:bg-slate-50/70">
+                              <td className="py-2.5 px-4">
+                                <input
+                                  type="checkbox"
+                                  disabled={!selectable}
+                                  checked={props.selectedEpisodeMemberIds.includes(r.memberId)}
+                                  onChange={() =>
+                                    props.setSelectedEpisodeMemberIds((prev) =>
+                                      prev.includes(r.memberId)
+                                        ? prev.filter((id) => id !== r.memberId)
+                                        : [...prev, r.memberId]
+                                    )
+                                  }
+                                  className="w-4 h-4 accent-[#16A34A] cursor-pointer disabled:opacity-40"
+                                />
+                              </td>
+                              <td className="py-2.5 px-4">
+                                <div className="font-semibold text-[#0F172A]">{r.memberName}</div>
+                                <div className="text-[11px] text-slate-500">{r.email}</div>
+                              </td>
+                              <td className="py-2.5 px-4 font-mono">
+                                {r.phoneE164 || r.rawPhone || 'Missing'}
+                              </td>
+                              <td className="py-2.5 px-4">
+                                <div className="font-semibold text-slate-700">{r.planName || r.planId}</div>
+                                <div className="text-[10px] uppercase text-slate-500">{r.membershipStatus}</div>
+                              </td>
+                              <td className="py-2.5 px-4">
+                                {r.eligibleForAutomatic ? (
+                                  <span className="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-bold">
+                                    Auto API + Manual Ready
+                                  </span>
+                                ) : r.eligibleForManual ? (
+                                  <span className="px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold">
+                                    Manual / In-App Only ({r.skipReason || 'No WhatsApp Opt-In'})
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold">
+                                    Excluded: {r.skipReason || 'Ineligible'}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Honest Episode Broadcast History */}
               <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
                 <h3 className="text-base font-bold text-[#0F172A]">Episode Broadcast History</h3>
                 {overview.episodeBroadcasts.length === 0 ? (
                   <p className="text-xs text-slate-500">No episode notifications triggered yet.</p>
                 ) : (
                   <div className="space-y-3">
-                    {overview.episodeBroadcasts.map((b) => (
-                      <div
-                        key={b.id}
-                        className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-2"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="text-xs font-bold text-[#0F172A]">
-                            {b.dramaTitle} · S{b.seasonNumber}E{b.episodeNumber} ({b.episodeSlug})
-                            {b.isResend && (
-                              <span className="ml-2 px-2 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px]">
-                                RESEND
+                    {overview.episodeBroadcasts.map((b) => {
+                      const zeroSent =
+                        (b.apiAcceptedCount || 0) +
+                          b.sentCount +
+                          (b.manualQueuedCount || 0) +
+                          (b.inAppNotifiedCount || 0) ===
+                        0;
+                      return (
+                        <div
+                          key={b.id}
+                          className={`p-4 rounded-xl border space-y-2 ${
+                            zeroSent && b.broadcastStatus !== 'queued_waiting_start'
+                              ? 'border-amber-200 bg-amber-50/40'
+                              : 'border-slate-200 bg-slate-50/70'
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-[#0F172A]">
+                              <span>
+                                {b.dramaTitle} · S{b.seasonNumber}E{b.episodeNumber} ({b.episodeSlug})
                               </span>
-                            )}
+                              <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[10px] uppercase">
+                                {b.accessType || 'premium'}
+                              </span>
+                              {b.sendingMode && (
+                                <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700 text-[10px]">
+                                  {b.sendingMode}
+                                </span>
+                              )}
+                              {b.broadcastStatus && (
+                                <span
+                                  className={`px-2 py-0.5 rounded border text-[10px] uppercase ${statusBadgeClass(
+                                    b.broadcastStatus
+                                  )}`}
+                                >
+                                  {b.broadcastStatus.replace(/_/g, ' ')}
+                                </span>
+                              )}
+                              {b.isResend && (
+                                <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px]">
+                                  RESEND
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-500">
+                              {formatDt(b.createdAt)} · by {b.triggeredByAdminEmail}
+                            </div>
                           </div>
-                          <div className="text-[11px] text-slate-500">
-                            {formatDt(b.createdAt)} · by {b.triggeredByAdminEmail}
+                          <div className="flex flex-wrap gap-3 text-xs tabular-nums">
+                            <span>Audience: <strong>{b.entitledCount}</strong></span>
+                            <span className="text-sky-700">API Accepted: <strong>{b.apiAcceptedCount ?? b.sentCount}</strong></span>
+                            <span className="text-[#16A34A]">Delivered: <strong>{b.deliveredCount ?? 0}</strong></span>
+                            <span className="text-emerald-700">Read: <strong>{b.readCount ?? 0}</strong></span>
+                            <span className="text-indigo-700">Manual Queued: <strong>{b.manualQueuedCount ?? 0}</strong></span>
+                            <span className="text-slate-700">In-App: <strong>{b.inAppNotifiedCount ?? 0}</strong></span>
+                            <span className="text-slate-600">Skipped: <strong>{b.skippedCount}</strong></span>
+                            <span className="text-red-600">Failed: <strong>{b.failedCount}</strong></span>
                           </div>
+                          {b.diagnosticSummary && (
+                            <div className="text-[11px] text-slate-700">{b.diagnosticSummary}</div>
+                          )}
                         </div>
-                        <div className="flex flex-wrap gap-3 text-xs">
-                          <span>Entitled: <strong>{b.entitledCount}</strong></span>
-                          <span className="text-[#16A34A]">Sent: <strong>{b.sentCount}</strong></span>
-                          <span className="text-slate-600">Skipped: <strong>{b.skippedCount}</strong></span>
-                          <span className="text-red-600">Failed/Unconfigured: <strong>{b.failedCount}</strong></span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1939,21 +2817,32 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                     Templates default to <strong>draft</strong> and are never assumed approved. Submit each template inside Meta WhatsApp Manager, wait for Meta approval, then update its approval status here to unlock live automated sending.
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs shrink-0">
-                  {(['all', 'UTILITY', 'MARKETING'] as const).map((f) => (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => props.setTemplateFilter(f)}
-                      className={`px-3 py-1.5 rounded-lg font-semibold cursor-pointer ${
-                        props.templateFilter === f
-                          ? 'bg-white text-[#0F172A] shadow-xs'
-                          : 'text-slate-600'
-                      }`}
-                    >
-                      {f === 'all' ? 'All' : f}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    disabled={props.syncingMetaTemplates}
+                    onClick={props.onSyncMetaTemplates}
+                    className="px-3.5 py-2 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] hover:text-[#0B0B0D] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition disabled:opacity-60"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${props.syncingMetaTemplates ? 'animate-spin' : ''}`} />
+                    <span>{props.syncingMetaTemplates ? 'Syncing from Meta...' : 'Sync Approval Status from Meta'}</span>
+                  </button>
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs shrink-0">
+                    {(['all', 'UTILITY', 'MARKETING'] as const).map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => props.setTemplateFilter(f)}
+                        className={`px-3 py-1.5 rounded-lg font-semibold cursor-pointer ${
+                          props.templateFilter === f
+                            ? 'bg-white text-[#0F172A] shadow-xs'
+                            : 'text-slate-600'
+                        }`}
+                      >
+                        {f === 'all' ? 'All' : f}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -2414,6 +3303,7 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                       className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs"
                     >
                       <option value="all">All Statuses</option>
+                      <option value="api_accepted">API Accepted (Pending Webhook)</option>
                       <option value="sent">Sent</option>
                       <option value="delivered">Delivered</option>
                       <option value="read">Read</option>
@@ -2442,11 +3332,11 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                       <thead>
                         <tr className="border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500">
                           <th className="py-2 pr-3">Time</th>
-                          <th className="py-2 pr-3">Dir</th>
+                          <th className="py-2 pr-3">Method</th>
                           <th className="py-2 pr-3">Phone</th>
                           <th className="py-2 pr-3">Event / Template</th>
-                          <th className="py-2 pr-3">Status</th>
-                          <th className="py-2 pr-3">Preview / Error</th>
+                          <th className="py-2 pr-3">Status / HTTP</th>
+                          <th className="py-2 pr-3">Preview / API Response</th>
                           <th className="py-2">Action</th>
                         </tr>
                       </thead>
@@ -2456,8 +3346,12 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                             <td className="py-2.5 pr-3 whitespace-nowrap text-slate-500 tabular-nums">
                               {formatDt(m.createdAt)}
                             </td>
-                            <td className="py-2.5 pr-3 uppercase text-[10px] font-bold text-slate-600">
-                              {m.direction}
+                            <td className="py-2.5 pr-3 uppercase text-[10px] font-bold text-slate-600 whitespace-nowrap">
+                              {m.direction === 'inbound'
+                                ? 'INBOUND'
+                                : m.sendingMethod === 'manual_whatsapp'
+                                ? 'MANUAL'
+                                : 'AUTO API'}
                             </td>
                             <td className="py-2.5 pr-3 font-mono whitespace-nowrap">
                               {m.recipientPhone}
@@ -2469,6 +3363,11 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                               {m.templateName && (
                                 <div className="text-[11px] text-slate-500">{m.templateName}</div>
                               )}
+                              {m.wamid && (
+                                <div className="text-[10px] font-mono text-slate-400 truncate max-w-[160px]" title={m.wamid}>
+                                  {m.wamid}
+                                </div>
+                              )}
                             </td>
                             <td className="py-2.5 pr-3">
                               <span
@@ -2478,27 +3377,48 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                               >
                                 {m.status}
                               </span>
+                              {typeof m.httpStatus === 'number' && (
+                                <div className="text-[10px] font-mono text-slate-500 mt-0.5">
+                                  HTTP {m.httpStatus}
+                                </div>
+                              )}
                             </td>
                             <td className="py-2.5 pr-3 max-w-xs">
                               <div className="truncate text-slate-700">{m.bodyPreview}</div>
+                              {m.apiResponseSummary && (
+                                <div className="text-[10px] font-mono text-slate-500 truncate">
+                                  {m.apiResponseSummary}
+                                </div>
+                              )}
                               {m.errorMessage && (
                                 <div className="text-[11px] text-red-600 truncate">
                                   {m.errorMessage}
                                 </div>
                               )}
                             </td>
-                            <td className="py-2.5">
-                              {(m.status === 'failed' || m.status === 'not_configured') &&
-                                m.direction === 'outbound' && (
+                            <td className="py-2.5 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                {(m.status === 'failed' || m.status === 'not_configured') &&
+                                  m.direction === 'outbound' && (
+                                    <button
+                                      type="button"
+                                      disabled={props.retryingId === m.id}
+                                      onClick={() => props.onRetryMessage(m.id)}
+                                      className="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-50 text-[11px] font-semibold cursor-pointer"
+                                    >
+                                      Retry
+                                    </button>
+                                  )}
+                                {m.manualFallbackNotificationId && (
                                   <button
                                     type="button"
-                                    disabled={props.retryingId === m.id}
-                                    onClick={() => props.onRetryMessage(m.id)}
-                                    className="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-50 text-[11px] font-semibold cursor-pointer"
+                                    onClick={() => props.onNavigatePage('admin-automation-whatsapp')}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold cursor-pointer"
                                   >
-                                    Retry
+                                    Manual Queue
                                   </button>
                                 )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -2510,6 +3430,167 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
             </div>
           )}
         </>
+      )}
+
+      {/* REACT CONFIRMATION MODAL: START / STOP MASTER AUTOMATION BOT */}
+      {props.botConfirmAction && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <h3 className="text-lg font-bold text-[#0B0B0D]">
+              {props.botConfirmAction === 'start'
+                ? 'Start Master Automation Bot?'
+                : 'Stop Master Automation Bot?'}
+            </h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {props.botConfirmAction === 'start'
+                ? 'Starting the automation bot activates the persistent server-side worker on Render. It will immediately process pending jobs and automatically dispatch approved WhatsApp notifications for live FEVIQO events (new signups, checkouts, payments, renewals, and episodes) even when your dashboard is closed. Historical users will NOT be messaged automatically.'
+                : 'Stopping the automation bot safely pauses all automatic WhatsApp Cloud API sending and scheduled job execution. Pending jobs and logs are preserved, and Manual WhatsApp Center sending continues to work normally.'}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={props.botBusy}
+                onClick={() => props.setBotConfirmAction(null)}
+                className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={props.botBusy}
+                onClick={props.onConfirmBotToggle}
+                className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-60 ${
+                  props.botConfirmAction === 'start'
+                    ? 'bg-[#22C55E] text-[#0B0B0D]'
+                    : 'bg-red-600 text-white'
+                }`}
+              >
+                {props.botBusy
+                  ? 'Updating...'
+                  : props.botConfirmAction === 'start'
+                  ? 'Confirm Start Automation'
+                  : 'Confirm Stop Automation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REACT CONFIRMATION MODAL: EPISODE BROADCAST */}
+      {props.episodeConfirmOpen && overview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-lg bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <h3 className="text-lg font-bold text-[#0B0B0D]">Confirm Episode Notification Broadcast</h3>
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div>
+                <strong>Episode:</strong> {props.selectedDramaCatalog?.title} · Episode {props.customEpNum} ({props.episodeAccessType.toUpperCase()})
+              </div>
+              <div>
+                <strong>Sending Method:</strong> {SENDING_MODE_LABELS[props.episodeSendingMode]}
+              </div>
+              <div>
+                <strong>Selected Recipients:</strong> {props.selectedEpisodeMemberIds.length} member(s) ·{' '}
+                <strong>In-App Fallback:</strong> {props.episodeSendInAppFallback ? 'Enabled' : 'Disabled'}
+              </div>
+            </div>
+
+            {!overview.settings.automationRunning && props.episodeSendingMode !== 'manual' && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-950 space-y-1">
+                <div className="font-bold">Master Automation Bot is currently STOPPED</div>
+                <p>
+                  Choose <strong>Start Bot &amp; Send Now</strong> to activate automatic delivery immediately, <strong>Queue Paused</strong> to hold jobs until you start the bot, or <strong>Send via Manual WhatsApp</strong> to queue one-click <span className="font-mono">wa.me</span> messages right now.
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => props.setEpisodeConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              {!overview.settings.automationRunning && props.episodeSendingMode !== 'manual' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => props.onExecuteEpisodeBroadcast({ overrideMode: 'manual' })}
+                    className="px-4 py-2 rounded-xl border border-slate-900 bg-white text-[#0B0B0D] text-xs font-bold cursor-pointer"
+                  >
+                    Send via Manual WhatsApp
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => props.onExecuteEpisodeBroadcast({ startAutomationIfStopped: false })}
+                    className="px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold cursor-pointer"
+                  >
+                    Queue Paused
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => props.onExecuteEpisodeBroadcast({ startAutomationIfStopped: true })}
+                    className="px-4 py-2 rounded-xl bg-[#22C55E] text-[#0B0B0D] text-xs font-bold cursor-pointer"
+                  >
+                    Start Bot &amp; Send Now
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => props.onExecuteEpisodeBroadcast()}
+                  className="px-5 py-2 rounded-xl bg-[#22C55E] text-[#0B0B0D] text-xs font-bold cursor-pointer"
+                >
+                  Confirm &amp; Dispatch Broadcast
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REACT CONFIRMATION MODAL: HISTORICAL CAMPAIGN */}
+      {props.campaignConfirmOpen && props.campaignPreview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <h3 className="text-lg font-bold text-[#0B0B0D]">Launch Historical Customer Campaign?</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              This will queue outreach for <strong>{props.campaignPreview.totalMatching}</strong> matching customer(s) in segment{' '}
+              <span className="font-mono">{props.campaignSegment}</span> using{' '}
+              <strong>{SENDING_MODE_LABELS[props.campaignSendingMode]}</strong>. Blocked and opted-out customers are strictly excluded.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={props.campaignBusy}
+                onClick={() => props.setCampaignConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-xs font-semibold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={props.campaignBusy}
+                onClick={props.onLaunchCampaign}
+                className="px-4 py-2 rounded-xl bg-[#22C55E] text-[#0B0B0D] text-xs font-bold cursor-pointer disabled:opacity-60"
+              >
+                {props.campaignBusy ? 'Launching...' : 'Confirm & Launch Campaign'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

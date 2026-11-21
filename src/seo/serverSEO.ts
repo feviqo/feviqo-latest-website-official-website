@@ -895,7 +895,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
             },
             {
               "@type": "Offer",
-              "name": "VIP Plan (30 Days, All Eligible VIP Dramas)",
+              "name": "VIP Plan (30 Days, 3 Dramas)",
               "url": "https://feviqo.com/membership",
               "priceCurrency": "PKR",
               "price": "1299",
@@ -934,7 +934,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
             "name": "What are the Starter, Standard, Plus, and VIP plan prices?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Starter is PKR 299 ($1.20 USD) for 15 days (1 drama), Standard is PKR 599 ($2.50 USD) for 30 days (1 drama), Plus is PKR 899 ($3.50 USD) for 30 days (2 dramas), and VIP is PKR 1,299 ($5.00 USD) for 30 days across all eligible VIP catalogue dramas."
+              "text": "Starter is PKR 299 ($1.20 USD) for 15 days (1 drama), Standard is PKR 599 ($2.50 USD) for 30 days (1 drama), Plus is PKR 899 ($3.50 USD) for 30 days (2 dramas), and VIP is PKR 1,299 ($5.00 USD) for 30 days (3 selected dramas)."
             }
           },
           {
@@ -961,7 +961,7 @@ export function transformHTMLForRoute(html: string, reqPath: string): string {
 
   const isMembershipRoute = cleanPath === '/membership' || cleanPath.startsWith('/membership/');
   const routeDetailsParagraph = isMembershipRoute
-    ? 'Starter (PKR 299 / $1.20 USD, 15 days, 1 drama) · Standard (PKR 599 / $2.50 USD, 30 days, 1 drama) · Plus (PKR 899 / $3.50 USD, 30 days, 2 dramas) · VIP (PKR 1,299 / $5.00 USD, 30 days, All VIP Dramas including Teşkilat, Mehmed: Fetihler Sultanı & Güneşin Doğduğu Yer in Urdu HD).'
+    ? 'Starter (PKR 299 / $1.20 USD, 15 days, 1 drama) · Standard (PKR 599 / $2.50 USD, 30 days, 1 drama) · Plus (PKR 899 / $3.50 USD, 30 days, 2 dramas) · VIP (PKR 1,299 / $5.00 USD, 30 days, 3 selected dramas including Teşkilat, Mehmed: Fetihler Sultanı & Güneşin Doğduğu Yer in Urdu HD).'
     : config.metaDescription;
 
   const noscriptFallback = `<noscript id="feviqo-noscript-fallback"><div style="max-width:960px;margin:0 auto;padding:32px 20px;font-family:system-ui,-apple-system,sans-serif;line-height:1.6;"><h1>${escapeHtmlText(config.seoTitle)}</h1><p>${escapeHtmlText(routeDetailsParagraph)}</p><nav aria-label="FEVIQO Sitemap Navigation"><a href="https://feviqo.com/">FEVIQO Home</a> · <a href="https://feviqo.com/membership">FEVIQO Premium Membership</a> · <a href="https://feviqo.com/dramas">Turkish Dramas</a> · <a href="https://feviqo.com/teskilat">Teşkilat Season 7</a> · <a href="https://feviqo.com/mehmed-fetihler-sultani">Mehmed: Fetihler Sultanı</a> · <a href="https://feviqo.com/gunesin-dogdugu-yer">Güneşin Doğduğu Yer</a> · <a href="https://feviqo.com/pricing">Agency Pricing</a> · <a href="https://feviqo.com/sitemap.xml">Sitemap</a></nav></div></noscript>`;

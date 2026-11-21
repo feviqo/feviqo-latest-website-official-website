@@ -13,6 +13,7 @@ import {
   sendWhatsAppTemplateMessage,
   sendWhatsAppTextMessage,
   markWhatsAppMessageRead,
+  fetchMetaWabaTemplates,
 } from './whatsappClient';
 import {
   mirrorDocToFirestoreServer,
@@ -23,6 +24,9 @@ import {
   getEntitledActiveMembersForDrama,
   findMemberContextByPhoneDigits,
   appendAdminAudit,
+  listBlockedUsers,
+  normalizeBlockedPhone,
+  createCustomerNotificationRecord,
 } from './membershipStore';
 import {
   generateFeviqoAiReply,
@@ -30,6 +34,15 @@ import {
   AssistantIntent,
   ScopedCustomerContext,
 } from './aiSupportAgent';
+import {
+  enqueueOneClickWhatsAppNotification,
+  cancelOneClickNotificationsForBlockedUser,
+  getOneClickNotificationsDashboard,
+} from './whatsappQueueStore';
+import {
+  OneClickEventType,
+  formatWhatsAppRecipient,
+} from '../src/utils/whatsappOneClick';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const WA_SETTINGS_FILE = path.join(DATA_DIR, 'whatsapp_settings.json');
@@ -135,30 +148,58 @@ export type AutomationEventType =
   | 'membership.cancelled'
   | 'membership.revoked'
   | 'episode.published'
+  | 'account.security_alert'
   | 'lead.created'
   | 'lead.qualified'
   | 'lead.quote_sent'
   | 'lead.booked';
 
+export type WhatsAppSendingMode =
+  | 'automatic'
+  | 'manual'
+  | 'automatic_with_fallback'
+  | 'disabled';
+
+export type AutomationCategoryKey =
+  | 'registration'
+  | 'unpaid_followups'
+  | 'payment'
+  | 'activation'
+  | 'rejection'
+  | 'expiry'
+  | 'episodes'
+  | 'security'
+  | 'creative_enquiries';
+
 export type WhatsAppMessageStatus =
   | 'queued'
+  | 'processing'
+  | 'api_accepted'
   | 'sent'
   | 'delivered'
   | 'read'
+  | 'opened'
+  | 'confirmed_sent'
   | 'failed'
   | 'not_configured'
   | 'skipped_no_consent'
+  | 'skipped_not_entitled'
   | 'skipped_opted_out'
   | 'skipped_rule_disabled'
-  | 'skipped_template_unapproved';
+  | 'skipped_template_unapproved'
+  | 'cancelled';
 
 export interface AutomationRulesConfig {
   masterEnabled: boolean;
   welcomeOnRegister: boolean;
   signupNoPackageReminder: boolean;
   signupNoPackageDelayMinutes: number;
+  signupNoPackageDelay24hHours: number;
+  signupNoPackageDelay72hHours: number;
   checkoutAbandonedReminder: boolean;
   checkoutAbandonedDelayMinutes: number;
+  checkoutAbandonedDelay24hHours: number;
+  checkoutAbandonedDelay72hHours: number;
   paymentProofReceived: boolean;
   paymentApproved: boolean;
   paymentRejected: boolean;
@@ -167,6 +208,7 @@ export interface AutomationRulesConfig {
   expiryReminder1Day: boolean;
   expiryOnExpired: boolean;
   episodePublishedAlerts: boolean;
+  accountSecurityAlerts: boolean;
   leadImmediateAcknowledgement: boolean;
   leadFollowUpNoResponse: boolean;
   leadFollowUpNoResponseHours: number;
@@ -189,6 +231,12 @@ export interface AiAssistantSettings {
 
 export interface WhatsAppAutomationSettings {
   id: 'main';
+  automationRunning: boolean;
+  automationStartedAt?: string;
+  automationStoppedAt?: string;
+  automationToggledBy?: string;
+  sendingMode: WhatsAppSendingMode;
+  categorySendingModes: Record<AutomationCategoryKey, WhatsAppSendingMode>;
   rules: AutomationRulesConfig;
   ai: AiAssistantSettings;
   templateStatuses: Record<string, WhatsAppTemplateApprovalStatus>;
@@ -197,6 +245,9 @@ export interface WhatsAppAutomationSettings {
   lastWebhookReceivedAt?: string;
   lastWebhookVerifiedAt?: string;
   lastWorkerRunAt?: string;
+  lastWorkerHeartbeatAt?: string;
+  lastSuccessfulRunAt?: string;
+  lastWorkerSummary?: string;
   updatedAt: string;
 }
 
@@ -232,7 +283,9 @@ export interface CustomerNotificationPreference {
 export interface WhatsAppMessageLog {
   id: string;
   direction: 'outbound' | 'inbound';
+  sendingMethod?: 'cloud_api' | 'manual_whatsapp' | 'in_app' | 'email';
   wamid?: string;
+  broadcastId?: string;
   idempotencyKey: string;
   eventType: string;
   recipientPhone: string;
@@ -244,6 +297,9 @@ export interface WhatsAppMessageLog {
   bodyParameters?: string[];
   bodyPreview: string;
   status: WhatsAppMessageStatus;
+  httpStatus?: number;
+  apiResponseSummary?: string;
+  manualFallbackNotificationId?: string;
   attempts: number;
   maxAttempts: number;
   nextRetryAt?: string;
@@ -260,11 +316,17 @@ export interface WhatsAppMessageLog {
 
 export type AutomationJobType =
   | 'signup_no_package_30m'
+  | 'signup_no_package_24h'
+  | 'signup_no_package_72h'
   | 'checkout_abandoned_reminder'
+  | 'checkout_abandoned_24h'
+  | 'checkout_abandoned_72h'
   | 'membership_expiry_7d'
   | 'membership_expiry_3d'
   | 'membership_expiry_1d'
   | 'membership_expired'
+  | 'episode_broadcast_delivery'
+  | 'historical_campaign_delivery'
   | 'lead_followup_no_reply'
   | 'lead_followup_pricing'
   | 'lead_followup_quote'
@@ -275,15 +337,20 @@ export interface AutomationScheduledJob {
   id: string;
   jobType: AutomationJobType;
   idempotencyKey: string;
-  status: 'pending' | 'completed' | 'cancelled' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'failed';
   runAt: string;
   memberId?: string;
   orderId?: string;
   membershipId?: string;
+  broadcastId?: string;
   leadId?: string;
   phoneE164?: string;
   payload: Record<string, any>;
   attempts: number;
+  maxAttempts?: number;
+  lockedAt?: string;
+  lockOwner?: string;
+  lockExpiresAt?: string;
   lastError?: string;
   cancelReason?: string;
   completedAt?: string;
@@ -296,10 +363,24 @@ export interface EpisodeBroadcastRecipient {
   memberName: string;
   phoneE164: string;
   planId: string;
+  sendingMethod?: 'cloud_api' | 'manual_whatsapp' | 'in_app' | 'skipped';
   status: WhatsAppMessageStatus;
+  wamid?: string;
+  httpStatus?: number;
   messageLogId?: string;
+  manualNotificationId?: string;
+  inAppNotified?: boolean;
   error?: string;
 }
+
+export type EpisodeBroadcastStatus =
+  | 'processing'
+  | 'completed'
+  | 'partially_completed'
+  | 'queued_waiting_start'
+  | 'no_eligible_recipients'
+  | 'failed'
+  | 'paused';
 
 export interface EpisodeBroadcastRecord {
   id: string;
@@ -311,14 +392,34 @@ export interface EpisodeBroadcastRecord {
   episodeSlug: string;
   episodeTitle: string;
   episodeUrl: string;
+  accessType: 'free' | 'premium';
+  sendingMode: WhatsAppSendingMode;
+  broadcastStatus: EpisodeBroadcastStatus;
   isResend: boolean;
   triggeredByAdminEmail: string;
+  totalMatchingCount: number;
   entitledCount: number;
+  eligibleWhatsappCount: number;
+  apiAcceptedCount: number;
   sentCount: number;
+  deliveredCount: number;
+  readCount: number;
+  manualQueuedCount: number;
+  inAppNotifiedCount: number;
   failedCount: number;
   skippedCount: number;
+  skippedBreakdown?: {
+    noPermission: number;
+    optedOut: number;
+    invalidPhone: number;
+    templateUnapproved: number;
+    ruleDisabled: number;
+    unentitled: number;
+  };
+  diagnosticSummary?: string;
   recipients: EpisodeBroadcastRecipient[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export type VideoLeadStage =
@@ -400,15 +501,34 @@ const DEFAULT_TEMPLATE_STATUSES: Record<string, WhatsAppTemplateApprovalStatus> 
     return acc;
   }, {} as Record<string, WhatsAppTemplateApprovalStatus>);
 
+const DEFAULT_CATEGORY_SENDING_MODES: Record<AutomationCategoryKey, WhatsAppSendingMode> = {
+  registration: 'automatic_with_fallback',
+  unpaid_followups: 'automatic_with_fallback',
+  payment: 'automatic_with_fallback',
+  activation: 'automatic_with_fallback',
+  rejection: 'automatic_with_fallback',
+  expiry: 'automatic_with_fallback',
+  episodes: 'automatic_with_fallback',
+  security: 'automatic_with_fallback',
+  creative_enquiries: 'automatic_with_fallback',
+};
+
 const DEFAULT_SETTINGS: WhatsAppAutomationSettings = {
   id: 'main',
+  automationRunning: false,
+  sendingMode: 'automatic_with_fallback',
+  categorySendingModes: { ...DEFAULT_CATEGORY_SENDING_MODES },
   rules: {
     masterEnabled: true,
     welcomeOnRegister: true,
     signupNoPackageReminder: true,
-    signupNoPackageDelayMinutes: 30,
+    signupNoPackageDelayMinutes: 1440,
+    signupNoPackageDelay24hHours: 24,
+    signupNoPackageDelay72hHours: 72,
     checkoutAbandonedReminder: true,
-    checkoutAbandonedDelayMinutes: 45,
+    checkoutAbandonedDelayMinutes: 120,
+    checkoutAbandonedDelay24hHours: 24,
+    checkoutAbandonedDelay72hHours: 72,
     paymentProofReceived: true,
     paymentApproved: true,
     paymentRejected: true,
@@ -417,6 +537,7 @@ const DEFAULT_SETTINGS: WhatsAppAutomationSettings = {
     expiryReminder1Day: true,
     expiryOnExpired: true,
     episodePublishedAlerts: true,
+    accountSecurityAlerts: true,
     leadImmediateAcknowledgement: true,
     leadFollowUpNoResponse: true,
     leadFollowUpNoResponseHours: 24,
@@ -450,11 +571,37 @@ const DEFAULT_SETTINGS: WhatsAppAutomationSettings = {
   updatedAt: new Date().toISOString(),
 };
 
+function isValidSendingMode(v: unknown): v is WhatsAppSendingMode {
+  return v === 'automatic' || v === 'manual' || v === 'automatic_with_fallback' || v === 'disabled';
+}
+
 // --- SETTINGS ---
 export function getAutomationSettings(): WhatsAppAutomationSettings {
   const saved = readJson<Partial<WhatsAppAutomationSettings>>(WA_SETTINGS_FILE, {});
+  const mergedCategoryModes: Record<AutomationCategoryKey, WhatsAppSendingMode> = {
+    ...DEFAULT_CATEGORY_SENDING_MODES,
+  };
+  if (saved.categorySendingModes && typeof saved.categorySendingModes === 'object') {
+    for (const key of Object.keys(DEFAULT_CATEGORY_SENDING_MODES) as AutomationCategoryKey[]) {
+      const val = (saved.categorySendingModes as any)[key];
+      if (isValidSendingMode(val)) {
+        mergedCategoryModes[key] = val;
+      }
+    }
+  }
   return {
     id: 'main',
+    automationRunning:
+      typeof saved.automationRunning === 'boolean'
+        ? saved.automationRunning
+        : DEFAULT_SETTINGS.automationRunning,
+    automationStartedAt: saved.automationStartedAt,
+    automationStoppedAt: saved.automationStoppedAt,
+    automationToggledBy: saved.automationToggledBy,
+    sendingMode: isValidSendingMode(saved.sendingMode)
+      ? saved.sendingMode
+      : DEFAULT_SETTINGS.sendingMode,
+    categorySendingModes: mergedCategoryModes,
     rules: {
       ...DEFAULT_SETTINGS.rules,
       ...(saved.rules || {}),
@@ -481,12 +628,34 @@ export function getAutomationSettings(): WhatsAppAutomationSettings {
     lastWebhookReceivedAt: saved.lastWebhookReceivedAt,
     lastWebhookVerifiedAt: saved.lastWebhookVerifiedAt,
     lastWorkerRunAt: saved.lastWorkerRunAt,
+    lastWorkerHeartbeatAt: saved.lastWorkerHeartbeatAt,
+    lastSuccessfulRunAt: saved.lastSuccessfulRunAt,
+    lastWorkerSummary: saved.lastWorkerSummary,
     updatedAt: saved.updatedAt || new Date().toISOString(),
   };
 }
 
+export function getEffectiveSendingMode(
+  category?: AutomationCategoryKey,
+  override?: WhatsAppSendingMode
+): WhatsAppSendingMode {
+  if (override && isValidSendingMode(override)) return override;
+  const settings = getAutomationSettings();
+  if (settings.sendingMode === 'disabled') return 'disabled';
+  if (category && settings.categorySendingModes[category]) {
+    return settings.categorySendingModes[category];
+  }
+  return settings.sendingMode;
+}
+
 export function saveAutomationSettings(
   updates: Partial<{
+    automationRunning: boolean;
+    automationStartedAt: string;
+    automationStoppedAt: string;
+    automationToggledBy: string;
+    sendingMode: WhatsAppSendingMode;
+    categorySendingModes: Partial<Record<AutomationCategoryKey, WhatsAppSendingMode>>;
     rules: Partial<AutomationRulesConfig>;
     ai: Partial<AiAssistantSettings>;
     templateStatuses: Record<string, WhatsAppTemplateApprovalStatus>;
@@ -495,12 +664,32 @@ export function saveAutomationSettings(
     lastWebhookReceivedAt: string;
     lastWebhookVerifiedAt: string;
     lastWorkerRunAt: string;
+    lastWorkerHeartbeatAt: string;
+    lastSuccessfulRunAt: string;
+    lastWorkerSummary: string;
   }>,
   admin?: { id: string; email: string }
 ): WhatsAppAutomationSettings {
   const current = getAutomationSettings();
+  const nextCategoryModes = { ...current.categorySendingModes };
+  if (updates.categorySendingModes) {
+    for (const [k, v] of Object.entries(updates.categorySendingModes)) {
+      if (k in DEFAULT_CATEGORY_SENDING_MODES && isValidSendingMode(v)) {
+        nextCategoryModes[k as AutomationCategoryKey] = v;
+      }
+    }
+  }
   const next: WhatsAppAutomationSettings = {
     ...current,
+    automationRunning:
+      typeof updates.automationRunning === 'boolean'
+        ? updates.automationRunning
+        : current.automationRunning,
+    automationStartedAt: updates.automationStartedAt ?? current.automationStartedAt,
+    automationStoppedAt: updates.automationStoppedAt ?? current.automationStoppedAt,
+    automationToggledBy: updates.automationToggledBy ?? current.automationToggledBy,
+    sendingMode: isValidSendingMode(updates.sendingMode) ? updates.sendingMode : current.sendingMode,
+    categorySendingModes: nextCategoryModes,
     rules: updates.rules ? { ...current.rules, ...updates.rules } : current.rules,
     ai: updates.ai
       ? {
@@ -525,6 +714,9 @@ export function saveAutomationSettings(
     lastWebhookReceivedAt: updates.lastWebhookReceivedAt ?? current.lastWebhookReceivedAt,
     lastWebhookVerifiedAt: updates.lastWebhookVerifiedAt ?? current.lastWebhookVerifiedAt,
     lastWorkerRunAt: updates.lastWorkerRunAt ?? current.lastWorkerRunAt,
+    lastWorkerHeartbeatAt: updates.lastWorkerHeartbeatAt ?? current.lastWorkerHeartbeatAt,
+    lastSuccessfulRunAt: updates.lastSuccessfulRunAt ?? current.lastSuccessfulRunAt,
+    lastWorkerSummary: updates.lastWorkerSummary ?? current.lastWorkerSummary,
     updatedAt: new Date().toISOString(),
   };
   writeJson(WA_SETTINGS_FILE, next);
@@ -539,10 +731,177 @@ export function saveAutomationSettings(
       adminEmail: admin.email,
       action: 'automation_settings_updated',
       targetId: 'whatsappSettings/main',
-      details: 'Updated WhatsApp & business automation settings.',
+      details: `Updated WhatsApp & business automation settings (running=${next.automationRunning}, mode=${next.sendingMode}).`,
     });
   }
   return next;
+}
+
+export async function startAutomationBot(admin: { id: string; email: string }): Promise<{
+  settings: WhatsAppAutomationSettings;
+  workerResult: Awaited<ReturnType<typeof runAutomationWorkerCycle>>;
+}> {
+  const now = new Date().toISOString();
+  const settings = saveAutomationSettings(
+    {
+      automationRunning: true,
+      automationStartedAt: now,
+      automationToggledBy: admin.email,
+      rules: { masterEnabled: true },
+    },
+    admin
+  );
+  appendAdminAudit({
+    adminId: admin.id,
+    adminEmail: admin.email,
+    action: 'automation_bot_started',
+    targetId: 'whatsappSettings/main',
+    details: 'Admin clicked START AUTOMATION. Background WhatsApp worker activated.',
+  });
+  const workerResult = await runAutomationWorkerCycle({ trigger: 'bot_started' });
+  return { settings: getAutomationSettings(), workerResult };
+}
+
+export function stopAutomationBot(admin: { id: string; email: string }): WhatsAppAutomationSettings {
+  const now = new Date().toISOString();
+  const settings = saveAutomationSettings(
+    {
+      automationRunning: false,
+      automationStoppedAt: now,
+      automationToggledBy: admin.email,
+    },
+    admin
+  );
+  appendAdminAudit({
+    adminId: admin.id,
+    adminEmail: admin.email,
+    action: 'automation_bot_stopped',
+    targetId: 'whatsappSettings/main',
+    details: 'Admin clicked STOP AUTOMATION. Pending jobs paused safely; manual WhatsApp sending remains available.',
+  });
+  return settings;
+}
+
+export async function syncMetaTemplateStatuses(admin?: { id: string; email: string }): Promise<{
+  ok: boolean;
+  syncedCount: number;
+  metaTemplatesFound: number;
+  updatedStatuses: Record<string, WhatsAppTemplateApprovalStatus>;
+  error?: string;
+}> {
+  const res = await fetchMetaWabaTemplates();
+  if (!res.ok) {
+    return {
+      ok: false,
+      syncedCount: 0,
+      metaTemplatesFound: 0,
+      updatedStatuses: {},
+      error: res.error,
+    };
+  }
+  const current = getAutomationSettings();
+  const updates: Record<string, WhatsAppTemplateApprovalStatus> = {};
+  let syncedCount = 0;
+
+  for (const mt of res.templates) {
+    if (!mt.name) continue;
+    let mapped: WhatsAppTemplateApprovalStatus = 'draft';
+    if (mt.status === 'APPROVED') mapped = 'approved';
+    else if (mt.status === 'PENDING' || mt.status === 'IN_APPEAL') mapped = 'pending_meta_review';
+    else if (mt.status === 'REJECTED' || mt.status === 'PAUSED' || mt.status === 'DISABLED') mapped = 'rejected';
+
+    if (mt.name in current.templateStatuses || WHATSAPP_TEMPLATES_CATALOG.some((t) => t.name === mt.name)) {
+      updates[mt.name] = mapped;
+      syncedCount += 1;
+    }
+  }
+
+  if (syncedCount > 0) {
+    saveAutomationSettings({ templateStatuses: updates }, admin);
+  }
+  return {
+    ok: true,
+    syncedCount,
+    metaTemplatesFound: res.templates.length,
+    updatedStatuses: updates,
+  };
+}
+
+export function cleanupBlockedUserAutomationState(params: {
+  memberIds?: string[];
+  email?: string;
+  phones?: string[];
+  reason?: string;
+  actor?: string;
+}): {
+  cancelledJobsCount: number;
+  cancelledManualNotificationsCount: number;
+  optedOutPreferencesCount: number;
+} {
+  const memberSet = new Set((params.memberIds || []).filter(Boolean));
+  const cleanEmail = String(params.email || '').trim().toLowerCase();
+  const phoneSet = new Set((params.phones || []).map((p) => normalizeBlockedPhone(p)).filter(Boolean));
+  const reason = params.reason || 'Account permanently blocked by administrator';
+
+  // 1. Cancel all pending automation scheduled jobs
+  const cancelledJobsCount = cancelScheduledJobs((job) => {
+    if (job.memberId && memberSet.has(job.memberId)) return true;
+    const jobPhone = normalizeBlockedPhone(job.phoneE164);
+    if (jobPhone && phoneSet.has(jobPhone)) return true;
+    return false;
+  }, reason);
+
+  // 2. Cancel all pending/opened manual one-click WhatsApp notifications
+  const cancelledManualNotificationsCount = cancelOneClickNotificationsForBlockedUser({
+    memberIds: Array.from(memberSet),
+    email: cleanEmail,
+    phones: Array.from(phoneSet),
+    reason,
+    actor: params.actor || 'admin',
+  });
+
+  // 3. Mark matching WhatsApp preferences as optedOut so no future automatic messages ever target them
+  const prefs = listAllNotificationPreferences();
+  const now = new Date().toISOString();
+  let optedOutPreferencesCount = 0;
+  for (const p of prefs) {
+    const pEmail = String(p.email || '').trim().toLowerCase();
+    const pPhone = normalizeBlockedPhone(p.phoneE164);
+    const matches =
+      (p.memberId && memberSet.has(p.memberId)) ||
+      (cleanEmail && pEmail === cleanEmail) ||
+      (pPhone && phoneSet.has(pPhone));
+    if (matches && !p.optedOut) {
+      p.optedOut = true;
+      p.optedOutAt = now;
+      p.optOutSource = 'admin_user_blocked';
+      p.membershipUpdates = false;
+      p.renewalReminders = false;
+      p.newEpisodeAlerts = false;
+      p.promotionalMessages = false;
+      p.leadEnquiryConsent = false;
+      p.updatedAt = now;
+      p.history = [
+        { changedAt: now, source: 'admin_user_blocked', summary: `Blocked: ${reason}` },
+        ...(p.history || []),
+      ].slice(0, 25);
+      optedOutPreferencesCount += 1;
+      void mirrorDocToFirestoreServer('whatsappPreferences', p.id, {
+        ...p,
+        createdAtIso: p.createdAt,
+        updatedAtIso: p.updatedAt,
+      });
+    }
+  }
+  if (optedOutPreferencesCount > 0) {
+    writeJson(WA_PREFS_FILE, prefs);
+  }
+
+  return {
+    cancelledJobsCount,
+    cancelledManualNotificationsCount,
+    optedOutPreferencesCount,
+  };
 }
 
 // --- CUSTOMER CONSENT & NOTIFICATION PREFERENCES ---
@@ -747,6 +1106,26 @@ function computeNextRetryIso(attempts: number): string | undefined {
   return new Date(Date.now() + mins * 60 * 1000).toISOString();
 }
 
+export interface ManualFallbackSpec {
+  eventType: OneClickEventType;
+  customerEmail?: string;
+  membershipId?: string;
+  orderId?: string;
+  dramaId?: string;
+  episodeSlug?: string;
+  planName?: string;
+  amountDisplay?: string;
+  startDate?: string;
+  expiryDate?: string;
+  rejectionReason?: string;
+  seriesName?: string;
+  episodeNumber?: string | number;
+  episodeLink?: string;
+  accessType?: 'free' | 'premium';
+  securityEventSummary?: string;
+  serviceName?: string;
+}
+
 export async function dispatchTemplateWhatsAppNotification(params: {
   idempotencyKey: string;
   eventType: string;
@@ -756,6 +1135,10 @@ export async function dispatchTemplateWhatsAppNotification(params: {
   recipientName?: string;
   memberId?: string;
   leadId?: string;
+  broadcastId?: string;
+  categoryKey?: AutomationCategoryKey;
+  sendingModeOverride?: WhatsAppSendingMode;
+  manualFallbackSpec?: ManualFallbackSpec;
   ruleEnabled: boolean;
   explicitLeadConsent?: boolean;
   bypassConsentForAdminTest?: boolean;
@@ -776,9 +1159,15 @@ export async function dispatchTemplateWhatsAppNotification(params: {
   const now = new Date().toISOString();
   const preview = renderTemplatePreview(params.templateName, params.bodyParameters);
 
+  const effectiveMode: WhatsAppSendingMode = params.bypassConsentForAdminTest
+    ? 'automatic'
+    : getEffectiveSendingMode(params.categoryKey, params.sendingModeOverride);
+
   const baseLog: WhatsAppMessageLog = {
     id: makeId('wamsg'),
     direction: 'outbound',
+    sendingMethod: effectiveMode === 'manual' ? 'manual_whatsapp' : 'cloud_api',
+    broadcastId: params.broadcastId,
     idempotencyKey: params.idempotencyKey,
     eventType: params.eventType,
     recipientPhone: phoneE164 || 'missing_phone',
@@ -797,13 +1186,89 @@ export async function dispatchTemplateWhatsAppNotification(params: {
     updatedAt: now,
   };
 
-  if (!params.bypassConsentForAdminTest && (!settings.rules.masterEnabled || !params.ruleEnabled)) {
+  if (!params.bypassConsentForAdminTest && (effectiveMode === 'disabled' || !params.ruleEnabled)) {
     baseLog.status = 'skipped_rule_disabled';
-    baseLog.errorMessage = 'Automation rule is disabled in Admin Automation Settings.';
+    baseLog.errorMessage =
+      effectiveMode === 'disabled'
+        ? `Sending mode for "${params.categoryKey || 'global'}" is set to Disabled.`
+        : 'Automation rule is disabled in Admin Automation Settings.';
     saveWhatsAppMessageLog(baseLog);
     return baseLog;
   }
 
+  // Respect blocked users permanently (both email and phone)
+  if (!params.bypassConsentForAdminTest && (params.memberId || phoneE164)) {
+    const blockedList = listBlockedUsers();
+    const normPhoneBlock = normalizeBlockedPhone(phoneE164);
+    const isBlocked = blockedList.some(
+      (b) =>
+        (params.memberId && b.memberId === params.memberId) ||
+        (normPhoneBlock &&
+          (normalizeBlockedPhone(b.phoneNormalized) === normPhoneBlock ||
+            normalizeBlockedPhone(b.phone) === normPhoneBlock ||
+            (b.additionalPhones || []).some((p) => normalizeBlockedPhone(p) === normPhoneBlock)))
+    );
+    if (isBlocked) {
+      baseLog.status = 'cancelled';
+      baseLog.errorMessage = 'Recipient account/phone is permanently blocked.';
+      saveWhatsAppMessageLog(baseLog);
+      return baseLog;
+    }
+  }
+
+  // Manual-only sending mode: enqueue ONE manual WhatsApp item, NEVER call Cloud API
+  if (effectiveMode === 'manual') {
+    if (params.manualFallbackSpec) {
+      const qRes = enqueueOneClickWhatsAppNotification({
+        idempotencyKey: `manual_mode:${params.idempotencyKey}`,
+        eventType: params.manualFallbackSpec.eventType,
+        customerName: params.recipientName || 'Valued Member',
+        customerEmail: params.manualFallbackSpec.customerEmail,
+        memberId: params.memberId,
+        membershipId: params.manualFallbackSpec.membershipId,
+        orderId: params.manualFallbackSpec.orderId,
+        leadId: params.leadId,
+        dramaId: params.manualFallbackSpec.dramaId,
+        episodeSlug: params.manualFallbackSpec.episodeSlug,
+        rawPhone: params.recipientPhone || phoneE164,
+        planName: params.manualFallbackSpec.planName,
+        amountDisplay: params.manualFallbackSpec.amountDisplay,
+        startDate: params.manualFallbackSpec.startDate,
+        expiryDate: params.manualFallbackSpec.expiryDate,
+        rejectionReason: params.manualFallbackSpec.rejectionReason,
+        seriesName: params.manualFallbackSpec.seriesName,
+        episodeNumber: params.manualFallbackSpec.episodeNumber,
+        episodeLink: params.manualFallbackSpec.episodeLink,
+        accessType: params.manualFallbackSpec.accessType,
+        securityEventSummary: params.manualFallbackSpec.securityEventSummary,
+        serviceName: params.manualFallbackSpec.serviceName,
+        explicitLeadConsent: params.explicitLeadConsent,
+        bypassCategoryGate: true,
+      });
+      if (qRes.ok) {
+        baseLog.sendingMethod = 'manual_whatsapp';
+        baseLog.status = qRes.notification.status === 'failed' ? 'failed' : 'queued';
+        baseLog.manualFallbackNotificationId = qRes.notification.id;
+        baseLog.errorMessage = qRes.notification.failureReason;
+        baseLog.apiResponseSummary = 'Queued in Manual WhatsApp Center (Manual Sending Mode).';
+        saveWhatsAppMessageLog(baseLog);
+        return baseLog;
+      } else {
+        baseLog.status = qRes.reason.toLowerCase().includes('opted out')
+          ? 'skipped_opted_out'
+          : 'skipped_no_consent';
+        baseLog.errorMessage = qRes.reason;
+        saveWhatsAppMessageLog(baseLog);
+        return baseLog;
+      }
+    }
+    baseLog.status = 'skipped_rule_disabled';
+    baseLog.errorMessage = 'Manual mode active (no manual message payload attached).';
+    saveWhatsAppMessageLog(baseLog);
+    return baseLog;
+  }
+
+  // Automatic or Automatic + Manual Fallback checks
   if (!phoneE164) {
     baseLog.status = 'skipped_no_consent';
     baseLog.errorMessage = 'Valid E.164 WhatsApp phone number not on file.';
@@ -829,10 +1294,49 @@ export async function dispatchTemplateWhatsAppNotification(params: {
     }
   }
 
+  const enqueueManualFallbackIfAllowed = (fallbackReason: string): string | undefined => {
+    if (effectiveMode !== 'automatic_with_fallback' || !params.manualFallbackSpec) return undefined;
+    const qRes = enqueueOneClickWhatsAppNotification({
+      idempotencyKey: `fallback:${params.idempotencyKey}`,
+      eventType: params.manualFallbackSpec.eventType,
+      customerName: params.recipientName || 'Valued Member',
+      customerEmail: params.manualFallbackSpec.customerEmail,
+      memberId: params.memberId,
+      membershipId: params.manualFallbackSpec.membershipId,
+      orderId: params.manualFallbackSpec.orderId,
+      leadId: params.leadId,
+      dramaId: params.manualFallbackSpec.dramaId,
+      episodeSlug: params.manualFallbackSpec.episodeSlug,
+      rawPhone: params.recipientPhone || phoneE164,
+      planName: params.manualFallbackSpec.planName,
+      amountDisplay: params.manualFallbackSpec.amountDisplay,
+      startDate: params.manualFallbackSpec.startDate,
+      expiryDate: params.manualFallbackSpec.expiryDate,
+      rejectionReason: params.manualFallbackSpec.rejectionReason,
+      seriesName: params.manualFallbackSpec.seriesName,
+      episodeNumber: params.manualFallbackSpec.episodeNumber,
+      episodeLink: params.manualFallbackSpec.episodeLink,
+      accessType: params.manualFallbackSpec.accessType,
+      securityEventSummary: params.manualFallbackSpec.securityEventSummary,
+      serviceName: params.manualFallbackSpec.serviceName,
+      explicitLeadConsent: params.explicitLeadConsent,
+      bypassConsentCheck: true,
+      bypassCategoryGate: true,
+    });
+    if (qRes.ok) {
+      baseLog.apiResponseSummary = `${fallbackReason} Fallback queued in Manual WhatsApp Center (${qRes.notification.id}).`;
+      return qRes.notification.id;
+    }
+    return undefined;
+  };
+
   const tplApproval = settings.templateStatuses[params.templateName] || 'draft';
   if (!params.bypassTemplateApprovalCheck && tplApproval !== 'approved') {
     baseLog.status = 'skipped_template_unapproved';
-    baseLog.errorMessage = `Template "${params.templateName}" is currently "${tplApproval}". Submit & approve it in Meta WhatsApp Manager, then mark as Approved in /admin/automation.`;
+    baseLog.errorMessage = `Template "${params.templateName}" is currently "${tplApproval}". Sync approved templates from Meta or mark as Approved in Meta Templates tab.`;
+    baseLog.manualFallbackNotificationId = enqueueManualFallbackIfAllowed(
+      `Template ${params.templateName} is ${tplApproval}.`
+    );
     saveWhatsAppMessageLog(baseLog);
     return baseLog;
   }
@@ -846,23 +1350,29 @@ export async function dispatchTemplateWhatsAppNotification(params: {
   });
 
   const finishedAt = new Date().toISOString();
+  baseLog.httpStatus = sendRes.httpStatus;
   if (sendRes.ok) {
-    baseLog.status = 'sent';
+    // Honest status: Meta API accepted request (wamid returned). Delivery confirmed only via webhook!
+    baseLog.status = 'api_accepted';
     baseLog.wamid = sendRes.messageId;
     baseLog.sentAt = finishedAt;
     baseLog.estimatedCostUsd = costEstimate;
+    baseLog.apiResponseSummary = `Meta Cloud API HTTP ${sendRes.httpStatus || 200} accepted (wamid: ${sendRes.messageId || 'pending'}). Awaiting delivery webhook.`;
     baseLog.updatedAt = finishedAt;
   } else if (sendRes.notConfigured) {
     baseLog.status = 'not_configured';
     baseLog.errorMessage = sendRes.error;
     baseLog.failedAt = finishedAt;
+    baseLog.manualFallbackNotificationId = enqueueManualFallbackIfAllowed('Meta Cloud API not configured.');
     baseLog.updatedAt = finishedAt;
   } else {
     baseLog.status = 'failed';
     baseLog.errorMessage = sendRes.error || 'Meta API delivery error.';
     baseLog.errorCode = sendRes.errorCode;
+    baseLog.apiResponseSummary = `Meta API HTTP ${sendRes.httpStatus || 500} error (${sendRes.errorCode || 'unknown'}): ${String(sendRes.error || '').slice(0, 180)}`;
     baseLog.failedAt = finishedAt;
     baseLog.nextRetryAt = computeNextRetryIso(baseLog.attempts);
+    baseLog.manualFallbackNotificationId = enqueueManualFallbackIfAllowed('Meta Cloud API error.');
     baseLog.updatedAt = finishedAt;
   }
 
@@ -898,12 +1408,14 @@ export async function retryFailedWhatsAppMessage(messageId: string): Promise<{
       });
 
   const settings = getAutomationSettings();
+  target.httpStatus = sendRes.httpStatus;
   if (sendRes.ok) {
-    target.status = 'sent';
+    target.status = 'api_accepted';
     target.wamid = sendRes.messageId;
     target.sentAt = new Date().toISOString();
     target.errorMessage = undefined;
     target.nextRetryAt = undefined;
+    target.apiResponseSummary = `Retry accepted by Meta Cloud API HTTP ${sendRes.httpStatus || 200} (wamid: ${sendRes.messageId || 'pending'}).`;
     target.estimatedCostUsd =
       target.templateCategory === 'MARKETING'
         ? settings.estimatedMarketingCostUsd
@@ -916,6 +1428,7 @@ export async function retryFailedWhatsAppMessage(messageId: string): Promise<{
     target.status = 'failed';
     target.errorMessage = sendRes.error || 'Retry failed.';
     target.errorCode = sendRes.errorCode;
+    target.apiResponseSummary = `Retry failed HTTP ${sendRes.httpStatus || 500}: ${String(sendRes.error || '').slice(0, 180)}`;
     target.failedAt = new Date().toISOString();
     target.nextRetryAt = computeNextRetryIso(target.attempts);
   }
@@ -952,8 +1465,10 @@ export function scheduleAutomationJob(params: {
   memberId?: string;
   orderId?: string;
   membershipId?: string;
+  broadcastId?: string;
   leadId?: string;
   phoneE164?: string;
+  maxAttempts?: number;
   payload?: Record<string, any>;
 }): AutomationScheduledJob | null {
   const all = readJson<AutomationScheduledJob[]>(AUTOMATION_JOBS_FILE, []);
@@ -970,10 +1485,12 @@ export function scheduleAutomationJob(params: {
     memberId: params.memberId,
     orderId: params.orderId,
     membershipId: params.membershipId,
+    broadcastId: params.broadcastId,
     leadId: params.leadId,
     phoneE164: params.phoneE164,
     payload: params.payload || {},
     attempts: 0,
+    maxAttempts: params.maxAttempts || 4,
     createdAt: now,
     updatedAt: now,
   };
@@ -1066,8 +1583,7 @@ export async function emitAutomationEvent(
 ): Promise<void> {
   try {
     const settings = getAutomationSettings();
-    const baseUrl = (process.env.APP_URL || 'https://feviqo.com').replace(/\/+$/, '');
-    const publicBaseUrl = baseUrl.includes('feviqo.com') ? 'https://feviqo.com' : 'https://feviqo.com';
+    const publicBaseUrl = 'https://feviqo.com';
 
     switch (eventType) {
       case 'user.registered': {
@@ -1086,77 +1602,169 @@ export async function emitAutomationEvent(
             source: consentSource || 'registration_form',
           });
         }
-        await dispatchTemplateWhatsAppNotification({
-          idempotencyKey: `user.registered:${memberId}`,
-          eventType: 'user.registered',
-          templateName: 'feviqo_welcome',
-          bodyParameters: [fullName || 'Member', `${publicBaseUrl}/membership`],
-          recipientPhone: phoneE164 || phone,
-          recipientName: fullName,
-          memberId,
-          ruleEnabled: settings.rules.welcomeOnRegister,
-        });
 
-        // Schedule 30-minute incomplete-package reminder
-        const delayMins = Math.max(5, Number(settings.rules.signupNoPackageDelayMinutes) || 30);
+        const regMode = getEffectiveSendingMode('registration');
+        if (settings.rules.welcomeOnRegister && regMode !== 'disabled') {
+          if (regMode === 'manual' || settings.automationRunning) {
+            await dispatchTemplateWhatsAppNotification({
+              idempotencyKey: `user.registered:${memberId}`,
+              eventType: 'user.registered',
+              templateName: 'feviqo_welcome',
+              bodyParameters: [fullName || 'Member', `${publicBaseUrl}/membership`],
+              recipientPhone: phoneE164 || phone,
+              recipientName: fullName,
+              memberId,
+              categoryKey: 'registration',
+              manualFallbackSpec: {
+                eventType: 'customer_registration',
+                customerEmail: email,
+              },
+              ruleEnabled: settings.rules.welcomeOnRegister,
+            });
+          } else {
+            // Automation bot is STOPPED: queue manual fallback if mode supports it, never drop event silently
+            if (regMode === 'automatic_with_fallback') {
+              enqueueOneClickWhatsAppNotification({
+                idempotencyKey: `fallback:user.registered:${memberId}`,
+                eventType: 'customer_registration',
+                customerName: fullName || 'Member',
+                customerEmail: email,
+                memberId,
+                rawPhone: phoneE164 || phone,
+                bypassCategoryGate: true,
+              });
+            }
+          }
+        }
+
+        // Schedule 24h and 72h follow-up reminders for registered customers who never purchased
+        const delay24h = Math.max(1, Number(settings.rules.signupNoPackageDelay24hHours) || 24);
+        const delay72h = Math.max(delay24h + 1, Number(settings.rules.signupNoPackageDelay72hHours) || 72);
         scheduleAutomationJob({
-          jobType: 'signup_no_package_30m',
-          idempotencyKey: `signup_no_package_30m:${memberId}`,
-          runAtIso: new Date(Date.now() + delayMins * 60 * 1000).toISOString(),
+          jobType: 'signup_no_package_24h',
+          idempotencyKey: `signup_no_package_24h:${memberId}`,
+          runAtIso: new Date(Date.now() + delay24h * 60 * 60 * 1000).toISOString(),
           memberId,
           phoneE164: phoneE164 || undefined,
-          payload: { fullName: fullName || 'Member' },
+          payload: { fullName: fullName || 'Member', email },
+        });
+        scheduleAutomationJob({
+          jobType: 'signup_no_package_72h',
+          idempotencyKey: `signup_no_package_72h:${memberId}`,
+          runAtIso: new Date(Date.now() + delay72h * 60 * 60 * 1000).toISOString(),
+          memberId,
+          phoneE164: phoneE164 || undefined,
+          payload: { fullName: fullName || 'Member', email },
         });
         break;
       }
 
       case 'membership.plan_selected':
       case 'membership.payment_pending': {
-        const { memberId, fullName, phone, orderId, planName, amountDisplay } = payload;
-        // User selected a package -> cancel the "no package selected" reminder immediately
+        const { memberId, fullName, email, phone, orderId, planName, amountDisplay } = payload;
+        // User selected a package -> cancel ALL "never purchased" signup follow-ups immediately
         cancelScheduledJobs(
-          (j) => j.memberId === memberId && j.jobType === 'signup_no_package_30m',
+          (j) =>
+            j.memberId === memberId &&
+            (j.jobType === 'signup_no_package_30m' ||
+              j.jobType === 'signup_no_package_24h' ||
+              j.jobType === 'signup_no_package_72h'),
           `User selected package (${planName || 'plan'})`
         );
 
-        const delayMins = Math.max(5, Number(settings.rules.checkoutAbandonedDelayMinutes) || 45);
+        const delay2hMins = Math.max(5, Number(settings.rules.checkoutAbandonedDelayMinutes) || 120);
+        const delay24h = Math.max(2, Number(settings.rules.checkoutAbandonedDelay24hHours) || 24);
+        const delay72h = Math.max(delay24h + 1, Number(settings.rules.checkoutAbandonedDelay72hHours) || 72);
+        const jobPayload = {
+          fullName: fullName || 'Member',
+          email,
+          planName: planName || 'Premium',
+          amountDisplay: amountDisplay || '',
+          orderId,
+        };
+        const phoneE164 = normalizePhoneE164(phone) || undefined;
+
         scheduleAutomationJob({
           jobType: 'checkout_abandoned_reminder',
-          idempotencyKey: `checkout_abandoned_reminder:${orderId}`,
-          runAtIso: new Date(Date.now() + delayMins * 60 * 1000).toISOString(),
+          idempotencyKey: `checkout_abandoned_2h:${orderId}`,
+          runAtIso: new Date(Date.now() + delay2hMins * 60 * 1000).toISOString(),
           memberId,
           orderId,
-          phoneE164: normalizePhoneE164(phone) || undefined,
-          payload: {
-            fullName: fullName || 'Member',
-            planName: planName || 'Premium',
-            amountDisplay: amountDisplay || '',
-            orderId,
-          },
+          phoneE164,
+          payload: jobPayload,
+        });
+        scheduleAutomationJob({
+          jobType: 'checkout_abandoned_24h',
+          idempotencyKey: `checkout_abandoned_24h:${orderId}`,
+          runAtIso: new Date(Date.now() + delay24h * 60 * 60 * 1000).toISOString(),
+          memberId,
+          orderId,
+          phoneE164,
+          payload: jobPayload,
+        });
+        scheduleAutomationJob({
+          jobType: 'checkout_abandoned_72h',
+          idempotencyKey: `checkout_abandoned_72h:${orderId}`,
+          runAtIso: new Date(Date.now() + delay72h * 60 * 60 * 1000).toISOString(),
+          memberId,
+          orderId,
+          phoneE164,
+          payload: jobPayload,
         });
         break;
       }
 
       case 'membership.proof_submitted': {
-        const { memberId, fullName, phone, orderId, planName } = payload;
-        // Stop checkout abandonment reminders immediately upon payment proof submission
+        const { memberId, fullName, email, phone, orderId, planName, amountDisplay } = payload;
+        // Stop all unpaid reminders immediately upon payment proof submission
         cancelScheduledJobs(
           (j) =>
             (j.orderId === orderId || j.memberId === memberId) &&
-            (j.jobType === 'checkout_abandoned_reminder' || j.jobType === 'signup_no_package_30m'),
+            (j.jobType === 'checkout_abandoned_reminder' ||
+              j.jobType === 'checkout_abandoned_24h' ||
+              j.jobType === 'checkout_abandoned_72h' ||
+              j.jobType === 'signup_no_package_30m' ||
+              j.jobType === 'signup_no_package_24h' ||
+              j.jobType === 'signup_no_package_72h'),
           `Payment proof submitted for order ${orderId}`
         );
 
-        await dispatchTemplateWhatsAppNotification({
-          idempotencyKey: `membership.proof_submitted:${orderId}:${payload.proofSubmittedAt || '1'}`,
-          eventType: 'membership.proof_submitted',
-          templateName: 'feviqo_payment_received',
-          bodyParameters: [fullName || 'Member', planName || 'Premium', orderId || ''],
-          recipientPhone: phone,
-          recipientName: fullName,
-          memberId,
-          ruleEnabled: settings.rules.paymentProofReceived,
-        });
+        const payMode = getEffectiveSendingMode('payment');
+        if (settings.rules.paymentProofReceived && payMode !== 'disabled') {
+          if (payMode === 'manual' || settings.automationRunning) {
+            await dispatchTemplateWhatsAppNotification({
+              idempotencyKey: `membership.proof_submitted:${orderId}:${payload.proofSubmittedAt || '1'}`,
+              eventType: 'membership.proof_submitted',
+              templateName: 'feviqo_payment_received',
+              bodyParameters: [fullName || 'Member', planName || 'Premium', orderId || ''],
+              recipientPhone: phone,
+              recipientName: fullName,
+              memberId,
+              categoryKey: 'payment',
+              manualFallbackSpec: {
+                eventType: 'payment_submitted',
+                customerEmail: email,
+                orderId,
+                planName,
+                amountDisplay,
+              },
+              ruleEnabled: settings.rules.paymentProofReceived,
+            });
+          } else if (payMode === 'automatic_with_fallback') {
+            enqueueOneClickWhatsAppNotification({
+              idempotencyKey: `fallback:membership.proof_submitted:${orderId}`,
+              eventType: 'payment_submitted',
+              customerName: fullName || 'Member',
+              customerEmail: email,
+              memberId,
+              orderId,
+              planName,
+              amountDisplay,
+              rawPhone: phone,
+              bypassCategoryGate: true,
+            });
+          }
+        }
         break;
       }
 
@@ -1164,39 +1772,80 @@ export async function emitAutomationEvent(
         const {
           memberId,
           fullName,
+          email,
           phone,
           orderId,
           membershipId,
           planName,
+          amountDisplay,
           dramaTitles,
           activatedAt,
           expiresAt,
+          wasRenewal,
         } = payload;
 
         cancelScheduledJobs(
           (j) =>
             (j.orderId === orderId || j.memberId === memberId) &&
-            (j.jobType === 'checkout_abandoned_reminder' || j.jobType === 'signup_no_package_30m'),
+            (j.jobType === 'checkout_abandoned_reminder' ||
+              j.jobType === 'checkout_abandoned_24h' ||
+              j.jobType === 'checkout_abandoned_72h' ||
+              j.jobType === 'signup_no_package_30m' ||
+              j.jobType === 'signup_no_package_24h' ||
+              j.jobType === 'signup_no_package_72h'),
           `Payment approved for order ${orderId}`
         );
 
-        await dispatchTemplateWhatsAppNotification({
-          idempotencyKey: `membership.approved:${orderId || membershipId}`,
-          eventType: 'membership.approved',
-          templateName: 'feviqo_membership_activated',
-          bodyParameters: [
-            fullName || 'Member',
-            planName || 'Premium',
-            dramaTitles || 'FEVIQO Urdu Dramas',
-            formatReadableDate(activatedAt || new Date().toISOString()),
-            formatReadableDate(expiresAt || ''),
-            `${publicBaseUrl}/account`,
-          ],
-          recipientPhone: phone,
-          recipientName: fullName,
-          memberId,
-          ruleEnabled: settings.rules.paymentApproved,
-        });
+        const actMode = getEffectiveSendingMode('activation');
+        const manualEventType: OneClickEventType = wasRenewal ? 'membership_renewed' : 'payment_approved';
+        if (settings.rules.paymentApproved && actMode !== 'disabled') {
+          if (actMode === 'manual' || settings.automationRunning) {
+            await dispatchTemplateWhatsAppNotification({
+              idempotencyKey: `membership.approved:${orderId || membershipId}:${expiresAt || '1'}`,
+              eventType: wasRenewal ? 'membership.renewed' : 'membership.approved',
+              templateName: 'feviqo_membership_activated',
+              bodyParameters: [
+                fullName || 'Member',
+                planName || 'Premium',
+                dramaTitles || 'FEVIQO Urdu Dramas',
+                formatReadableDate(activatedAt || new Date().toISOString()),
+                formatReadableDate(expiresAt || ''),
+                `${publicBaseUrl}/account`,
+              ],
+              recipientPhone: phone,
+              recipientName: fullName,
+              memberId,
+              categoryKey: 'activation',
+              manualFallbackSpec: {
+                eventType: manualEventType,
+                customerEmail: email,
+                membershipId,
+                orderId,
+                planName,
+                amountDisplay,
+                startDate: activatedAt,
+                expiryDate: expiresAt,
+              },
+              ruleEnabled: settings.rules.paymentApproved,
+            });
+          } else if (actMode === 'automatic_with_fallback') {
+            enqueueOneClickWhatsAppNotification({
+              idempotencyKey: `fallback:membership.approved:${orderId || membershipId}`,
+              eventType: manualEventType,
+              customerName: fullName || 'Member',
+              customerEmail: email,
+              memberId,
+              membershipId,
+              orderId,
+              planName,
+              amountDisplay,
+              startDate: activatedAt,
+              expiryDate: expiresAt,
+              rawPhone: phone,
+              bypassCategoryGate: true,
+            });
+          }
+        }
 
         if (membershipId && expiresAt) {
           scheduleExpiryRemindersForMembership({
@@ -1212,26 +1861,50 @@ export async function emitAutomationEvent(
       }
 
       case 'membership.rejected': {
-        const { memberId, fullName, phone, orderId, rejectionReason } = payload;
+        const { memberId, fullName, email, phone, orderId, rejectionReason } = payload;
         // NEVER invent a rejection reason
         const actualReason = String(rejectionReason || '').trim();
         if (!actualReason) break;
 
-        await dispatchTemplateWhatsAppNotification({
-          idempotencyKey: `membership.rejected:${orderId}:${payload.reviewedAt || '1'}`,
-          eventType: 'membership.rejected',
-          templateName: 'feviqo_payment_rejected',
-          bodyParameters: [
-            fullName || 'Member',
-            orderId || '',
-            actualReason,
-            `${publicBaseUrl}/account`,
-          ],
-          recipientPhone: phone,
-          recipientName: fullName,
-          memberId,
-          ruleEnabled: settings.rules.paymentRejected,
-        });
+        const rejMode = getEffectiveSendingMode('rejection');
+        if (settings.rules.paymentRejected && rejMode !== 'disabled') {
+          if (rejMode === 'manual' || settings.automationRunning) {
+            await dispatchTemplateWhatsAppNotification({
+              idempotencyKey: `membership.rejected:${orderId}:${payload.reviewedAt || '1'}`,
+              eventType: 'membership.rejected',
+              templateName: 'feviqo_payment_rejected',
+              bodyParameters: [
+                fullName || 'Member',
+                orderId || '',
+                actualReason,
+                `${publicBaseUrl}/account`,
+              ],
+              recipientPhone: phone,
+              recipientName: fullName,
+              memberId,
+              categoryKey: 'rejection',
+              manualFallbackSpec: {
+                eventType: 'payment_rejected',
+                customerEmail: email,
+                orderId,
+                rejectionReason: actualReason,
+              },
+              ruleEnabled: settings.rules.paymentRejected,
+            });
+          } else if (rejMode === 'automatic_with_fallback') {
+            enqueueOneClickWhatsAppNotification({
+              idempotencyKey: `fallback:membership.rejected:${orderId}`,
+              eventType: 'payment_rejected',
+              customerName: fullName || 'Member',
+              customerEmail: email,
+              memberId,
+              orderId,
+              rejectionReason: actualReason,
+              rawPhone: phone,
+              bypassCategoryGate: true,
+            });
+          }
+        }
         break;
       }
 
@@ -1252,25 +1925,92 @@ export async function emitAutomationEvent(
         break;
       }
 
+      case 'account.security_alert': {
+        // Strictly sanitized summary — NEVER includes passwords, app passwords, or secret tokens
+        const { memberId, fullName, email, phone, summary } = payload;
+        const cleanSummary =
+          String(summary || 'A security or password update was performed on your FEVIQO account.')
+            .replace(/(password|token|secret|key)\s*[:=]\s*\S+/gi, '$1: [REDACTED]')
+            .slice(0, 260);
+
+        if (memberId) {
+          createCustomerNotificationRecord({
+            memberId,
+            customerEmail: email,
+            type: 'security_alert',
+            title: 'FEVIQO Account Security Notice',
+            message: cleanSummary,
+            ctaLabel: 'Review Account Security',
+            ctaHref: '/account',
+            dedupeKey: `security_alert:${memberId}:${Date.now().toString(36)}`,
+            emailStatus: 'not_sent',
+          });
+        }
+
+        const secMode = getEffectiveSendingMode('security');
+        if (settings.rules.accountSecurityAlerts && secMode !== 'disabled' && phone) {
+          if (secMode === 'manual' || settings.automationRunning) {
+            await dispatchTemplateWhatsAppNotification({
+              idempotencyKey: `account.security_alert:${memberId || phone}:${Date.now().toString(36)}`,
+              eventType: 'account.security_alert',
+              templateName: 'feviqo_account_security',
+              bodyParameters: [fullName || 'Member', cleanSummary, `${publicBaseUrl}/account`],
+              recipientPhone: phone,
+              recipientName: fullName,
+              memberId,
+              categoryKey: 'security',
+              manualFallbackSpec: {
+                eventType: 'account_security_alert',
+                customerEmail: email,
+                securityEventSummary: cleanSummary,
+              },
+              ruleEnabled: settings.rules.accountSecurityAlerts,
+            });
+          }
+        }
+        break;
+      }
+
       case 'lead.created': {
         const lead = payload.lead as VideoEditingLead | undefined;
         if (!lead) break;
 
         if (lead.whatsappConsent && lead.whatsappE164) {
-          await dispatchTemplateWhatsAppNotification({
-            idempotencyKey: `lead.created:${lead.id}`,
-            eventType: 'lead.created',
-            templateName: 'feviqo_lead_received',
-            bodyParameters: [
-              lead.fullName || 'there',
-              lead.editingService || 'Video Editing Services',
-            ],
-            recipientPhone: lead.whatsappE164,
-            recipientName: lead.fullName,
-            leadId: lead.id,
-            ruleEnabled: settings.rules.leadImmediateAcknowledgement,
-            explicitLeadConsent: true,
-          });
+          const leadMode = getEffectiveSendingMode('creative_enquiries');
+          if (leadMode === 'manual' || settings.automationRunning) {
+            await dispatchTemplateWhatsAppNotification({
+              idempotencyKey: `lead.created:${lead.id}`,
+              eventType: 'lead.created',
+              templateName: 'feviqo_lead_received',
+              bodyParameters: [
+                lead.fullName || 'there',
+                lead.editingService || 'Video Editing Services',
+              ],
+              recipientPhone: lead.whatsappE164,
+              recipientName: lead.fullName,
+              leadId: lead.id,
+              categoryKey: 'creative_enquiries',
+              manualFallbackSpec: {
+                eventType: 'creative_enquiry',
+                customerEmail: lead.email,
+                serviceName: lead.editingService,
+              },
+              ruleEnabled: settings.rules.leadImmediateAcknowledgement,
+              explicitLeadConsent: true,
+            });
+          } else if (leadMode === 'automatic_with_fallback') {
+            enqueueOneClickWhatsAppNotification({
+              idempotencyKey: `fallback:lead.created:${lead.id}`,
+              eventType: 'creative_enquiry',
+              customerName: lead.fullName || 'there',
+              customerEmail: lead.email,
+              leadId: lead.id,
+              rawPhone: lead.whatsappE164,
+              serviceName: lead.editingService,
+              explicitLeadConsent: true,
+              bypassCategoryGate: true,
+            });
+          }
 
           if (settings.rules.leadFollowUpNoResponse) {
             const hrs = Math.max(1, Number(settings.rules.leadFollowUpNoResponseHours) || 24);
@@ -1328,40 +2068,355 @@ export async function emitAutomationEvent(
   }
 }
 
-// --- EPISODE PUBLISHING BROADCAST ENGINE ---
+// --- EPISODE PUBLISHING BROADCAST ENGINE (FREE & PREMIUM) ---
 export function listEpisodeBroadcasts(limit = 100): EpisodeBroadcastRecord[] {
   return readJson<EpisodeBroadcastRecord[]>(EPISODE_BROADCASTS_FILE, []).slice(0, limit);
 }
 
-export function previewEpisodeNotificationAudience(dramaId: string): {
+function saveEpisodeBroadcastRecord(record: EpisodeBroadcastRecord): void {
+  const all = readJson<EpisodeBroadcastRecord[]>(EPISODE_BROADCASTS_FILE, []);
+  const idx = all.findIndex((b) => b.id === record.id);
+  if (idx >= 0) {
+    all[idx] = record;
+  } else {
+    all.unshift(record);
+  }
+  writeJson(EPISODE_BROADCASTS_FILE, all.slice(0, 500));
+  void mirrorDocToFirestoreServer('episodeBroadcasts', record.id, {
+    ...record,
+    createdAtIso: record.createdAt,
+    updatedAtIso: record.updatedAt || record.createdAt,
+  });
+}
+
+function getBlockedLookupSets(): { emails: Set<string>; phones: Set<string> } {
+  const blocked = listBlockedUsers();
+  const emails = new Set(blocked.map((b) => String(b.email || '').trim().toLowerCase()).filter(Boolean));
+  const phones = new Set<string>();
+  for (const b of blocked) {
+    if (b.phoneNormalized) phones.add(normalizeBlockedPhone(b.phoneNormalized));
+    if (b.phone) phones.add(normalizeBlockedPhone(b.phone));
+    for (const p of b.additionalPhones || []) {
+      const n = normalizeBlockedPhone(p);
+      if (n) phones.add(n);
+    }
+  }
+  return { emails, phones };
+}
+
+function maskPhoneForDisplay(phone?: string): string {
+  const clean = String(phone || '').trim();
+  if (!clean) return 'Missing';
+  if (clean.length <= 6) return clean;
+  return `${clean.slice(0, 4)}••••${clean.slice(-3)}`;
+}
+
+export interface EpisodeAudienceRecipientPreview {
+  memberId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  maskedPhone: string;
+  phoneValid: boolean;
+  phoneError?: string;
+  planId: string;
+  membershipStatus: string;
+  hasConsent: boolean;
+  optedOut: boolean;
+  alreadyNotified: boolean;
+  eligibleForWhatsapp: boolean;
+  exclusionReason?: string;
+}
+
+export interface EpisodeAudiencePreviewResult {
   dramaTitle: string;
+  accessType: 'free' | 'premium';
+  totalRegisteredNonBlocked: number;
+  totalMatchingCustomers: number;
   entitledActiveCount: number;
   consentedCount: number;
+  eligibleWhatsappCount: number;
+  noPermissionCount: number;
+  optedOutCount: number;
+  invalidPhoneCount: number;
+  unentitledCount: number;
+  inactiveOrExpiredCount: number;
+  alreadyNotifiedCount: number;
   optedOutOrNoConsentCount: number;
   alreadyBroadcastSlugs: string[];
-} {
+  recipients: EpisodeAudienceRecipientPreview[];
+}
+
+export function previewEpisodeNotificationAudience(
+  dramaId: string,
+  options?: { accessType?: 'free' | 'premium'; episodeSlug?: string }
+): EpisodeAudiencePreviewResult {
   const drama = getDramaById(dramaId);
-  const entitled = getEntitledActiveMembersForDrama(dramaId);
-  let consentedCount = 0;
-  for (const item of entitled) {
+  const accessType: 'free' | 'premium' = options?.accessType === 'free' ? 'free' : 'premium';
+  const { members, memberships } = getAutomationMembershipSnapshot();
+  const blockedSets = getBlockedLookupSets();
+  const isBlocked = (email?: string, phone?: string) => {
+    const e = String(email || '').trim().toLowerCase();
+    const p = normalizeBlockedPhone(phone);
+    return (Boolean(e) && blockedSets.emails.has(e)) || (Boolean(p) && blockedSets.phones.has(p));
+  };
+
+  const nonBlockedMembers = members.filter((m) => !isBlocked(m.email, m.phone));
+  const entitledPairs = getEntitledActiveMembersForDrama(dramaId).filter(
+    ({ member }) => !isBlocked(member.email, member.phone)
+  );
+  const entitledByMemberId = new Map(entitledPairs.map((pair) => [pair.member.id, pair]));
+
+  const priorBroadcasts = listEpisodeBroadcasts(200).filter((b) => b.dramaId === dramaId);
+  const alreadyNotifiedMemberIds = new Set<string>();
+  if (options?.episodeSlug) {
+    const cleanSlug = options.episodeSlug.trim();
+    for (const b of priorBroadcasts.filter((x) => x.episodeSlug === cleanSlug)) {
+      for (const r of b.recipients || []) {
+        if (
+          r.status === 'api_accepted' ||
+          r.status === 'sent' ||
+          r.status === 'delivered' ||
+          r.status === 'read' ||
+          r.status === 'confirmed_sent'
+        ) {
+          alreadyNotifiedMemberIds.add(r.memberId);
+        }
+      }
+    }
+  }
+
+  const nowMs = Date.now();
+  let inactiveOrExpiredCount = 0;
+  let unentitledCount = 0;
+
+  if (accessType === 'premium') {
+    for (const m of nonBlockedMembers) {
+      if (entitledByMemberId.has(m.id)) continue;
+      const mSubs = memberships.filter((s) => s.memberId === m.id);
+      const hasAnyActiveSub = mSubs.some((s) => s.status === 'active' && Date.parse(s.expiresAt) > nowMs);
+      if (hasAnyActiveSub) {
+        unentitledCount += 1;
+      } else {
+        inactiveOrExpiredCount += 1;
+      }
+    }
+  }
+
+  const candidateList: Array<{ member: (typeof nonBlockedMembers)[number]; planId: string; membershipStatus: string }> =
+    accessType === 'free'
+      ? nonBlockedMembers.map((m) => {
+          const activeSub = memberships.find(
+            (s) => s.memberId === m.id && s.status === 'active' && Date.parse(s.expiresAt) > nowMs
+          );
+          return {
+            member: m,
+            planId: activeSub?.planId || 'free_registered',
+            membershipStatus: activeSub ? `Active (${activeSub.planName})` : 'Registered (Free)',
+          };
+        })
+      : entitledPairs.map(({ member, membership }) => ({
+          member,
+          planId: membership.planId,
+          membershipStatus: `Active (${membership.planName})`,
+        }));
+
+  let eligibleWhatsappCount = 0;
+  let noPermissionCount = 0;
+  let optedOutCount = 0;
+  let invalidPhoneCount = 0;
+  let alreadyNotifiedCount = 0;
+  const recipients: EpisodeAudienceRecipientPreview[] = [];
+
+  for (const item of candidateList) {
+    const formatted = formatWhatsAppRecipient(item.member.phone);
     const consent = checkConsentForCategory({
       memberId: item.member.id,
-      phone: item.member.phone,
+      phone: formatted.valid ? formatted.e164 : item.member.phone,
       category: 'newEpisodeAlerts',
     });
-    if (consent.allowed) consentedCount += 1;
+    const alreadyNotified = alreadyNotifiedMemberIds.has(item.member.id);
+    if (alreadyNotified) alreadyNotifiedCount += 1;
+
+    let exclusionReason: string | undefined;
+    let eligibleForWhatsapp = false;
+
+    if (!formatted.valid) {
+      invalidPhoneCount += 1;
+      exclusionReason = formatted.reason || 'Invalid or missing WhatsApp number';
+    } else if (consent.reason === 'opted_out') {
+      optedOutCount += 1;
+      exclusionReason = 'Customer opted out (STOP)';
+    } else if (!consent.allowed) {
+      noPermissionCount += 1;
+      exclusionReason = 'No WhatsApp episode-alert opt-in recorded';
+    } else {
+      eligibleForWhatsapp = true;
+      eligibleWhatsappCount += 1;
+    }
+
+    recipients.push({
+      memberId: item.member.id,
+      fullName: item.member.fullName || 'FEVIQO Member',
+      email: item.member.email,
+      phone: formatted.valid ? formatted.e164 : item.member.phone || '',
+      maskedPhone: maskPhoneForDisplay(formatted.valid ? formatted.e164 : item.member.phone),
+      phoneValid: formatted.valid,
+      phoneError: formatted.valid ? undefined : formatted.reason,
+      planId: item.planId,
+      membershipStatus: item.membershipStatus,
+      hasConsent: consent.allowed,
+      optedOut: consent.reason === 'opted_out',
+      alreadyNotified,
+      eligibleForWhatsapp,
+      exclusionReason,
+    });
   }
-  const prior = listEpisodeBroadcasts(200)
-    .filter((b) => b.dramaId === dramaId)
-    .map((b) => b.episodeSlug);
 
   return {
     dramaTitle: drama?.title || dramaId,
-    entitledActiveCount: entitled.length,
-    consentedCount,
-    optedOutOrNoConsentCount: Math.max(0, entitled.length - consentedCount),
-    alreadyBroadcastSlugs: Array.from(new Set(prior)),
+    accessType,
+    totalRegisteredNonBlocked: nonBlockedMembers.length,
+    totalMatchingCustomers: candidateList.length,
+    entitledActiveCount: entitledPairs.length,
+    consentedCount: eligibleWhatsappCount,
+    eligibleWhatsappCount,
+    noPermissionCount,
+    optedOutCount,
+    invalidPhoneCount,
+    unentitledCount,
+    inactiveOrExpiredCount,
+    alreadyNotifiedCount,
+    optedOutOrNoConsentCount: Math.max(0, candidateList.length - eligibleWhatsappCount),
+    alreadyBroadcastSlugs: Array.from(new Set(priorBroadcasts.map((b) => b.episodeSlug))),
+    recipients,
   };
+}
+
+function recomputeEpisodeBroadcastCounters(broadcast: EpisodeBroadcastRecord): EpisodeBroadcastRecord {
+  let apiAcceptedCount = 0;
+  let sentCount = 0;
+  let deliveredCount = 0;
+  let readCount = 0;
+  let manualQueuedCount = 0;
+  let inAppNotifiedCount = 0;
+  let failedCount = 0;
+  let skippedCount = 0;
+  let pendingOrProcessing = 0;
+
+  const breakdown = {
+    noPermission: 0,
+    optedOut: 0,
+    invalidPhone: 0,
+    templateUnapproved: 0,
+    ruleDisabled: 0,
+    unentitled: 0,
+  };
+
+  for (const r of broadcast.recipients) {
+    if (r.inAppNotified) inAppNotifiedCount += 1;
+    if (r.manualNotificationId) manualQueuedCount += 1;
+
+    switch (r.status) {
+      case 'api_accepted':
+        apiAcceptedCount += 1;
+        break;
+      case 'sent':
+        sentCount += 1;
+        break;
+      case 'delivered':
+        deliveredCount += 1;
+        break;
+      case 'read':
+        readCount += 1;
+        break;
+      case 'confirmed_sent':
+        sentCount += 1;
+        break;
+      case 'queued':
+      case 'processing':
+      case 'opened':
+        pendingOrProcessing += 1;
+        break;
+      case 'failed':
+      case 'not_configured':
+        failedCount += 1;
+        break;
+      case 'skipped_no_consent':
+        skippedCount += 1;
+        if ((r.error || '').toLowerCase().includes('phone')) breakdown.invalidPhone += 1;
+        else breakdown.noPermission += 1;
+        break;
+      case 'skipped_opted_out':
+        skippedCount += 1;
+        breakdown.optedOut += 1;
+        break;
+      case 'skipped_template_unapproved':
+        skippedCount += 1;
+        breakdown.templateUnapproved += 1;
+        break;
+      case 'skipped_rule_disabled':
+        skippedCount += 1;
+        breakdown.ruleDisabled += 1;
+        break;
+      case 'skipped_not_entitled':
+        skippedCount += 1;
+        breakdown.unentitled += 1;
+        break;
+      default:
+        skippedCount += 1;
+        break;
+    }
+  }
+
+  const totalSuccessfulDispatches = apiAcceptedCount + sentCount + deliveredCount + readCount;
+  let broadcastStatus: EpisodeBroadcastStatus = 'completed';
+
+  if (broadcast.totalMatchingCount === 0 || (broadcast.eligibleWhatsappCount === 0 && manualQueuedCount === 0)) {
+    broadcastStatus = 'no_eligible_recipients';
+  } else if (pendingOrProcessing > 0 && totalSuccessfulDispatches === 0 && manualQueuedCount === 0) {
+    const settings = getAutomationSettings();
+    broadcastStatus = settings.automationRunning ? 'processing' : 'queued_waiting_start';
+  } else if (totalSuccessfulDispatches === 0 && manualQueuedCount > 0 && broadcast.sendingMode === 'manual') {
+    broadcastStatus = 'completed';
+  } else if (totalSuccessfulDispatches === 0 && failedCount > 0) {
+    broadcastStatus = 'failed';
+  } else if (totalSuccessfulDispatches === 0 && skippedCount > 0 && manualQueuedCount === 0) {
+    broadcastStatus = 'no_eligible_recipients';
+  } else if (failedCount > 0 || skippedCount > 0 || pendingOrProcessing > 0) {
+    broadcastStatus = totalSuccessfulDispatches > 0 || manualQueuedCount > 0 ? 'partially_completed' : 'failed';
+  }
+
+  let diagnosticSummary = '';
+  if (broadcastStatus === 'queued_waiting_start') {
+    diagnosticSummary = `Automation Bot is currently STOPPED. ${pendingOrProcessing} eligible recipient job(s) are queued and paused. Click START AUTOMATION to dispatch via Meta Cloud API, or use Manual WhatsApp Sending.`;
+  } else if (totalSuccessfulDispatches === 0 && manualQueuedCount === 0) {
+    const reasons: string[] = [];
+    if (breakdown.noPermission > 0) reasons.push(`${breakdown.noPermission} missing WhatsApp opt-in`);
+    if (breakdown.invalidPhone > 0) reasons.push(`${breakdown.invalidPhone} invalid/missing phone`);
+    if (breakdown.optedOut > 0) reasons.push(`${breakdown.optedOut} opted out (STOP)`);
+    if (breakdown.templateUnapproved > 0) reasons.push(`${breakdown.templateUnapproved} blocked by unapproved template status`);
+    if (failedCount > 0) reasons.push(`${failedCount} Meta API error(s)`);
+    diagnosticSummary = `No WhatsApp messages were sent. ${reasons.length > 0 ? `Reasons: ${reasons.join(', ')}.` : 'Review recipient eligibility, permission records, sending mode, and Meta API response.'}${inAppNotifiedCount > 0 ? ` (${inAppNotifiedCount} in-app notification(s) delivered to customer accounts.)` : ''}`;
+  } else if (broadcast.sendingMode === 'manual') {
+    diagnosticSummary = `${manualQueuedCount} personalized WhatsApp message(s) prepared in Manual WhatsApp Center (ready for 1-click Send on WhatsApp).`;
+  } else {
+    diagnosticSummary = `Meta Cloud API accepted ${totalSuccessfulDispatches} message(s) (Delivered: ${deliveredCount}, Read: ${readCount}, Failed: ${failedCount}, Skipped: ${skippedCount}${manualQueuedCount > 0 ? `, Manual Fallback Queued: ${manualQueuedCount}` : ''}${inAppNotifiedCount > 0 ? `, In-App Notified: ${inAppNotifiedCount}` : ''}).`;
+  }
+
+  broadcast.apiAcceptedCount = apiAcceptedCount;
+  broadcast.sentCount = sentCount;
+  broadcast.deliveredCount = deliveredCount;
+  broadcast.readCount = readCount;
+  broadcast.manualQueuedCount = manualQueuedCount;
+  broadcast.inAppNotifiedCount = inAppNotifiedCount;
+  broadcast.failedCount = failedCount;
+  broadcast.skippedCount = skippedCount;
+  broadcast.skippedBreakdown = breakdown;
+  broadcast.broadcastStatus = broadcastStatus;
+  broadcast.diagnosticSummary = diagnosticSummary;
+  broadcast.updatedAt = new Date().toISOString();
+  return broadcast;
 }
 
 export async function triggerEpisodePublishedBroadcast(params: {
@@ -1371,6 +2426,11 @@ export async function triggerEpisodePublishedBroadcast(params: {
   episodeNumber: number;
   episodeTitle: string;
   episodeUrl?: string;
+  accessType?: 'free' | 'premium';
+  sendingMode?: WhatsAppSendingMode;
+  selectedMemberIds?: string[];
+  sendInAppFallback?: boolean;
+  startAutomationIfStopped?: boolean;
   adminEmail: string;
   adminId?: string;
   forceResend?: boolean;
@@ -1384,6 +2444,14 @@ export async function triggerEpisodePublishedBroadcast(params: {
   }
 
   const cleanSlug = String(params.episodeSlug || `episode-${params.episodeNumber}`).trim();
+  const matchedCatalogEp = drama.episodes.find((ep) => ep.slug === cleanSlug);
+  const accessType: 'free' | 'premium' =
+    params.accessType === 'free' || params.accessType === 'premium'
+      ? params.accessType
+      : matchedCatalogEp?.accessType === 'free'
+      ? 'free'
+      : 'premium';
+
   const broadcastKey = `${drama.id}:${cleanSlug}`;
   const allBroadcasts = readJson<EpisodeBroadcastRecord[]>(EPISODE_BROADCASTS_FILE, []);
   const existing = allBroadcasts.find((b) => b.broadcastKey === broadcastKey);
@@ -1397,57 +2465,215 @@ export async function triggerEpisodePublishedBroadcast(params: {
     };
   }
 
+  if (params.startAutomationIfStopped && !getAutomationSettings().automationRunning) {
+    saveAutomationSettings(
+      {
+        automationRunning: true,
+        automationStartedAt: new Date().toISOString(),
+        automationToggledBy: params.adminEmail,
+        rules: { masterEnabled: true },
+      },
+      params.adminId ? { id: params.adminId, email: params.adminEmail } : undefined
+    );
+  }
+
   const settings = getAutomationSettings();
-  const entitled = getEntitledActiveMembersForDrama(drama.id);
+  const effectiveMode = getEffectiveSendingMode('episodes', params.sendingMode);
   const episodeUrl =
     params.episodeUrl || `https://feviqo.com${drama.hubPath.replace(/\/+$/, '')}/${cleanSlug}`;
   const resendSuffix = params.forceResend ? `:resend:${Date.now()}` : '';
+  const broadcastId = makeId('epcast');
+
+  const audience = previewEpisodeNotificationAudience(drama.id, {
+    accessType,
+    episodeSlug: cleanSlug,
+  });
+
+  let targetRecipients = audience.recipients;
+  if (Array.isArray(params.selectedMemberIds) && params.selectedMemberIds.length > 0) {
+    const selectedSet = new Set(params.selectedMemberIds);
+    targetRecipients = targetRecipients.filter((r) => selectedSet.has(r.memberId));
+  }
 
   const recipients: EpisodeBroadcastRecipient[] = [];
-  let sentCount = 0;
-  let failedCount = 0;
-  let skippedCount = 0;
+  const shouldSendInApp = params.sendInAppFallback !== false;
+  const nowIso = new Date().toISOString();
+  const queuedJobIds: string[] = [];
 
-  for (const { member, membership } of entitled) {
-    const phoneE164 = normalizePhoneE164(member.phone) || '';
-    const msgLog = await dispatchTemplateWhatsAppNotification({
-      idempotencyKey: `episode.published:${broadcastKey}:${member.id}${resendSuffix}`,
-      eventType: 'episode.published',
-      templateName: 'feviqo_new_episode',
-      bodyParameters: [
-        drama.title,
-        String(params.seasonNumber || 1),
-        String(params.episodeNumber),
-        episodeUrl,
-      ],
-      recipientPhone: phoneE164,
-      recipientName: member.fullName,
-      memberId: member.id,
-      ruleEnabled: settings.rules.episodePublishedAlerts,
-    });
+  for (const rec of targetRecipients) {
+    let inAppNotified = false;
 
-    const status = msgLog?.status || 'skipped_no_consent';
-    if (status === 'sent' || status === 'delivered' || status === 'read') {
-      sentCount += 1;
-    } else if (status === 'failed' || status === 'not_configured') {
-      failedCount += 1;
-    } else {
-      skippedCount += 1;
+    // Alternative permitted channel: in-app notification for entitled/registered users (especially when WhatsApp is unavailable)
+    if (shouldSendInApp) {
+      const inAppRes = createCustomerNotificationRecord({
+        memberId: rec.memberId,
+        customerEmail: rec.email,
+        dramaIds: [drama.id],
+        type: 'episode_published',
+        title: `New Urdu Episode: ${drama.title} Ep ${params.episodeNumber}`,
+        message: `${params.episodeTitle || `${drama.title} Episode ${params.episodeNumber}`} (${accessType === 'free' ? 'Free' : 'Premium'}) is now live on FEVIQO.`,
+        ctaLabel: 'Watch Episode',
+        ctaHref: `${drama.hubPath.replace(/\/+$/, '')}/${cleanSlug}`,
+        dedupeKey: `ep_inapp:${broadcastKey}:${rec.memberId}${resendSuffix}`,
+        emailStatus: 'not_sent',
+      });
+      inAppNotified = inAppRes.created || Boolean(inAppRes.notification);
     }
 
+    if (effectiveMode === 'disabled') {
+      recipients.push({
+        memberId: rec.memberId,
+        memberName: rec.fullName,
+        phoneE164: rec.phone || 'missing',
+        planId: rec.planId,
+        sendingMethod: inAppNotified ? 'in_app' : 'skipped',
+        status: 'skipped_rule_disabled',
+        inAppNotified,
+        error: 'Episode WhatsApp sending mode is set to Disabled.',
+      });
+      continue;
+    }
+
+    // Manual mode: works independently even if automation bot is stopped or Meta API is down
+    if (effectiveMode === 'manual') {
+      if (rec.optedOut) {
+        recipients.push({
+          memberId: rec.memberId,
+          memberName: rec.fullName,
+          phoneE164: rec.phone || 'missing',
+          planId: rec.planId,
+          sendingMethod: inAppNotified ? 'in_app' : 'skipped',
+          status: 'skipped_opted_out',
+          inAppNotified,
+          error: 'Customer opted out (STOP).',
+        });
+        continue;
+      }
+      const qRes = enqueueOneClickWhatsAppNotification({
+        idempotencyKey: `episode.published:${broadcastKey}:${rec.memberId}${resendSuffix}`,
+        eventType: 'episode_published',
+        customerName: rec.fullName,
+        customerEmail: rec.email,
+        memberId: rec.memberId,
+        dramaId: drama.id,
+        episodeSlug: cleanSlug,
+        rawPhone: rec.phone,
+        seriesName: drama.title,
+        episodeNumber: params.episodeNumber,
+        episodeLink: episodeUrl,
+        accessType,
+        bypassConsentCheck: true,
+        bypassCategoryGate: true,
+      });
+      if (qRes.ok) {
+        recipients.push({
+          memberId: rec.memberId,
+          memberName: rec.fullName,
+          phoneE164: qRes.notification.recipientPhone,
+          planId: rec.planId,
+          sendingMethod: 'manual_whatsapp',
+          status: qRes.notification.status === 'failed' ? 'failed' : 'queued',
+          manualNotificationId: qRes.notification.id,
+          inAppNotified,
+          error: qRes.notification.failureReason,
+        });
+      } else {
+        recipients.push({
+          memberId: rec.memberId,
+          memberName: rec.fullName,
+          phoneE164: rec.phone || 'missing',
+          planId: rec.planId,
+          sendingMethod: inAppNotified ? 'in_app' : 'skipped',
+          status: 'skipped_no_consent',
+          inAppNotified,
+          error: qRes.reason,
+        });
+      }
+      continue;
+    }
+
+    // Automatic or Automatic + Manual Fallback: respect consent & phone validity honestly
+    if (!rec.phoneValid) {
+      recipients.push({
+        memberId: rec.memberId,
+        memberName: rec.fullName,
+        phoneE164: rec.phone || 'missing',
+        planId: rec.planId,
+        sendingMethod: inAppNotified ? 'in_app' : 'skipped',
+        status: 'skipped_no_consent',
+        inAppNotified,
+        error: rec.phoneError || 'Valid E.164 WhatsApp phone number not on file.',
+      });
+      continue;
+    }
+
+    if (rec.optedOut) {
+      recipients.push({
+        memberId: rec.memberId,
+        memberName: rec.fullName,
+        phoneE164: rec.phone,
+        planId: rec.planId,
+        sendingMethod: inAppNotified ? 'in_app' : 'skipped',
+        status: 'skipped_opted_out',
+        inAppNotified,
+        error: 'Customer opted out of WhatsApp messages (STOP).',
+      });
+      continue;
+    }
+
+    if (!rec.hasConsent) {
+      recipients.push({
+        memberId: rec.memberId,
+        memberName: rec.fullName,
+        phoneE164: rec.phone,
+        planId: rec.planId,
+        sendingMethod: inAppNotified ? 'in_app' : 'skipped',
+        status: 'skipped_no_consent',
+        inAppNotified,
+        error: 'Customer has not opted in to WhatsApp episode alerts (no permission recorded).',
+      });
+      continue;
+    }
+
+    // Create durable queue job for this eligible WhatsApp recipient
+    const job = scheduleAutomationJob({
+      jobType: 'episode_broadcast_delivery',
+      idempotencyKey: `episode.published:${broadcastKey}:${rec.memberId}${resendSuffix}`,
+      runAtIso: nowIso,
+      memberId: rec.memberId,
+      broadcastId,
+      phoneE164: rec.phone,
+      payload: {
+        broadcastId,
+        dramaId: drama.id,
+        dramaTitle: drama.title,
+        episodeSlug: cleanSlug,
+        seasonNumber: Number(params.seasonNumber) || 1,
+        episodeNumber: Number(params.episodeNumber),
+        episodeTitle: params.episodeTitle || `${drama.title} Episode ${params.episodeNumber}`,
+        episodeUrl,
+        accessType,
+        sendingMode: effectiveMode,
+        memberName: rec.fullName,
+        memberEmail: rec.email,
+        planId: rec.planId,
+      },
+    });
+    if (job) queuedJobIds.push(job.id);
+
     recipients.push({
-      memberId: member.id,
-      memberName: member.fullName,
-      phoneE164: phoneE164 || member.phone || 'missing',
-      planId: membership.planId,
-      status,
-      messageLogId: msgLog?.id,
-      error: msgLog?.errorMessage,
+      memberId: rec.memberId,
+      memberName: rec.fullName,
+      phoneE164: rec.phone,
+      planId: rec.planId,
+      sendingMethod: 'cloud_api',
+      status: 'queued',
+      inAppNotified,
     });
   }
 
-  const broadcast: EpisodeBroadcastRecord = {
-    id: makeId('epcast'),
+  let broadcast: EpisodeBroadcastRecord = {
+    id: broadcastId,
     broadcastKey,
     dramaId: drama.id,
     dramaTitle: drama.title,
@@ -1456,22 +2682,41 @@ export async function triggerEpisodePublishedBroadcast(params: {
     episodeSlug: cleanSlug,
     episodeTitle: params.episodeTitle || `${drama.title} Episode ${params.episodeNumber}`,
     episodeUrl,
+    accessType,
+    sendingMode: effectiveMode,
+    broadcastStatus: 'processing',
     isResend: Boolean(params.forceResend && existing),
     triggeredByAdminEmail: params.adminEmail,
-    entitledCount: entitled.length,
-    sentCount,
-    failedCount,
-    skippedCount,
+    totalMatchingCount: targetRecipients.length,
+    entitledCount: targetRecipients.length,
+    eligibleWhatsappCount: targetRecipients.filter((r) => r.eligibleForWhatsapp).length,
+    apiAcceptedCount: 0,
+    sentCount: 0,
+    deliveredCount: 0,
+    readCount: 0,
+    manualQueuedCount: 0,
+    inAppNotifiedCount: 0,
+    failedCount: 0,
+    skippedCount: 0,
     recipients,
-    createdAt: new Date().toISOString(),
+    createdAt: nowIso,
+    updatedAt: nowIso,
   };
 
-  allBroadcasts.unshift(broadcast);
-  writeJson(EPISODE_BROADCASTS_FILE, allBroadcasts.slice(0, 500));
-  void mirrorDocToFirestoreServer('episodeBroadcasts', broadcast.id, {
-    ...broadcast,
-    createdAtIso: broadcast.createdAt,
-  });
+  broadcast = recomputeEpisodeBroadcastCounters(broadcast);
+  saveEpisodeBroadcastRecord(broadcast);
+
+  // Immediately process queued episode broadcast jobs through the worker if automation is RUNNING!
+  if (queuedJobIds.length > 0 && settings.automationRunning) {
+    await runAutomationWorkerCycle({
+      trigger: 'episode_broadcast',
+      targetBroadcastId: broadcast.id,
+    });
+    const refreshed = listEpisodeBroadcasts(200).find((b) => b.id === broadcast.id);
+    if (refreshed) {
+      broadcast = refreshed;
+    }
+  }
 
   if (params.adminId) {
     appendAdminAudit({
@@ -1479,7 +2724,7 @@ export async function triggerEpisodePublishedBroadcast(params: {
       adminEmail: params.adminEmail,
       action: params.forceResend ? 'episode_notification_resent' : 'episode_notification_sent',
       targetId: broadcast.id,
-      details: `${drama.title} S${broadcast.seasonNumber}E${broadcast.episodeNumber}: entitled=${entitled.length}, sent=${sentCount}, skipped=${skippedCount}, failed=${failedCount}`,
+      details: `${drama.title} (${accessType}) S${broadcast.seasonNumber}E${broadcast.episodeNumber}: status=${broadcast.broadcastStatus}, matching=${broadcast.totalMatchingCount}, accepted=${broadcast.apiAcceptedCount}, sent=${broadcast.sentCount}, manualQueued=${broadcast.manualQueuedCount}, inApp=${broadcast.inAppNotifiedCount}, skipped=${broadcast.skippedCount}, failed=${broadcast.failedCount}`,
     });
   }
 
@@ -1955,6 +3200,25 @@ export async function processIncomingWhatsAppWebhookPayload(payload: any): Promi
           }
           msg.updatedAt = now;
           saveWhatsAppMessageLog(msg);
+
+          // Sync live delivery status back into any matching EpisodeBroadcastRecord
+          if (msg.broadcastId) {
+            const allBroadcasts = readJson<EpisodeBroadcastRecord[]>(EPISODE_BROADCASTS_FILE, []);
+            const bIdx = allBroadcasts.findIndex((b) => b.id === msg.broadcastId);
+            if (bIdx >= 0) {
+              const b = allBroadcasts[bIdx];
+              const rec = b.recipients.find(
+                (r) => r.messageLogId === msg.id || r.wamid === wamid || r.memberId === msg.memberId
+              );
+              if (rec) {
+                rec.status = msg.status;
+                rec.wamid = wamid;
+                if (msg.errorMessage) rec.error = msg.errorMessage;
+                recomputeEpisodeBroadcastCounters(b);
+                saveEpisodeBroadcastRecord(b);
+              }
+            }
+          }
         }
       }
 
@@ -2275,27 +3539,37 @@ export async function processIncomingWhatsAppWebhookPayload(payload: any): Promi
   return { processedMessages, processedStatuses, duplicatesIgnored };
 }
 
-// --- SCHEDULED BACKGROUND WORKER (DELAYED REMINDERS + EXPIRY SYNC + RETRY QUEUE) ---
+// --- SCHEDULED BACKGROUND WORKER (ATOMIC LOCKING + MASTER BOT STATE + EPISODE & LIFECYCLE DELIVERY) ---
 let workerRunning = false;
+const WORKER_LOCK_LEASE_MS = 5 * 60 * 1000;
 
-export async function runAutomationWorkerCycle(): Promise<{
+export async function runAutomationWorkerCycle(options?: {
+  trigger?: string;
+  targetBroadcastId?: string;
+  forceEvenIfStopped?: boolean;
+}): Promise<{
   ranAt: string;
+  paused: boolean;
   jobsProcessed: number;
   jobsCancelled: number;
   retriesAttempted: number;
   expiryJobsEnsured: number;
+  summary: string;
 }> {
   if (workerRunning) {
     return {
       ranAt: new Date().toISOString(),
+      paused: false,
       jobsProcessed: 0,
       jobsCancelled: 0,
       retriesAttempted: 0,
       expiryJobsEnsured: 0,
+      summary: 'Worker cycle already in progress.',
     };
   }
   workerRunning = true;
   const ranAt = new Date().toISOString();
+  const lockOwner = `worker_${process.pid}_${Date.now().toString(36)}`;
   let jobsProcessed = 0;
   let jobsCancelled = 0;
   let retriesAttempted = 0;
@@ -2303,30 +3577,58 @@ export async function runAutomationWorkerCycle(): Promise<{
 
   try {
     const settings = getAutomationSettings();
+
+    // Respect persisted Master START/STOP Automation Bot switch!
+    if (!settings.automationRunning && !options?.forceEvenIfStopped) {
+      saveAutomationSettings({
+        lastWorkerHeartbeatAt: ranAt,
+        lastWorkerSummary: 'Automation Bot is STOPPED. Pending automatic jobs paused safely.',
+      });
+      return {
+        ranAt,
+        paused: true,
+        jobsProcessed: 0,
+        jobsCancelled: 0,
+        retriesAttempted: 0,
+        expiryJobsEnsured: 0,
+        summary: 'Automation Bot is STOPPED. Pending jobs preserved; manual WhatsApp sending remains available.',
+      };
+    }
+
     const { members, orders, memberships } = getAutomationMembershipSnapshot();
+    const blockedSets = getBlockedLookupSets();
+    const isBlockedMember = (m?: { email?: string; phone?: string }) => {
+      if (!m) return false;
+      const e = String(m.email || '').trim().toLowerCase();
+      const p = normalizeBlockedPhone(m.phone);
+      return (Boolean(e) && blockedSets.emails.has(e)) || (Boolean(p) && blockedSets.phones.has(p));
+    };
+
     const memberMap = new Map(members.map((m) => [m.id, m]));
     const orderMap = new Map(orders.map((o) => [o.id, o]));
     const membershipMap = new Map(memberships.map((s) => [s.id, s]));
     const nowMs = Date.now();
 
-    // 1. Ensure expiry reminder jobs exist for all currently active memberships
+    // 1. Ensure future expiry reminder jobs exist for currently active non-blocked memberships
     for (const sub of memberships) {
       if (sub.status !== 'active') continue;
       const expMs = Date.parse(sub.expiresAt);
       if (Number.isNaN(expMs)) continue;
       const member = memberMap.get(sub.memberId);
+      if (isBlockedMember(member)) continue;
+
       const milestones: Array<{ jobType: AutomationJobType; offsetDays: number }> = [
         { jobType: 'membership_expiry_7d', offsetDays: 7 },
         { jobType: 'membership_expiry_3d', offsetDays: 3 },
         { jobType: 'membership_expiry_1d', offsetDays: 1 },
         { jobType: 'membership_expired', offsetDays: 0 },
       ];
+      const existingJobsSnapshot = readJson<AutomationScheduledJob[]>(AUTOMATION_JOBS_FILE, []);
       for (const m of milestones) {
         const runAtMs = expMs - m.offsetDays * 24 * 60 * 60 * 1000;
         if (runAtMs < nowMs - 24 * 60 * 60 * 1000) continue;
         const key = `${m.jobType}:${sub.id}:${sub.expiresAt}`;
-        const existingJobs = readJson<AutomationScheduledJob[]>(AUTOMATION_JOBS_FILE, []);
-        if (!existingJobs.some((j) => j.idempotencyKey === key)) {
+        if (!existingJobsSnapshot.some((j) => j.idempotencyKey === key)) {
           scheduleAutomationJob({
             jobType: m.jobType,
             idempotencyKey: key,
@@ -2336,6 +3638,7 @@ export async function runAutomationWorkerCycle(): Promise<{
             phoneE164: normalizePhoneE164(member?.phone || sub.customerPhone) || undefined,
             payload: {
               memberName: member?.fullName || sub.customerName || 'Member',
+              email: member?.email || sub.customerEmail,
               planName: sub.planName,
               expiresAt: sub.expiresAt,
             },
@@ -2345,25 +3648,175 @@ export async function runAutomationWorkerCycle(): Promise<{
       }
     }
 
-    // 2. Process due pending scheduled jobs
+    // 2. Recover stale locks (crash safety) and atomically claim due pending jobs
     const allJobs = readJson<AutomationScheduledJob[]>(AUTOMATION_JOBS_FILE, []);
+    let locksChanged = false;
     for (const job of allJobs) {
-      if (job.status !== 'pending') continue;
+      if (
+        job.status === 'processing' &&
+        job.lockExpiresAt &&
+        Date.parse(job.lockExpiresAt) <= nowMs
+      ) {
+        job.status = 'pending';
+        job.lockedAt = undefined;
+        job.lockOwner = undefined;
+        job.lockExpiresAt = undefined;
+        job.updatedAt = ranAt;
+        locksChanged = true;
+      }
+    }
+    if (locksChanged) {
+      writeJson(AUTOMATION_JOBS_FILE, allJobs);
+    }
+
+    const dueJobs = allJobs.filter((job) => {
+      if (job.status !== 'pending') return false;
+      if (options?.targetBroadcastId && job.broadcastId !== options.targetBroadcastId) return false;
       const runMs = Date.parse(job.runAt);
-      if (Number.isNaN(runMs) || runMs > nowMs) continue;
+      return !Number.isNaN(runMs) && runMs <= nowMs;
+    });
 
-      job.attempts += 1;
+    for (const job of dueJobs) {
+      // Re-check persisted switch before claiming each job so STOP AUTOMATION halts cleanly between jobs
+      if (!options?.forceEvenIfStopped && !getAutomationSettings().automationRunning) {
+        break;
+      }
+
       const nowIso = new Date().toISOString();
+      job.status = 'processing';
+      job.lockedAt = nowIso;
+      job.lockOwner = lockOwner;
+      job.lockExpiresAt = new Date(Date.now() + WORKER_LOCK_LEASE_MS).toISOString();
+      job.attempts = (job.attempts || 0) + 1;
+      job.updatedAt = nowIso;
+      saveAutomationJob(job);
 
-      if (job.jobType === 'signup_no_package_30m') {
-        const member = job.memberId ? memberMap.get(job.memberId) : undefined;
+      const finishJob = (status: 'completed' | 'cancelled' | 'failed', note?: string) => {
+        const doneIso = new Date().toISOString();
+        job.status = status;
+        job.lockedAt = undefined;
+        job.lockOwner = undefined;
+        job.lockExpiresAt = undefined;
+        if (status === 'completed') job.completedAt = doneIso;
+        if (status === 'cancelled' && note) job.cancelReason = note;
+        if (status === 'failed' && note) job.lastError = note;
+        job.updatedAt = doneIso;
+        saveAutomationJob(job);
+      };
+
+      // Cancel immediately if member is permanently blocked
+      const jobMember = job.memberId ? memberMap.get(job.memberId) : undefined;
+      if (isBlockedMember(jobMember)) {
+        finishJob('cancelled', 'Recipient account/phone is permanently blocked.');
+        jobsCancelled += 1;
+        continue;
+      }
+
+      if (job.jobType === 'episode_broadcast_delivery') {
+        const p = job.payload || {};
+        const drama = p.dramaId ? getDramaById(p.dramaId) : undefined;
+        const accessLabel = p.accessType === 'free' ? 'Free' : 'Premium';
+
+        // Security check: if Premium episode, verify member is STILL actively entitled right before sending!
+        if (p.accessType !== 'free' && p.dramaId && job.memberId) {
+          const stillEntitled = getEntitledActiveMembersForDrama(p.dramaId).some(
+            (e) => e.member.id === job.memberId
+          );
+          if (!stillEntitled) {
+            finishJob('cancelled', 'Member is no longer actively entitled to this Premium drama.');
+            jobsCancelled += 1;
+            continue;
+          }
+        }
+
+        const msgLog = await dispatchTemplateWhatsAppNotification({
+          idempotencyKey: job.idempotencyKey,
+          eventType: 'episode.published',
+          templateName: 'feviqo_new_episode',
+          bodyParameters: [
+            p.dramaTitle || drama?.title || 'FEVIQO Drama',
+            String(p.episodeNumber || 1),
+            accessLabel,
+            p.episodeUrl || 'https://feviqo.com/dramas',
+          ],
+          recipientPhone: jobMember?.phone || job.phoneE164,
+          recipientName: jobMember?.fullName || p.memberName,
+          memberId: job.memberId,
+          broadcastId: job.broadcastId,
+          categoryKey: 'episodes',
+          sendingModeOverride: p.sendingMode,
+          manualFallbackSpec: {
+            eventType: 'episode_published',
+            customerEmail: jobMember?.email || p.memberEmail,
+            dramaId: p.dramaId,
+            episodeSlug: p.episodeSlug,
+            seriesName: p.dramaTitle || drama?.title,
+            episodeNumber: p.episodeNumber,
+            episodeLink: p.episodeUrl,
+            accessType: p.accessType === 'free' ? 'free' : 'premium',
+          },
+          ruleEnabled: settings.rules.episodePublishedAlerts,
+        });
+
+        // Update matching EpisodeBroadcastRecord recipient & counters
+        if (job.broadcastId) {
+          const allB = readJson<EpisodeBroadcastRecord[]>(EPISODE_BROADCASTS_FILE, []);
+          const b = allB.find((x) => x.id === job.broadcastId);
+          if (b) {
+            const rec = b.recipients.find((r) => r.memberId === job.memberId);
+            if (rec && msgLog) {
+              rec.status = msgLog.status;
+              rec.wamid = msgLog.wamid;
+              rec.httpStatus = msgLog.httpStatus;
+              rec.messageLogId = msgLog.id;
+              rec.manualNotificationId = msgLog.manualFallbackNotificationId || rec.manualNotificationId;
+              rec.sendingMethod = msgLog.manualFallbackNotificationId ? 'manual_whatsapp' : 'cloud_api';
+              rec.error = msgLog.errorMessage;
+            }
+            recomputeEpisodeBroadcastCounters(b);
+            saveEpisodeBroadcastRecord(b);
+          }
+        }
+
+        finishJob(msgLog?.status === 'failed' ? 'failed' : 'completed', msgLog?.errorMessage);
+        jobsProcessed += 1;
+        continue;
+      }
+
+      if (job.jobType === 'historical_campaign_delivery') {
+        const p = job.payload || {};
+        const msgLog = await dispatchTemplateWhatsAppNotification({
+          idempotencyKey: job.idempotencyKey,
+          eventType: p.eventType || 'campaign.manual_broadcast',
+          templateName: p.templateName || 'feviqo_membership_incomplete',
+          bodyParameters: Array.isArray(p.bodyParameters)
+            ? p.bodyParameters
+            : [jobMember?.fullName || p.memberName || 'Member', 'https://feviqo.com/membership'],
+          recipientPhone: jobMember?.phone || job.phoneE164,
+          recipientName: jobMember?.fullName || p.memberName,
+          memberId: job.memberId,
+          categoryKey: p.categoryKey || 'unpaid_followups',
+          sendingModeOverride: p.sendingMode,
+          manualFallbackSpec: {
+            eventType: p.manualEventType || 'signup_followup_unpaid',
+            customerEmail: jobMember?.email || p.memberEmail,
+          },
+          ruleEnabled: true,
+        });
+        finishJob(msgLog?.status === 'failed' ? 'failed' : 'completed', msgLog?.errorMessage);
+        jobsProcessed += 1;
+        continue;
+      }
+
+      if (
+        job.jobType === 'signup_no_package_30m' ||
+        job.jobType === 'signup_no_package_24h' ||
+        job.jobType === 'signup_no_package_72h'
+      ) {
         const hasAnyOrder = orders.some((o) => o.memberId === job.memberId);
         const hasAnySub = memberships.some((s) => s.memberId === job.memberId);
-        if (!member || hasAnyOrder || hasAnySub) {
-          job.status = 'cancelled';
-          job.cancelReason = 'User already selected a package or has a membership.';
-          job.updatedAt = nowIso;
-          saveAutomationJob(job);
+        if (!jobMember || hasAnyOrder || hasAnySub) {
+          finishJob('cancelled', 'User already selected a package or has a membership.');
           jobsCancelled += 1;
           continue;
         }
@@ -2371,28 +3824,30 @@ export async function runAutomationWorkerCycle(): Promise<{
           idempotencyKey: job.idempotencyKey,
           eventType: 'membership.incomplete_signup',
           templateName: 'feviqo_membership_incomplete',
-          bodyParameters: [member.fullName || 'Member', 'https://feviqo.com/membership'],
-          recipientPhone: member.phone || job.phoneE164,
-          recipientName: member.fullName,
-          memberId: member.id,
+          bodyParameters: [jobMember.fullName || 'Member', 'https://feviqo.com/membership'],
+          recipientPhone: jobMember.phone || job.phoneE164,
+          recipientName: jobMember.fullName,
+          memberId: jobMember.id,
+          categoryKey: 'unpaid_followups',
+          manualFallbackSpec: {
+            eventType: 'signup_followup_unpaid',
+            customerEmail: jobMember.email,
+          },
           ruleEnabled: settings.rules.signupNoPackageReminder,
         });
-        job.status = 'completed';
-        job.completedAt = nowIso;
-        job.updatedAt = nowIso;
-        saveAutomationJob(job);
+        finishJob('completed');
         jobsProcessed += 1;
         continue;
       }
 
-      if (job.jobType === 'checkout_abandoned_reminder') {
+      if (
+        job.jobType === 'checkout_abandoned_reminder' ||
+        job.jobType === 'checkout_abandoned_24h' ||
+        job.jobType === 'checkout_abandoned_72h'
+      ) {
         const order = job.orderId ? orderMap.get(job.orderId) : undefined;
-        const member = job.memberId ? memberMap.get(job.memberId) : undefined;
-        if (!order || order.status !== 'awaiting_payment' || !member) {
-          job.status = 'cancelled';
-          job.cancelReason = `Order is no longer awaiting_payment (status=${order?.status || 'missing'}).`;
-          job.updatedAt = nowIso;
-          saveAutomationJob(job);
+        if (!order || order.status !== 'awaiting_payment' || !jobMember) {
+          finishJob('cancelled', `Order is no longer awaiting_payment (status=${order?.status || 'missing'}).`);
           jobsCancelled += 1;
           continue;
         }
@@ -2405,21 +3860,26 @@ export async function runAutomationWorkerCycle(): Promise<{
           eventType: 'membership.payment_pending',
           templateName: 'feviqo_checkout_reminder',
           bodyParameters: [
-            member.fullName || 'Member',
+            jobMember.fullName || 'Member',
             order.planName,
             amountDisplay,
             order.id,
             'https://feviqo.com/account',
           ],
-          recipientPhone: member.phone || job.phoneE164,
-          recipientName: member.fullName,
-          memberId: member.id,
+          recipientPhone: jobMember.phone || job.phoneE164,
+          recipientName: jobMember.fullName,
+          memberId: jobMember.id,
+          categoryKey: 'unpaid_followups',
+          manualFallbackSpec: {
+            eventType: 'unpaid_plan_reminder',
+            customerEmail: jobMember.email,
+            orderId: order.id,
+            planName: order.planName,
+            amountDisplay,
+          },
           ruleEnabled: settings.rules.checkoutAbandonedReminder,
         });
-        job.status = 'completed';
-        job.completedAt = nowIso;
-        job.updatedAt = nowIso;
-        saveAutomationJob(job);
+        finishJob('completed');
         jobsProcessed += 1;
         continue;
       }
@@ -2431,7 +3891,6 @@ export async function runAutomationWorkerCycle(): Promise<{
         job.jobType === 'membership_expired'
       ) {
         const sub = job.membershipId ? membershipMap.get(job.membershipId) : undefined;
-        const member = job.memberId ? memberMap.get(job.memberId) : undefined;
 
         const isCancelledOrRenewed =
           !sub ||
@@ -2439,31 +3898,32 @@ export async function runAutomationWorkerCycle(): Promise<{
           sub.expiresAt !== job.payload?.expiresAt ||
           (job.jobType !== 'membership_expired' && sub.status !== 'active');
 
-        if (isCancelledOrRenewed || !member) {
-          job.status = 'cancelled';
-          job.cancelReason = 'Membership was renewed, cancelled, or revoked.';
-          job.updatedAt = nowIso;
-          saveAutomationJob(job);
+        if (isCancelledOrRenewed || !jobMember) {
+          finishJob('cancelled', 'Membership was renewed, cancelled, or revoked.');
           jobsCancelled += 1;
           continue;
         }
 
-        const tplMap: Record<string, { name: string; enabled: boolean }> = {
+        const tplMap: Record<string, { name: string; enabled: boolean; manualType: OneClickEventType }> = {
           membership_expiry_7d: {
             name: 'feviqo_membership_expiry_7_days',
             enabled: settings.rules.expiryReminder7Days,
+            manualType: 'expiry_reminder_7d',
           },
           membership_expiry_3d: {
             name: 'feviqo_membership_expiry_3_days',
             enabled: settings.rules.expiryReminder3Days,
+            manualType: 'expiry_reminder_3d',
           },
           membership_expiry_1d: {
             name: 'feviqo_membership_expiry_1_day',
             enabled: settings.rules.expiryReminder1Day,
+            manualType: 'expiry_reminder_1d',
           },
           membership_expired: {
             name: 'feviqo_membership_expired',
             enabled: settings.rules.expiryOnExpired,
+            manualType: 'membership_expired',
           },
         };
         const chosen = tplMap[job.jobType];
@@ -2472,20 +3932,25 @@ export async function runAutomationWorkerCycle(): Promise<{
           eventType: job.jobType === 'membership_expired' ? 'membership.expired' : 'membership.expiring',
           templateName: chosen.name,
           bodyParameters: [
-            member.fullName || 'Member',
+            jobMember.fullName || 'Member',
             sub.planName,
             formatReadableDate(sub.expiresAt),
             'https://feviqo.com/membership',
           ],
-          recipientPhone: member.phone || sub.customerPhone || job.phoneE164,
-          recipientName: member.fullName,
-          memberId: member.id,
+          recipientPhone: jobMember.phone || sub.customerPhone || job.phoneE164,
+          recipientName: jobMember.fullName,
+          memberId: jobMember.id,
+          categoryKey: 'expiry',
+          manualFallbackSpec: {
+            eventType: chosen.manualType,
+            customerEmail: jobMember.email,
+            membershipId: sub.id,
+            planName: sub.planName,
+            expiryDate: sub.expiresAt,
+          },
           ruleEnabled: chosen.enabled,
         });
-        job.status = 'completed';
-        job.completedAt = nowIso;
-        job.updatedAt = nowIso;
-        saveAutomationJob(job);
+        finishJob('completed');
         jobsProcessed += 1;
         continue;
       }
@@ -2504,10 +3969,7 @@ export async function runAutomationWorkerCycle(): Promise<{
           (lead.lastLeadReplyAt && Date.parse(lead.lastLeadReplyAt) > Date.parse(job.createdAt));
 
         if (stopLead) {
-          job.status = 'cancelled';
-          job.cancelReason = 'Lead replied, booked, closed, opted out, or reached frequency limit.';
-          job.updatedAt = nowIso;
-          saveAutomationJob(job);
+          finishJob('cancelled', 'Lead replied, booked, closed, opted out, or reached frequency limit.');
           jobsCancelled += 1;
           continue;
         }
@@ -2532,43 +3994,324 @@ export async function runAutomationWorkerCycle(): Promise<{
           recipientPhone: lead.whatsappE164 || job.phoneE164,
           recipientName: lead.fullName,
           leadId: lead.id,
+          categoryKey: 'creative_enquiries',
+          manualFallbackSpec: {
+            eventType: 'creative_enquiry',
+            customerEmail: lead.email,
+            serviceName: lead.editingService,
+          },
           ruleEnabled: Boolean(ruleEnabledMap[job.jobType]),
           explicitLeadConsent: lead.whatsappConsent,
         });
 
-        if (msgLog?.status === 'sent') {
+        if (msgLog?.status === 'api_accepted' || msgLog?.status === 'sent') {
           lead.followUpsSentCount = (lead.followUpsSentCount || 0) + 1;
-          lead.updatedAt = nowIso;
+          lead.updatedAt = new Date().toISOString();
           saveVideoEditingLead(lead);
         }
 
-        job.status = 'completed';
-        job.completedAt = nowIso;
-        job.updatedAt = nowIso;
-        saveAutomationJob(job);
+        finishJob('completed');
         jobsProcessed += 1;
       }
     }
 
-    // 3. Process due failed-message retries with exponential backoff
-    const allMsgs = readJson<WhatsAppMessageLog[]>(WA_MESSAGES_FILE, []);
-    for (const msg of allMsgs) {
-      if (msg.direction !== 'outbound' || msg.status !== 'failed') continue;
-      if (!msg.nextRetryAt || msg.attempts >= (msg.maxAttempts || 4)) continue;
-      if (Date.parse(msg.nextRetryAt) <= nowMs) {
-        await retryFailedWhatsAppMessage(msg.id);
-        retriesAttempted += 1;
+    // 3. Process due failed-message retries with exponential backoff (only on general worker runs)
+    if (!options?.targetBroadcastId) {
+      const allMsgs = readJson<WhatsAppMessageLog[]>(WA_MESSAGES_FILE, []);
+      for (const msg of allMsgs) {
+        if (msg.direction !== 'outbound' || msg.status !== 'failed') continue;
+        if (!msg.nextRetryAt || msg.attempts >= (msg.maxAttempts || 4)) continue;
+        if (Date.parse(msg.nextRetryAt) <= nowMs) {
+          await retryFailedWhatsAppMessage(msg.id);
+          retriesAttempted += 1;
+        }
       }
     }
 
-    saveAutomationSettings({ lastWorkerRunAt: ranAt });
+    const summary = `Processed ${jobsProcessed} job(s), cancelled ${jobsCancelled}, retried ${retriesAttempted}, ensured ${expiryJobsEnsured} expiry schedule(s).`;
+    saveAutomationSettings({
+      lastWorkerRunAt: ranAt,
+      lastWorkerHeartbeatAt: ranAt,
+      lastSuccessfulRunAt: ranAt,
+      lastWorkerSummary: summary,
+    });
+    return { ranAt, paused: false, jobsProcessed, jobsCancelled, retriesAttempted, expiryJobsEnsured, summary };
   } catch (err) {
     console.warn('[AutomationWorker] Cycle error:', err);
+    return {
+      ranAt,
+      paused: false,
+      jobsProcessed,
+      jobsCancelled,
+      retriesAttempted,
+      expiryJobsEnsured,
+      summary: `Worker error: ${(err as Error)?.message || 'Unknown error'}`,
+    };
   } finally {
     workerRunning = false;
   }
+}
 
-  return { ranAt, jobsProcessed, jobsCancelled, retriesAttempted, expiryJobsEnsured };
+// --- CUSTOMER AUDIENCE SEGMENTATION (REAL FIRESTORE/BACKEND DATA) ---
+export interface CustomerAudienceSegments {
+  totalRegistered: number;
+  blockedAccounts: number;
+  whatsappEligible: number;
+  withoutWhatsappPermission: number;
+  optedOut: number;
+  invalidPhones: number;
+  neverPurchased: number;
+  selectedPlanUnpaid: number;
+  paymentProofSubmitted: number;
+  awaitingAdminApproval: number;
+  activePaidMembers: number;
+  expiredMembers: number;
+  cancelledMembers: number;
+  rejectedPaymentCustomers: number;
+  pendingRenewals: number;
+}
+
+export function computeCustomerAudienceSegments(): CustomerAudienceSegments {
+  const { members, orders, memberships } = getAutomationMembershipSnapshot();
+  const blockedSets = getBlockedLookupSets();
+  const isBlocked = (email?: string, phone?: string) => {
+    const e = String(email || '').trim().toLowerCase();
+    const p = normalizeBlockedPhone(phone);
+    return (Boolean(e) && blockedSets.emails.has(e)) || (Boolean(p) && blockedSets.phones.has(p));
+  };
+
+  const nonBlocked = members.filter((m) => !isBlocked(m.email, m.phone));
+  const nowMs = Date.now();
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+  let whatsappEligible = 0;
+  let withoutWhatsappPermission = 0;
+  let optedOut = 0;
+  let invalidPhones = 0;
+  let neverPurchased = 0;
+  let selectedPlanUnpaid = 0;
+  let paymentProofSubmitted = 0;
+  let activePaidMembers = 0;
+  let expiredMembers = 0;
+  let cancelledMembers = 0;
+  let rejectedPaymentCustomers = 0;
+  let pendingRenewals = 0;
+
+  for (const m of nonBlocked) {
+    const formatted = formatWhatsAppRecipient(m.phone);
+    const pref = getMemberNotificationPreferences({ memberId: m.id, phone: m.phone });
+
+    if (!formatted.valid) {
+      invalidPhones += 1;
+    } else if (pref?.optedOut) {
+      optedOut += 1;
+    } else if (pref && (pref.membershipUpdates || pref.renewalReminders || pref.newEpisodeAlerts)) {
+      whatsappEligible += 1;
+    } else {
+      withoutWhatsappPermission += 1;
+    }
+
+    const mOrders = orders.filter((o) => o.memberId === m.id);
+    const mSubs = memberships.filter((s) => s.memberId === m.id);
+    const activeSubs = mSubs.filter((s) => s.status === 'active' && Date.parse(s.expiresAt) > nowMs);
+
+    if (mOrders.length === 0 && mSubs.length === 0) {
+      neverPurchased += 1;
+    }
+    if (mOrders.some((o) => o.status === 'awaiting_payment')) {
+      selectedPlanUnpaid += 1;
+    }
+    if (mOrders.some((o) => o.status === 'pending_verification')) {
+      paymentProofSubmitted += 1;
+    }
+    if (activeSubs.length > 0) {
+      activePaidMembers += 1;
+      if (activeSubs.some((s) => Date.parse(s.expiresAt) - nowMs <= sevenDaysMs)) {
+        pendingRenewals += 1;
+      }
+    } else if (mSubs.some((s) => s.status === 'expired' || (s.status === 'active' && Date.parse(s.expiresAt) <= nowMs))) {
+      expiredMembers += 1;
+    } else if (mSubs.some((s) => s.status === 'cancelled')) {
+      cancelledMembers += 1;
+    }
+    if (mOrders.some((o) => o.status === 'rejected') && activeSubs.length === 0) {
+      rejectedPaymentCustomers += 1;
+    }
+  }
+
+  return {
+    totalRegistered: nonBlocked.length,
+    blockedAccounts: listBlockedUsers().length,
+    whatsappEligible,
+    withoutWhatsappPermission,
+    optedOut,
+    invalidPhones,
+    neverPurchased,
+    selectedPlanUnpaid,
+    paymentProofSubmitted,
+    awaitingAdminApproval: paymentProofSubmitted,
+    activePaidMembers,
+    expiredMembers,
+    cancelledMembers,
+    rejectedPaymentCustomers,
+    pendingRenewals,
+  };
+}
+
+// --- HISTORICAL CAMPAIGN PREVIEW & EXPLICIT ADMIN LAUNCH (NEVER RUNS ON DEPLOY) ---
+export type HistoricalCampaignSegment =
+  | 'never_purchased'
+  | 'selected_plan_unpaid'
+  | 'expired_members'
+  | 'pending_renewals'
+  | 'all_consented';
+
+export function previewHistoricalCampaign(segment: HistoricalCampaignSegment) {
+  const { members, orders, memberships } = getAutomationMembershipSnapshot();
+  const blockedSets = getBlockedLookupSets();
+  const nowMs = Date.now();
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+  const matching = members.filter((m) => {
+    const e = String(m.email || '').trim().toLowerCase();
+    const p = normalizeBlockedPhone(m.phone);
+    if ((e && blockedSets.emails.has(e)) || (p && blockedSets.phones.has(p))) return false;
+    const mOrders = orders.filter((o) => o.memberId === m.id);
+    const mSubs = memberships.filter((s) => s.memberId === m.id);
+    const hasActive = mSubs.some((s) => s.status === 'active' && Date.parse(s.expiresAt) > nowMs);
+
+    switch (segment) {
+      case 'never_purchased':
+        return mOrders.length === 0 && mSubs.length === 0;
+      case 'selected_plan_unpaid':
+        return mOrders.some((o) => o.status === 'awaiting_payment') && !hasActive;
+      case 'expired_members':
+        return !hasActive && mSubs.some((s) => s.status === 'expired' || Date.parse(s.expiresAt) <= nowMs);
+      case 'pending_renewals':
+        return mSubs.some((s) => s.status === 'active' && Date.parse(s.expiresAt) > nowMs && Date.parse(s.expiresAt) - nowMs <= sevenDaysMs);
+      case 'all_consented':
+        return true;
+    }
+  });
+
+  const recipients = matching.map((m) => {
+    const formatted = formatWhatsAppRecipient(m.phone);
+    const pref = getMemberNotificationPreferences({ memberId: m.id, phone: m.phone });
+    const eligible = Boolean(
+      formatted.valid && pref && !pref.optedOut && (pref.membershipUpdates || pref.renewalReminders || pref.promotionalMessages)
+    );
+    return {
+      memberId: m.id,
+      fullName: m.fullName,
+      email: m.email,
+      maskedPhone: maskPhoneForDisplay(formatted.valid ? formatted.e164 : m.phone),
+      phoneValid: formatted.valid,
+      eligibleForAutomatic: eligible,
+      optedOut: Boolean(pref?.optedOut),
+    };
+  });
+
+  return {
+    segment,
+    totalMatching: recipients.length,
+    eligibleAutomaticCount: recipients.filter((r) => r.eligibleForAutomatic).length,
+    validPhoneManualCount: recipients.filter((r) => r.phoneValid && !r.optedOut).length,
+    optedOutCount: recipients.filter((r) => r.optedOut).length,
+    recipients: recipients.slice(0, 100),
+  };
+}
+
+export async function launchHistoricalCampaign(params: {
+  segment: HistoricalCampaignSegment;
+  sendingMode: WhatsAppSendingMode;
+  admin: { id: string; email: string };
+}) {
+  const preview = previewHistoricalCampaign(params.segment);
+  const campaignId = makeId('camp');
+  const nowIso = new Date().toISOString();
+  const { members } = getAutomationMembershipSnapshot();
+  const memberMap = new Map(members.map((m) => [m.id, m]));
+
+  let queuedAutomatic = 0;
+  let queuedManual = 0;
+  let skipped = 0;
+
+  for (const r of preview.recipients) {
+    const member = memberMap.get(r.memberId);
+    if (!member || r.optedOut || !r.phoneValid) {
+      skipped += 1;
+      continue;
+    }
+    const manualEventType: OneClickEventType =
+      params.segment === 'selected_plan_unpaid'
+        ? 'unpaid_plan_reminder'
+        : params.segment === 'expired_members'
+        ? 'membership_expired'
+        : params.segment === 'pending_renewals'
+        ? 'expiry_reminder_7d'
+        : 'signup_followup_unpaid';
+
+    if (params.sendingMode === 'manual') {
+      const qRes = enqueueOneClickWhatsAppNotification({
+        idempotencyKey: `campaign:${campaignId}:${member.id}`,
+        eventType: manualEventType,
+        customerName: member.fullName,
+        customerEmail: member.email,
+        memberId: member.id,
+        rawPhone: member.phone,
+        bypassConsentCheck: true,
+        bypassCategoryGate: true,
+      });
+      if (qRes.ok) queuedManual += 1;
+      else skipped += 1;
+    } else if (params.sendingMode === 'automatic' || params.sendingMode === 'automatic_with_fallback') {
+      if (!r.eligibleForAutomatic && params.sendingMode === 'automatic') {
+        skipped += 1;
+        continue;
+      }
+      scheduleAutomationJob({
+        jobType: 'historical_campaign_delivery',
+        idempotencyKey: `campaign:${campaignId}:${member.id}`,
+        runAtIso: nowIso,
+        memberId: member.id,
+        phoneE164: normalizePhoneE164(member.phone) || undefined,
+        payload: {
+          campaignId,
+          segment: params.segment,
+          sendingMode: params.sendingMode,
+          templateName: 'feviqo_membership_incomplete',
+          manualEventType,
+          memberName: member.fullName,
+          memberEmail: member.email,
+          bodyParameters: [member.fullName || 'Member', 'https://feviqo.com/membership'],
+        },
+      });
+      queuedAutomatic += 1;
+    }
+  }
+
+  if (queuedAutomatic > 0 && getAutomationSettings().automationRunning) {
+    await runAutomationWorkerCycle({ trigger: `campaign:${campaignId}` });
+  }
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'historical_campaign_launched',
+    targetId: campaignId,
+    details: `Segment=${params.segment}, mode=${params.sendingMode}, automaticQueued=${queuedAutomatic}, manualQueued=${queuedManual}, skipped=${skipped}`,
+  });
+
+  return {
+    ok: true,
+    campaignId,
+    segment: params.segment,
+    sendingMode: params.sendingMode,
+    queuedAutomatic,
+    queuedManual,
+    skipped,
+    automationRunning: getAutomationSettings().automationRunning,
+  };
 }
 
 // --- HYDRATE FROM FIRESTORE ON BOOT ---
@@ -2636,8 +4379,11 @@ export function getAdminAutomationOverview() {
   const failedWebhookEvents = webhookEvents.filter(
     (e) => e.status === 'rejected' || e.status === 'error'
   );
+  const audienceSegments = computeCustomerAudienceSegments();
+  const manualDashboard = getOneClickNotificationsDashboard({ limit: 50 });
 
   const outbound = messages.filter((m) => m.direction === 'outbound');
+  const apiAcceptedCount = outbound.filter((m) => m.status === 'api_accepted').length;
   const sentCount = outbound.filter((m) => m.status === 'sent').length;
   const deliveredCount = outbound.filter((m) => m.status === 'delivered').length;
   const readCount = outbound.filter((m) => m.status === 'read').length;
@@ -2649,19 +4395,19 @@ export function getAdminAutomationOverview() {
   const billableUtility = outbound.filter(
     (m) =>
       m.templateCategory === 'UTILITY' &&
-      (m.status === 'sent' || m.status === 'delivered' || m.status === 'read')
+      (m.status === 'api_accepted' || m.status === 'sent' || m.status === 'delivered' || m.status === 'read')
   ).length;
   const billableMarketing = outbound.filter(
     (m) =>
       m.templateCategory === 'MARKETING' &&
-      (m.status === 'sent' || m.status === 'delivered' || m.status === 'read')
+      (m.status === 'api_accepted' || m.status === 'sent' || m.status === 'delivered' || m.status === 'read')
   ).length;
   const estimatedTotalCostUsd = Number(
     outbound.reduce((sum, m) => sum + (Number(m.estimatedCostUsd) || 0), 0).toFixed(4)
   );
 
   const retryQueue = outbound.filter((m) => m.status === 'failed' || m.status === 'not_configured');
-  const pendingJobs = jobs.filter((j) => j.status === 'pending');
+  const pendingJobs = jobs.filter((j) => j.status === 'pending' || j.status === 'processing');
 
   const templates = WHATSAPP_TEMPLATES_CATALOG.map((tpl) => ({
     ...tpl,
@@ -2680,19 +4426,26 @@ export function getAdminAutomationOverview() {
       releaseDate: ep.releaseDate,
       accessType: ep.accessType,
     })),
-    audience: previewEpisodeNotificationAudience(d.id),
+    audience: previewEpisodeNotificationAudience(d.id, { accessType: 'premium' }),
+    freeAudience: previewEpisodeNotificationAudience(d.id, { accessType: 'free' }),
   }));
 
   return {
     envStatus,
     aiConfigured: isAiAssistantConfigured(),
     settings,
+    audienceSegments,
+    manualQueueStats: manualDashboard.stats,
     stats: {
       totalOutbound: outbound.length,
       totalInbound: inboundCount,
+      apiAccepted: apiAcceptedCount,
       sent: sentCount,
       delivered: deliveredCount,
       read: readCount,
+      openedInWhatsApp: manualDashboard.stats.opened,
+      manuallyConfirmedSent: manualDashboard.stats.confirmedSent,
+      manualPending: manualDashboard.stats.pending,
       failed: failedCount,
       notConfigured: notConfiguredCount,
       skipped: skippedCount,

@@ -166,6 +166,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const [blockingMemberId, setBlockingMemberId] = useState<string | null>(null);
   const [blockReasonInput, setBlockReasonInput] = useState('');
   const [directBlockEmailInput, setDirectBlockEmailInput] = useState('');
+  const [directBlockPhoneInput, setDirectBlockPhoneInput] = useState('');
   const [directBlockReasonInput, setDirectBlockReasonInput] = useState('');
   const [blockedSearch, setBlockedSearch] = useState('');
 
@@ -238,7 +239,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   const [assignPlanId, setAssignPlanId] = useState<MembershipPlanId>('vip');
   const [assignDurationDays, setAssignDurationDays] = useState('30');
   const [assignDramaIds, setAssignDramaIds] = useState<string[]>(
-    MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id)
+    MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id)
   );
   const [assignNote, setAssignNote] = useState('');
   const [assignSubmitting, setAssignSubmitting] = useState(false);
@@ -965,6 +966,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
   const handleBlockUserEmail = async (params: {
     email?: string;
+    phone?: string;
     memberId?: string;
     reason?: string;
   }) => {
@@ -979,19 +981,35 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setBlockingMemberId(null);
         setBlockReasonInput('');
         setDirectBlockEmailInput('');
+        setDirectBlockPhoneInput('');
         setDirectBlockReasonInput('');
         if (isFirebaseAdminUser()) {
           syncBlockedUserToFirestore(res.blockedUser)
             .then(() => setCloudSyncedAt(new Date().toISOString()))
             .catch(() => {});
         }
+        const cleanupParts: string[] = [];
+        if (res.blockedUser.phone) cleanupParts.push(`phone ${res.blockedUser.phone} blocked`);
+        if (res.cleanup?.deletedPendingOrdersCount) {
+          cleanupParts.push(`${res.cleanup.deletedPendingOrdersCount} pending verification(s) deleted`);
+        }
+        if (res.cleanup?.revokedMembershipsCount) {
+          cleanupParts.push(`${res.cleanup.revokedMembershipsCount} membership(s) revoked`);
+        }
+        if (res.cleanup?.cancelledJobsCount) {
+          cleanupParts.push(`${res.cleanup.cancelledJobsCount} scheduled job(s) cancelled`);
+        }
+        if (res.cleanup?.cancelledManualNotificationsCount) {
+          cleanupParts.push(`${res.cleanup.cancelledManualNotificationsCount} queued WhatsApp item(s) cancelled`);
+        }
+        const identity = res.blockedUser.email || res.blockedUser.phone || 'User';
         setFeedbackBanner({
           type: 'success',
-          text: `${res.blockedUser.email} has been permanently blocked from accessing FEVIQO until you unblock them.`,
+          text: `${identity} permanently blocked${cleanupParts.length ? ` (${cleanupParts.join(', ')})` : ''}.`,
         });
       }
     } catch {
-      setFeedbackBanner({ type: 'error', text: 'Failed to block email address.' });
+      setFeedbackBanner({ type: 'error', text: 'Failed to block user and phone number.' });
     } finally {
       setActionBusy(false);
     }
@@ -1032,7 +1050,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     setAssignPassword('');
     setAssignPlanId(defaultPlan.id);
     setAssignDurationDays(String(defaultPlan.durationDays));
-    setAssignDramaIds(MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id));
+    setAssignDramaIds(MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id));
     setAssignNote('');
     setAssignModalOpen(true);
   };
@@ -1042,16 +1060,13 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     const plan = MEMBERSHIP_PLANS.find((p) => p.id === nextPlanId);
     if (!plan) return;
     setAssignDurationDays(String(plan.durationDays));
-    if (plan.dramaLimit === 'all') {
-      setAssignDramaIds(MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id));
-    } else {
-      setAssignDramaIds((prev) => {
-        const sliced = prev.slice(0, plan.dramaLimit as number);
-        if (sliced.length === plan.dramaLimit) return sliced;
-        const fill = MEMBERSHIP_DRAMAS.map((d) => d.id).filter((id) => !sliced.includes(id));
-        return [...sliced, ...fill].slice(0, plan.dramaLimit as number);
-      });
-    }
+    const limit = plan.dramaLimit === 'all' ? 3 : plan.dramaLimit;
+    setAssignDramaIds((prev) => {
+      const sliced = prev.slice(0, limit);
+      if (sliced.length === limit) return sliced;
+      const fill = MEMBERSHIP_DRAMAS.map((d) => d.id).filter((id) => !sliced.includes(id));
+      return [...sliced, ...fill].slice(0, limit);
+    });
   };
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
@@ -1520,16 +1535,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
 
   const resolvePackageDramaNames = (planId?: string, selectedDramaIds?: string[]): string[] => {
     const ids = Array.isArray(selectedDramaIds) ? [...selectedDramaIds] : [];
-    if (planId === 'vip') {
-      for (const d of MEMBERSHIP_DRAMAS) {
-        if (d.vipEligible && !ids.includes(d.id)) {
-          ids.push(d.id);
-        }
+    if (planId === 'vip' && ids.length === 0) {
+      for (const d of MEMBERSHIP_DRAMAS.slice(0, 3)) {
+        ids.push(d.id);
       }
     }
+    const cappedIds = planId === 'vip' ? ids.slice(0, 3) : ids;
     const seen = new Set<string>();
     const titles: string[] = [];
-    for (const id of ids) {
+    for (const id of cappedIds) {
       const title = getDramaById(id)?.title || id;
       if (title && !seen.has(title)) {
         seen.add(title);
@@ -1869,6 +1883,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 >
                   <Bot className="w-3.5 h-3.5 shrink-0 text-emerald-700" />
                   <span>WhatsApp Automation</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigatePage('admin-automation-whatsapp')}
+                  className="px-4 py-2.5 rounded-xl border border-slate-900 bg-[#0B0B0D] hover:bg-[#22C55E] hover:border-[#22C55E] hover:text-[#0B0B0D] text-white text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                  title="Open Manual One-Click WhatsApp Recipient Directory & Queue"
+                >
+                  <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                  <span>Manual WhatsApp Center</span>
                 </button>
                 <button
                   type="button"
@@ -2395,7 +2418,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                               <td className="py-4 px-5 align-top min-w-[210px] max-w-[260px]">
                                 {req.planId === 'vip' && (
                                   <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-emerald-700 mb-1">
-                                    All VIP Dramas
+                                    VIP · 3 Dramas
                                   </div>
                                 )}
                                 <div className="space-y-0.5 text-[13px] font-medium text-[#0F172A]">
@@ -2625,7 +2648,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                               <td className="py-4 px-5 align-top min-w-[210px] max-w-[260px]">
                                 {m.planId === 'vip' && (
                                   <div className="text-[11px] font-semibold uppercase tracking-[0.04em] text-emerald-700 mb-1">
-                                    All VIP Dramas
+                                    VIP · 3 Dramas
                                   </div>
                                 )}
                                 <div className="space-y-0.5 text-[13px] font-medium text-[#0F172A]">
@@ -3816,41 +3839,53 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   <div className="space-y-1">
                     <div className="text-xs font-semibold uppercase tracking-[0.06em] text-red-600 flex items-center gap-1.5">
                       <Ban className="w-3.5 h-3.5 shrink-0" />
-                      <span>Permanent Email Access Control</span>
+                      <span>Permanent Account &amp; Phone Access Control</span>
                     </div>
                     <h2 className="text-lg font-bold text-[#0F172A] leading-snug">
-                      Block Any Email Permanently
+                      Block Email &amp; Phone Number Permanently
                     </h2>
                     <p className="text-[13px] text-slate-500 leading-relaxed max-w-3xl">
-                      Enter any email address (registered or unregistered) to permanently block it from signing in, creating an account, purchasing memberships, or watching streams. Active sessions are terminated immediately. Access remains blocked until you unblock the email below.
+                      Enter an email address and/or phone number to permanently block that person from signing in, creating any new account, submitting payments, or watching streams. Blocking immediately deletes all pending verifications, revokes active memberships, cancels queued WhatsApp jobs, and blocks all associated phone numbers.
                     </p>
                   </div>
 
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
-                      if (!directBlockEmailInput.trim()) return;
+                      if (!directBlockEmailInput.trim() && !directBlockPhoneInput.trim()) return;
                       void handleBlockUserEmail({
-                        email: directBlockEmailInput.trim(),
+                        email: directBlockEmailInput.trim() || undefined,
+                        phone: directBlockPhoneInput.trim() || undefined,
                         reason: directBlockReasonInput.trim() || undefined,
                       });
                     }}
                     className="grid grid-cols-1 md:grid-cols-12 gap-3 pt-1"
                   >
-                    <div className="md:col-span-5">
+                    <div className="md:col-span-4">
                       <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
-                        Email Address to Block *
+                        Email Address
                       </label>
                       <input
                         type="email"
-                        required
                         value={directBlockEmailInput}
                         onChange={(e) => setDirectBlockEmailInput(e.target.value)}
                         placeholder="user@example.com"
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-600"
                       />
                     </div>
-                    <div className="md:col-span-5">
+                    <div className="md:col-span-3">
+                      <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                        Phone / WhatsApp Number
+                      </label>
+                      <input
+                        type="text"
+                        value={directBlockPhoneInput}
+                        onChange={(e) => setDirectBlockPhoneInput(e.target.value)}
+                        placeholder="+923001234567"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-red-600"
+                      />
+                    </div>
+                    <div className="md:col-span-3">
                       <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1">
                         Reason (Optional)
                       </label>
@@ -3858,18 +3893,18 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         type="text"
                         value={directBlockReasonInput}
                         onChange={(e) => setDirectBlockReasonInput(e.target.value)}
-                        placeholder="e.g. Fake payment proof, policy violation, account sharing"
+                        placeholder="e.g. Fake payment proof, abuse"
                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#0F172A]"
                       />
                     </div>
                     <div className="md:col-span-2 flex items-end">
                       <button
                         type="submit"
-                        disabled={actionBusy || !directBlockEmailInput.trim()}
+                        disabled={actionBusy || (!directBlockEmailInput.trim() && !directBlockPhoneInput.trim())}
                         className="w-full px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 transition"
                       >
                         <Ban className="w-3.5 h-3.5 shrink-0" />
-                        <span>{actionBusy ? 'Blocking...' : 'Block Email'}</span>
+                        <span>{actionBusy ? 'Blocking...' : 'Block Permanently'}</span>
                       </button>
                     </div>
                   </form>
@@ -3879,10 +3914,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-sm font-bold text-[#0F172A]">
-                        Blocked Emails ({blockedUsersList.length})
+                        Blocked Users &amp; Phone Numbers ({blockedUsersList.length})
                       </h3>
                       <p className="text-xs text-slate-500">
-                        Blocked users cannot access FEVIQO until you click Unblock &amp; Restore Access.
+                        Blocked emails and phone numbers cannot register new accounts or access FEVIQO until unblocked.
                       </p>
                     </div>
                     <div className="relative w-full sm:w-72 shrink-0">
@@ -3891,7 +3926,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                         type="text"
                         value={blockedSearch}
                         onChange={(e) => setBlockedSearch(e.target.value)}
-                        placeholder="Search blocked email or reason"
+                        placeholder="Search blocked email, phone, or reason"
                         className="w-full pl-10 pr-3.5 py-2 text-[13px] bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F172A]"
                       />
                     </div>
@@ -3901,7 +3936,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     <table className="w-full text-left text-[13px] leading-relaxed">
                       <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-[0.06em] text-[11px] font-semibold">
                         <tr>
-                          <th className="py-3.5 px-5 whitespace-nowrap">Blocked Email</th>
+                          <th className="py-3.5 px-5 whitespace-nowrap">Blocked Email &amp; Phone</th>
                           <th className="py-3.5 px-5 whitespace-nowrap">Reason</th>
                           <th className="py-3.5 px-5 whitespace-nowrap">Blocked By</th>
                           <th className="py-3.5 px-5 whitespace-nowrap">Blocked On</th>
@@ -3913,20 +3948,32 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                           <tr>
                             <td colSpan={5} className="py-12 text-center text-sm text-slate-500">
                               {blockedUsersList.length === 0
-                                ? 'No emails are currently blocked.'
-                                : 'No blocked emails match your search.'}
+                                ? 'No emails or phone numbers are currently blocked.'
+                                : 'No blocked records match your search.'}
                             </td>
                           </tr>
                         ) : (
                           filteredBlockedUsers.map((entry) => (
                             <tr key={entry.id} className="hover:bg-slate-50/70 transition-colors">
-                              <td className="py-4 px-5 align-top min-w-[220px]">
-                                <div className="flex items-center gap-2">
-                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-red-100 text-red-700 shrink-0">
+                              <td className="py-4 px-5 align-top min-w-[240px]">
+                                <div className="flex items-start gap-2">
+                                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-red-100 text-red-700 shrink-0 mt-0.5">
                                     <Ban className="w-3.5 h-3.5" />
                                   </span>
-                                  <div>
-                                    <div className="font-semibold text-[#0F172A]">{entry.email}</div>
+                                  <div className="space-y-0.5">
+                                    <div className="font-semibold text-[#0F172A]">
+                                      {entry.email || 'Phone-only block'}
+                                    </div>
+                                    {entry.phone && (
+                                      <div className="text-xs font-mono text-red-700">
+                                        Phone blocked: {entry.phone}
+                                      </div>
+                                    )}
+                                    {Array.isArray(entry.additionalPhones) && entry.additionalPhones.length > 0 && (
+                                      <div className="text-[11px] font-mono text-slate-500">
+                                        Also blocked: {entry.additionalPhones.join(', ')}
+                                      </div>
+                                    )}
                                     {entry.fullName && (
                                       <div className="text-xs text-slate-500">{entry.fullName}</div>
                                     )}
@@ -3946,7 +3993,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                 <button
                                   type="button"
                                   disabled={actionBusy}
-                                  onClick={() => handleUnblockUserEmail(entry.id, entry.email)}
+                                  onClick={() => handleUnblockUserEmail(entry.id, entry.email || entry.phone)}
                                   className="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 transition whitespace-nowrap"
                                 >
                                   <RotateCcw className="w-3.5 h-3.5 shrink-0" />
@@ -5189,23 +5236,23 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     Included Dramas
                   </label>
                   <span className="text-xs text-slate-500">
-                    {assignPlanId === 'vip'
-                      ? 'All VIP Dramas'
-                      : `Select ${MEMBERSHIP_PLANS.find((p) => p.id === assignPlanId)?.dramaLimit || 1}`}
+                    {`Select ${
+                      MEMBERSHIP_PLANS.find((p) => p.id === assignPlanId)?.dramaLimit === 'all'
+                        ? 3
+                        : MEMBERSHIP_PLANS.find((p) => p.id === assignPlanId)?.dramaLimit || 1
+                    }`}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   {MEMBERSHIP_DRAMAS.map((drama) => {
                     const selected = assignDramaIds.includes(drama.id);
-                    const isVip = assignPlanId === 'vip';
-                    const limit = MEMBERSHIP_PLANS.find((p) => p.id === assignPlanId)?.dramaLimit;
+                    const rawLimit = MEMBERSHIP_PLANS.find((p) => p.id === assignPlanId)?.dramaLimit;
+                    const limit = rawLimit === 'all' ? 3 : rawLimit || 1;
                     return (
                       <button
                         key={drama.id}
                         type="button"
-                        disabled={isVip}
                         onClick={() => {
-                          if (isVip) return;
                           if (selected) {
                             setAssignDramaIds((prev) => prev.filter((id) => id !== drama.id));
                           } else {

@@ -133,10 +133,13 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
 
   const hasDramaAccess = useCallback(
     (dramaId: string): boolean => {
-      const drama = getDramaById(dramaId);
       return activeMemberships.some((m) => {
-        if (m.planId === 'vip' && (drama ? drama.vipEligible : true)) return true;
-        return m.selectedDramaIds.includes(dramaId);
+        const ids = Array.isArray(m.selectedDramaIds) ? m.selectedDramaIds : [];
+        if (m.planId === 'vip') {
+          if (ids.length > 0) return ids.slice(0, 3).includes(dramaId);
+          return ['teskilat', 'mehmed-fetihler-sultani', 'gunesin-dogdugu-yer'].includes(dramaId);
+        }
+        return ids.includes(dramaId);
       });
     },
     [activeMemberships]

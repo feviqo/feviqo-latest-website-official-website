@@ -19,6 +19,8 @@ import {
   appendAdminAudit,
   getAutomationMembershipSnapshot,
   getEntitledActiveMembersForDrama,
+  listBlockedUsers,
+  normalizeBlockedPhone,
 } from './membershipStore';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -112,6 +114,7 @@ const DEFAULT_QUEUE_SETTINGS: OneClickQueueSettings = {
     rejection: true,
     expiry: true,
     episodes: true,
+    security: true,
     creative_enquiries: true,
   },
   updatedAt: new Date().toISOString(),
@@ -280,14 +283,19 @@ export function enqueueOneClickWhatsAppNotification(params: {
   seriesName?: string;
   episodeNumber?: string | number;
   episodeLink?: string;
+  accessType?: 'free' | 'premium';
+  securityEventSummary?: string;
   serviceName?: string;
+  customMessageOverride?: string;
   explicitLeadConsent?: boolean;
   bypassEpisodeOptInCheck?: boolean;
+  bypassConsentCheck?: boolean;
+  bypassCategoryGate?: boolean;
 }): { ok: true; notification: OneClickWhatsAppNotification; deduplicated?: boolean } | { ok: false; skipped: true; reason: string } {
   const category = getNotificationCategoryForEvent(params.eventType);
   const queueSettings = getOneClickQueueSettings();
 
-  if (!queueSettings.enabled || !queueSettings.categories[category]) {
+  if (!params.bypassCategoryGate && !params.bypassConsentCheck && (!queueSettings.enabled || !queueSettings.categories[category])) {
     return {
       ok: false,
       skipped: true,
@@ -306,6 +314,7 @@ export function enqueueOneClickWhatsAppNotification(params: {
   }
 
   if (
+    !params.bypassConsentCheck &&
     (params.eventType === 'expiry_reminder_7d' ||
       params.eventType === 'expiry_reminder_3d' ||
       params.eventType === 'expiry_reminder_1d' ||
@@ -320,7 +329,7 @@ export function enqueueOneClickWhatsAppNotification(params: {
     };
   }
 
-  if (params.eventType === 'episode_published' && !params.bypassEpisodeOptInCheck) {
+  if (params.eventType === 'episode_published' && !params.bypassEpisodeOptInCheck && !params.bypassConsentCheck) {
     const episodeConsented = Boolean(pref && !pref.optedOut && pref.newEpisodeAlerts);
     if (!episodeConsented) {
       return {
@@ -340,19 +349,24 @@ export function enqueueOneClickWhatsAppNotification(params: {
   }
 
   // Generate actual message from real data (strictly refuses empty rejection reason)
-  const msgResult = generateOneClickWhatsAppMessage({
-    eventType: params.eventType,
-    customerName: params.customerName,
-    planName: params.planName,
-    amountDisplay: params.amountDisplay,
-    startDate: params.startDate,
-    expiryDate: params.expiryDate,
-    rejectionReason: params.rejectionReason,
-    seriesName: params.seriesName,
-    episodeNumber: params.episodeNumber,
-    episodeLink: params.episodeLink,
-    serviceName: params.serviceName,
-  });
+  const customClean = String(params.customMessageOverride || '').trim();
+  const msgResult = customClean
+    ? { ok: true as const, message: customClean }
+    : generateOneClickWhatsAppMessage({
+        eventType: params.eventType,
+        customerName: params.customerName,
+        planName: params.planName,
+        amountDisplay: params.amountDisplay,
+        startDate: params.startDate,
+        expiryDate: params.expiryDate,
+        rejectionReason: params.rejectionReason,
+        seriesName: params.seriesName,
+        episodeNumber: params.episodeNumber,
+        episodeLink: params.episodeLink,
+        accessType: params.accessType,
+        securityEventSummary: params.securityEventSummary,
+        serviceName: params.serviceName,
+      });
 
   if (!msgResult.ok) {
     return { ok: false, skipped: true, reason: msgResult.error };
@@ -776,6 +790,30 @@ export function syncOneClickLifecycleReminders(): {
   };
 }
 
+export function cancelOneClickNotificationsForBlockedUser(params: {
+  memberIds?: string[];
+  email?: string;
+  phones?: string[];
+  reason?: string;
+  actor?: string;
+}): number {
+  const memberSet = new Set((params.memberIds || []).filter(Boolean));
+  const cleanEmail = String(params.email || '').trim().toLowerCase();
+  const phoneSet = new Set((params.phones || []).map((p) => normalizeBlockedPhone(p)).filter(Boolean));
+
+  return cancelPendingOneClickNotifications(
+    (item) => {
+      if (item.memberId && memberSet.has(item.memberId)) return true;
+      if (cleanEmail && String(item.customerEmail || '').trim().toLowerCase() === cleanEmail) return true;
+      const itemPhone = normalizeBlockedPhone(item.recipientPhone || item.rawPhone);
+      if (itemPhone && phoneSet.has(itemPhone)) return true;
+      return false;
+    },
+    params.reason || 'User permanently blocked by FEVIQO administrator',
+    params.actor || 'admin'
+  );
+}
+
 export function queueEpisodePublishedOneClickNotifications(params: {
   dramaId: string;
   episodeSlug: string;
@@ -783,10 +821,14 @@ export function queueEpisodePublishedOneClickNotifications(params: {
   episodeNumber: number;
   episodeTitle: string;
   episodeUrl?: string;
+  accessType?: 'free' | 'premium';
+  selectedMemberIds?: string[];
+  requireConsent?: boolean;
   forceResend?: boolean;
 }): {
   ok: true;
   dramaTitle: string;
+  accessType: 'free' | 'premium';
   entitledCount: number;
   queuedCount: number;
   failedPhoneCount: number;
@@ -799,10 +841,50 @@ export function queueEpisodePublishedOneClickNotifications(params: {
     return { ok: false, error: `Unknown drama ID: ${params.dramaId}` };
   }
 
+  const accessType: 'free' | 'premium' = params.accessType === 'free' ? 'free' : 'premium';
   const cleanSlug = String(params.episodeSlug || `episode-${params.episodeNumber}`).trim();
   const episodeLink =
     params.episodeUrl || `https://feviqo.com${drama.hubPath.replace(/\/+$/, '')}/${cleanSlug}`;
-  const entitled = getEntitledActiveMembersForDrama(drama.id);
+  const blocked = listBlockedUsers();
+  const blockedEmails = new Set(blocked.map((b) => String(b.email || '').trim().toLowerCase()).filter(Boolean));
+  const blockedPhones = new Set<string>();
+  for (const b of blocked) {
+    if (b.phoneNormalized) blockedPhones.add(normalizeBlockedPhone(b.phoneNormalized));
+    if (b.phone) blockedPhones.add(normalizeBlockedPhone(b.phone));
+    for (const p of b.additionalPhones || []) {
+      const n = normalizeBlockedPhone(p);
+      if (n) blockedPhones.add(n);
+    }
+  }
+  const isMemberBlocked = (email?: string, phone?: string) => {
+    const e = String(email || '').trim().toLowerCase();
+    const p = normalizeBlockedPhone(phone);
+    return (Boolean(e) && blockedEmails.has(e)) || (Boolean(p) && blockedPhones.has(p));
+  };
+
+  let targetMembers: Array<{ id: string; fullName: string; email: string; phone?: string }> = [];
+  if (accessType === 'free') {
+    const { members } = getAutomationMembershipSnapshot();
+    targetMembers = members
+      .filter((m) => !isMemberBlocked(m.email, m.phone))
+      .map((m) => ({ id: m.id, fullName: m.fullName, email: m.email, phone: m.phone }));
+  } else {
+    const entitled = getEntitledActiveMembersForDrama(drama.id);
+    targetMembers = entitled
+      .filter(({ member }) => !isMemberBlocked(member.email, member.phone))
+      .map(({ member }) => ({
+        id: member.id,
+        fullName: member.fullName,
+        email: member.email,
+        phone: member.phone,
+      }));
+  }
+
+  if (Array.isArray(params.selectedMemberIds) && params.selectedMemberIds.length > 0) {
+    const selectedSet = new Set(params.selectedMemberIds);
+    targetMembers = targetMembers.filter((m) => selectedSet.has(m.id));
+  }
+
   const resendTag = params.forceResend ? `:resend:${Date.now()}` : '';
 
   let queuedCount = 0;
@@ -811,7 +893,7 @@ export function queueEpisodePublishedOneClickNotifications(params: {
   let duplicateCount = 0;
   const queuedItems: OneClickWhatsAppNotification[] = [];
 
-  for (const { member } of entitled) {
+  for (const member of targetMembers) {
     const res = enqueueOneClickWhatsAppNotification({
       idempotencyKey: `episode_published:${drama.id}:${cleanSlug}:${member.id}${resendTag}`,
       eventType: 'episode_published',
@@ -824,6 +906,8 @@ export function queueEpisodePublishedOneClickNotifications(params: {
       seriesName: drama.title,
       episodeNumber: params.episodeNumber,
       episodeLink,
+      accessType,
+      bypassConsentCheck: params.requireConsent === false,
     });
 
     if (!res.ok) {
@@ -843,12 +927,258 @@ export function queueEpisodePublishedOneClickNotifications(params: {
   return {
     ok: true,
     dramaTitle: drama.title,
-    entitledCount: entitled.length,
+    accessType,
+    entitledCount: targetMembers.length,
     queuedCount,
     failedPhoneCount,
     skippedNoConsentCount,
     duplicateCount,
     notifications: queuedItems,
+  };
+}
+
+export interface ManualWhatsAppCustomerRecipient {
+  memberId: string;
+  customerName: string;
+  customerEmail: string;
+  rawPhone: string;
+  formattedPhone: string;
+  waDigits: string;
+  phoneValid: boolean;
+  phoneError?: string;
+  membershipStatus:
+    | 'active'
+    | 'expired'
+    | 'cancelled'
+    | 'pending_verification'
+    | 'awaiting_payment'
+    | 'rejected'
+    | 'never_purchased';
+  planName: string;
+  entitledDramaIds: string[];
+  entitledDramaTitles: string[];
+  expiresAt?: string;
+  hasWhatsappConsent: boolean;
+  hasEpisodeConsent: boolean;
+  optedOut: boolean;
+  latestManualStatus?: OneClickNotificationStatus;
+  latestManualNotificationId?: string;
+  latestManualEventType?: string;
+}
+
+export function getManualWhatsAppRecipientsDirectory(filters?: {
+  search?: string;
+  membershipStatus?: string;
+  dramaId?: string;
+}): ManualWhatsAppCustomerRecipient[] {
+  const { members, orders, memberships } = getAutomationMembershipSnapshot();
+  const allNotifications = readNotifications();
+  const blocked = listBlockedUsers();
+  const blockedEmails = new Set(blocked.map((b) => String(b.email || '').trim().toLowerCase()).filter(Boolean));
+  const blockedPhones = new Set<string>();
+  for (const b of blocked) {
+    if (b.phoneNormalized) blockedPhones.add(normalizeBlockedPhone(b.phoneNormalized));
+    if (b.phone) blockedPhones.add(normalizeBlockedPhone(b.phone));
+    for (const p of b.additionalPhones || []) {
+      const n = normalizeBlockedPhone(p);
+      if (n) blockedPhones.add(n);
+    }
+  }
+
+  const nowMs = Date.now();
+  const list: ManualWhatsAppCustomerRecipient[] = [];
+
+  for (const member of members) {
+    const emailNorm = String(member.email || '').trim().toLowerCase();
+    const phoneBlockNorm = normalizeBlockedPhone(member.phone);
+    if ((emailNorm && blockedEmails.has(emailNorm)) || (phoneBlockNorm && blockedPhones.has(phoneBlockNorm))) {
+      continue;
+    }
+
+    const memberSubs = memberships.filter((s) => s.memberId === member.id);
+    const activeSub = memberSubs.find((s) => s.status === 'active' && Date.parse(s.expiresAt) > nowMs);
+    const memberOrders = orders
+      .filter((o) => o.memberId === member.id)
+      .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+
+    let membershipStatus: ManualWhatsAppCustomerRecipient['membershipStatus'] = 'never_purchased';
+    let planName = 'No Plan';
+    let expiresAt: string | undefined;
+    const entitledDramaIdsSet = new Set<string>();
+
+    if (activeSub) {
+      membershipStatus = 'active';
+      planName = activeSub.planName;
+      expiresAt = activeSub.expiresAt;
+      for (const s of memberSubs.filter((x) => x.status === 'active' && Date.parse(x.expiresAt) > nowMs)) {
+        const subDramaIds =
+          Array.isArray(s.selectedDramaIds) && s.selectedDramaIds.length > 0
+            ? s.planId === 'vip'
+              ? s.selectedDramaIds.slice(0, 3)
+              : s.selectedDramaIds
+            : s.planId === 'vip'
+              ? ['teskilat', 'mehmed-fetihler-sultani', 'gunesin-dogdugu-yer']
+              : [];
+        for (const dId of subDramaIds) {
+          entitledDramaIdsSet.add(dId);
+        }
+      }
+    } else if (memberOrders.some((o) => o.status === 'pending_verification')) {
+      membershipStatus = 'pending_verification';
+      planName = memberOrders.find((o) => o.status === 'pending_verification')?.planName || 'Pending Order';
+    } else if (memberOrders.some((o) => o.status === 'awaiting_payment')) {
+      membershipStatus = 'awaiting_payment';
+      planName = memberOrders.find((o) => o.status === 'awaiting_payment')?.planName || 'Unpaid Plan';
+    } else if (memberSubs.some((s) => s.status === 'expired' || (s.status === 'active' && Date.parse(s.expiresAt) <= nowMs))) {
+      membershipStatus = 'expired';
+      const latestSub = memberSubs[0];
+      planName = latestSub?.planName || 'Expired Plan';
+      expiresAt = latestSub?.expiresAt;
+    } else if (memberSubs.some((s) => s.status === 'cancelled')) {
+      membershipStatus = 'cancelled';
+      planName = memberSubs[0]?.planName || 'Cancelled Plan';
+    } else if (memberOrders.some((o) => o.status === 'rejected')) {
+      membershipStatus = 'rejected';
+      planName = memberOrders[0]?.planName || 'Rejected Order';
+    }
+
+    const formatted = formatWhatsAppRecipient(member.phone);
+    const pref = findPreferenceForMember(member.id, member.phone);
+    const optedOut = Boolean(pref?.optedOut);
+    const hasWhatsappConsent = Boolean(
+      !optedOut && pref && (pref.membershipUpdates || pref.renewalReminders || pref.newEpisodeAlerts)
+    );
+    const hasEpisodeConsent = Boolean(!optedOut && pref && pref.newEpisodeAlerts);
+
+    const latestManual = allNotifications.find((n) => n.memberId === member.id);
+    const entitledDramaIds = Array.from(entitledDramaIdsSet);
+    const entitledDramaTitles = entitledDramaIds.map((id) => getDramaById(id)?.title || id);
+
+    list.push({
+      memberId: member.id,
+      customerName: member.fullName || 'FEVIQO Member',
+      customerEmail: member.email,
+      rawPhone: member.phone || '',
+      formattedPhone: formatted.valid ? formatted.e164 : member.phone || 'Missing',
+      waDigits: formatted.valid ? formatted.waDigits : '',
+      phoneValid: formatted.valid,
+      phoneError: formatted.valid ? undefined : formatted.reason,
+      membershipStatus,
+      planName,
+      entitledDramaIds,
+      entitledDramaTitles,
+      expiresAt,
+      hasWhatsappConsent,
+      hasEpisodeConsent,
+      optedOut,
+      latestManualStatus: latestManual?.status,
+      latestManualNotificationId: latestManual?.id,
+      latestManualEventType: latestManual?.eventType,
+    });
+  }
+
+  let filtered = list;
+  if (filters?.membershipStatus && filters.membershipStatus !== 'all') {
+    filtered = filtered.filter((r) => r.membershipStatus === filters.membershipStatus);
+  }
+  if (filters?.dramaId && filters.dramaId !== 'all') {
+    filtered = filtered.filter((r) => r.entitledDramaIds.includes(filters.dramaId!));
+  }
+  if (filters?.search && filters.search.trim()) {
+    const q = filters.search.trim().toLowerCase();
+    filtered = filtered.filter((r) =>
+      `${r.customerName} ${r.customerEmail} ${r.rawPhone} ${r.formattedPhone} ${r.planName} ${r.entitledDramaTitles.join(' ')}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }
+  return filtered;
+}
+
+export function prepareManualWhatsAppMessagesForMembers(params: {
+  memberIds: string[];
+  eventType: OneClickEventType;
+  customMessage?: string;
+  dramaId?: string;
+  episodeNumber?: number;
+  episodeSlug?: string;
+  episodeLink?: string;
+  accessType?: 'free' | 'premium';
+  rejectionReason?: string;
+  adminEmail: string;
+}): {
+  ok: true;
+  createdCount: number;
+  failedPhoneCount: number;
+  skippedOptedOutCount: number;
+  notifications: OneClickWhatsAppNotification[];
+} {
+  const { members, orders, memberships } = getAutomationMembershipSnapshot();
+  const memberMap = new Map(members.map((m) => [m.id, m]));
+  const drama = params.dramaId ? getDramaById(params.dramaId) : undefined;
+  const created: OneClickWhatsAppNotification[] = [];
+  let createdCount = 0;
+  let failedPhoneCount = 0;
+  let skippedOptedOutCount = 0;
+
+  for (const memberId of params.memberIds) {
+    const member = memberMap.get(memberId);
+    if (!member) continue;
+    const pref = findPreferenceForMember(member.id, member.phone);
+    if (pref?.optedOut) {
+      skippedOptedOutCount += 1;
+      continue;
+    }
+
+    const latestSub = memberships.find((s) => s.memberId === member.id);
+    const latestOrder = orders.find((o) => o.memberId === member.id);
+    const amountDisplay = latestOrder
+      ? latestOrder.currency === 'USD'
+        ? `$${Number(latestOrder.amountUsd ?? latestOrder.expectedAmount ?? 0).toFixed(2)} USD`
+        : `PKR ${Number(latestOrder.amountPkr || 0).toLocaleString()}`
+      : undefined;
+
+    const batchTag = Date.now().toString(36);
+    const res = enqueueOneClickWhatsAppNotification({
+      idempotencyKey: `manual:${params.eventType}:${member.id}:${params.dramaId || ''}:${params.episodeSlug || ''}:${batchTag}`,
+      eventType: params.eventType,
+      customerName: member.fullName,
+      customerEmail: member.email,
+      memberId: member.id,
+      membershipId: latestSub?.id,
+      orderId: latestOrder?.id,
+      dramaId: drama?.id,
+      episodeSlug: params.episodeSlug,
+      rawPhone: member.phone,
+      planName: latestSub?.planName || latestOrder?.planName,
+      amountDisplay,
+      startDate: latestSub?.activatedAt,
+      expiryDate: latestSub?.expiresAt,
+      rejectionReason: params.rejectionReason || latestOrder?.rejectionReason,
+      seriesName: drama?.title,
+      episodeNumber: params.episodeNumber,
+      episodeLink: params.episodeLink,
+      accessType: params.accessType,
+      customMessageOverride: params.customMessage,
+      bypassConsentCheck: true,
+    });
+
+    if (res.ok) {
+      created.push(res.notification);
+      if (res.notification.status === 'failed') {
+        failedPhoneCount += 1;
+      } else {
+        createdCount += 1;
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    createdCount,
+    failedPhoneCount,
+    skippedOptedOutCount,
+    notifications: created,
   };
 }
 
@@ -878,6 +1208,7 @@ export function getOneClickNotificationsDashboard(filters?: {
     rejection: all.filter((n) => n.category === 'rejection').length,
     expiry: all.filter((n) => n.category === 'expiry').length,
     episodes: all.filter((n) => n.category === 'episodes').length,
+    security: all.filter((n) => n.category === 'security').length,
     creative_enquiries: all.filter((n) => n.category === 'creative_enquiries').length,
   };
 

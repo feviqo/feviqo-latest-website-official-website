@@ -41,7 +41,7 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
     setMeta('property', 'og:url', config.canonicalUrl);
     setMeta('property', 'og:image', config.ogImage);
     setMeta('property', 'og:image:secure_url', config.ogImage);
-    setMeta('property', 'og:type', (pathname.includes('/teskilat/episode-') || pathname.includes('/gunesin-dogdugu-yer/episode-')) ? 'video.episode' : 'website');
+    setMeta('property', 'og:type', (pathname.includes('/teskilat/episode-') || pathname.includes('/gunesin-dogdugu-yer/episode-') || pathname.includes('/yeralti/episode-')) ? 'video.episode' : 'website');
 
     // 6. Twitter / X Cards
     setMeta('name', 'twitter:card', 'summary_large_image');
@@ -194,8 +194,12 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
       const epDesc = epNum === 3 
         ? "Watch Gunesin Dogdugu Yer Episode 3 in HD Urdu Subtitles. Follow the intense family secrets, rivalries, and drama online with full story recaps on FEVIQO."
         : `Watch Gunesin Dogdugu Yer Episode ${epNum} in HD Urdu Subtitles. Follow the intense family betrayals and drama watch online with story recaps on FEVIQO.`;
-      const date = epNum === 3 ? "2026-10-15T18:00:00+00:00" : (epNum === 1 ? "2026-10-01T18:00:00+00:00" : "2026-10-08T18:00:00+00:00");
-      const thumb = epNum === 3 ? "https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj" : "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh";
+      const date = epNum === 9 ? "2026-11-21T04:00:00+00:00" : (epNum === 3 ? "2026-10-15T18:00:00+00:00" : (epNum === 1 ? "2026-10-01T18:00:00+00:00" : "2026-10-08T18:00:00+00:00"));
+      const thumb = epNum === 9
+        ? "https://lh3.googleusercontent.com/d/1UikNqWzQcGxbQx8sSqgjaTDN47iGhxgd"
+        : epNum === 3
+        ? "https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj"
+        : "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh";
 
       schemaGraph.push({
         "@type": "TVEpisode",
@@ -240,6 +244,44 @@ export const SEOHead: React.FC<SEOHeadProps> = ({ pathname, overrideConfig }) =>
         "name": "Gunesin Dogdugu Yer",
         "description": "Watch Gunesin Dogdugu Yer Turkish drama in HD Urdu subtitles. Stream all official episodes online with complete story summaries and recaps on FEVIQO.",
         "image": "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
+        "containsSeason": {
+          "@type": "TVSeason",
+          "seasonNumber": 1,
+          "name": "Season 1"
+        }
+      });
+    }
+
+    if (pathname.includes('/yeralti/episode-')) {
+      const match = pathname.match(/episode-(\d+)/);
+      const epNum = match ? parseInt(match[1], 10) : 1;
+      schemaGraph.push({
+        "@type": "TVEpisode",
+        "@id": `https://feviqo.com/yeralti/episode-${epNum}#episode`,
+        "url": `https://feviqo.com/yeralti/episode-${epNum}`,
+        "name": `Yeralti - Urdu Dub Episode ${epNum} (جرائم کی دنیا)`,
+        "episodeNumber": epNum.toString(),
+        "seasonNumber": "1",
+        "inLanguage": "Urdu",
+        "description": `Watch Yeralti - Urdu Dub (جرائم کی دنیا) Episode ${epNum} in exclusive Urdu Dubbed HD on FEVIQO Premium.`,
+        "image": "https://lh3.googleusercontent.com/d/1hU7IkIPWRZ0uSuDhU_azx-TXyEbzxvqQ",
+        "mainEntityOfPage": `https://feviqo.com/yeralti/episode-${epNum}`,
+        "isPartOf": {
+          "@type": "TVSeries",
+          "name": "Yeralti - Urdu Dub",
+          "alternateName": "جرائم کی دنیا",
+          "url": "https://feviqo.com/yeralti"
+        }
+      });
+    } else if (pathname === '/yeralti') {
+      schemaGraph.push({
+        "@type": "TVSeries",
+        "@id": "https://feviqo.com/yeralti#series",
+        "url": "https://feviqo.com/yeralti",
+        "name": "Yeralti - Urdu Dub",
+        "alternateName": "جرائم کی دنیا",
+        "description": "Watch Yeralti - Urdu Dub (جرائم کی دنیا) Turkish crime drama in exclusive Urdu Dubbed HD on FEVIQO Premium.",
+        "image": "https://lh3.googleusercontent.com/d/1hU7IkIPWRZ0uSuDhU_azx-TXyEbzxvqQ",
         "containsSeason": {
           "@type": "TVSeason",
           "seasonNumber": 1,

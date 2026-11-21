@@ -250,6 +250,50 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },
+  '/gunesin-dogdugu-yer/episode-9': {
+    path: '/gunesin-dogdugu-yer/episode-9',
+    pageName: 'Gunesin Dogdugu Yer Episode 9 Watch Page',
+    seoTitle: 'Gunesin Dogdugu Yer Episode 9 Urdu Dubbed | Bolum 9 - FEVIQO',
+    metaDescription: 'Watch Gunesin Dogdugu Yer Episode 9 (Bolum 9) in Urdu Dubbed HD exclusively on FEVIQO Premium.',
+    focusKeyword: 'Gunesin Dogdugu Yer Episode 9 Urdu Dubbed',
+    secondaryKeywords: [
+      'Gunesin Dogdugu Yer Episode 9', 'Gunesin Dogdugu Yer Episode 9 Urdu Dubbed', 'Gunesin Dogdugu Yer Bolum 9', 'Gunesin Dogdugu Yer Episode 9 Urdu', 'FEVIQO Gunesin Dogdugu Yer'
+    ],
+    canonicalUrl: 'https://feviqo.com/gunesin-dogdugu-yer/episode-9',
+    ogTitle: 'Gunesin Dogdugu Yer Episode 9 Urdu Dubbed | Bolum 9 - FEVIQO',
+    ogDescription: 'Watch Gunesin Dogdugu Yer Episode 9 (Bolum 9) in Urdu Dubbed HD exclusively on FEVIQO Premium.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1UikNqWzQcGxbQx8sSqgjaTDN47iGhxgd',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
+  '/yeralti': {
+    path: '/yeralti',
+    pageName: 'Yeralti - Urdu Dub Hub Page',
+    seoTitle: 'Yeralti - Urdu Dub (جرائم کی دنیا) | Turkish Drama — FEVIQO',
+    metaDescription: 'Watch Yeralti - Urdu Dub (جرائم کی دنیا) Turkish crime drama in exclusive Urdu Dubbed HD on FEVIQO Premium.',
+    focusKeyword: 'yeralti urdu dub',
+    secondaryKeywords: ['yeralti urdu dub', 'yeralti urdu dubbed', 'جرائم کی دنیا', 'yeralti turkish drama urdu', 'feviqo yeralti'],
+    canonicalUrl: 'https://feviqo.com/yeralti',
+    ogTitle: 'Yeralti - Urdu Dub (جرائم کی دنیا) | FEVIQO',
+    ogDescription: 'Watch Yeralti - Urdu Dub (جرائم کی دنیا) Turkish crime drama in exclusive Urdu Dubbed HD on FEVIQO Premium.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1hU7IkIPWRZ0uSuDhU_azx-TXyEbzxvqQ',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVSeries'
+  },
+  '/yeralti/episode-1': {
+    path: '/yeralti/episode-1',
+    pageName: 'Yeralti - Urdu Dub Episode 1 Watch Page',
+    seoTitle: 'Yeralti - Urdu Dub Episode 1 (جرائم کی دنیا قسط 1) | FEVIQO',
+    metaDescription: 'Watch Yeralti - Urdu Dub (جرائم کی دنیا) Episode 1 in exclusive Urdu Dubbed HD on FEVIQO Premium.',
+    focusKeyword: 'yeralti episode 1 urdu dub',
+    secondaryKeywords: ['yeralti episode 1 urdu dub', 'yeralti urdu dubbed episode 1', 'جرائم کی دنیا قسط 1', 'feviqo yeralti'],
+    canonicalUrl: 'https://feviqo.com/yeralti/episode-1',
+    ogTitle: 'Yeralti - Urdu Dub Episode 1 (جرائم کی دنیا قسط 1) | FEVIQO',
+    ogDescription: 'Watch Yeralti - Urdu Dub (جرائم کی دنیا) Episode 1 in exclusive Urdu Dubbed HD on FEVIQO Premium.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1hU7IkIPWRZ0uSuDhU_azx-TXyEbzxvqQ',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
   '/teskilat/episode-193': {
     path: '/teskilat/episode-193',
     pageName: 'Teskilat Episode 193 Urdu Subtitles',
@@ -605,6 +649,20 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'noindex, nofollow',
     schemaType: 'WebSite'
   },
+  '/admin/automation/whatsapp': {
+    path: '/admin/automation/whatsapp',
+    pageName: 'FEVIQO Manual WhatsApp Center',
+    seoTitle: 'FEVIQO Manual WhatsApp Center & Customer Messaging Queue',
+    metaDescription: 'Private FEVIQO administration dashboard for one-click manual WhatsApp customer notifications, recipient directory, and delivery confirmation.',
+    focusKeyword: 'feviqo admin manual whatsapp',
+    secondaryKeywords: [],
+    canonicalUrl: 'https://feviqo.com/admin/automation/whatsapp',
+    ogTitle: 'FEVIQO Manual WhatsApp Center',
+    ogDescription: 'Private manual WhatsApp messaging center and customer directory.',
+    ogImage: 'https://feviqo.com/feviqo1.png',
+    robots: 'noindex, nofollow',
+    schemaType: 'WebSite'
+  },
   '/admin/automation/leads': {
     path: '/admin/automation/leads',
     pageName: 'FEVIQO Video Editing Leads & WhatsApp Inbox',
@@ -785,6 +843,22 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
       focusKeyword: `Gunesin Dogdugu Yer Episode ${epNum} Urdu Subtitles`,
       canonicalUrl: `https://feviqo.com/gunesin-dogdugu-yer/episode-${epNum}`,
       ogTitle: `Güneşin Doğduğu Yer Episode ${epNum} Urdu Subtitles | Bolum ${epNum} - FEVIQO`,
+      schemaType: 'TVEpisode',
+    };
+  }
+
+  const yeraltiEpMatch = cleanPath.match(/^\/yeralti\/episode-(\d+)$/);
+  if (yeraltiEpMatch) {
+    const epNum = yeraltiEpMatch[1];
+    return {
+      ...DEFAULT_PAGE_SEO['/yeralti'],
+      path: `/yeralti/episode-${epNum}`,
+      pageName: `Yeralti - Urdu Dub Episode ${epNum} Watch Page`,
+      seoTitle: `Yeralti - Urdu Dub Episode ${epNum} (جرائم کی دنیا) | FEVIQO`,
+      metaDescription: `Watch Yeralti - Urdu Dub (جرائم کی دنیا) Episode ${epNum} in Urdu Dubbed HD exclusively on FEVIQO Premium.`,
+      focusKeyword: `Yeralti Episode ${epNum} Urdu Dub`,
+      canonicalUrl: `https://feviqo.com/yeralti/episode-${epNum}`,
+      ogTitle: `Yeralti - Urdu Dub Episode ${epNum} (جرائم کی دنیا) | FEVIQO`,
       schemaType: 'TVEpisode',
     };
   }

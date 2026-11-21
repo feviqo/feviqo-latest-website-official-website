@@ -197,11 +197,13 @@ export type AppRoute =
   | 'teskilat-urdu'
   | 'gunesin-dogdugu-yer'
   | 'mehmed-fetihler-sultani'
+  | 'yeralti'
   | 'dramas'
   | 'membership'
   | 'account'
   | 'admin-memberships'
   | 'admin-automation'
+  | 'admin-automation-whatsapp'
   | 'admin-automation-leads'
   | 'privacy'
   | 'terms';

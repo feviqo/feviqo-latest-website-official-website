@@ -229,6 +229,12 @@ export const Footer: React.FC<FooterProps> = ({
             </h4>
             <ul className="space-y-2 text-xs text-emerald-100 font-normal">
               <li>
+                <a href="/yeralti" onClick={(e) => { e.preventDefault(); nav('yeralti'); }} className="hover:text-white transition cursor-pointer font-black text-[#22C55E] flex items-center justify-between">
+                  <span>Yeralti - Urdu Dub (جرائم کی دنیا)</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 font-black text-[9px] uppercase tracking-wider">DUB</span>
+                </a>
+              </li>
+              <li>
                 <a href="/mehmed-fetihler-sultani/episode-90" onClick={(e) => { e.preventDefault(); if (onNavigatePage) onNavigatePage('mehmed-fetihler-sultani-ep90' as any); }} className="hover:text-white transition cursor-pointer font-black text-amber-300 flex items-center justify-between">
                   <span>Mehmed Episode 90 (Bolum 90)</span>
                   <span className="px-1.5 py-0.5 rounded bg-red-600/90 text-white font-black text-[9px] uppercase tracking-wider">NEW</span>

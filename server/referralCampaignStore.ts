@@ -247,6 +247,7 @@ const RESERVED_SLUGS = new Set([
   'mehmed',
   'mehmed-fetihler-sultani',
   'gunesin-dogdugu-yer',
+  'yeralti',
   'null',
   'undefined',
 ]);

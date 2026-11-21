@@ -1,6 +1,7 @@
 import { DEFAULT_PAGE_SEO } from './seoStore';
 import { GUNESIN_EPISODES } from '../data/gunesinDogduguYer';
 import { MEHMED_EPISODES } from '../data/mehmedData';
+import { YERALTI_EPISODES } from '../data/yeraltiData';
 import fs from 'fs';
 import path from 'path';
 
@@ -108,7 +109,7 @@ export function generateSitemapXml(): string {
   };
 
   // 1. Core pages from DEFAULT_PAGE_SEO (prioritize homepage, /membership, and /dramas at top)
-  const priorityFirstRoutes = ['/', '/membership', '/dramas', '/teskilat', '/mehmed-fetihler-sultani', '/gunesin-dogdugu-yer'];
+  const priorityFirstRoutes = ['/', '/membership', '/dramas', '/yeralti', '/teskilat', '/mehmed-fetihler-sultani', '/gunesin-dogdugu-yer'];
   const allRouteKeys = [
     ...priorityFirstRoutes.filter((r) => Boolean(DEFAULT_PAGE_SEO[r])),
     ...Object.keys(DEFAULT_PAGE_SEO).filter((r) => !priorityFirstRoutes.includes(r)),
@@ -278,6 +279,20 @@ export function generateSitemapXml(): string {
         description: ep.shortSummary,
         contentLoc: firstEmbed
       } : undefined
+    );
+  });
+
+  // 4. Yeralti Episodes (never expose protected streams)
+  YERALTI_EPISODES.forEach((ep) => {
+    const epPath = `/yeralti/${ep.slug}`;
+    addNode(
+      epPath,
+      '1.0',
+      'daily',
+      ep.airDate ? ep.airDate.split('T')[0] : defaultLastmod,
+      ep.thumbnail,
+      ep.title,
+      undefined
     );
   });
 

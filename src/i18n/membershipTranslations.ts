@@ -56,8 +56,8 @@ export const MEMBERSHIP_COPY = {
     },
     subtitleUrLine: 'اپنے پسندیدہ ترکی ڈرامے اردو ڈبنگ میں دیکھیں۔',
     description: {
-      en: 'Choose the exact series you follow or unlock the full eligible VIP catalogue with Urdu dubbing—built for smooth, high-definition viewing across Pakistan.',
-      ur: 'اپنے پسندیدہ ترکی ڈرامے منتخب کریں یا تمام دستیاب VIP ڈرامے اردو ڈبنگ کے ساتھ ہائی کوالٹی میں دیکھیں۔',
+      en: 'Choose the exact series you follow—from 1 drama on Starter or Standard, 2 dramas on Plus, or 3 dramas on VIP with Urdu dubbing—built for smooth, high-definition viewing.',
+      ur: 'اپنے پسندیدہ ترکی ڈرامے منتخب کریں—اسٹارٹر اور اسٹینڈرڈ میں 1، پلس میں 2، یا VIP میں 3 ڈرامے اردو ڈبنگ کے ساتھ ہائی کوالٹی میں دیکھیں۔',
     },
     exploreMemberships: { en: 'Explore Memberships', ur: 'ممبرشپ پلانز دیکھیں' },
     exploreDramas: { en: 'Explore Dramas', ur: 'ڈرامے دیکھیں' },
@@ -68,8 +68,8 @@ export const MEMBERSHIP_COPY = {
     heading: { en: 'Your Membership. Your Choice.', ur: 'آپ کی ممبرشپ، آپ کا انتخاب۔' },
     step1Title: { en: '01 — Choose Your Dramas', ur: '01 — اپنے ڈرامے منتخب کریں' },
     step1Desc: {
-      en: 'Pick the membership tier that matches how you watch, then choose one or two specific Turkish dramas—or unlock all eligible VIP titles at once.',
-      ur: 'اپنی پسند کا پلان منتخب کریں، پھر ایک یا دو ترکی ڈرامے چنیں یا تمام دستیاب VIP ڈرامے ان لاک کریں۔',
+      en: 'Pick the membership tier that matches how you watch, then choose 1, 2, or 3 Turkish dramas from our Urdu-dubbed catalogue.',
+      ur: 'اپنی پسند کا پلان منتخب کریں، پھر اردو ڈبنگ کیٹلاگ سے 1، 2 یا 3 ترکی ڈرامے چنیں۔',
     },
     step2Title: { en: '02 — Pay via QR & Upload Proof', ur: '02 — QR سے ادائیگی اور ثبوت اپ لوڈ کریں' },
     step2Desc: {
@@ -149,10 +149,10 @@ export const MEMBERSHIP_COPY = {
       vip: {
         name: { en: 'VIP', ur: 'وی آئی پی (VIP)' },
         durationLabel: { en: '30 Days', ur: '30 دن' },
-        inclusionText: { en: 'All eligible VIP catalogue dramas', ur: 'تمام دستیاب VIP ڈرامے شامل' },
+        inclusionText: { en: '3 dramas included', ur: '3 ڈرامے شامل' },
         summary: {
-          en: 'Unrestricted 30-day access across the entire eligible VIP Urdu drama catalogue.',
-          ur: '30 دن کے لیے اردو ڈبنگ میں تمام دستیاب VIP ترکی ڈراموں تک مکمل رسائی۔',
+          en: 'Select any three Turkish series from the catalogue for 30 continuous days.',
+          ur: 'مسلسل 30 دن کے لیے کیٹلاگ سے کوئی سے تین ترکی ڈرامے منتخب کریں۔',
         },
         ctaLabel: { en: 'Choose VIP', ur: 'وی آئی پی منتخب کریں' },
       },
@@ -162,8 +162,8 @@ export const MEMBERSHIP_COPY = {
   dramaSelection: {
     stepEyebrow: { en: 'Step 2', ur: 'مرحلہ 2' },
     allVipHeading: {
-      en: 'All Eligible VIP Catalogue Dramas Included',
-      ur: 'تمام دستیاب VIP ڈرامے شامل ہیں',
+      en: 'Select 3 Dramas for Your VIP Membership',
+      ur: 'اپنی VIP ممبرشپ کے لیے 3 ڈرامے منتخب کریں',
     },
     selectOneHeading: {
       en: 'Select 1 Drama for Your Membership',
@@ -174,8 +174,8 @@ export const MEMBERSHIP_COPY = {
       ur: 'اپنی ممبرشپ کے لیے 2 ڈرامے منتخب کریں',
     },
     vipDesc: {
-      en: 'Your VIP plan unlocks every eligible Turkish series below for 30 days.',
-      ur: 'آپ کا VIP پلان نیچے دیے گئے تمام دستیاب ترکی ڈراموں کو 30 دن کے لیے کھولتا ہے۔',
+      en: 'Your VIP plan includes 3 selected Turkish dramas for 30 days.',
+      ur: 'آپ کے VIP پلان میں 30 دن کے لیے 3 منتخب ترکی ڈرامے شامل ہیں۔',
     },
     chooseCountDesc: {
       en: 'Choose from the official FEVIQO Urdu-dubbed catalogue.',
@@ -484,8 +484,8 @@ export const MEMBERSHIP_COPY = {
         id: 'drama-selection',
         title: { en: 'Drama Selection', ur: 'ڈراموں کا انتخاب' },
         description: {
-          en: 'Starter and Standard include 1 chosen series, Plus includes 2 chosen series, and VIP opens all eligible VIP catalogue dramas simultaneously.',
-          ur: 'اسٹارٹر اور اسٹینڈرڈ میں 1، پلس میں 2، اور VIP میں تمام دستیاب VIP ڈرامے شامل ہوتے ہیں۔',
+          en: 'Starter and Standard include 1 chosen series, Plus includes 2 chosen series, and VIP includes 3 chosen series.',
+          ur: 'اسٹارٹر اور اسٹینڈرڈ میں 1، پلس میں 2، اور VIP میں 3 منتخب ڈرامے شامل ہوتے ہیں۔',
         },
       },
     ],
@@ -513,8 +513,8 @@ export const MEMBERSHIP_COPY = {
           ur: 'سوال 2: اسٹارٹر، اسٹینڈرڈ، پلس اور VIP پلانز میں کیا فرق ہے؟',
         },
         answer: {
-          en: 'Starter covers 1 selected drama for 15 days. Standard covers 1 selected drama for 30 days. Plus covers any 2 dramas for 30 days. VIP unlocks all eligible VIP catalogue dramas for 30 days.',
-          ur: 'اسٹارٹر 15 دن کے لیے 1 ڈرامہ، اسٹینڈرڈ 30 دن کے لیے 1 ڈرامہ، پلس 30 دن کے لیے 2 ڈرامے اور VIP 30 دن کے لیے تمام دستیاب VIP ڈرامے کھولتا ہے۔',
+          en: 'Starter covers 1 selected drama for 15 days. Standard covers 1 selected drama for 30 days. Plus covers any 2 dramas for 30 days. VIP covers any 3 selected dramas for 30 days.',
+          ur: 'اسٹارٹر 15 دن کے لیے 1 ڈرامہ، اسٹینڈرڈ 30 دن کے لیے 1 ڈرامہ، پلس 30 دن کے لیے 2 ڈرامے اور VIP 30 دن کے لیے 3 منتخب ڈرامے کھولتا ہے۔',
         },
       },
       {

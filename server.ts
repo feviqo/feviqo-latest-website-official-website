@@ -108,6 +108,7 @@ import {
   restoreMemberSessionFromSnapshot,
   listBlockedUsers,
   getBlockedUserByEmail,
+  getBlockedUserByPhone,
   getBlockedUserByMemberId,
   buildBlockedAccountMessage,
   blockUserEmailByAdmin,
@@ -168,6 +169,13 @@ import {
   dispatchTemplateWhatsAppNotification,
   retryFailedWhatsAppMessage,
   triggerEpisodePublishedBroadcast,
+  previewEpisodeNotificationAudience,
+  startAutomationBot,
+  stopAutomationBot,
+  syncMetaTemplateStatuses,
+  cleanupBlockedUserAutomationState,
+  previewHistoricalCampaign,
+  launchHistoricalCampaign,
   createVideoEditingLead,
   listVideoEditingLeads,
   updateVideoEditingLeadByAdmin,
@@ -181,7 +189,22 @@ import {
   recordWebhookEvent,
   updateWebhookEvent,
   registerHighIntentLeadNotifier,
+  WhatsAppSendingMode,
+  HistoricalCampaignSegment,
 } from './server/automationStore';
+import {
+  getOneClickNotificationsDashboard,
+  saveOneClickQueueSettings,
+  editOneClickNotification,
+  markOneClickNotificationOpened,
+  markOneClickNotificationConfirmedSent,
+  cancelOneClickNotification,
+  syncOneClickLifecycleReminders,
+  queueEpisodePublishedOneClickNotifications,
+  getManualWhatsAppRecipientsDirectory,
+  prepareManualWhatsAppMessagesForMembers,
+  hydrateOneClickQueueFromFirestore,
+} from './server/whatsappQueueStore';
 import { generateFeviqoAiReply } from './server/aiSupportAgent';
 import { findMemberContextByPhoneDigits } from './server/membershipStore';
 
@@ -261,6 +284,9 @@ app.use((req, res, next) => {
     '/gunesin-dogdugu-yer/episode-4/': '/gunesin-dogdugu-yer/episode-4',
     '/gunesin-dogdugu-yer/episode-5/': '/gunesin-dogdugu-yer/episode-5',
     '/gunesin-dogdugu-yer/episode-7/': '/gunesin-dogdugu-yer/episode-7',
+    '/gunesin-dogdugu-yer/episode-9/': '/gunesin-dogdugu-yer/episode-9',
+    '/yeralti/': '/yeralti',
+    '/yeralti/episode-1/': '/yeralti/episode-1',
     '/for-creators': '/creators',
     '/for-creators/': '/creators',
     '/for-business': '/business',
@@ -3728,11 +3754,42 @@ app.post('/api/membership/profile/phone', (req, res) => {
       referralCode: req.body?.referralCode,
     });
     if ('error' in result) {
-      return res.status(result.statusCode || 400).json({ success: false, error: result.error });
+      if (result.code === 'ACCOUNT_BLOCKED') {
+        res.clearCookie(MEMBER_COOKIE_NAME, { path: '/' });
+      }
+      return res.status(result.statusCode || 400).json({
+        success: false,
+        code: result.code,
+        blocked: result.code === 'ACCOUNT_BLOCKED',
+        email: result.blockedEmail,
+        reason: result.blockedReason,
+        error: result.error,
+      });
     }
     const account = getMemberAccountState(memberId);
     if (!account) {
       return res.status(404).json({ success: false, error: 'Account not found.' });
+    }
+    // Explicitly record WhatsApp permission when a Google signup completes their phone number and opts in
+    if (req.body?.whatsappOptIn === true || req.body?.promotionalOptIn === true) {
+      try {
+        upsertMemberNotificationPreferences({
+          memberId: account.member.id,
+          ownerUid: account.member.googleUid,
+          email: account.member.email,
+          fullName: account.member.fullName,
+          phone: account.member.phone,
+          membershipUpdates: req.body?.whatsappOptIn === true,
+          renewalReminders: req.body?.whatsappOptIn === true,
+          newEpisodeAlerts: req.body?.whatsappOptIn === true,
+          promotionalMessages: req.body?.promotionalOptIn === true,
+          leadEnquiryConsent: false,
+          optedOut: false,
+          source: 'phone_completion_modal',
+        });
+      } catch {
+        // Non-blocking preference recording
+      }
     }
     return res.json({ success: true, ...account });
   } catch {
@@ -3828,6 +3885,7 @@ app.post('/api/membership/checkout', async (req, res) => {
       void emitAutomationEvent('membership.payment_pending', {
         memberId: account.member.id,
         fullName: account.member.fullName,
+        email: account.member.email,
         phone: account.member.phone,
         orderId: result.order.id,
         planName: result.order.planName,
@@ -3900,6 +3958,7 @@ app.post('/api/membership/orders/:orderId/confirm-free', async (req, res) => {
     void emitAutomationEvent('membership.proof_submitted', {
       memberId: member.id,
       fullName: member.fullName,
+      email: member.email,
       phone: member.phone,
       orderId: order.id,
       planName: order.planName,
@@ -4036,6 +4095,7 @@ app.post(
       void emitAutomationEvent('membership.proof_submitted', {
         memberId: member.id,
         fullName: member.fullName,
+        email: member.email,
         phone: member.phone,
         orderId: order.id,
         planName: order.planName,
@@ -4699,13 +4759,19 @@ app.post('/api/admin/memberships/requests/:orderId/approve', requireAdmin, async
       });
     }
 
+    const approvedAmountDisplay =
+      order.currency === 'USD'
+        ? `$${Number(order.amountUsd ?? order.expectedAmount ?? 0).toFixed(2)} USD`
+        : `PKR ${Number(order.amountPkr || 0).toLocaleString()}`;
     void emitAutomationEvent('membership.approved', {
       memberId: member?.id || membership.memberId,
       fullName: member?.fullName || membership.customerName,
+      email: member?.email || membership.customerEmail,
       phone: member?.phone || membership.customerPhone,
       orderId: order.id,
       membershipId: membership.id,
       planName: membership.planName,
+      amountDisplay: approvedAmountDisplay,
       dramaTitles,
       activatedAt: membership.activatedAt,
       expiresAt: membership.expiresAt,
@@ -4769,8 +4835,10 @@ app.post('/api/admin/memberships/requests/:orderId/reject', requireAdmin, async 
     void emitAutomationEvent('membership.rejected', {
       memberId: member?.id || order.memberId,
       fullName: member?.fullName || order.customerName,
+      email: member?.email || order.customerEmail,
       phone: member?.phone || order.customerPhone,
       orderId: order.id,
+      planName: order.planName,
       rejectionReason: order.rejectionReason,
       reviewedAt: order.reviewedAt || order.updatedAt,
     });
@@ -4851,6 +4919,7 @@ app.post('/api/admin/memberships/assign', requireAdmin, async (req: any, res) =>
     void emitAutomationEvent('membership.approved', {
       memberId: member.id,
       fullName: member.fullName,
+      email: member.email,
       phone: member.phone,
       orderId: order.id,
       membershipId: membership.id,
@@ -5015,9 +5084,10 @@ app.get('/api/admin/memberships/blocked-users', requireAdmin, (_req: any, res) =
 
 app.post('/api/admin/memberships/blocked-users', requireAdmin, (req: any, res) => {
   try {
-    const { email, memberId, reason } = req.body || {};
+    const { email, phone, memberId, reason } = req.body || {};
     const result = blockUserEmailByAdmin({
       email: typeof email === 'string' ? email : undefined,
+      phone: typeof phone === 'string' ? phone : undefined,
       memberId: typeof memberId === 'string' ? memberId : undefined,
       reason: typeof reason === 'string' ? reason : undefined,
       admin: req.admin,
@@ -5025,13 +5095,24 @@ app.post('/api/admin/memberships/blocked-users', requireAdmin, (req: any, res) =
     if ('error' in result) {
       return res.status(result.statusCode).json({ success: false, error: result.error });
     }
+    const automationCleanup = cleanupBlockedUserAutomationState({
+      memberIds: result.cleanup.affectedMemberIds,
+      email: result.blockedUser.email,
+      phones: result.cleanup.blockedPhones,
+      reason: result.blockedUser.reason,
+      actor: req.admin.email,
+    });
     return res.status(201).json({
       success: true,
       blockedUser: result.blockedUser,
+      cleanup: {
+        ...result.cleanup,
+        ...automationCleanup,
+      },
       overview: getAdminMembershipsOverview(),
     });
   } catch {
-    return res.status(500).json({ success: false, error: 'Failed to block email address.' });
+    return res.status(500).json({ success: false, error: 'Failed to block user account and phone number.' });
   }
 });
 
@@ -6429,14 +6510,60 @@ app.post('/api/admin/automation/test-message', requireAdmin, async (req: any, re
       bypassTemplateApprovalCheck: Boolean(req.body?.bypassApprovalCheck),
     });
 
+    const accepted =
+      log?.status === 'api_accepted' ||
+      log?.status === 'sent' ||
+      log?.status === 'delivered' ||
+      log?.status === 'read';
     return res.json({
-      success: log?.status === 'sent',
+      success: accepted,
       messageLog: log,
-      error: log?.status === 'sent' ? undefined : log?.errorMessage,
+      error: accepted ? undefined : log?.errorMessage,
       overview: getAdminAutomationOverview(),
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to dispatch test WhatsApp message.' });
+  }
+});
+
+// Master Automation Bot START / STOP Controls & Live Meta Template Sync
+app.post('/api/admin/automation/bot/start', requireAdmin, async (req: any, res) => {
+  try {
+    const result = await startAutomationBot(req.admin);
+    return res.json({
+      success: true,
+      settings: result.settings,
+      workerSummary: result.workerSummary,
+      overview: getAdminAutomationOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to start automation bot.' });
+  }
+});
+
+app.post('/api/admin/automation/bot/stop', requireAdmin, (req: any, res) => {
+  try {
+    const settings = stopAutomationBot(req.admin);
+    return res.json({
+      success: true,
+      settings,
+      overview: getAdminAutomationOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to stop automation bot.' });
+  }
+});
+
+app.post('/api/admin/automation/templates/sync-meta', requireAdmin, async (req: any, res) => {
+  try {
+    const result = await syncMetaTemplateStatuses(req.admin);
+    return res.status(result.ok ? 200 : 400).json({
+      success: result.ok,
+      ...result,
+      overview: getAdminAutomationOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to sync Meta template approval statuses.' });
   }
 });
 
@@ -6508,7 +6635,22 @@ app.put('/api/admin/automation/preferences/:prefId', requireAdmin, (req: any, re
   }
 });
 
-// 6. Episode Publishing Notification Endpoint (Entitled active subscribers only, anti-duplicate + deliberate resend)
+// 6. Episode Publishing Notification Endpoint (Free & Premium, anti-duplicate, honest breakdown, worker execution)
+app.get('/api/admin/automation/episodes/audience-preview', requireAdmin, (req: any, res) => {
+  try {
+    const dramaId = String(req.query?.dramaId || '').trim();
+    if (!dramaId) {
+      return res.status(400).json({ success: false, error: 'dramaId query parameter is required.' });
+    }
+    const accessType = req.query?.accessType === 'free' ? 'free' : 'premium';
+    const episodeSlug = req.query?.episodeSlug ? String(req.query.episodeSlug) : undefined;
+    const preview = previewEpisodeNotificationAudience(dramaId, { accessType, episodeSlug });
+    return res.json({ success: true, preview });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to compute episode audience preview.' });
+  }
+});
+
 app.post('/api/admin/automation/episodes/publish-notify', requireAdmin, async (req: any, res) => {
   try {
     const {
@@ -6518,6 +6660,11 @@ app.post('/api/admin/automation/episodes/publish-notify', requireAdmin, async (r
       episodeNumber,
       episodeTitle,
       episodeUrl,
+      accessType,
+      sendingMode,
+      selectedMemberIds,
+      sendInAppFallback,
+      startAutomationIfStopped,
       forceResend,
     } = req.body || {};
 
@@ -6528,6 +6675,9 @@ app.post('/api/admin/automation/episodes/publish-notify', requireAdmin, async (r
       });
     }
 
+    const validModes: WhatsAppSendingMode[] = ['automatic', 'manual', 'automatic_with_fallback', 'disabled'];
+    const parsedSendingMode = validModes.includes(sendingMode) ? (sendingMode as WhatsAppSendingMode) : undefined;
+
     const result = await triggerEpisodePublishedBroadcast({
       dramaId: String(dramaId),
       episodeSlug: String(episodeSlug || `episode-${episodeNumber}`),
@@ -6535,6 +6685,13 @@ app.post('/api/admin/automation/episodes/publish-notify', requireAdmin, async (r
       episodeNumber: Number(episodeNumber),
       episodeTitle: String(episodeTitle || `Episode ${episodeNumber}`),
       episodeUrl: episodeUrl ? String(episodeUrl) : undefined,
+      accessType: accessType === 'free' || accessType === 'premium' ? accessType : undefined,
+      sendingMode: parsedSendingMode,
+      selectedMemberIds: Array.isArray(selectedMemberIds)
+        ? selectedMemberIds.map((id: any) => String(id))
+        : undefined,
+      sendInAppFallback: sendInAppFallback !== false,
+      startAutomationIfStopped: startAutomationIfStopped === true,
       adminEmail: req.admin.email,
       adminId: req.admin.id,
       forceResend: forceResend === true,
@@ -6557,6 +6714,254 @@ app.post('/api/admin/automation/episodes/publish-notify', requireAdmin, async (r
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to trigger episode broadcast.' });
+  }
+});
+
+// 6B. Historical Customer Campaigns (Admin-Controlled Preview & Launch)
+app.post('/api/admin/automation/campaigns/preview', requireAdmin, (req: any, res) => {
+  try {
+    const segment = String(req.body?.segment || 'registered_never_purchased') as HistoricalCampaignSegment;
+    const validSegments: HistoricalCampaignSegment[] = [
+      'registered_never_purchased',
+      'selected_plan_unpaid',
+      'expired_memberships',
+      'active_members',
+    ];
+    if (!validSegments.includes(segment)) {
+      return res.status(400).json({ success: false, error: 'Invalid historical campaign segment.' });
+    }
+    const preview = previewHistoricalCampaign(segment);
+    return res.json({ success: true, preview });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to preview historical campaign.' });
+  }
+});
+
+app.post('/api/admin/automation/campaigns/launch', requireAdmin, async (req: any, res) => {
+  try {
+    const segment = String(req.body?.segment || '') as HistoricalCampaignSegment;
+    const validSegments: HistoricalCampaignSegment[] = [
+      'registered_never_purchased',
+      'selected_plan_unpaid',
+      'expired_memberships',
+      'active_members',
+    ];
+    if (!validSegments.includes(segment)) {
+      return res.status(400).json({ success: false, error: 'Invalid historical campaign segment.' });
+    }
+    const validModes: WhatsAppSendingMode[] = ['automatic', 'manual', 'automatic_with_fallback', 'disabled'];
+    const sendingMode: WhatsAppSendingMode = validModes.includes(req.body?.sendingMode)
+      ? req.body.sendingMode
+      : 'automatic_with_fallback';
+    const result = await launchHistoricalCampaign({
+      segment,
+      sendingMode,
+      admin: req.admin,
+    });
+    return res.json({
+      success: true,
+      campaign: result,
+      overview: getAdminAutomationOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to launch historical campaign.' });
+  }
+});
+
+// 6C. Manual One-Click WhatsApp Center & Customer Recipient Directory (Works independently of Cloud API)
+app.get('/api/admin/automation/whatsapp-notifications', requireAdmin, (req: any, res) => {
+  try {
+    const dashboard = getOneClickNotificationsDashboard({
+      category: req.query?.category ? String(req.query.category) : undefined,
+      status: req.query?.status ? String(req.query.status) : undefined,
+      search: req.query?.search ? String(req.query.search) : undefined,
+      limit: req.query?.limit ? Number(req.query.limit) : 400,
+    });
+    const recipients = getManualWhatsAppRecipientsDirectory({
+      search: req.query?.recipientSearch ? String(req.query.recipientSearch) : undefined,
+      membershipStatus: req.query?.membershipStatus ? String(req.query.membershipStatus) : undefined,
+      dramaId: req.query?.dramaId ? String(req.query.dramaId) : undefined,
+    });
+    return res.json({
+      success: true,
+      currentAdmin: req.admin,
+      ...dashboard,
+      recipients,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to load manual WhatsApp center.' });
+  }
+});
+
+app.put('/api/admin/automation/whatsapp-notifications/settings', requireAdmin, (req: any, res) => {
+  try {
+    const settings = saveOneClickQueueSettings(req.body || {}, req.admin.email);
+    return res.json({
+      success: true,
+      settings,
+      dashboard: getOneClickNotificationsDashboard(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to save manual WhatsApp settings.' });
+  }
+});
+
+app.patch('/api/admin/automation/whatsapp-notifications/:id', requireAdmin, (req: any, res) => {
+  try {
+    const result = editOneClickNotification({
+      id: req.params.id,
+      messageText: typeof req.body?.messageText === 'string' ? req.body.messageText : undefined,
+      rawPhone: typeof req.body?.rawPhone === 'string' ? req.body.rawPhone : undefined,
+      actor: req.admin.email,
+    });
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      notification: result.notification,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to update WhatsApp notification.' });
+  }
+});
+
+app.post('/api/admin/automation/whatsapp-notifications/:id/open', requireAdmin, (req: any, res) => {
+  try {
+    const result = markOneClickNotificationOpened({
+      id: req.params.id,
+      actor: req.admin.email,
+    });
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      notification: result.notification,
+      waUrl: result.waUrl,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to open WhatsApp notification.' });
+  }
+});
+
+app.post('/api/admin/automation/whatsapp-notifications/:id/confirm-sent', requireAdmin, (req: any, res) => {
+  try {
+    const result = markOneClickNotificationConfirmedSent({
+      id: req.params.id,
+      actor: req.admin.email,
+      note: typeof req.body?.note === 'string' ? req.body.note : undefined,
+    });
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      notification: result.notification,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to confirm WhatsApp message sent.' });
+  }
+});
+
+app.post('/api/admin/automation/whatsapp-notifications/:id/cancel', requireAdmin, (req: any, res) => {
+  try {
+    const result = cancelOneClickNotification({
+      id: req.params.id,
+      actor: req.admin.email,
+      reason: typeof req.body?.reason === 'string' ? req.body.reason : undefined,
+    });
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      notification: result.notification,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to cancel WhatsApp notification.' });
+  }
+});
+
+app.post('/api/admin/automation/whatsapp-notifications/sync-reminders', requireAdmin, (_req: any, res) => {
+  try {
+    const summary = syncOneClickLifecycleReminders();
+    return res.json({
+      success: true,
+      summary,
+      dashboard: getOneClickNotificationsDashboard(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to sync manual WhatsApp reminders.' });
+  }
+});
+
+app.post('/api/admin/automation/whatsapp-notifications/manual-prepare', requireAdmin, (req: any, res) => {
+  try {
+    const {
+      memberIds,
+      eventType,
+      customMessage,
+      dramaId,
+      episodeNumber,
+      episodeSlug,
+      episodeLink,
+      accessType,
+      rejectionReason,
+    } = req.body || {};
+    if (!Array.isArray(memberIds) || memberIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'Select at least one customer recipient.' });
+    }
+    if (!eventType) {
+      return res.status(400).json({ success: false, error: 'eventType is required.' });
+    }
+    const result = prepareManualWhatsAppMessagesForMembers({
+      memberIds: memberIds.map((id: any) => String(id)),
+      eventType,
+      customMessage: typeof customMessage === 'string' && customMessage.trim() ? customMessage.trim() : undefined,
+      dramaId: typeof dramaId === 'string' && dramaId.trim() ? dramaId.trim() : undefined,
+      episodeNumber: episodeNumber ? Number(episodeNumber) : undefined,
+      episodeSlug: typeof episodeSlug === 'string' ? episodeSlug : undefined,
+      episodeLink: typeof episodeLink === 'string' ? episodeLink : undefined,
+      accessType: accessType === 'free' || accessType === 'premium' ? accessType : undefined,
+      rejectionReason: typeof rejectionReason === 'string' ? rejectionReason : undefined,
+      adminEmail: req.admin.email,
+    });
+    return res.json({
+      success: true,
+      ...result,
+      dashboard: getOneClickNotificationsDashboard(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to prepare manual WhatsApp messages.' });
+  }
+});
+
+app.post('/api/admin/automation/whatsapp-notifications/episode-queue', requireAdmin, (req: any, res) => {
+  try {
+    const { dramaId, episodeSlug, episodeNumber, episodeUrl, accessType, selectedMemberIds } = req.body || {};
+    if (!dramaId || !episodeNumber) {
+      return res.status(400).json({ success: false, error: 'dramaId and episodeNumber are required.' });
+    }
+    const result = queueEpisodePublishedOneClickNotifications({
+      dramaId: String(dramaId),
+      episodeSlug: String(episodeSlug || `episode-${episodeNumber}`),
+      episodeNumber: Number(episodeNumber),
+      episodeUrl: episodeUrl ? String(episodeUrl) : undefined,
+      accessType: accessType === 'free' || accessType === 'premium' ? accessType : undefined,
+      selectedMemberIds: Array.isArray(selectedMemberIds) ? selectedMemberIds.map((id: any) => String(id)) : undefined,
+      adminEmail: req.admin.email,
+    });
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
+    return res.json({
+      success: true,
+      ...result,
+      dashboard: getOneClickNotificationsDashboard(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to queue manual episode WhatsApp notifications.' });
   }
 });
 
@@ -6717,9 +7122,12 @@ if (!process.env.CONTROL_PLANE_PORT) {
         'https://feviqo.com/mehmed-fetihler-sultani/episode-88',
         'https://feviqo.com/mehmed-fetihler-sultani/episode-87',
         'https://feviqo.com/gunesin-dogdugu-yer',
+        'https://feviqo.com/gunesin-dogdugu-yer/episode-9',
         'https://feviqo.com/gunesin-dogdugu-yer/episode-8',
         'https://feviqo.com/gunesin-dogdugu-yer/episode-7',
         'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
+        'https://feviqo.com/yeralti',
+        'https://feviqo.com/yeralti/episode-1',
         'https://feviqo.com/dramas',
         'https://feviqo.com/membership'
       ],
@@ -6737,6 +7145,9 @@ async function startServer() {
   });
   void hydrateAutomationStoreFromFirestore().catch((err) => {
     console.warn('Initial automation Firestore hydration skipped:', (err as Error)?.message || err);
+  });
+  void hydrateOneClickQueueFromFirestore().catch((err) => {
+    console.warn('Initial manual WhatsApp queue Firestore hydration skipped:', (err as Error)?.message || err);
   });
   if (process.env.NODE_ENV !== 'production') {
     const disableHmr =
@@ -6892,7 +7303,7 @@ async function startServer() {
       runLifecycleReminderCheck('startup', dispatcher).catch((err) =>
         console.warn('[MembershipScheduler] Startup check error:', err)
       );
-      runAutomationWorkerCycle().catch((err) =>
+      runAutomationWorkerCycle({ trigger: 'startup' }).catch((err) =>
         console.warn('[AutomationWorker] Startup cycle error:', err)
       );
     }, 3000).unref();
@@ -6904,7 +7315,7 @@ async function startServer() {
     }, 5 * 60 * 1000).unref();
 
     setInterval(() => {
-      runAutomationWorkerCycle().catch((err) =>
+      runAutomationWorkerCycle({ trigger: 'scheduled_interval' }).catch((err) =>
         console.warn('[AutomationWorker] Interval cycle error:', err)
       );
     }, 60 * 1000).unref();

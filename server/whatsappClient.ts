@@ -228,22 +228,40 @@ export const WHATSAPP_TEMPLATES_CATALOG: WhatsAppTemplateDraft[] = [
   },
   {
     name: 'feviqo_new_episode',
-    displayName: 'New Urdu Episode Published Alert',
+    displayName: 'New Urdu Episode Published Alert (Free & Premium)',
     category: 'MARKETING',
     classificationNote:
-      'Classified as MARKETING under Meta policy for new content release alerts (sent only to entitled, opted-in active members).',
+      'Classified as MARKETING under Meta policy for new content release alerts. Premium episodes target active entitled members only; Free episodes target registered consented customers.',
     language: 'en',
     eventTrigger: 'episode.published',
     consentCategory: 'newEpisodeAlerts',
     bodyText:
-      'New Urdu Episode Live on FEVIQO Premium! 🎬\n\nDrama: {{1}}\nSeason {{2}}, Episode {{3}}\n\nWatch now with your active membership: {{4}}',
+      'New Urdu-Dubbed Episode Available on FEVIQO! 🎬\n\nDrama: {{1}}\nEpisode: {{2}}\nAccess: {{3}}\n\nWatch now:\n{{4}}\n\nVisit FEVIQO Premium for more Urdu-dubbed entertainment.',
     variables: [
       { index: 1, key: 'dramaName', example: 'Mehmed: Fetihler Sultani' },
-      { index: 2, key: 'seasonNumber', example: '4' },
-      { index: 3, key: 'episodeNumber', example: '92' },
+      { index: 2, key: 'episodeNumber', example: '92' },
+      { index: 3, key: 'accessType', example: 'Premium' },
       { index: 4, key: 'episodeUrl', example: 'https://feviqo.com/mehmed-fetihler-sultani/episode-92' },
     ],
     footerText: 'Reply STOP anytime to opt out.',
+  },
+  {
+    name: 'feviqo_account_security',
+    displayName: 'Account Security & Password Activity Notice',
+    category: 'UTILITY',
+    classificationNote:
+      'Classified as UTILITY for account security alerts. Never includes passwords, app passwords, or secret tokens.',
+    language: 'en',
+    eventTrigger: 'account.security_alert',
+    consentCategory: 'membershipUpdates',
+    bodyText:
+      'Assalam o Alaikum {{1}}, FEVIQO Account Security Notice:\n\n{{2}}\n\nIf this was not you, secure your account immediately at {{3}}.',
+    variables: [
+      { index: 1, key: 'name', example: 'Ali' },
+      { index: 2, key: 'summary', example: 'Your account password was updated.' },
+      { index: 3, key: 'accountUrl', example: 'https://feviqo.com/account' },
+    ],
+    footerText: 'FEVIQO Security — Never share passwords.',
   },
   {
     name: 'feviqo_lead_received',
@@ -700,3 +718,63 @@ export async function testWhatsAppGraphConnectivity(): Promise<{
     };
   }
 }
+
+/**
+ * Fetches approved/pending/rejected message templates directly from Meta WABA Graph API
+ * using the existing configured WHATSAPP_BUSINESS_ACCOUNT_ID and WHATSAPP_ACCESS_TOKEN.
+ */
+export async function fetchMetaWabaTemplates(): Promise<{
+  ok: boolean;
+  notConfigured?: boolean;
+  templates: Array<{
+    name: string;
+    status: string;
+    category: string;
+    language: string;
+  }>;
+  error?: string;
+}> {
+  const accessToken = (process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
+  const wabaId = (process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || '').trim();
+  const apiVersion = (process.env.WHATSAPP_API_VERSION || 'v22.0').trim();
+
+  if (!accessToken || !wabaId) {
+    return {
+      ok: false,
+      notConfigured: true,
+      templates: [],
+      error: 'Missing WHATSAPP_ACCESS_TOKEN or WHATSAPP_BUSINESS_ACCOUNT_ID.',
+    };
+  }
+
+  try {
+    const url = `https://graph.facebook.com/${encodeURIComponent(apiVersion)}/${encodeURIComponent(wabaId)}/message_templates?fields=name,status,category,language&limit=200`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(12000),
+    });
+    const data: any = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return {
+        ok: false,
+        templates: [],
+        error: data?.error?.message || `Meta API HTTP ${res.status}`,
+      };
+    }
+    const rawList = Array.isArray(data?.data) ? data.data : [];
+    const templates = rawList.map((item: any) => ({
+      name: String(item?.name || ''),
+      status: String(item?.status || '').toUpperCase(),
+      category: String(item?.category || '').toUpperCase(),
+      language: String(item?.language || 'en'),
+    }));
+    return { ok: true, templates };
+  } catch (err: any) {
+    return {
+      ok: false,
+      templates: [],
+      error: err?.message || 'Unable to fetch templates from Meta Graph API.',
+    };
+  }
+}
+

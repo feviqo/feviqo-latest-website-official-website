@@ -1268,11 +1268,14 @@
     },
     "BlockedUser": {
       "title": "BlockedUser",
-      "description": "Permanently blocked email address denied access across FEVIQO until unblocked by an administrator.",
+      "description": "Permanently blocked email address and associated phone number(s) denied access across FEVIQO until unblocked by an administrator.",
       "type": "object",
       "properties": {
         "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
         "email": { "type": "string", "format": "email", "minLength": 5, "maxLength": 200 },
+        "phone": { "type": "string", "minLength": 0, "maxLength": 32 },
+        "phoneNormalized": { "type": "string", "minLength": 0, "maxLength": 32 },
+        "additionalPhones": { "type": "array", "items": { "type": "string" } },
         "memberId": { "type": "string", "minLength": 0, "maxLength": 128 },
         "fullName": { "type": "string", "minLength": 0, "maxLength": 120 },
         "reason": { "type": "string", "minLength": 0, "maxLength": 500 },

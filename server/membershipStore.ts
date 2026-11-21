@@ -128,6 +128,9 @@ export interface SafeMember {
 export interface BlockedUserRecord {
   id: string;
   email: string;
+  phone?: string;
+  phoneNormalized?: string;
+  additionalPhones?: string[];
   memberId?: string;
   fullName?: string;
   reason: string;
@@ -304,7 +307,9 @@ export type CustomerNotificationType =
   | 'membership_renewed'
   | 'membership_extended'
   | 'payment_rejected'
-  | 'referral_reward';
+  | 'referral_reward'
+  | 'episode_published'
+  | 'security_alert';
 
 export interface CustomerNotification {
   id: string;
@@ -942,7 +947,7 @@ export function appendAdminAudit(entry: Omit<AdminAuditEntry, 'id' | 'createdAt'
   return item;
 }
 
-function createCustomerNotificationRecord(
+export function createCustomerNotificationRecord(
   input: Omit<CustomerNotification, 'id' | 'createdAt' | 'isRead'> & { isRead?: boolean }
 ): { notification: CustomerNotification; created: boolean } {
   const existingAll = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
@@ -2164,7 +2169,7 @@ export function registerMember(params: {
     return { success: false, error: 'Please enter a valid email address.', statusCode: 400 };
   }
 
-  const blocked = getBlockedUserByEmail(email);
+  const blocked = getBlockedUserByEmail(email) || getBlockedUserByPhone(params.phone);
   if (blocked) {
     return {
       success: false,
@@ -2298,6 +2303,17 @@ export function loginMember(params: {
   }
 
   const found = members[foundIdx];
+  const blockedPhone = getBlockedUserByPhone(found.phone);
+  if (blockedPhone) {
+    return {
+      success: false,
+      statusCode: 403,
+      code: 'ACCOUNT_BLOCKED',
+      blockedEmail: blockedPhone.email,
+      blockedReason: blockedPhone.reason,
+      error: buildBlockedAccountMessage(blockedPhone),
+    };
+  }
   const passwordValid = verifyMemberPassword(password, found.passwordHash);
   const canAdoptPassword =
     !passwordValid &&
@@ -2340,7 +2356,7 @@ export function upsertGoogleMember(params: {
     return { success: false, error: 'Verified Google email is required.', statusCode: 400 };
   }
 
-  const blocked = getBlockedUserByEmail(email);
+  const blocked = getBlockedUserByEmail(email) || getBlockedUserByPhone(params.phone);
   if (blocked) {
     return {
       success: false,
@@ -2360,6 +2376,17 @@ export function upsertGoogleMember(params: {
 
   if (existingIdx !== -1) {
     const existing = members[existingIdx];
+    const blockedExistingPhone = getBlockedUserByPhone(existing.phone);
+    if (blockedExistingPhone) {
+      return {
+        success: false,
+        statusCode: 403,
+        code: 'ACCOUNT_BLOCKED',
+        blockedEmail: blockedExistingPhone.email,
+        blockedReason: blockedExistingPhone.reason,
+        error: buildBlockedAccountMessage(blockedExistingPhone),
+      };
+    }
     let updated = false;
     if (
       params.uid &&
@@ -2455,10 +2482,22 @@ export function updateMemberPhone(params: {
   memberId: string;
   phone: string;
   referralCode?: string;
-}): { success: true; member: SafeMember } | { success: false; error: string; statusCode?: number } {
+}): { success: true; member: SafeMember } | { success: false; error: string; statusCode?: number; code?: string; blockedReason?: string; blockedEmail?: string } {
   const phoneCheck = normalizeAndValidatePhone(params.phone);
   if (!('phone' in phoneCheck)) {
     return { success: false, error: phoneCheck.error, statusCode: 400 };
+  }
+
+  const blocked = getBlockedUserByPhone(phoneCheck.phone) || getBlockedUserByMemberId(params.memberId);
+  if (blocked) {
+    return {
+      success: false,
+      statusCode: 403,
+      code: 'ACCOUNT_BLOCKED',
+      blockedEmail: blocked.email,
+      blockedReason: blocked.reason,
+      error: buildBlockedAccountMessage(blocked),
+    };
   }
 
   const members = readMembersEnsured();
@@ -2552,10 +2591,12 @@ function readAllOrders(): MembershipOrder[] {
 }
 
 function getMembershipDramaIds(sub: MembershipRecord): string[] {
+  const selected = Array.isArray(sub.selectedDramaIds) ? sub.selectedDramaIds.filter(Boolean) : [];
   if (sub.planId === 'vip') {
-    return MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id);
+    if (selected.length > 0) return selected.slice(0, 3);
+    return MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id);
   }
-  return Array.isArray(sub.selectedDramaIds) ? sub.selectedDramaIds : [];
+  return selected;
 }
 
 export function syncMemberSubscriptions(memberId?: string): MembershipRecord[] {
@@ -2785,7 +2826,7 @@ export function validatePlanAndDramas(params: {
   }
 
   if (plan.dramaLimit === 'all') {
-    const vipIds = MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id);
+    const vipIds = MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id);
     return { valid: true, plan, normalizedDramaIds: vipIds };
   }
 
@@ -4150,9 +4191,13 @@ export function approvePaymentRequest(params: {
   writeJson(ORDERS_FILE, orders);
 
   const selectedIds =
-    plan.dramaLimit === 'all'
-      ? MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id)
-      : order.selectedDramaIds;
+    Array.isArray(order.selectedDramaIds) && order.selectedDramaIds.length > 0
+      ? plan.id === 'vip'
+        ? order.selectedDramaIds.slice(0, 3)
+        : order.selectedDramaIds
+      : plan.id === 'vip'
+        ? MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id)
+        : ['teskilat'];
   const orderMember = getMemberById(order.memberId);
   const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
   const durationMs = order.durationDays * 24 * 60 * 60 * 1000;
@@ -4888,7 +4933,24 @@ export function buildBlockedAccountMessage(record?: BlockedUserRecord | null): s
   if (record?.reason && record.reason.trim() && record.reason.trim() !== 'Blocked by FEVIQO administrator') {
     return `This email address (${record.email}) has been permanently blocked from accessing FEVIQO. Reason: ${record.reason.trim()}`;
   }
-  return 'This email address has been permanently blocked from accessing FEVIQO until an administrator restores access.';
+  return 'This account and its associated phone number have been permanently blocked from accessing or registering on FEVIQO until an administrator restores access.';
+}
+
+export function normalizeBlockedPhone(phone?: string | null): string {
+  const raw = String(phone || '').trim();
+  if (!raw) return '';
+  let digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00')) {
+    digits = digits.slice(2);
+  }
+  if (/^03\d{9}$/.test(digits)) {
+    return `92${digits.slice(1)}`;
+  }
+  if (/^3\d{9}$/.test(digits)) {
+    return `92${digits}`;
+  }
+  return digits.length >= 10 && digits.length <= 15 ? digits : '';
 }
 
 function mirrorBlockedUserServer(record: BlockedUserRecord) {
@@ -4896,6 +4958,9 @@ function mirrorBlockedUserServer(record: BlockedUserRecord) {
   void mirrorDocToFirestoreServer('blockedUsers', record.id, {
     id: record.id,
     email: record.email,
+    phone: record.phone || '',
+    phoneNormalized: record.phoneNormalized || '',
+    additionalPhones: Array.isArray(record.additionalPhones) ? record.additionalPhones.slice(0, 20) : [],
     memberId: record.memberId || '',
     fullName: record.fullName || '',
     reason: record.reason || 'Blocked by FEVIQO administrator',
@@ -4921,6 +4986,22 @@ export function getBlockedUserByEmail(email?: string | null): BlockedUserRecord 
   return list.find((item) => normalizeBlockedEmail(item.email) === normalized) || null;
 }
 
+export function getBlockedUserByPhone(phone?: string | null): BlockedUserRecord | null {
+  const normalized = normalizeBlockedPhone(phone);
+  if (!normalized) return null;
+  const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
+  return (
+    list.find((item) => {
+      if (item.phoneNormalized && normalizeBlockedPhone(item.phoneNormalized) === normalized) return true;
+      if (item.phone && normalizeBlockedPhone(item.phone) === normalized) return true;
+      if (Array.isArray(item.additionalPhones)) {
+        return item.additionalPhones.some((p) => normalizeBlockedPhone(p) === normalized);
+      }
+      return false;
+    }) || null
+  );
+}
+
 export function getBlockedUserByMemberId(memberId?: string | null): BlockedUserRecord | null {
   if (!memberId) return null;
   const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
@@ -4928,26 +5009,45 @@ export function getBlockedUserByMemberId(memberId?: string | null): BlockedUserR
   if (direct) return direct;
   const members = readMembersEnsured();
   const member = members.find((m) => m.id === memberId);
-  if (!member?.email) return null;
-  return getBlockedUserByEmail(member.email);
+  if (!member) return null;
+  return getBlockedUserByEmail(member.email) || getBlockedUserByPhone(member.phone) || null;
 }
 
 export function isEmailBlocked(email?: string | null): boolean {
   return Boolean(getBlockedUserByEmail(email));
 }
 
+export function isPhoneBlocked(phone?: string | null): boolean {
+  return Boolean(getBlockedUserByPhone(phone));
+}
+
 export function blockUserEmailByAdmin(params: {
   email?: string;
+  phone?: string;
   memberId?: string;
   reason?: string;
   admin: SafeAdmin;
 }):
-  | { success: true; blockedUser: BlockedUserRecord }
+  | {
+      success: true;
+      blockedUser: BlockedUserRecord;
+      cleanup: {
+        deletedPendingOrdersCount: number;
+        revokedMembershipsCount: number;
+        affectedMemberIds: string[];
+        blockedPhones: string[];
+      };
+    }
   | { success: false; statusCode: number; error: string } {
   const members = readMembersEnsured();
   let targetMember = params.memberId
     ? members.find((m) => m.id === params.memberId)
     : undefined;
+
+  const explicitPhoneNorm = normalizeBlockedPhone(params.phone);
+  if (!targetMember && explicitPhoneNorm) {
+    targetMember = members.find((m) => normalizeBlockedPhone(m.phone) === explicitPhoneNorm);
+  }
 
   const normalizedEmail = normalizeBlockedEmail(params.email || targetMember?.email);
   if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
@@ -4985,17 +5085,92 @@ export function blockUserEmailByAdmin(params: {
   const existingIdx = list.findIndex(
     (item) => item.id === id || normalizeBlockedEmail(item.email) === normalizedEmail
   );
+  const existingRec = existingIdx >= 0 ? list[existingIdx] : undefined;
+
+  // Gather ALL phone numbers associated with this user across members, orders, memberships, and explicit input
+  const phoneSet = new Set<string>();
+  const rawPhones: string[] = [];
+  const addPhoneCandidate = (raw?: string | null) => {
+    const trimmed = String(raw || '').trim();
+    const norm = normalizeBlockedPhone(trimmed);
+    if (norm) {
+      phoneSet.add(norm);
+      if (trimmed) rawPhones.push(trimmed);
+    }
+  };
+
+  addPhoneCandidate(params.phone);
+  addPhoneCandidate(targetMember?.phone);
+  addPhoneCandidate(existingRec?.phone);
+  addPhoneCandidate(existingRec?.phoneNormalized);
+  if (Array.isArray(existingRec?.additionalPhones)) {
+    for (const p of existingRec.additionalPhones) addPhoneCandidate(p);
+  }
+
+  const matchingMembers = members.filter(
+    (m) =>
+      normalizeBlockedEmail(m.email) === normalizedEmail ||
+      (targetMember && m.id === targetMember.id) ||
+      (explicitPhoneNorm && normalizeBlockedPhone(m.phone) === explicitPhoneNorm)
+  );
+  for (const m of matchingMembers) {
+    addPhoneCandidate(m.phone);
+  }
+
+  const allOrders = readAllOrders();
+  const matchingMemberIds = new Set<string>(matchingMembers.map((m) => m.id));
+  for (const o of allOrders) {
+    const oEmail = normalizeBlockedEmail(o.customerEmail);
+    const oPhone = normalizeBlockedPhone(o.customerPhone);
+    if (
+      oEmail === normalizedEmail ||
+      matchingMemberIds.has(o.memberId) ||
+      (oPhone && phoneSet.has(oPhone))
+    ) {
+      addPhoneCandidate(o.customerPhone);
+      if (o.memberId) matchingMemberIds.add(o.memberId);
+    }
+  }
+
+  const allMemberships = readAllMemberships();
+  for (const ms of allMemberships) {
+    const msEmail = normalizeBlockedEmail(ms.customerEmail);
+    const msPhone = normalizeBlockedPhone(ms.customerPhone);
+    if (
+      msEmail === normalizedEmail ||
+      matchingMemberIds.has(ms.memberId) ||
+      (msPhone && phoneSet.has(msPhone))
+    ) {
+      addPhoneCandidate(ms.customerPhone);
+      if (ms.memberId) matchingMemberIds.add(ms.memberId);
+    }
+  }
+
+  // Also sweep any additional member accounts that share any of the discovered blocked phone numbers
+  for (const m of members) {
+    const mPhone = normalizeBlockedPhone(m.phone);
+    if (mPhone && phoneSet.has(mPhone)) {
+      matchingMemberIds.add(m.id);
+    }
+  }
+
+  const blockedPhones = Array.from(phoneSet).slice(0, 20);
+  const primaryPhoneNormalized = blockedPhones[0] || '';
+  const primaryRawPhone = rawPhones[0] || (primaryPhoneNormalized ? `+${primaryPhoneNormalized}` : '');
 
   const record: BlockedUserRecord = {
     id,
     email: normalizedEmail,
-    memberId: targetMember?.id || (existingIdx >= 0 ? list[existingIdx].memberId : undefined),
-    fullName: targetMember?.fullName || (existingIdx >= 0 ? list[existingIdx].fullName : undefined),
+    phone: primaryRawPhone || undefined,
+    phoneNormalized: primaryPhoneNormalized || undefined,
+    additionalPhones: blockedPhones,
+    memberId: targetMember?.id || existingRec?.memberId,
+    fullName: targetMember?.fullName || existingRec?.fullName,
     reason: cleanReason,
     blockedByAdminId: params.admin.id,
     blockedByAdminEmail: params.admin.email,
     blockedAt: nowIso,
-    createdAt: existingIdx >= 0 ? list[existingIdx].createdAt : nowIso,
+    createdAt: existingRec ? existingRec.createdAt : nowIso,
     updatedAt: nowIso,
   };
 
@@ -5007,11 +5182,60 @@ export function blockUserEmailByAdmin(params: {
   writeJson(BLOCKED_USERS_FILE, list);
   mirrorBlockedUserServer(record);
 
-  // Immediately revoke any active video playback sessions for all matching member accounts
-  for (const m of members) {
-    if (normalizeBlockedEmail(m.email) === normalizedEmail) {
-      revokePlaybackSessionsForMember(m.id, `Account permanently blocked: ${cleanReason}`);
+  // IMMEDIATELY DELETE all pending payment verifications & awaiting_payment orders for this blocked user/phone
+  const ordersToKeep: OrderRecord[] = [];
+  const deletedPendingOrderIds: string[] = [];
+  for (const order of allOrders) {
+    const oEmail = normalizeBlockedEmail(order.customerEmail);
+    const oPhone = normalizeBlockedPhone(order.customerPhone);
+    const belongsToBlocked =
+      oEmail === normalizedEmail ||
+      matchingMemberIds.has(order.memberId) ||
+      (oPhone && phoneSet.has(oPhone));
+    const isPendingOrder =
+      order.status === 'awaiting_payment' || order.status === 'pending_verification';
+    if (belongsToBlocked && isPendingOrder) {
+      deletedPendingOrderIds.push(order.id);
+      if (isServerFirestoreEnabled()) {
+        void deleteDocFromFirestoreServer('membershipOrders', order.id);
+      }
+    } else {
+      ordersToKeep.push(order);
     }
+  }
+  if (deletedPendingOrderIds.length > 0) {
+    writeJson(ORDERS_FILE, ordersToKeep);
+  }
+
+  // IMMEDIATELY REVOKE/CANCEL any active memberships for the blocked user/phone so they cannot interfere with access or episode broadcasts
+  let revokedMembershipsCount = 0;
+  for (let i = 0; i < allMemberships.length; i++) {
+    const ms = allMemberships[i];
+    const msEmail = normalizeBlockedEmail(ms.customerEmail);
+    const msPhone = normalizeBlockedPhone(ms.customerPhone);
+    const belongsToBlocked =
+      msEmail === normalizedEmail ||
+      matchingMemberIds.has(ms.memberId) ||
+      (msPhone && phoneSet.has(msPhone));
+    if (belongsToBlocked && ms.status === 'active') {
+      allMemberships[i] = {
+        ...ms,
+        status: 'cancelled',
+        cancelledAt: nowIso,
+        revokedByAdminEmail: params.admin.email,
+        revokedReason: `Account permanently blocked: ${cleanReason}`,
+      };
+      revokedMembershipsCount++;
+      mirrorMembershipServer(allMemberships[i]);
+    }
+  }
+  if (revokedMembershipsCount > 0) {
+    writeJson(MEMBERSHIPS_FILE, allMemberships);
+  }
+
+  // Immediately revoke any active video playback sessions for all matching member accounts
+  for (const mid of matchingMemberIds) {
+    revokePlaybackSessionsForMember(mid, `Account permanently blocked: ${cleanReason}`);
   }
 
   appendAdminAudit({
@@ -5019,10 +5243,19 @@ export function blockUserEmailByAdmin(params: {
     adminEmail: params.admin.email,
     action: 'user_blocked',
     targetId: record.id,
-    details: `Permanently blocked email ${normalizedEmail}${targetMember ? ` (${targetMember.fullName})` : ''}. Reason: ${cleanReason}`,
+    details: `Permanently blocked email ${normalizedEmail}${primaryRawPhone ? ` and phone ${primaryRawPhone}` : ''}${targetMember ? ` (${targetMember.fullName})` : ''}. Deleted ${deletedPendingOrderIds.length} pending order(s), revoked ${revokedMembershipsCount} active membership(s). Reason: ${cleanReason}`,
   });
 
-  return { success: true, blockedUser: record };
+  return {
+    success: true,
+    blockedUser: record,
+    cleanup: {
+      deletedPendingOrdersCount: deletedPendingOrderIds.length,
+      revokedMembershipsCount,
+      affectedMemberIds: Array.from(matchingMemberIds),
+      blockedPhones,
+    },
+  };
 }
 
 export function unblockUserEmailByAdmin(params: {
@@ -5909,6 +6142,11 @@ export function mergeCloudSyncSnapshot(payload: {
         const rec: BlockedUserRecord = {
           id: inc.id || buildBlockedUserDocId(email),
           email,
+          phone: inc.phone || undefined,
+          phoneNormalized: inc.phoneNormalized || normalizeBlockedPhone(inc.phone) || undefined,
+          additionalPhones: Array.isArray(inc.additionalPhones)
+            ? inc.additionalPhones.map((p) => normalizeBlockedPhone(p)).filter(Boolean)
+            : [],
           memberId: inc.memberId || undefined,
           fullName: inc.fullName || undefined,
           reason: String(inc.reason || 'Blocked by FEVIQO administrator').slice(0, 500),
@@ -6005,7 +6243,7 @@ export function reconcileAndRecoverMissingMemberships(): MembershipRecoveryRepor
   const nowIso = new Date(nowMs).toISOString();
   const resolvedPlans = getResolvedPlans();
   const planById = new Map(resolvedPlans.map((p) => [p.id, p]));
-  const vipDramaIds = MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id);
+  const vipDramaIds = MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id);
 
   const members = readMembersEnsured();
   const memberById = new Map(members.map((m) => [m.id, m]));
@@ -6147,10 +6385,12 @@ export function reconcileAndRecoverMissingMemberships(): MembershipRecoveryRepor
     const activatedIso = ord.paidAt || ord.reviewedAt || ord.updatedAt || ord.createdAt || nowIso;
     const activatedMs = Date.parse(activatedIso) || nowMs;
     const selectedDramaIds =
-      plan.dramaLimit === 'all' || ord.planId === 'vip'
-        ? vipDramaIds
-        : Array.isArray(ord.selectedDramaIds) && ord.selectedDramaIds.length > 0
-          ? ord.selectedDramaIds
+      Array.isArray(ord.selectedDramaIds) && ord.selectedDramaIds.length > 0
+        ? ord.planId === 'vip'
+          ? ord.selectedDramaIds.slice(0, 3)
+          : ord.selectedDramaIds
+        : ord.planId === 'vip'
+          ? vipDramaIds
           : ['teskilat'];
 
     // If this was a renewal order targeting an existing membership, re-apply extension
@@ -6304,12 +6544,16 @@ export function reconcileAndRecoverMissingMemberships(): MembershipRecoveryRepor
     const expiresAtIso = parsedExp || new Date(activatedMs + durationDays * 24 * 60 * 60 * 1000).toISOString();
     const status: MembershipStatus = Date.parse(expiresAtIso) > nowMs ? 'active' : 'expired';
     const selectedDramaIds =
-      planId === 'vip'
-        ? vipDramaIds
-        : Array.isArray(h.selectedDramaIds) && h.selectedDramaIds.length > 0
-          ? h.selectedDramaIds
-          : Array.isArray(linkedOrder?.selectedDramaIds) && linkedOrder.selectedDramaIds.length > 0
-            ? linkedOrder.selectedDramaIds
+      Array.isArray(h.selectedDramaIds) && h.selectedDramaIds.length > 0
+        ? planId === 'vip'
+          ? h.selectedDramaIds.slice(0, 3)
+          : h.selectedDramaIds
+        : Array.isArray(linkedOrder?.selectedDramaIds) && linkedOrder.selectedDramaIds.length > 0
+          ? planId === 'vip'
+            ? linkedOrder.selectedDramaIds.slice(0, 3)
+            : linkedOrder.selectedDramaIds
+          : planId === 'vip'
+            ? vipDramaIds
             : ['teskilat'];
 
     const rebuilt: MembershipRecord = {
@@ -6382,10 +6626,12 @@ export function reconcileAndRecoverMissingMemberships(): MembershipRecoveryRepor
     const expiresAtIso = parsedExp || new Date(activatedMs + durationDays * 24 * 60 * 60 * 1000).toISOString();
     const status: MembershipStatus = Date.parse(expiresAtIso) > nowMs ? 'active' : 'expired';
     const selectedDramaIds =
-      planId === 'vip'
-        ? vipDramaIds
-        : Array.isArray(n.dramaIds) && n.dramaIds.length > 0
-          ? n.dramaIds
+      Array.isArray(n.dramaIds) && n.dramaIds.length > 0
+        ? planId === 'vip'
+          ? n.dramaIds.slice(0, 3)
+          : n.dramaIds
+        : planId === 'vip'
+          ? vipDramaIds
           : ['teskilat'];
 
     const rebuilt: MembershipRecord = {
@@ -6779,9 +7025,7 @@ export function authorizeEpisodePlayback(params: {
   if (activeList.length === 0) {
     // Prefer an expired membership that previously covered this drama, else latest
     const matchingExpired = memberships.find(
-      (m) =>
-        m.status === 'expired' &&
-        ((m.planId === 'vip' && drama.vipEligible) || m.selectedDramaIds.includes(drama.id))
+      (m) => m.status === 'expired' && getMembershipDramaIds(m).includes(drama.id)
     );
     const latest = matchingExpired || memberships[0];
 
@@ -6815,9 +7059,7 @@ export function authorizeEpisodePlayback(params: {
     };
   }
 
-  const matchingActive = activeList.find(
-    (m) => (m.planId === 'vip' && drama.vipEligible) || m.selectedDramaIds.includes(drama.id)
-  );
+  const matchingActive = activeList.find((m) => getMembershipDramaIds(m).includes(drama.id));
 
   if (!matchingActive) {
     const coveredSet = new Set<string>();
@@ -6827,9 +7069,7 @@ export function authorizeEpisodePlayback(params: {
       for (const id of getMembershipDramaIds(m)) coveredSet.add(id);
     }
     const matchingExpired = memberships.find(
-      (m) =>
-        m.status === 'expired' &&
-        ((m.planId === 'vip' && drama.vipEligible) || m.selectedDramaIds.includes(drama.id))
+      (m) => m.status === 'expired' && getMembershipDramaIds(m).includes(drama.id)
     );
     if (matchingExpired) {
       return {
@@ -6907,9 +7147,7 @@ export function getEntitledActiveMembersForDrama(dramaId: string): Array<{
     const expMs = Date.parse(sub.expiresAt);
     if (Number.isNaN(expMs) || expMs <= now) continue;
 
-    const isEntitled =
-      (sub.planId === 'vip' && drama.vipEligible) ||
-      (Array.isArray(sub.selectedDramaIds) && sub.selectedDramaIds.includes(drama.id));
+    const isEntitled = getMembershipDramaIds(sub).includes(drama.id);
     if (!isEntitled) continue;
 
     const memberRec = memberMap.get(sub.memberId);

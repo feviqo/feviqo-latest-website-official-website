@@ -78,7 +78,7 @@ function buildPublicFeviqoKnowledge(bookingUrl: string): string {
   const plansSummary = MEMBERSHIP_PLANS.map(
     (p) =>
       `- ${p.name} (${p.id.toUpperCase()}): PKR ${p.pricePkr} / ${p.durationDays} days — ${
-        p.id === 'vip' || p.dramaLimit === 'all' ? 'All VIP-eligible dramas' : `${p.dramaLimit} drama(s)`
+        p.dramaLimit === 'all' ? '3 dramas' : `${p.dramaLimit} drama(s)`
       }`
   ).join('\n');
 

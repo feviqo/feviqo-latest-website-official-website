@@ -36,6 +36,7 @@ import { TurkishDramaPage } from './components/pages/TurkishDramaPage';
 import { TeskilatDramaPage } from './components/pages/TeskilatDramaPage';
 import { GunesinDramaPage } from './components/pages/GunesinDramaPage';
 import { MehmedDramaPage } from './components/pages/MehmedDramaPage';
+import { YeraltiDramaPage } from './components/pages/YeraltiDramaPage';
 import { DramasPage } from './components/pages/DramasPage';
 import { AboutUsPage } from './components/pages/AboutUsPage';
 import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
@@ -89,6 +90,9 @@ const MembershipAdminPage = lazyWithRetry(() =>
 const AdminAutomationPage = lazyWithRetry(() =>
   import('./components/pages/AdminAutomationPage').then((m) => ({ default: m.AdminAutomationPage }))
 );
+const AdminWhatsAppCenterPage = lazyWithRetry(() =>
+  import('./components/pages/AdminWhatsAppCenterPage').then((m) => ({ default: m.AdminWhatsAppCenterPage }))
+);
 const AdminAutomationLeadsPage = lazyWithRetry(() =>
   import('./components/pages/AdminAutomationLeadsPage').then((m) => ({ default: m.AdminAutomationLeadsPage }))
 );
@@ -120,6 +124,7 @@ export default function App() {
         return 'membership';
       }
 
+      if (path.startsWith('/admin/automation/whatsapp')) return 'admin-automation-whatsapp';
       if (path.startsWith('/admin/automation/leads')) return 'admin-automation-leads';
       if (path.startsWith('/admin/automation')) return 'admin-automation';
       if (path.startsWith('/admin/memberships')) return 'admin-memberships';
@@ -139,6 +144,7 @@ export default function App() {
       if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/episode-189') || path.includes('/episode-192') || path.includes('/episode-193') || path.includes('/teskilat-188') || path.includes('/teskilat-189') || path.includes('/teskilat-192') || path.includes('/teskilat-193')) return 'teskilat-urdu';
       if (path.includes('/gunesin-dogdugu-yer')) return 'gunesin-dogdugu-yer';
       if (path.includes('/mehmed') || path.includes('/mehmed-fetihler-sultani')) return 'mehmed-fetihler-sultani';
+      if (path.includes('/yeralti')) return 'yeralti';
       if (path.includes('/dramas')) return 'dramas';
       if (path.startsWith('/account')) return 'account';
       if (path.includes('/membership') || hash.includes('#membership')) return 'membership';
@@ -237,7 +243,9 @@ export default function App() {
         setCurrentRoute('gallery');
       }
 
-      if (path.startsWith('/admin/automation/leads')) {
+      if (path.startsWith('/admin/automation/whatsapp')) {
+        setCurrentRoute('admin-automation-whatsapp');
+      } else if (path.startsWith('/admin/automation/leads')) {
         setCurrentRoute('admin-automation-leads');
       } else if (path.startsWith('/admin/automation')) {
         setCurrentRoute('admin-automation');
@@ -274,6 +282,8 @@ export default function App() {
         setCurrentRoute('gunesin-dogdugu-yer');
       } else if (path.includes('/mehmed') || path.includes('/mehmed-fetihler-sultani')) {
         setCurrentRoute('mehmed-fetihler-sultani');
+      } else if (path.includes('/yeralti')) {
+        setCurrentRoute('yeralti');
       } else if (path.includes('/dramas')) {
         setCurrentRoute('dramas');
       } else if (path.startsWith('/account')) {
@@ -344,11 +354,13 @@ export default function App() {
       'teskilat-urdu': 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188 - FEVIQO.com',
       'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',
       'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90 - FEVIQO',
+      'yeralti': 'Yeralti - Urdu Dub (جرائم کی دنیا) | Turkish Drama — FEVIQO',
       'dramas': 'Turkish Dramas Portal - Stream Premium Series & Movies | FEVIQO',
       'membership': 'FEVIQO Premium Membership & Pricing | Watch Turkish Dramas in Urdu',
       'account': 'My Account | FEVIQO Premium Membership',
       'admin-memberships': 'FEVIQO Membership & Payment Verification Admin',
       'admin-automation': 'FEVIQO WhatsApp Cloud API & Automation Admin',
+      'admin-automation-whatsapp': 'FEVIQO Manual WhatsApp Center & Customer Queue',
       'admin-automation-leads': 'FEVIQO Video Editing Leads & WhatsApp Inbox',
       'privacy': 'Privacy Policy & Cookie Disclosure | FEVIQO',
       'terms': 'Terms of Service & Usage Agreement | FEVIQO'
@@ -390,6 +402,8 @@ export default function App() {
         ? '/admin/memberships'
         : route === 'admin-automation'
         ? '/admin/automation'
+        : route === 'admin-automation-whatsapp'
+        ? '/admin/automation/whatsapp'
         : route === 'admin-automation-leads'
         ? '/admin/automation/leads'
         : route === 'membership' && currentPartnerSlug
@@ -827,6 +841,17 @@ export default function App() {
           />
         );
 
+      case 'admin-automation-whatsapp':
+        return (
+          <AdminWhatsAppCenterPage
+            onBookCall={() => handleOpenBookCall()}
+            onNavigateSection={handleNavigateSection}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
+            onNavigatePage={(route) => navigateTo(route)}
+          />
+        );
+
       case 'admin-automation-leads':
         return (
           <AdminAutomationLeadsPage
@@ -863,6 +888,19 @@ export default function App() {
         return (
           <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white text-slate-900 font-sans selection:bg-[#22C55E] selection:text-white flex flex-col">
             <MehmedDramaPage 
+              onBackToHome={() => navigateTo('home')}
+              onBookCall={handleOpenBookCall}
+              onNavigatePricing={() => navigateTo('pricing')}
+              onNavigateFlow={(view) => navigateTo('flow', view)}
+              onNavigatePage={(route) => navigateTo(route)}
+            />
+          </div>
+        );
+
+      case 'yeralti':
+        return (
+          <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-white text-slate-900 font-sans selection:bg-[#22C55E] selection:text-white flex flex-col">
+            <YeraltiDramaPage 
               onBackToHome={() => navigateTo('home')}
               onBookCall={handleOpenBookCall}
               onNavigatePricing={() => navigateTo('pricing')}
@@ -974,6 +1012,11 @@ export default function App() {
           return window.location.pathname;
         }
         return '/mehmed-fetihler-sultani';
+      case 'yeralti':
+        if (typeof window !== 'undefined' && window.location.pathname.includes('/episode-')) {
+          return window.location.pathname;
+        }
+        return '/yeralti';
       case 'dramas': return '/dramas';
       case 'membership':
         if (typeof window !== 'undefined' && /^\/memberships?\/[a-z0-9_-]+/i.test(window.location.pathname)) {
@@ -983,6 +1026,7 @@ export default function App() {
       case 'account': return '/account';
       case 'admin-memberships': return '/admin/memberships';
       case 'admin-automation': return '/admin/automation';
+      case 'admin-automation-whatsapp': return '/admin/automation/whatsapp';
       case 'admin-automation-leads': return '/admin/automation/leads';
       case 'privacy': return '/privacy';
       case 'terms': return '/terms';

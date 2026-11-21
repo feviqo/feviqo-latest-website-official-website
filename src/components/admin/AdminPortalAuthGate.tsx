@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Lock, LogOut, AlertCircle, MessageSquare, Users, CreditCard } from 'lucide-react';
+import { ShieldCheck, Lock, LogOut, AlertCircle, MessageSquare, Users, CreditCard, Send } from 'lucide-react';
 import { signInWithPopup, signOut } from 'firebase/auth';
 import {
   SafeAdmin,
@@ -14,7 +14,7 @@ import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
 
 interface AdminPortalAuthGateProps {
-  currentSection: 'automation' | 'leads';
+  currentSection: 'automation' | 'whatsapp' | 'leads';
   onBookCall: () => void;
   onNavigateSection: (sectionId: string) => void;
   onNavigatePricing: () => void;
@@ -130,6 +130,18 @@ export const AdminPortalAuthGate: React.FC<AdminPortalAuthGateProps> = ({
       >
         <MessageSquare className="w-3.5 h-3.5" />
         <span>WhatsApp &amp; Automation</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onNavigatePage('admin-automation-whatsapp')}
+        className={`px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition ${
+          currentSection === 'whatsapp'
+            ? 'bg-[#0F172A] text-white'
+            : 'border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-900'
+        }`}
+      >
+        <Send className="w-3.5 h-3.5" />
+        <span>Manual WhatsApp Center</span>
       </button>
       <button
         type="button"

@@ -594,12 +594,16 @@ service cloud.firestore {
           'blockedAt', 'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
         ])
         && data.keys().hasOnly([
-          'id', 'email', 'memberId', 'fullName', 'reason',
+          'id', 'email', 'phone', 'phoneNormalized', 'additionalPhones',
+          'memberId', 'fullName', 'reason',
           'blockedByAdminId', 'blockedByAdminEmail', 'blockedAt',
           'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
         ])
         && isValidId(data.id)
         && isBoundedString(data.email, 5, 200)
+        && (!('phone' in data) || isBoundedString(data.phone, 0, 32))
+        && (!('phoneNormalized' in data) || isBoundedString(data.phoneNormalized, 0, 32))
+        && (!('additionalPhones' in data) || (data.additionalPhones is list && data.additionalPhones.size() <= 20))
         && (!('memberId' in data) || isBoundedString(data.memberId, 0, 128))
         && (!('fullName' in data) || isBoundedString(data.fullName, 0, 120))
         && isBoundedString(data.reason, 0, 500)
@@ -994,6 +998,7 @@ service cloud.firestore {
         && incoming().createdAtIso == existing().createdAtIso
         && incoming().updatedAt == request.time
         && incoming().diff(existing()).affectedKeys().hasOnly([
+          'phone', 'phoneNormalized', 'additionalPhones',
           'memberId', 'fullName', 'reason',
           'blockedByAdminId', 'blockedByAdminEmail', 'blockedAt',
           'updatedAtIso', 'updatedAt'

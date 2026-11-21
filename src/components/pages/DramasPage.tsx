@@ -10,6 +10,8 @@ import { AdBanner160x300 } from '../AdBanner160x300';
 import { AdNativeBanner } from '../AdNativeBanner';
 import { getDramaById } from '../../data/membershipCatalog';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
+import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
+import { YERALTI_LOGO_URL, YERALTI_POSTER_URL } from '../../data/yeraltiData';
 
 interface DramasPageProps {
   onBackToHome: () => void;
@@ -22,6 +24,7 @@ interface DramasPageProps {
 interface DramaItem {
   id: string;
   title: string;
+  urduTitle?: string;
   subtitle: string;
   description: string;
   image: string;
@@ -29,58 +32,92 @@ interface DramaItem {
   buttonLabel: string;
   latestEpisodeUrl?: string;
   latestEpisodeLabel?: string;
+  isUrduDubOnly?: boolean;
 }
 
 const dramas: DramaItem[] = [
   {
+    id: "yeralti",
+    title: "Yeralti - Urdu Dub",
+    urduTitle: "جرائم کی دنیا",
+    subtitle: "Season 1 · Turkish Drama · Urdu Dubbed Exclusive",
+    description: "Step into the dark criminal underworld in Yeralti - Urdu Dub (جرائم کی دنیا). Rival syndicates, high-stakes betrayals, and relentless power struggles unfold in exclusive Urdu Dubbed HD on FEVIQO Premium.",
+    image: YERALTI_POSTER_URL,
+    href: "/yeralti",
+    buttonLabel: "Explore Yeralti - Urdu Dub",
+    isUrduDubOnly: true
+  },
+  {
     id: "teskilat",
     title: "Teskilat",
-    subtitle: "Season 7 · Turkish Drama · Urdu Subtitles",
+    subtitle: "Season 7 · Turkish Drama · Urdu Subtitles & Urdu Dubbed",
     description: "An intense intelligence drama of missions, loyalty, sacrifice and betrayal. Altay and his secret operatives face dangerous operations to protect their homeland from international threats.",
     image: "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
     href: "/teskilat",
     buttonLabel: "Watch Teskilat Season 7",
     latestEpisodeUrl: "/teskilat/episode-189",
-    latestEpisodeLabel: "Episode 189 (Latest)"
+    latestEpisodeLabel: "Episode 189 (Latest Free)"
   },
   {
     id: "gunesin-dogdugu-yer",
     title: "Gunesin Dogdugu Yer",
-    subtitle: "Turkish Drama · Urdu Subtitles",
+    subtitle: "Turkish Drama · Urdu Subtitles & Urdu Dubbed",
     description: "A powerful Turkish story of people, ambition, struggle and the choices that shape their lives. Follow an intense family saga, deep regional rivalries, and lovers torn apart by secrets.",
     image: "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
     href: "/gunesin-dogdugu-yer",
     buttonLabel: "Watch Gunesin Dogdugu Yer",
     latestEpisodeUrl: "/gunesin-dogdugu-yer/episode-7",
-    latestEpisodeLabel: "Episode 7 (Latest)"
+    latestEpisodeLabel: "Episode 7 (Latest Free)"
   },
   {
     id: "mehmed-fetihler-sultani",
     title: "Mehmed: Fetihler Sultani",
-    subtitle: "Season 4 · Turkish Drama · Urdu Subtitles",
-    description: "The epic historical saga of Sultan Mehmed II, the Conqueror of Constantinople. Watch tactical siege operations, imperial intrigue, and royal warfare in HD Urdu Subtitles.",
+    subtitle: "Season 4 · Turkish Drama · Urdu Subtitles & Urdu Dubbed",
+    description: "The epic historical saga of Sultan Mehmed II, the Conqueror of Constantinople. Watch tactical siege operations, imperial intrigue, and royal warfare in HD Urdu Subtitles & Urdu Dubbed.",
     image: "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
     href: "/mehmed-fetihler-sultani",
     buttonLabel: "Explore Mehmed Hub",
     latestEpisodeUrl: "/mehmed-fetihler-sultani/episode-90",
-    latestEpisodeLabel: "Episode 90 (New Release)"
+    latestEpisodeLabel: "Episode 90 (Latest Free)"
   }
 ];
 
 interface SlideItem {
   id: string;
   title: string;
+  urduTitle?: string;
+  eyebrow: string;
+  heading: string;
+  badgeText: string;
   logoUrl: string;
   tags: string[];
   description: string;
   image: string;
   href: string;
+  isUrduDubOnly?: boolean;
 }
 
 const slides: SlideItem[] = [
   {
+    id: "yeralti",
+    title: "Yeralti - Urdu Dub",
+    urduTitle: "جرائم کی دنیا",
+    eyebrow: "YERALTI - URDU DUB",
+    heading: "Yeralti - Urdu Dub",
+    badgeText: "Urdu Dubbed · Premium Exclusive",
+    logoUrl: YERALTI_LOGO_URL,
+    tags: ["Turkish", "Crime", "Thriller"],
+    description: "Enter the ruthless underworld in Yeralti - Urdu Dub (جرائم کی دنیا). Rival syndicates, deadly secrets, and high-stakes betrayals streaming exclusively in Urdu Dubbed HD on FEVIQO.",
+    image: YERALTI_POSTER_URL,
+    href: "/yeralti",
+    isUrduDubOnly: true
+  },
+  {
     id: "teskilat",
     title: "TESKILAT",
+    eyebrow: "TESKILAT",
+    heading: "TESKILAT — Ultra HD Urdu Subtitles & Dub",
+    badgeText: "Urdu Subtitles & Dub",
     logoUrl: "https://lh3.googleusercontent.com/d/1hO0OhAjFTt4UPxwURNI8u0Hm7j0xz74Y",
     tags: ["Turkish", "Thriller", "Action"],
     description: "When their country is threatened, fearless patriots form a secret team to protect their homeland from terrorists. Experience high-octane suspense and unmatched patriotism in Ultra HD with Urdu Subtitles.",
@@ -90,6 +127,9 @@ const slides: SlideItem[] = [
   {
     id: "gunesin-dogdugu-yer",
     title: "GUNESIN DOGDUGU YER",
+    eyebrow: "GUNESIN DOGDUGU YER",
+    heading: "GUNESIN DOGDUGU YER — Ultra HD Urdu Subtitles & Dub",
+    badgeText: "Urdu Subtitles & Dub",
     logoUrl: "https://lh3.googleusercontent.com/d/1ceV7W__33FQpHUPZMaxE8cahPItht54z",
     tags: ["Turkish", "Drama", "Mystery"],
     description: "Explore an intense family saga, deep-rooted regional rivalries, and the journey of lovers torn apart by dynastic secrets. Stream the latest episodes officially on FEVIQO in premium high definition.",
@@ -99,9 +139,12 @@ const slides: SlideItem[] = [
   {
     id: "mehmed-fetihler-sultani",
     title: "MEHMED FETIHLER SULTANI",
+    eyebrow: "MEHMED FETIHLER SULTANI",
+    heading: "MEHMED FETIHLER SULTANI — Ultra HD Urdu Subtitles & Dub",
+    badgeText: "Urdu Subtitles & Dub",
     logoUrl: "https://lh3.googleusercontent.com/d/19HL2dzvRlKelis5qfA0ZyJ-vLUwU_ctZ",
     tags: ["Turkish", "Historical", "War"],
-    description: "Witness the grand conquest and strategic brilliance of Sultan Mehmed II. Watch Season 4 Episode 4 (Episode 87) with Saruca's battle and Gedik Ahmed Pasha in Tabriz officially in Urdu Subtitles.",
+    description: "Witness the grand conquest and strategic brilliance of Sultan Mehmed II. Watch Season 4 with Urdu Subtitles and exclusive Urdu Dubbed episodes officially on FEVIQO.",
     image: "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
     href: "/mehmed-fetihler-sultani"
   }
@@ -115,7 +158,20 @@ export const DramasPage: React.FC<DramasPageProps> = ({
   onNavigatePage,
 }) => {
   const [activeSlide, setActiveSlide] = useState(0);
-  const { hasDramaAccess } = useDramaEntitlement();
+  const { member, gateState, hasDramaAccess, attemptWatchEpisode, closeGateModal } =
+    useDramaEntitlement();
+
+  const navigateDramaHub = (dramaId: string) => {
+    if (dramaId === 'teskilat') {
+      onNavigatePage('teskilat-urdu');
+    } else if (dramaId === 'mehmed-fetihler-sultani') {
+      onNavigatePage('mehmed-fetihler-sultani');
+    } else if (dramaId === 'yeralti') {
+      onNavigatePage('yeralti');
+    } else {
+      onNavigatePage('gunesin-dogdugu-yer');
+    }
+  };
 
   // Client-side SEO injection
   useEffect(() => {
@@ -245,8 +301,17 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                   <img
                     src={slide.image}
                     alt={`${slide.title} Cinematic Backdrop`}
-                    className="w-full h-full object-contain"
+                    referrerPolicy="no-referrer"
+                    className={`w-full h-full object-contain ${
+                      slide.isUrduDubOnly && !hasDramaAccess(slide.id) ? 'brightness-75' : ''
+                    }`}
                   />
+                  {slide.isUrduDubOnly && !hasDramaAccess(slide.id) && (
+                    <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 px-3.5 py-1.5 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/50 text-[#22C55E] text-[11px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 shadow-xl">
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Urdu Dub · Locked for Free Users</span>
+                    </div>
+                  )}
                   <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black to-transparent pointer-events-none" />
                 </div>
 
@@ -257,19 +322,26 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                     {/* Left text panel */}
                     <div className="lg:col-span-8 space-y-4 sm:space-y-5">
                       <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                        FEVIQO • {slide.id === 'teskilat' ? 'TESKILAT' : 'GUNESIN DOGDUGU YER'}
+                        FEVIQO • {slide.eyebrow}
                       </div>
 
                       {/* Primary Descriptive H1 Heading */}
-                      <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white uppercase">
-                        {slide.title} — Ultra HD Urdu Subtitles
+                      <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
+                        {slide.heading}
                       </h1>
+
+                      {slide.urduTitle && (
+                        <div className="text-xl sm:text-2xl font-urdu-slim text-emerald-300 font-normal dir-rtl leading-relaxed">
+                          {slide.urduTitle}
+                        </div>
+                      )}
 
                       {/* Official Graphic LOGO matching exactly Teskilat sizing & position */}
                       <div className="h-14 sm:h-20 w-auto flex items-center justify-start select-none">
                         <img 
                           src={slide.logoUrl} 
                           alt={`${slide.title} Official Logo`}
+                          referrerPolicy="no-referrer"
                           className="h-full w-auto object-contain max-w-[250px] sm:max-w-[340px]"
                           loading="eager"
                         />
@@ -283,7 +355,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                           </React.Fragment>
                         ))}
                         <span className="text-slate-500 font-bold">-</span>
-                        <span className="text-[#22C55E] font-bold uppercase tracking-wider">Urdu Subtitles</span>
+                        <span className="text-[#22C55E] font-bold uppercase tracking-wider">{slide.badgeText}</span>
                       </div>
 
                       <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal max-w-2xl">
@@ -294,19 +366,15 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                     {/* Right button panel */}
                     <div className="lg:col-span-4 flex items-center lg:justify-end">
                       <button
-                        onClick={() => {
-                          if (slide.id === 'teskilat') {
-                            onNavigatePage('teskilat-urdu');
-                          } else if (slide.id === 'mehmed-fetihler-sultani') {
-                            onNavigatePage('mehmed-fetihler-sultani');
-                          } else {
-                            onNavigatePage('gunesin-dogdugu-yer');
-                          }
-                        }}
+                        onClick={() => navigateDramaHub(slide.id)}
                         className="w-full lg:w-auto px-10 py-4 bg-white hover:bg-slate-200 text-black font-black text-sm tracking-wide rounded-lg transition duration-150 flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:scale-[1.02]"
                       >
-                        <Play className="w-4 h-4 fill-current text-black" />
-                        <span>Watch Now</span>
+                        {slide.isUrduDubOnly && !hasDramaAccess(slide.id) ? (
+                          <Lock className="w-4 h-4 text-black" />
+                        ) : (
+                          <Play className="w-4 h-4 fill-current text-black" />
+                        )}
+                        <span>{slide.isUrduDubOnly && !hasDramaAccess(slide.id) ? 'Explore & Unlock' : 'Watch Now'}</span>
                       </button>
                     </div>
 
@@ -400,21 +468,20 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                     onClick={(e) => {
                       if (!e.metaKey && !e.ctrlKey) {
                         e.preventDefault();
-                        if (drama.id === 'teskilat') {
-                          onNavigatePage('teskilat-urdu');
-                        } else if (drama.id === 'mehmed-fetihler-sultani') {
-                          onNavigatePage('mehmed-fetihler-sultani');
-                        } else {
-                          onNavigatePage('gunesin-dogdugu-yer');
-                        }
+                        navigateDramaHub(drama.id);
                       }
                     }}
-                    className="w-full lg:w-[58%] aspect-video rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 relative shadow-md shrink-0 cursor-pointer group block"
+                    className="w-full lg:w-[58%] aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-100 relative shadow-md shrink-0 cursor-pointer group block"
                   >
                     <img 
                       src={drama.image} 
-                      alt={`${drama.title} Turkish drama with Urdu subtitles`}
-                      className="w-full h-full object-cover block opacity-100 group-hover:scale-105 transition-all duration-[450ms] ease-out"
+                      alt={`${drama.title} Turkish drama`}
+                      referrerPolicy="no-referrer"
+                      className={`w-full h-full object-cover block transition-all duration-[450ms] ease-out ${
+                        drama.isUrduDubOnly && !isUnlocked
+                          ? 'brightness-50 group-hover:brightness-40 group-hover:scale-105'
+                          : 'opacity-100 group-hover:scale-105'
+                      }`}
                       loading="lazy"
                     />
                     {isUnlocked ? (
@@ -422,10 +489,25 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                         <ShieldCheck className="w-3.5 h-3.5" />
                         <span>Membership Active</span>
                       </div>
+                    ) : drama.isUrduDubOnly ? (
+                      <>
+                        <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#0B0B0D]/90 text-[#22C55E] border border-[#22C55E]/50 text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
+                          <Lock className="w-3 h-3" />
+                          <span>Urdu Dub · Locked for Free Users</span>
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/25 flex flex-col items-center justify-center p-4 text-center">
+                          <div className="w-14 h-14 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/60 text-[#22C55E] flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform mb-2.5">
+                            <Lock className="w-6 h-6" />
+                          </div>
+                          <span className="text-xs font-black uppercase tracking-wider text-white">
+                            Urdu Dubbed · Unlock with FEVIQO Premium
+                          </span>
+                        </div>
+                      </>
                     ) : premiumEp ? (
                       <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#0B0B0D]/90 text-[#22C55E] border border-[#22C55E]/40 text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
                         <Lock className="w-3 h-3" />
-                        <span>Urdu Dubbed Premium</span>
+                        <span>Urdu Dubbed · Locked for Free Users</span>
                       </div>
                     ) : null}
                     {/* Balanced visual depth gradient on bottom */}
@@ -445,13 +527,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                           onClick={(e) => {
                             if (!e.metaKey && !e.ctrlKey) {
                               e.preventDefault();
-                              if (drama.id === 'teskilat') {
-                                onNavigatePage('teskilat-urdu');
-                              } else if (drama.id === 'mehmed-fetihler-sultani') {
-                                onNavigatePage('mehmed-fetihler-sultani');
-                              } else {
-                                onNavigatePage('gunesin-dogdugu-yer');
-                              }
+                              navigateDramaHub(drama.id);
                             }
                           }}
                           className="hover:text-emerald-600 transition-colors"
@@ -459,6 +535,11 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                           {drama.title}
                         </a>
                       </h3>
+                      {drama.urduTitle && (
+                        <p className="text-xl sm:text-2xl font-urdu-slim text-emerald-700 font-semibold dir-rtl leading-relaxed pt-1">
+                          {drama.urduTitle}
+                        </p>
+                      )}
                     </div>
 
                     <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-lg font-normal">
@@ -476,7 +557,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                           <span className="text-xs font-semibold truncate">
                             {isUnlocked
                               ? `Unlocked: ${premiumEp.title} (Urdu Dubbed)`
-                              : `Premium Urdu Dubbed: Episode ${premiumEp.number}`}
+                              : `Locked Urdu Dubbed: Episode ${premiumEp.number}`}
                           </span>
                         </div>
                         <a
@@ -488,10 +569,21 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                           onClick={(e) => {
                             if (!e.metaKey && !e.ctrlKey) {
                               e.preventDefault();
-                              const target = isUnlocked
-                                ? `${drama.href}/${premiumEp.slug}`
-                                : `/membership?drama=${encodeURIComponent(drama.id)}&episode=${encodeURIComponent(premiumEp.slug)}`;
-                              window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: target }));
+                              if (isUnlocked) {
+                                window.dispatchEvent(
+                                  new CustomEvent('feviqo-navigate-url', {
+                                    detail: `${drama.href}/${premiumEp.slug}`,
+                                  })
+                                );
+                              } else {
+                                attemptWatchEpisode(drama.id, premiumEp.slug, premiumEp.title, () => {
+                                  window.dispatchEvent(
+                                    new CustomEvent('feviqo-navigate-url', {
+                                      detail: `${drama.href}/${premiumEp.slug}`,
+                                    })
+                                  );
+                                });
+                              }
                             }
                           }}
                           className="text-xs font-black text-[#22C55E] hover:underline shrink-0"
@@ -522,26 +614,35 @@ export const DramasPage: React.FC<DramasPageProps> = ({
 
                     {/* Highly premium buttons */}
                     <div className="pt-2 flex flex-wrap items-center gap-3">
-                      <a 
-                        href={drama.latestEpisodeUrl || drama.href}
-                        className="px-6 py-3 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs sm:text-sm tracking-wide rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                      >
-                        <Play className="w-4 h-4 fill-current text-slate-950" />
-                        <span>{drama.latestEpisodeLabel ? `Watch ${drama.latestEpisodeLabel}` : drama.buttonLabel}</span>
-                      </a>
+                      {drama.isUrduDubOnly && !isUnlocked && premiumEp ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            attemptWatchEpisode(drama.id, premiumEp.slug, premiumEp.title, () => {
+                              navigateDramaHub(drama.id);
+                            })
+                          }
+                          className="px-6 py-3 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs sm:text-sm tracking-wide rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                        >
+                          <Lock className="w-4 h-4 text-slate-950" />
+                          <span>Unlock Yeralti - Urdu Dub</span>
+                        </button>
+                      ) : (
+                        <a 
+                          href={drama.latestEpisodeUrl || drama.href}
+                          className="px-6 py-3 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs sm:text-sm tracking-wide rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                        >
+                          <Play className="w-4 h-4 fill-current text-slate-950" />
+                          <span>{drama.latestEpisodeLabel ? `Watch ${drama.latestEpisodeLabel}` : drama.buttonLabel}</span>
+                        </a>
+                      )}
 
                       <a 
                         href={drama.href}
                         onClick={(e) => {
                           if (!e.metaKey && !e.ctrlKey) {
                             e.preventDefault();
-                            if (drama.id === 'teskilat') {
-                              onNavigatePage('teskilat-urdu');
-                            } else if (drama.id === 'mehmed-fetihler-sultani') {
-                              onNavigatePage('mehmed-fetihler-sultani');
-                            } else {
-                              onNavigatePage('gunesin-dogdugu-yer');
-                            }
+                            navigateDramaHub(drama.id);
                           }
                         }}
                         className="px-5 py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 font-extrabold text-xs sm:text-sm rounded-lg transition border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
@@ -587,6 +688,15 @@ export const DramasPage: React.FC<DramasPageProps> = ({
         onNavigatePricing={onNavigatePricing}
         onNavigateFlow={() => onNavigateFlow()}
         onNavigatePage={onNavigatePage}
+      />
+
+      <PremiumEpisodeModal
+        gateState={gateState}
+        member={member}
+        onClose={closeGateModal}
+        onNavigateMembershipUrl={(targetUrl) => {
+          window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: targetUrl }));
+        }}
       />
 
     </div>

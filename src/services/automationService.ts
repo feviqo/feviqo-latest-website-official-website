@@ -60,13 +60,41 @@ export interface WebhookEventView {
   updatedAt: string;
 }
 
+export type WhatsAppSendingMode =
+  | 'automatic'
+  | 'manual'
+  | 'automatic_with_fallback'
+  | 'disabled';
+
+export type AutomationCategoryKey =
+  | 'registration'
+  | 'unpaid_followup'
+  | 'payment_updates'
+  | 'membership_expiry'
+  | 'episode_alerts'
+  | 'security_alerts'
+  | 'creative_enquiries';
+
+export type HistoricalCampaignSegment =
+  | 'registered_never_purchased'
+  | 'selected_plan_unpaid'
+  | 'expired_memberships'
+  | 'active_members';
+
 export interface AutomationRulesConfig {
   masterEnabled: boolean;
+  sendingMode?: WhatsAppSendingMode;
+  categorySendingModes?: Record<AutomationCategoryKey, WhatsAppSendingMode>;
   welcomeOnRegister: boolean;
   signupNoPackageReminder: boolean;
   signupNoPackageDelayMinutes: number;
+  signupFollowUp24h?: boolean;
+  signupFollowUp72h?: boolean;
   checkoutAbandonedReminder: boolean;
   checkoutAbandonedDelayMinutes: number;
+  unpaidCheckoutReminder2h?: boolean;
+  unpaidCheckoutReminder24h?: boolean;
+  unpaidCheckoutReminder72h?: boolean;
   paymentProofReceived: boolean;
   paymentApproved: boolean;
   paymentRejected: boolean;
@@ -75,6 +103,7 @@ export interface AutomationRulesConfig {
   expiryReminder1Day: boolean;
   expiryOnExpired: boolean;
   episodePublishedAlerts: boolean;
+  accountSecurityAlerts?: boolean;
   leadImmediateAcknowledgement: boolean;
   leadFollowUpNoResponse: boolean;
   leadFollowUpNoResponseHours: number;
@@ -130,6 +159,11 @@ export interface WhatsAppMessageLogView {
   bodyParameters?: string[];
   bodyPreview: string;
   status: string;
+  sendingMethod?: 'automatic_api' | 'manual_whatsapp';
+  httpStatus?: number;
+  apiResponseSummary?: string;
+  manualFallbackNotificationId?: string;
+  broadcastId?: string;
   attempts: number;
   maxAttempts: number;
   nextRetryAt?: string;
@@ -148,7 +182,7 @@ export interface AutomationJobView {
   id: string;
   jobType: string;
   idempotencyKey: string;
-  status: 'pending' | 'completed' | 'cancelled' | 'failed';
+  status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'failed';
   runAt: string;
   memberId?: string;
   orderId?: string;
@@ -161,6 +195,46 @@ export interface AutomationJobView {
   createdAt: string;
 }
 
+export interface EpisodeAudienceRecipientPreview {
+  memberId: string;
+  memberName: string;
+  email: string;
+  rawPhone: string;
+  phoneE164?: string;
+  phoneValid: boolean;
+  phoneError?: string;
+  planId: string;
+  planName?: string;
+  membershipStatus: 'active' | 'expired' | 'free_registered' | 'pending_payment';
+  entitledForDrama: boolean;
+  whatsappOptedIn: boolean;
+  whatsappOptedOut: boolean;
+  alreadyNotified: boolean;
+  eligibleForAutomatic: boolean;
+  eligibleForManual: boolean;
+  skipReason?: string;
+}
+
+export interface EpisodeAudiencePreviewResult {
+  dramaId: string;
+  dramaTitle: string;
+  accessType: 'free' | 'premium';
+  episodeSlug?: string;
+  totalRegisteredNonBlocked: number;
+  entitledActiveCount: number;
+  audiencePoolCount: number;
+  eligibleAutomaticCount: number;
+  eligibleManualCount: number;
+  missingConsentCount: number;
+  optedOutCount: number;
+  invalidPhoneCount: number;
+  alreadyNotifiedCount: number;
+  consentedCount: number;
+  optedOutOrNoConsentCount: number;
+  alreadyBroadcastSlugs: string[];
+  recipients: EpisodeAudienceRecipientPreview[];
+}
+
 export interface EpisodeBroadcastView {
   id: string;
   broadcastKey: string;
@@ -171,10 +245,28 @@ export interface EpisodeBroadcastView {
   episodeSlug: string;
   episodeTitle: string;
   episodeUrl: string;
+  accessType?: 'free' | 'premium';
+  sendingMode?: WhatsAppSendingMode;
+  broadcastStatus?:
+    | 'processing'
+    | 'completed'
+    | 'partially_completed'
+    | 'queued_waiting_start'
+    | 'no_eligible_recipients'
+    | 'failed'
+    | 'paused';
+  diagnosticSummary?: string;
   isResend: boolean;
   triggeredByAdminEmail: string;
   entitledCount: number;
+  selectedCount?: number;
+  queuedAutoCount?: number;
+  apiAcceptedCount?: number;
   sentCount: number;
+  deliveredCount?: number;
+  readCount?: number;
+  manualQueuedCount?: number;
+  inAppNotifiedCount?: number;
   failedCount: number;
   skippedCount: number;
   recipients: Array<{
@@ -183,9 +275,94 @@ export interface EpisodeBroadcastView {
     phoneE164: string;
     planId: string;
     status: string;
+    sendingMethod?: 'automatic_api' | 'manual_whatsapp' | 'in_app';
+    messageLogId?: string;
+    manualNotificationId?: string;
+    wamid?: string;
     error?: string;
   }>;
   createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CustomerAudienceSegments {
+  totalRegistered: number;
+  blockedExcluded: number;
+  whatsappEligible: number;
+  noWhatsAppPermission: number;
+  optedOut: number;
+  invalidPhone: number;
+  registeredNeverPurchased: number;
+  selectedPlanUnpaid: number;
+  pendingPaymentApproval: number;
+  activePaidMembers: number;
+  expiredMemberships: number;
+  renewalsDueSoon: number;
+  creativeEnquiries: number;
+}
+
+export interface OneClickWhatsAppNotificationView {
+  id: string;
+  idempotencyKey: string;
+  eventType: string;
+  category: string;
+  customerName: string;
+  customerEmail?: string;
+  memberId?: string;
+  membershipId?: string;
+  orderId?: string;
+  dramaId?: string;
+  episodeSlug?: string;
+  rawPhone: string;
+  phoneE164?: string;
+  waDigits?: string;
+  phoneValid: boolean;
+  phoneError?: string;
+  planName?: string;
+  amountDisplay?: string;
+  messageText: string;
+  waUrl?: string;
+  status: 'pending' | 'opened' | 'confirmed_sent' | 'failed' | 'cancelled';
+  openCount: number;
+  openedAt?: string;
+  openedBy?: string;
+  confirmedSentAt?: string;
+  confirmedSentBy?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancelReason?: string;
+  metadata?: Record<string, string | number | boolean | undefined>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManualWhatsAppCustomerRecipientView {
+  memberId: string;
+  customerName: string;
+  customerEmail: string;
+  rawPhone: string;
+  formattedPhone: string;
+  waDigits: string;
+  phoneValid: boolean;
+  phoneError?: string;
+  membershipStatus:
+    | 'active'
+    | 'expired'
+    | 'cancelled'
+    | 'pending_verification'
+    | 'awaiting_payment'
+    | 'rejected'
+    | 'never_purchased';
+  planName: string;
+  entitledDramaIds: string[];
+  entitledDramaTitles: string[];
+  expiresAt?: string;
+  hasWhatsappConsent: boolean;
+  hasEpisodeConsent: boolean;
+  optedOut: boolean;
+  latestManualStatus?: 'pending' | 'opened' | 'confirmed_sent' | 'failed' | 'cancelled';
+  latestManualNotificationId?: string;
+  latestManualEventType?: string;
 }
 
 export type VideoLeadStage =
@@ -252,6 +429,13 @@ export interface AdminAutomationOverview {
   aiConfigured: boolean;
   settings: {
     id: 'main';
+    automationRunning?: boolean;
+    automationStartedAt?: string;
+    automationStoppedAt?: string;
+    automationToggledBy?: string;
+    lastWorkerHeartbeatAt?: string;
+    lastSuccessfulRunAt?: string;
+    lastWorkerSummary?: string;
     rules: AutomationRulesConfig;
     ai: AiAssistantSettings;
     templateStatuses: Record<string, TemplateApprovalStatus>;
@@ -265,6 +449,7 @@ export interface AdminAutomationOverview {
   stats: {
     totalOutbound: number;
     totalInbound: number;
+    apiAccepted?: number;
     sent: number;
     delivered: number;
     read: number;
@@ -272,15 +457,30 @@ export interface AdminAutomationOverview {
     notConfigured: number;
     skipped: number;
     pendingJobs: number;
+    processingJobs?: number;
     retryQueueCount: number;
     failedWebhooks?: number;
     optedInUsers: number;
     optedOutUsers: number;
     totalLeads: number;
     activeConversations: number;
+    manualPending?: number;
+    manualOpened?: number;
+    manualConfirmedSent?: number;
+    manualFailedPhones?: number;
     billableUtility: number;
     billableMarketing: number;
     estimatedTotalCostUsd: number;
+  };
+  audienceSegments?: CustomerAudienceSegments;
+  manualQueueStats?: {
+    total: number;
+    pending: number;
+    opened: number;
+    confirmedSent: number;
+    failed: number;
+    cancelled: number;
+    invalidPhones: number;
   };
   templates: WhatsAppTemplateView[];
   messages: WhatsAppMessageLogView[];
@@ -307,6 +507,11 @@ export interface AdminAutomationOverview {
       entitledActiveCount: number;
       consentedCount: number;
       optedOutOrNoConsentCount: number;
+      eligibleAutomaticCount?: number;
+      eligibleManualCount?: number;
+      missingConsentCount?: number;
+      optedOutCount?: number;
+      invalidPhoneCount?: number;
       alreadyBroadcastSlugs: string[];
     };
   }>;
@@ -509,6 +714,69 @@ export async function updateAdminCustomerPreference(
   return parseJsonSafe(res);
 }
 
+export async function startAdminAutomationBot(): Promise<{
+  success: boolean;
+  workerSummary?: any;
+  overview?: AdminAutomationOverview;
+  error?: string;
+}> {
+  const res = await fetch('/api/admin/automation/bot/start', {
+    method: 'POST',
+    headers: adminHeaders(),
+    credentials: 'include',
+  });
+  return parseJsonSafe(res);
+}
+
+export async function stopAdminAutomationBot(): Promise<{
+  success: boolean;
+  overview?: AdminAutomationOverview;
+  error?: string;
+}> {
+  const res = await fetch('/api/admin/automation/bot/stop', {
+    method: 'POST',
+    headers: adminHeaders(),
+    credentials: 'include',
+  });
+  return parseJsonSafe(res);
+}
+
+export async function syncAdminMetaTemplates(): Promise<{
+  success: boolean;
+  syncedCount?: number;
+  matchedTemplates?: Array<{ name: string; status: TemplateApprovalStatus; metaStatus: string }>;
+  error?: string;
+  overview?: AdminAutomationOverview;
+}> {
+  const res = await fetch('/api/admin/automation/templates/sync-meta', {
+    method: 'POST',
+    headers: adminHeaders(),
+    credentials: 'include',
+  });
+  return parseJsonSafe(res);
+}
+
+export async function fetchAdminEpisodeAudiencePreview(params: {
+  dramaId: string;
+  accessType: 'free' | 'premium';
+  episodeSlug?: string;
+}): Promise<{
+  success: boolean;
+  preview?: EpisodeAudiencePreviewResult;
+  error?: string;
+}> {
+  const qs = new URLSearchParams({
+    dramaId: params.dramaId,
+    accessType: params.accessType,
+  });
+  if (params.episodeSlug) qs.set('episodeSlug', params.episodeSlug);
+  const res = await fetch(`/api/admin/automation/episodes/audience-preview?${qs.toString()}`, {
+    headers: adminHeaders(),
+    credentials: 'include',
+  });
+  return parseJsonSafe(res);
+}
+
 export async function triggerAdminEpisodePublishNotify(payload: {
   dramaId: string;
   episodeSlug: string;
@@ -516,6 +784,11 @@ export async function triggerAdminEpisodePublishNotify(payload: {
   episodeNumber: number;
   episodeTitle: string;
   episodeUrl?: string;
+  accessType?: 'free' | 'premium';
+  sendingMode?: WhatsAppSendingMode;
+  selectedMemberIds?: string[];
+  sendInAppFallback?: boolean;
+  startAutomationIfStopped?: boolean;
   forceResend?: boolean;
 }): Promise<{
   success: boolean;
@@ -525,6 +798,220 @@ export async function triggerAdminEpisodePublishNotify(payload: {
   error?: string;
 }> {
   const res = await fetch('/api/admin/automation/episodes/publish-notify', {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function previewAdminHistoricalCampaign(segment: HistoricalCampaignSegment): Promise<{
+  success: boolean;
+  preview?: {
+    segment: HistoricalCampaignSegment;
+    totalMatching: number;
+    eligibleAutomaticCount: number;
+    validPhoneManualCount: number;
+    optedOutCount: number;
+    recipients: Array<{
+      memberId: string;
+      fullName: string;
+      email: string;
+      phoneE164?: string;
+      phoneValid: boolean;
+      optedIn: boolean;
+      optedOut: boolean;
+      eligibleForAutomatic: boolean;
+      detail: string;
+    }>;
+  };
+  error?: string;
+}> {
+  const res = await fetch('/api/admin/automation/campaigns/preview', {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify({ segment }),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function launchAdminHistoricalCampaign(payload: {
+  segment: HistoricalCampaignSegment;
+  sendingMode: WhatsAppSendingMode;
+}): Promise<{
+  success: boolean;
+  campaign?: {
+    campaignId: string;
+    segment: HistoricalCampaignSegment;
+    sendingMode: WhatsAppSendingMode;
+    totalMatching: number;
+    queuedAutomatic: number;
+    queuedManual: number;
+    skipped: number;
+  };
+  overview?: AdminAutomationOverview;
+  error?: string;
+}> {
+  const res = await fetch('/api/admin/automation/campaigns/launch', {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+// --- Manual One-Click WhatsApp Center APIs ---
+export async function fetchManualWhatsAppCenter(filters?: {
+  category?: string;
+  status?: string;
+  search?: string;
+  recipientSearch?: string;
+  membershipStatus?: string;
+  dramaId?: string;
+}): Promise<{
+  success: boolean;
+  stats?: {
+    total: number;
+    pending: number;
+    opened: number;
+    confirmedSent: number;
+    failed: number;
+    cancelled: number;
+    invalidPhones: number;
+  };
+  categoryCounts?: Record<string, number>;
+  settings?: {
+    enabled: boolean;
+    categories: Record<string, boolean>;
+    updatedAt: string;
+  };
+  notifications?: OneClickWhatsAppNotificationView[];
+  recipients?: ManualWhatsAppCustomerRecipientView[];
+  error?: string;
+}> {
+  const qs = new URLSearchParams();
+  if (filters?.category) qs.set('category', filters.category);
+  if (filters?.status) qs.set('status', filters.status);
+  if (filters?.search) qs.set('search', filters.search);
+  if (filters?.recipientSearch) qs.set('recipientSearch', filters.recipientSearch);
+  if (filters?.membershipStatus) qs.set('membershipStatus', filters.membershipStatus);
+  if (filters?.dramaId) qs.set('dramaId', filters.dramaId);
+  const res = await fetch(`/api/admin/automation/whatsapp-notifications?${qs.toString()}`, {
+    headers: adminHeaders(),
+    credentials: 'include',
+  });
+  return parseJsonSafe(res);
+}
+
+export async function editManualWhatsAppNotification(
+  id: string,
+  payload: { messageText?: string; rawPhone?: string }
+): Promise<{
+  success: boolean;
+  notification?: OneClickWhatsAppNotificationView;
+  error?: string;
+}> {
+  const res = await fetch(`/api/admin/automation/whatsapp-notifications/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function openManualWhatsAppNotification(id: string): Promise<{
+  success: boolean;
+  notification?: OneClickWhatsAppNotificationView;
+  waUrl?: string;
+  error?: string;
+}> {
+  const res = await fetch(
+    `/api/admin/automation/whatsapp-notifications/${encodeURIComponent(id)}/open`,
+    {
+      method: 'POST',
+      headers: adminHeaders(),
+      credentials: 'include',
+    }
+  );
+  return parseJsonSafe(res);
+}
+
+export async function confirmManualWhatsAppNotificationSent(
+  id: string,
+  note?: string
+): Promise<{
+  success: boolean;
+  notification?: OneClickWhatsAppNotificationView;
+  error?: string;
+}> {
+  const res = await fetch(
+    `/api/admin/automation/whatsapp-notifications/${encodeURIComponent(id)}/confirm-sent`,
+    {
+      method: 'POST',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+      body: JSON.stringify({ note }),
+    }
+  );
+  return parseJsonSafe(res);
+}
+
+export async function cancelManualWhatsAppNotification(
+  id: string,
+  reason?: string
+): Promise<{
+  success: boolean;
+  notification?: OneClickWhatsAppNotificationView;
+  error?: string;
+}> {
+  const res = await fetch(
+    `/api/admin/automation/whatsapp-notifications/${encodeURIComponent(id)}/cancel`,
+    {
+      method: 'POST',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+      body: JSON.stringify({ reason }),
+    }
+  );
+  return parseJsonSafe(res);
+}
+
+export async function syncManualWhatsAppReminders(): Promise<{
+  success: boolean;
+  summary?: { queued: number; skipped: number };
+  error?: string;
+}> {
+  const res = await fetch('/api/admin/automation/whatsapp-notifications/sync-reminders', {
+    method: 'POST',
+    headers: adminHeaders(),
+    credentials: 'include',
+  });
+  return parseJsonSafe(res);
+}
+
+export async function prepareManualWhatsAppMessages(payload: {
+  memberIds: string[];
+  eventType: string;
+  customMessage?: string;
+  dramaId?: string;
+  episodeNumber?: number;
+  episodeSlug?: string;
+  episodeLink?: string;
+  accessType?: 'free' | 'premium';
+  rejectionReason?: string;
+}): Promise<{
+  success: boolean;
+  createdCount?: number;
+  failedPhoneCount?: number;
+  skippedOptedOutCount?: number;
+  notifications?: OneClickWhatsAppNotificationView[];
+  error?: string;
+}> {
+  const res = await fetch('/api/admin/automation/whatsapp-notifications/manual-prepare', {
     method: 'POST',
     headers: adminHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',

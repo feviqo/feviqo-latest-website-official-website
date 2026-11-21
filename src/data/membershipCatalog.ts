@@ -113,9 +113,9 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     priceUsdDisplay: `$${DEFAULT_USD_PRICES.vip.toFixed(2)} USD`,
     durationDays: 30,
     durationLabel: '30 Days',
-    dramaLimit: 'all',
-    inclusionText: 'All eligible VIP catalogue dramas',
-    summary: 'Unrestricted 30-day access across the entire eligible VIP Urdu drama catalogue.',
+    dramaLimit: 3,
+    inclusionText: '3 dramas included',
+    summary: 'Select any three Turkish series from the catalogue for 30 continuous days.',
     ctaLabel: 'Choose VIP',
   },
 ];
@@ -424,7 +424,7 @@ export const MEMBERSHIP_POLICIES: MembershipPolicyItem[] = [
     id: 'drama-selection',
     title: 'Drama Selection',
     description:
-      'Starter and Standard include 1 chosen series, Plus includes 2 chosen series, and VIP opens all eligible VIP catalogue dramas simultaneously.',
+      'Starter and Standard include 1 chosen series, Plus includes 2 chosen series, and VIP includes 3 chosen series.',
   },
   {
     id: 'episode-availability',
@@ -451,7 +451,7 @@ export const MEMBERSHIP_FAQS: MembershipFaqItem[] = [
     id: 'q2',
     question: 'Q2. How do Starter, Standard, Plus, and VIP plans differ?',
     answer:
-      'Starter (PKR 299 / $1.20 USD) covers 1 selected drama for 15 days. Standard (PKR 599 / $2.50 USD) covers 1 selected drama for 30 days. Plus (PKR 899 / $3.50 USD) lets you select any 2 dramas for 30 days. VIP (PKR 1,299 / $5.00 USD) includes all eligible VIP catalogue dramas for 30 days.',
+      'Starter (PKR 299 / $1.20 USD) covers 1 selected drama for 15 days. Standard (PKR 599 / $2.50 USD) covers 1 selected drama for 30 days. Plus (PKR 899 / $3.50 USD) lets you select any 2 dramas for 30 days. VIP (PKR 1,299 / $5.00 USD) lets you select any 3 dramas for 30 days.',
   },
   {
     id: 'q3',

@@ -1,14 +1,18 @@
 export type OneClickEventType =
   | 'customer_registration'
+  | 'signup_followup_unpaid'
   | 'plan_selected'
+  | 'unpaid_plan_reminder'
   | 'payment_submitted'
   | 'payment_approved'
+  | 'membership_renewed'
   | 'payment_rejected'
   | 'expiry_reminder_7d'
   | 'expiry_reminder_3d'
   | 'expiry_reminder_1d'
   | 'membership_expired'
   | 'episode_published'
+  | 'account_security_alert'
   | 'creative_enquiry';
 
 export type OneClickNotificationCategory =
@@ -18,6 +22,7 @@ export type OneClickNotificationCategory =
   | 'rejection'
   | 'expiry'
   | 'episodes'
+  | 'security'
   | 'creative_enquiries';
 
 export type OneClickNotificationStatus =
@@ -232,11 +237,14 @@ export function getNotificationCategoryForEvent(
 ): OneClickNotificationCategory {
   switch (eventType) {
     case 'customer_registration':
+    case 'signup_followup_unpaid':
       return 'registration';
     case 'plan_selected':
+    case 'unpaid_plan_reminder':
     case 'payment_submitted':
       return 'payment';
     case 'payment_approved':
+    case 'membership_renewed':
       return 'activation';
     case 'payment_rejected':
       return 'rejection';
@@ -247,6 +255,8 @@ export function getNotificationCategoryForEvent(
       return 'expiry';
     case 'episode_published':
       return 'episodes';
+    case 'account_security_alert':
+      return 'security';
     case 'creative_enquiry':
       return 'creative_enquiries';
   }
@@ -275,6 +285,8 @@ export interface GenerateOneClickMessageInput {
   seriesName?: string;
   episodeNumber?: string | number;
   episodeLink?: string;
+  accessType?: 'free' | 'premium';
+  securityEventSummary?: string;
   serviceName?: string;
 }
 
@@ -409,25 +421,94 @@ export function generateOneClickWhatsAppMessage(
       };
     }
 
+    case 'signup_followup_unpaid': {
+      return {
+        ok: true,
+        message: [
+          `Assalam o Alaikum ${customerName},`,
+          `Your FEVIQO account is ready, and you haven't activated a drama membership plan yet.`,
+          ``,
+          `Explore our Urdu-dubbed drama packages anytime here:`,
+          `https://feviqo.com/membership`,
+          ``,
+          `Reply here if you need help choosing the right plan.`,
+        ].join('\n'),
+      };
+    }
+
+    case 'unpaid_plan_reminder': {
+      const priceText = amountDisplay ? ` (${amountDisplay})` : '';
+      return {
+        ok: true,
+        message: [
+          `Assalam o Alaikum ${customerName},`,
+          `Friendly reminder: your selected ${planName}${priceText} membership order on FEVIQO is still awaiting payment proof.`,
+          ``,
+          `Upload your Bank QR or Binance QR screenshot on your account page to submit for verification:`,
+          `https://feviqo.com/account`,
+        ].join('\n'),
+      };
+    }
+
+    case 'membership_renewed': {
+      const startDate = formatReadableDateUtc(input.startDate || new Date().toISOString());
+      const expiryDate = formatReadableDateUtc(input.expiryDate || '');
+      const lines = [
+        `Assalam o Alaikum ${customerName},`,
+        `Your FEVIQO membership has been renewed.`,
+        ``,
+        `Plan: ${planName}`,
+      ];
+      if (amountDisplay) lines.push(`Amount: ${amountDisplay}`);
+      lines.push(
+        `Activation Date: ${startDate}`,
+        `New Expiry Date: ${expiryDate}`,
+        `Status: Active`,
+        ``,
+        `Watch your Urdu-dubbed dramas here:`,
+        `https://feviqo.com/account`
+      );
+      return { ok: true, message: lines.join('\n') };
+    }
+
     case 'episode_published': {
       const seriesName = String(input.seriesName || '').trim();
       const epNum = String(input.episodeNumber ?? '').trim();
       const epLink = String(input.episodeLink || '').trim() || 'https://feviqo.com/dramas';
+      const accessLabel = input.accessType === 'free' ? 'Free' : 'Premium';
       if (!seriesName || !epNum) {
         return { ok: false, error: 'Series name and episode number are required.' };
       }
       return {
         ok: true,
         message: [
-          `Assalam o Alaikum ${customerName},`,
-          `New episode is now live on FEVIQO.`,
+          `New Urdu-Dubbed Episode Available on FEVIQO! 🎬`,
           ``,
-          `Series: ${seriesName}`,
+          `Drama: ${seriesName}`,
           `Episode: ${epNum}`,
-          `Language: Urdu Dubbed`,
+          `Access: ${accessLabel}`,
           ``,
           `Watch now:`,
           epLink,
+          ``,
+          `Visit FEVIQO Premium for more Urdu-dubbed entertainment.`,
+        ].join('\n'),
+      };
+    }
+
+    case 'account_security_alert': {
+      const summary =
+        String(input.securityEventSummary || '').trim() ||
+        'A security or password update was detected on your FEVIQO account.';
+      return {
+        ok: true,
+        message: [
+          `Assalam o Alaikum ${customerName},`,
+          `FEVIQO Account Security Notice:`,
+          ``,
+          summary,
+          ``,
+          `If this was you, no action is needed. If you did not authorize this change, please secure your account immediately at https://feviqo.com/account.`,
         ].join('\n'),
       };
     }

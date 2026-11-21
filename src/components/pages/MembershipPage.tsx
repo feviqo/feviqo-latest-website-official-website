@@ -165,7 +165,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     if (paramPlan && MEMBERSHIP_PLANS.some((p) => p.id === paramPlan)) {
       setSelectedPlanId(paramPlan);
       if (paramPlan === 'vip') {
-        setSelectedDramaIds(MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id));
+        setSelectedDramaIds(MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id));
       }
       setTimeout(() => {
         scrollToSection(paramRenew ? dramaSelectionRef.current : pricingRef.current);
@@ -444,7 +444,10 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     setActivePaymentOrder(null);
 
     if (plan.dramaLimit === 'all') {
-      setSelectedDramaIds(MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id));
+      setSelectedDramaIds(MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id));
+    } else if (plan.id === 'vip' && selectedDramaIds.length < plan.dramaLimit) {
+      const fill = MEMBERSHIP_DRAMAS.map((d) => d.id).filter((id) => !selectedDramaIds.includes(id));
+      setSelectedDramaIds([...selectedDramaIds, ...fill].slice(0, plan.dramaLimit));
     } else if (selectedDramaIds.length > plan.dramaLimit) {
       setSelectedDramaIds((prev) => prev.slice(0, plan.dramaLimit as number));
     }
@@ -459,16 +462,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     setSelectionWarning(null);
     setCheckoutError(null);
 
-    if (selectedPlan.dramaLimit === 'all') {
-      setSelectionWarning(
-        isUrdu
-          ? 'VIP پلان میں تمام دستیاب VIP ڈرامے خودکار طور پر شامل ہیں۔'
-          : 'VIP includes all eligible VIP catalogue dramas automatically.'
-      );
-      return;
-    }
-
-    const limit = selectedPlan.dramaLimit;
+    const limit = selectedPlan.dramaLimit === 'all' ? 3 : selectedPlan.dramaLimit;
     const exists = selectedDramaIds.includes(drama.id);
 
     if (exists) {
@@ -482,7 +476,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           ? `آپ کے منتخب ${selectedPlan.name} پلان میں ${limit} ڈرامے شامل ہیں۔ تبدیل کرنے کے لیے پہلے موجودہ انتخاب ہٹائیں۔`
           : limit === 1
           ? `Your ${selectedPlan.name} plan includes 1 drama. Deselect the current drama to switch, or upgrade to Plus for 2 dramas.`
-          : `Your ${selectedPlan.name} plan includes ${limit} dramas. Deselect one drama first, or switch to VIP for the entire eligible catalogue.`
+          : limit === 2
+          ? `Your ${selectedPlan.name} plan includes 2 dramas. Deselect one drama first, or switch to VIP for 3 dramas.`
+          : `Your ${selectedPlan.name} plan includes ${limit} dramas. Deselect one drama first to switch.`
       );
       return;
     }
@@ -610,7 +606,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
 
     const finalIds =
       selectedPlan.dramaLimit === 'all'
-        ? MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id)
+        ? MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id)
         : selectedDramaIds;
 
     if (!account) {
@@ -691,7 +687,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
       setPendingCheckoutAfterAuth(false);
       const finalIds =
         selectedPlan.dramaLimit === 'all'
-          ? MEMBERSHIP_DRAMAS.filter((d) => d.vipEligible).map((d) => d.id)
+          ? MEMBERSHIP_DRAMAS.slice(0, 3).map((d) => d.id)
           : selectedDramaIds;
       await runServerCheckout(selectedPlan, finalIds);
     } else if (returnEpisodeContext?.dramaId && enrichedAccount.unlockedDramaIds.includes(returnEpisodeContext.dramaId)) {
@@ -1475,23 +1471,21 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                         {t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})
                       </div>
                       <h2 id="drama-selection-heading" className="text-2xl sm:text-3xl font-bold tracking-tight text-[#0B0B0D]">
-                        {selectedPlan.dramaLimit === 'all'
+                        {selectedPlan.dramaLimit === 3 || selectedPlan.dramaLimit === 'all'
                           ? t(MEMBERSHIP_COPY.dramaSelection.allVipHeading)
                           : selectedPlan.dramaLimit === 2
                           ? t(MEMBERSHIP_COPY.dramaSelection.selectTwoHeading)
                           : t(MEMBERSHIP_COPY.dramaSelection.selectOneHeading)}
                       </h2>
                       <p className="text-sm text-zinc-600">
-                        {selectedPlan.dramaLimit === 'all'
+                        {selectedPlan.dramaLimit === 3 || selectedPlan.dramaLimit === 'all'
                           ? t(MEMBERSHIP_COPY.dramaSelection.vipDesc)
                           : t(MEMBERSHIP_COPY.dramaSelection.chooseCountDesc)}
                       </p>
                     </div>
 
                     <div className="text-sm font-semibold text-[#0B0B0D] tabular-nums shrink-0" dir="ltr">
-                      {selectedPlan.dramaLimit === 'all'
-                        ? `${MEMBERSHIP_DRAMAS.length} / ${MEMBERSHIP_DRAMAS.length}`
-                        : `${selectedDramaIds.length} / ${selectedPlan.dramaLimit}`}
+                      {selectedDramaIds.length} / {selectedPlan.dramaLimit === 'all' ? 3 : selectedPlan.dramaLimit}
                     </div>
                   </div>
 
@@ -1508,8 +1502,8 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                   {/* Real FEVIQO 3-Drama Selection Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {MEMBERSHIP_DRAMAS.map((drama) => {
-                      const isVipAuto = selectedPlan.dramaLimit === 'all' && drama.vipEligible;
-                      const isChosen = isVipAuto || selectedDramaIds.includes(drama.id);
+                      const isVipAuto = false;
+                      const isChosen = selectedDramaIds.includes(drama.id);
 
                       return (
                         <button

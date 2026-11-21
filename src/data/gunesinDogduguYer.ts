@@ -62,6 +62,19 @@ export const GUNESIN_SERIES_DATA: GunesinSeries = {
 
 export const GUNESIN_EPISODES: GunesinEpisode[] = [
   {
+    number: 9,
+    slug: "episode-9",
+    title: "Gunesin Dogdugu Yer Episode 9 Urdu Dubbed | Bolum 9 — Premium Access",
+    airDate: "2026-11-21T04:00:00.000Z",
+    thumbnail: "https://lh3.googleusercontent.com/d/1UikNqWzQcGxbQx8sSqgjaTDN47iGhxgd",
+    duration: "2h 30m",
+    shortSummary: "Gunesin Dogdugu Yer Episode 9 in Urdu Dubbed HD is exclusively unlocked for active FEVIQO Premium Members.",
+    recap: `Gunesin Dogdugu Yer Episode 9 (Bolum 9) raises the stakes to an unforgettable climax as long-buried family loyalties shatter and dangerous secrets collide.\n\nThis episode is available in Urdu Dubbed HD exclusively for FEVIQO Premium Membership subscribers. Sign in or subscribe to an eligible plan covering Gunesin Dogdugu Yer or VIP to unlock immediate streaming.`,
+    embeds: [],
+    season: 1,
+    isLockedPremium: true,
+  },
+  {
     number: 8,
     slug: "episode-8",
     title: "Gunesin Dogdugu Yer Episode 8 Urdu Dubbed | Bolum 8 — Premium Access",
