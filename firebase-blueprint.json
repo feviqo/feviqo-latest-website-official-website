@@ -1397,6 +1397,22 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "eventKey", "createdAt"]
+    },
+    "WhatsAppNotification": {
+      "title": "WhatsAppNotification",
+      "description": "Server-generated one-click WhatsApp customer notification queue item with strict phone validation, status lifecycle (pending, opened, confirmed_sent, failed, cancelled), and admin audit log.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "eventType": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "category": { "type": "string", "enum": ["registration", "payment", "activation", "rejection", "expiry", "episodes", "creative_enquiries"] },
+        "status": { "type": "string", "enum": ["pending", "opened", "confirmed_sent", "failed", "cancelled"] },
+        "recipientPhone": { "type": "string", "minLength": 0, "maxLength": 40 },
+        "phoneValid": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "eventType", "category", "status", "phoneValid", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -1523,6 +1539,10 @@
     "/whatsappWebhookDedupe/{dedupeId}": {
       "schema": { "$ref": "#/entities/WhatsAppWebhookDedupe" },
       "description": "Persistent deduplication markers preventing duplicate processing of Meta webhook retries across restarts."
+    },
+    "/whatsappNotifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/WhatsAppNotification" },
+      "description": "One-click WhatsApp customer notification queue records generated from real Firestore customer and membership lifecycle events."
     }
   }
 }

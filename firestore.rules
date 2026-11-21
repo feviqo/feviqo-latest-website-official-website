@@ -1057,6 +1057,12 @@ service cloud.firestore {
       allow list: if isBootstrappedAdmin();
       allow create, update, delete: if false;
     }
+
+    match /whatsappNotifications/{notificationId} {
+      allow get: if isValidId(notificationId) && isAdmin();
+      allow list: if isBootstrappedAdmin();
+      allow create, update, delete: if false;
+    }
   }
 }
 

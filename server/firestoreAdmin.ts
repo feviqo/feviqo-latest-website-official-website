@@ -375,6 +375,7 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
 
 export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
   settings: Record<string, any> | null;
+  queueSettings: Record<string, any> | null;
   preferences: any[];
   messages: any[];
   jobs: any[];
@@ -383,12 +384,14 @@ export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
   conversations: any[];
   webhookEvents: any[];
   webhookDedupe: any[];
+  oneClickNotifications: any[];
 } | null> {
   const db = getAdminFirestoreDb();
   if (!db) return null;
   try {
     const [
       settingsSnap,
+      queueSettingsSnap,
       prefsSnap,
       msgsSnap,
       jobsSnap,
@@ -397,8 +400,10 @@ export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
       convSnap,
       webhookEventsSnap,
       webhookDedupeSnap,
+      oneClickSnap,
     ] = await Promise.all([
       db.collection('whatsappSettings').doc('main').get(),
+      db.collection('whatsappSettings').doc('queue').get(),
       db.collection('whatsappPreferences').get(),
       db.collection('whatsappMessages').get(),
       db.collection('automationJobs').get(),
@@ -407,6 +412,7 @@ export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
       db.collection('whatsappConversations').get(),
       db.collection('whatsappWebhookEvents').get(),
       db.collection('whatsappWebhookDedupe').get(),
+      db.collection('whatsappNotifications').get(),
     ]);
 
     const normalizeList = (snap: { docs: Array<{ id: string; data: () => Record<string, any> }> }) =>
@@ -422,6 +428,7 @@ export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
 
     return {
       settings: settingsSnap.exists ? (settingsSnap.data() || null) : null,
+      queueSettings: queueSettingsSnap.exists ? (queueSettingsSnap.data() || null) : null,
       preferences: normalizeList(prefsSnap),
       messages: normalizeList(msgsSnap),
       jobs: normalizeList(jobsSnap),
@@ -430,6 +437,7 @@ export async function pullAutomationSnapshotFromFirestoreServer(): Promise<{
       conversations: normalizeList(convSnap),
       webhookEvents: normalizeList(webhookEventsSnap),
       webhookDedupe: normalizeList(webhookDedupeSnap),
+      oneClickNotifications: normalizeList(oneClickSnap),
     };
   } catch (err: any) {
     if (err?.code === 7 || String(err?.message || '').includes('PERMISSION_DENIED')) {
