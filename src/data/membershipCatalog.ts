@@ -1,3 +1,5 @@
+import { YERALTI_POSTER_URL } from './yeraltiData';
+
 export type MembershipPlanId = 'starter' | 'standard' | 'plus' | 'vip';
 
 export type PaymentRegion = 'pakistan' | 'international';
@@ -37,7 +39,7 @@ export interface CatalogEpisodeMeta {
 }
 
 export interface CatalogDramaMeta {
-  id: 'teskilat' | 'mehmed-fetihler-sultani' | 'gunesin-dogdugu-yer';
+  id: 'yeralti' | 'teskilat' | 'mehmed-fetihler-sultani' | 'gunesin-dogdugu-yer';
   title: string;
   urduTitle: string;
   seasonLabel: string;
@@ -121,6 +123,36 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
 ];
 
 export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
+  {
+    id: 'yeralti',
+    title: 'Yeralti - Urdu Dub',
+    urduTitle: 'جرائم کی دنیا',
+    seasonLabel: 'Season 1',
+    genreLabel: 'Crime Thriller',
+    languageLabel: 'Urdu Dubbed',
+    languageLabelUr: 'اردو ڈبنگ',
+    vipEligible: true,
+    posterUrl: YERALTI_POSTER_URL,
+    fallbackPosterUrl: '/images/posters/poster-horiz-narrative-storytelling.jpg',
+    synopsis:
+      'Enter the ruthless criminal underworld of Yeralti - Urdu Dub (جرائم کی دنیا). Rival syndicates, deadly betrayals, and high-stakes power struggles unfold in exclusive Urdu Dubbed HD.',
+    hubPath: '/yeralti',
+    episodes: [
+      {
+        slug: 'episode-23',
+        number: 23,
+        title: 'Yeralti - Urdu Dub Episode 23 (جرائم کی دنیا)',
+        duration: '2h 15m',
+        releaseDate: '2026-11-21',
+        thumbnail: YERALTI_POSTER_URL,
+        shortSummary:
+          'Enter the dark underworld of Yeralti in Episode 23 Urdu Dubbed HD — exclusive for FEVIQO Premium Members.',
+        accessType: 'premium',
+        isPublished: true,
+        requiredPlanLevel: 'any_active',
+      },
+    ],
+  },
   {
     id: 'teskilat',
     title: 'Teşkilat',
@@ -463,7 +495,7 @@ export const MEMBERSHIP_FAQS: MembershipFaqItem[] = [
     id: 'q4',
     question: 'Q4. How do locked episodes unlock across drama pages?',
     answer:
-      'Once your payment is approved by our verification team, simply sign in and click any locked episode on Teşkilat, Güneşin Doğduğu Yer, Mehmed: Fetihler Sultanı, or future series pages to stream automatically.',
+      'Once your payment is approved by our verification team, simply sign in and click any locked episode on Yeralti - Urdu Dub, Teşkilat, Güneşin Doğduğu Yer, Mehmed: Fetihler Sultanı, or future series pages to stream automatically.',
   },
   {
     id: 'q5',

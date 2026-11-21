@@ -13,6 +13,7 @@ import {
   Tag,
   Wallet,
   X,
+  Lock,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
@@ -1024,6 +1025,16 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                   }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/50 text-[#22C55E] text-[10px] font-bold uppercase tracking-wider shadow-lg">
+                    <Lock className="w-3 h-3" />
+                    <span>{isUrdu ? 'پریمیئم اردو ڈب · لاکڈ' : 'Urdu Dub · Premium Locked'}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/90 text-[#0B0B0D] text-[10px] font-bold shadow-sm group-hover:bg-[#22C55E] transition-colors">
+                    <span>{isUrdu ? 'اقساط دیکھیں' : 'View Episodes'}</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </span>
+                </div>
                 <div className="absolute bottom-5 left-5 right-5 flex items-end justify-between gap-4 text-white">
                   <div>
                     <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#22C55E]">
@@ -1039,7 +1050,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                 </div>
               </a>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 {heroSecondary.map((drama) => (
                   <a
                     key={drama.id}
@@ -1064,12 +1075,12 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                       }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                    <div className="absolute bottom-3 left-3.5 right-3.5 text-white">
-                      <div className="text-[10px] font-medium text-zinc-300">
-                        {drama.seasonLabel} · {t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)} · {drama.episodes.length}{' '}
+                    <div className="absolute bottom-2.5 left-3 right-3 text-white">
+                      <div className="text-[10px] font-medium text-zinc-300 truncate">
+                        {drama.seasonLabel} · {drama.episodes.length}{' '}
                         {t(MEMBERSHIP_COPY.dramaSelection.episodes)}
                       </div>
-                      <div className="text-sm font-bold leading-snug truncate mt-0.5">{drama.title}</div>
+                      <div className="text-xs sm:text-sm font-bold leading-snug truncate mt-0.5">{drama.title}</div>
                     </div>
                   </a>
                 ))}
@@ -1401,36 +1412,65 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
             </a>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {MEMBERSHIP_DRAMAS.map((drama) => (
               <article
                 key={`catalogue-${drama.id}`}
-                className="rounded-2xl border border-zinc-200 bg-white overflow-hidden flex flex-col justify-between"
+                className="rounded-2xl border border-zinc-200 bg-white overflow-hidden flex flex-col justify-between group hover:border-zinc-400 transition-colors"
               >
-                <div className="p-5 space-y-2.5">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="text-base font-bold text-[#0B0B0D]">
-                      <a
-                        href={`/${drama.id}`}
-                        onClick={(e) => {
-                          if (!e.metaKey && !e.ctrlKey) {
-                            e.preventDefault();
-                            window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: `/${drama.id}` }));
-                          }
-                        }}
-                        className="hover:text-[#16A34A] transition-colors"
-                      >
-                        {drama.title}
-                      </a>
-                    </h3>
-                    <span className="font-urdu-slim text-sm text-zinc-700" dir="rtl">
-                      {drama.urduTitle}
-                    </span>
+                <div>
+                  <a
+                    href={`/${drama.id}`}
+                    onClick={(e) => {
+                      if (!e.metaKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: `/${drama.id}` }));
+                      }
+                    }}
+                    className="relative aspect-video w-full bg-[#0B0B0D] block overflow-hidden"
+                  >
+                    <img
+                      src={drama.posterUrl}
+                      referrerPolicy="no-referrer"
+                      alt={`${drama.title} — ${drama.seasonLabel} Urdu Dubbed Poster`}
+                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                      onError={(e) => {
+                        if (e.currentTarget.src !== window.location.origin + drama.fallbackPosterUrl) {
+                          e.currentTarget.src = drama.fallbackPosterUrl;
+                        }
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                    <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/40 text-[#22C55E] text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" />
+                      <span>{t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)}</span>
+                    </div>
+                  </a>
+                  <div className="p-5 space-y-2.5">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="text-base font-bold text-[#0B0B0D]">
+                        <a
+                          href={`/${drama.id}`}
+                          onClick={(e) => {
+                            if (!e.metaKey && !e.ctrlKey) {
+                              e.preventDefault();
+                              window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: `/${drama.id}` }));
+                            }
+                          }}
+                          className="hover:text-[#16A34A] transition-colors"
+                        >
+                          {drama.title}
+                        </a>
+                      </h3>
+                      <span className="font-urdu-slim text-sm text-zinc-700 shrink-0" dir="rtl">
+                        {drama.urduTitle}
+                      </span>
+                    </div>
+                    <div className="text-xs font-medium text-zinc-500">
+                      {drama.seasonLabel} · {drama.genreLabel}
+                    </div>
+                    <p className="text-xs text-zinc-600 leading-relaxed line-clamp-3">{drama.synopsis}</p>
                   </div>
-                  <div className="text-xs font-medium text-zinc-500">
-                    {drama.seasonLabel} · {drama.genreLabel}
-                  </div>
-                  <p className="text-xs text-zinc-600 leading-relaxed">{drama.synopsis}</p>
                 </div>
                 <div className="px-5 py-3 bg-[#F8FAFC] border-t border-zinc-200 flex items-center justify-between text-xs font-semibold">
                   <a
@@ -1441,9 +1481,10 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                         window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: `/${drama.id}` }));
                       }
                     }}
-                    className="text-[#0B0B0D] hover:text-[#16A34A] transition-colors"
+                    className="text-[#0B0B0D] hover:text-[#16A34A] transition-colors inline-flex items-center gap-1"
                   >
-                    {isUrdu ? 'ڈرامہ پیج دیکھیں' : 'View Episodes'}
+                    <span>{isUrdu ? 'ڈرامہ پیج دیکھیں' : 'View Episodes'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                   <span className="text-[#16A34A]">{t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)}</span>
                 </div>
@@ -1499,17 +1540,24 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                     </div>
                   )}
 
-                  {/* Real FEVIQO 3-Drama Selection Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Real FEVIQO Drama Selection Grid (VIP picks up to 3 dramas) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     {MEMBERSHIP_DRAMAS.map((drama) => {
                       const isVipAuto = false;
                       const isChosen = selectedDramaIds.includes(drama.id);
 
                       return (
-                        <button
+                        <div
                           key={drama.id}
-                          type="button"
+                          role="button"
+                          tabIndex={0}
                           onClick={() => handleToggleDrama(drama)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleToggleDrama(drama);
+                            }
+                          }}
                           className={`text-left rounded-2xl overflow-hidden bg-white transition flex flex-col cursor-pointer ${
                             isChosen ? 'border-2 border-[#22C55E]' : 'border border-zinc-200 hover:border-zinc-400'
                           }`}
@@ -1526,18 +1574,32 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                                 }
                               }}
                             />
+                            <a
+                              href={`/${drama.id}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!e.metaKey && !e.ctrlKey) {
+                                  e.preventDefault();
+                                  window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: `/${drama.id}` }));
+                                }
+                              }}
+                              className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-[#0B0B0D]/85 hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-[10px] font-bold inline-flex items-center gap-1 transition-colors shadow-sm"
+                            >
+                              <span>{isUrdu ? 'اقساط دیکھیں' : 'Open Series'}</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </a>
                             {isChosen && (
-                              <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-[#22C55E] text-[#0B0B0D] flex items-center justify-center shadow-sm">
+                              <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-[#22C55E] text-[#0B0B0D] flex items-center justify-center shadow-sm">
                                 <Check className="w-4 h-4 stroke-[2.5]" />
                               </div>
                             )}
                           </div>
 
-                          <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                            <div className="space-y-2">
+                          <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                            <div className="space-y-1.5">
                               <div className="flex items-baseline justify-between gap-2">
-                                <h3 className="text-lg font-bold text-[#0B0B0D]">{drama.title}</h3>
-                                <span className="font-urdu-slim text-base text-zinc-700" dir="rtl">
+                                <h3 className="text-base font-bold text-[#0B0B0D]">{drama.title}</h3>
+                                <span className="font-urdu-slim text-sm text-zinc-700 shrink-0" dir="rtl">
                                   {drama.urduTitle}
                                 </span>
                               </div>
@@ -1545,7 +1607,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                                 {drama.seasonLabel} · {drama.genreLabel} · {drama.episodes.length}{' '}
                                 {t(MEMBERSHIP_COPY.dramaSelection.episodes)}
                               </div>
-                              <p className="text-xs text-zinc-600 leading-relaxed">{drama.synopsis}</p>
+                              <p className="text-xs text-zinc-600 leading-relaxed line-clamp-3">{drama.synopsis}</p>
                             </div>
 
                             <div className="pt-3 border-t border-zinc-100 text-xs font-semibold flex items-center justify-between">
@@ -1559,7 +1621,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                               <span className="text-zinc-500">{t(MEMBERSHIP_COPY.dramaSelection.urduDubbed)}</span>
                             </div>
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>

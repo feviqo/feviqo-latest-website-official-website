@@ -170,6 +170,7 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
     ): Promise<{
       allowed: boolean;
       streamUrl?: string;
+      streamPending?: boolean;
       watermark?: WatermarkInfo;
       caseType?: EpisodeGateCase;
       coveredDramaIds?: string[];
@@ -215,6 +216,13 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
           expiredPlanId?: MembershipPlanId;
           expiresAt?: string;
         };
+
+        if (errRes.code === 'STREAM_PENDING') {
+          return {
+            allowed: true,
+            streamPending: true,
+          };
+        }
 
         let caseType: EpisodeGateCase = 'A';
         if (errRes.code === 'UNAUTHENTICATED') caseType = 'A';
@@ -263,9 +271,9 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
       const dramaTitle = drama?.title || dramaId;
       const result = await verifyAndUnlockEpisode(dramaId, episodeSlug);
 
-      if (result.allowed && result.streamUrl) {
+      if (result.allowed && (result.streamUrl || result.streamPending)) {
         setGateState(null);
-        onUnlocked?.(result.streamUrl);
+        onUnlocked?.(result.streamUrl || '');
         return { allowed: true, streamUrl: result.streamUrl };
       }
 

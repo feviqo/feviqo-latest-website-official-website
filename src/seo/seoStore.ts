@@ -280,16 +280,16 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVSeries'
   },
-  '/yeralti/episode-1': {
-    path: '/yeralti/episode-1',
-    pageName: 'Yeralti - Urdu Dub Episode 1 Watch Page',
-    seoTitle: 'Yeralti - Urdu Dub Episode 1 (جرائم کی دنیا قسط 1) | FEVIQO',
-    metaDescription: 'Watch Yeralti - Urdu Dub (جرائم کی دنیا) Episode 1 in exclusive Urdu Dubbed HD on FEVIQO Premium.',
-    focusKeyword: 'yeralti episode 1 urdu dub',
-    secondaryKeywords: ['yeralti episode 1 urdu dub', 'yeralti urdu dubbed episode 1', 'جرائم کی دنیا قسط 1', 'feviqo yeralti'],
-    canonicalUrl: 'https://feviqo.com/yeralti/episode-1',
-    ogTitle: 'Yeralti - Urdu Dub Episode 1 (جرائم کی دنیا قسط 1) | FEVIQO',
-    ogDescription: 'Watch Yeralti - Urdu Dub (جرائم کی دنیا) Episode 1 in exclusive Urdu Dubbed HD on FEVIQO Premium.',
+  '/yeralti/episode-23': {
+    path: '/yeralti/episode-23',
+    pageName: 'Yeralti - Urdu Dub Episode 23 Watch Page',
+    seoTitle: 'Yeralti - Urdu Dub Episode 23 (جرائم کی دنیا قسط 23) | FEVIQO',
+    metaDescription: 'Watch Yeralti - Urdu Dub (جرائم کی دنیا) Episode 23 in exclusive Urdu Dubbed HD on FEVIQO Premium.',
+    focusKeyword: 'yeralti episode 23 urdu dub',
+    secondaryKeywords: ['yeralti episode 23 urdu dub', 'yeralti urdu dubbed episode 23', 'جرائم کی دنیا قسط 23', 'feviqo yeralti'],
+    canonicalUrl: 'https://feviqo.com/yeralti/episode-23',
+    ogTitle: 'Yeralti - Urdu Dub Episode 23 (جرائم کی دنیا قسط 23) | FEVIQO',
+    ogDescription: 'Watch Yeralti - Urdu Dub (جرائم کی دنیا) Episode 23 in exclusive Urdu Dubbed HD on FEVIQO Premium.',
     ogImage: 'https://lh3.googleusercontent.com/d/1hU7IkIPWRZ0uSuDhU_azx-TXyEbzxvqQ',
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'

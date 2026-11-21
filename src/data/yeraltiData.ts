@@ -62,16 +62,16 @@ export const YERALTI_SERIES_DATA: YeraltiSeries = {
 
 export const YERALTI_EPISODES: YeraltiEpisode[] = [
   {
-    number: 1,
-    slug: 'episode-1',
-    title: 'Yeralti - Urdu Dub Episode 1 | جرائم کی دنیا قسط 1',
-    urduTitle: 'جرائم کی دنیا قسط 1 — اردو ڈبنگ',
+    number: 23,
+    slug: 'episode-23',
+    title: 'Yeralti - Urdu Dub Episode 23 | جرائم کی دنیا قسط 23',
+    urduTitle: 'جرائم کی دنیا قسط 23 — اردو ڈبنگ',
     airDate: '2026-11-21T04:00:00.000Z',
     thumbnail: YERALTI_POSTER_URL,
     duration: '2h 15m',
     shortSummary:
-      'Step into the criminal underworld in Yeralti - Urdu Dub (جرائم کی دنیا) Episode 1 in Urdu Dubbed HD — exclusive for FEVIQO Premium Members.',
-    recap: `Yeralti - Urdu Dub (جرائم کی دنیا) Episode 1 opens inside a hidden empire of crime, betrayal, and high-stakes power struggles where survival demands absolute loyalty.\n\nThis Urdu Dubbed HD series is exclusively locked for FEVIQO Premium Members. Activate an eligible plan covering Yeralti - Urdu Dub or VIP to unlock full streaming access.`,
+      'Step into the criminal underworld in Yeralti - Urdu Dub (جرائم کی دنیا) Episode 23 in Urdu Dubbed HD — exclusive for FEVIQO Premium Members.',
+    recap: `Yeralti - Urdu Dub (جرائم کی دنیا) Episode 23 unfolds inside a hidden empire of crime, betrayal, and high-stakes power struggles where survival demands absolute loyalty.\n\nThis Urdu Dubbed HD series is exclusively locked for FEVIQO Premium Members. Activate an eligible plan covering Yeralti - Urdu Dub or VIP to unlock full streaming access.`,
     embeds: [],
     season: 1,
     isLockedPremium: true,

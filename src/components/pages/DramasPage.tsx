@@ -177,7 +177,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
 
-    document.title = "Turkish Dramas in Urdu Subtitles | Teskilat & Gunesin Dogdugu Yer | FEVIQO";
+    document.title = "Turkish Dramas in Urdu Dub & Subtitles | Yeralti, Teskilat & Mehmed | FEVIQO";
 
     let metaDesc = document.querySelector('meta[name="description"]');
     if (!metaDesc) {
@@ -185,7 +185,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
       metaDesc.setAttribute('name', 'description');
       document.head.appendChild(metaDesc);
     }
-    metaDesc.setAttribute('content', "Explore Turkish dramas with Urdu subtitles on FEVIQO, including Teskilat and Gunesin Dogdugu Yer. Discover premium Turkish series and their latest episodes.");
+    metaDesc.setAttribute('content', "Explore Turkish dramas in Urdu Dub and Urdu Subtitles on FEVIQO, including Yeralti - Urdu Dub (جرائم کی دنیا), Teskilat, Mehmed: Fetihler Sultani, and Gunesin Dogdugu Yer.");
 
     let metaRobots = document.querySelector('meta[name="robots"]');
     if (!metaRobots) {
@@ -297,11 +297,26 @@ export const DramasPage: React.FC<DramasPageProps> = ({
               >
                 
                 {/* 1. PICTURE PANEL: Displays widescreen 16:9 banner with zero cropping, 100% visible on any device */}
-                <div className="w-full aspect-video bg-black relative select-none">
+                <a
+                  href={slide.href}
+                  onClick={(e) => {
+                    if (!e.metaKey && !e.ctrlKey) {
+                      e.preventDefault();
+                      navigateDramaHub(slide.id);
+                    }
+                  }}
+                  className="w-full aspect-video bg-black relative select-none block cursor-pointer"
+                >
                   <img
                     src={slide.image}
                     alt={`${slide.title} Cinematic Backdrop`}
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const fallback = '/images/posters/poster-horiz-narrative-storytelling.jpg';
+                      if (!e.currentTarget.src.endsWith(fallback)) {
+                        e.currentTarget.src = fallback;
+                      }
+                    }}
                     className={`w-full h-full object-contain ${
                       slide.isUrduDubOnly && !hasDramaAccess(slide.id) ? 'brightness-75' : ''
                     }`}
@@ -313,7 +328,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                     </div>
                   )}
                   <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black to-transparent pointer-events-none" />
-                </div>
+                </a>
 
                 {/* 2. DETAILS AREA: Solid, ultra-premium text content block sitting directly below on solid black */}
                 <div className="w-full bg-black py-8 px-6 sm:px-12 lg:px-16 z-20 border-b border-zinc-800">
@@ -477,6 +492,12 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                       src={drama.image} 
                       alt={`${drama.title} Turkish drama`}
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        const fallback = '/images/posters/poster-horiz-narrative-storytelling.jpg';
+                        if (!e.currentTarget.src.endsWith(fallback)) {
+                          e.currentTarget.src = fallback;
+                        }
+                      }}
                       className={`w-full h-full object-cover block transition-all duration-[450ms] ease-out ${
                         drama.isUrduDubOnly && !isUnlocked
                           ? 'brightness-50 group-hover:brightness-40 group-hover:scale-105'

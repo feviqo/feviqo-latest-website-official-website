@@ -282,6 +282,12 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                     src={YERALTI_SERIES_DATA.backdrop}
                     alt="Yeralti - Urdu Dub Official Poster"
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const fallback = '/images/posters/poster-horiz-narrative-storytelling.jpg';
+                      if (!e.currentTarget.src.endsWith(fallback)) {
+                        e.currentTarget.src = fallback;
+                      }
+                    }}
                     className={`w-full h-full object-contain block transition duration-300 ${
                       !isDramaUnlocked ? 'brightness-75' : ''
                     }`}
@@ -417,6 +423,12 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                       src={latestEpisode.thumbnail}
                       alt={latestEpisode.title}
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        const fallback = '/images/posters/poster-horiz-narrative-storytelling.jpg';
+                        if (!e.currentTarget.src.endsWith(fallback)) {
+                          e.currentTarget.src = fallback;
+                        }
+                      }}
                       className={`w-full h-full object-cover transition duration-300 ${
                         isLatestLocked
                           ? 'brightness-50 group-hover:brightness-40 group-hover:scale-105'
@@ -596,6 +608,12 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                               src={ep.thumbnail}
                               alt={ep.title}
                               referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                const fallback = '/images/posters/poster-horiz-narrative-storytelling.jpg';
+                                if (!e.currentTarget.src.endsWith(fallback)) {
+                                  e.currentTarget.src = fallback;
+                                }
+                              }}
                               className={`w-full h-full object-cover transition duration-300 ${
                                 isLocked
                                   ? 'brightness-50 group-hover:brightness-40 group-hover:scale-105'

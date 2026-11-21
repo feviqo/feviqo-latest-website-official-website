@@ -61,6 +61,9 @@ for (const dir of [DATA_DIR, PRIVATE_PROOFS_DIR, PUBLIC_QR_DIR]) {
 // Server-only protected episode stream URLs.
 // Never export or serialize these into public catalog endpoints or static frontend bundles.
 const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
+  yeralti: {
+    'episode-23': '',
+  },
   teskilat: {
     'episode-193': 'https://stream.mux.com/019jnoxNSoObArxNDjk8h5HRQDh4ahOYzCruDLCD00zgQ.m3u8',
     'episode-192': 'https://stream.mux.com/9KzAsaCfqKFh5hi4k5o5NCUuYWa3TbQsbCrVgsih8WU.m3u8',
@@ -6961,7 +6964,8 @@ export function authorizeEpisodePlayback(params: {
         | 'MEMBERSHIP_CANCELLED'
         | 'MEMBERSHIP_EXPIRED'
         | 'DRAMA_NOT_INCLUDED'
-        | 'EPISODE_NOT_FOUND';
+        | 'EPISODE_NOT_FOUND'
+        | 'STREAM_PENDING';
       error: string;
       coveredDramaIds?: string[];
       activePlanNames?: string[];
@@ -6971,9 +6975,9 @@ export function authorizeEpisodePlayback(params: {
     } {
   const drama = getDramaById(params.dramaId);
   const episode = getEpisodeMeta(params.dramaId, params.episodeSlug);
-  const rawServerStreamUrl = PROTECTED_EPISODE_STREAMS[params.dramaId]?.[params.episodeSlug];
+  const rawServerStreamUrl = PROTECTED_EPISODE_STREAMS[params.dramaId]?.[params.episodeSlug] || '';
 
-  if (!drama || !episode || !episode.isPublished || !rawServerStreamUrl) {
+  if (!drama || !episode || !episode.isPublished) {
     return {
       authorized: false,
       statusCode: 404,
@@ -7091,6 +7095,15 @@ export function authorizeEpisodePlayback(params: {
       error: `${drama.title} is not included in your current ${Array.from(planNames).join(' / ')} drama selection.`,
       coveredDramaIds: Array.from(coveredSet),
       activePlanNames: Array.from(planNames),
+    };
+  }
+
+  if (!serverStreamUrl || !resolvedOverride.playbackId) {
+    return {
+      authorized: false,
+      statusCode: 404,
+      code: 'STREAM_PENDING',
+      error: 'Your FEVIQO Premium membership is active. This Urdu Dubbed HD stream is being finalized and will begin playing here automatically once live.',
     };
   }
 
