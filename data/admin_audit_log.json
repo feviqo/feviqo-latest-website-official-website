@@ -1,5 +1,516 @@
 [
   {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795390536456-c049b5",
+    "createdAt": "2026-11-22T23:35:36.456Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-1795390536399-43a198",
+    "details": "Permanently deleted supporter leaderboard entry sup-1795390536399-43a198.",
+    "id": "aud-1795390536453-e60933",
+    "createdAt": "2026-11-22T23:35:36.453Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-1795390536363-43ea76",
+    "details": "Permanently deleted supporter leaderboard entry sup-1795390536363-43ea76.",
+    "id": "aud-1795390536445-770232",
+    "createdAt": "2026-11-22T23:35:36.445Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=false, max=10, showAmounts=false, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795390536438-ace110",
+    "createdAt": "2026-11-22T23:35:36.438Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=false, autoRank=true, manualPriority=true, manualFeatured=false).",
+    "id": "aud-1795390536428-31ca3d",
+    "createdAt": "2026-11-22T23:35:36.428Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=1, showAmounts=false, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795390536421-2afbb7",
+    "createdAt": "2026-11-22T23:35:36.421Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_updated",
+    "targetId": "sup-1795390536363-43ea76",
+    "details": "Updated supporter entry \"Manual One\" (manual_featured, PKR 5,000, active=true, removed=false).",
+    "id": "aud-1795390536416-158fbb",
+    "createdAt": "2026-11-22T23:35:36.416Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_updated",
+    "targetId": "sup-1795390536363-43ea76",
+    "details": "Updated supporter entry \"Manual One\" (manual_featured, PKR 5,000, active=false, removed=true).",
+    "id": "aud-1795390536406-e4150a",
+    "createdAt": "2026-11-22T23:35:36.406Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_created",
+    "targetId": "sup-1795390536399-43a198",
+    "details": "Added manual featured supporter \"Manual Two\" (PKR 2,500, badge: Founding Supporter).",
+    "id": "aud-1795390536399-c5c179",
+    "createdAt": "2026-11-22T23:35:36.399Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_created",
+    "targetId": "sup-1795390536363-43ea76",
+    "details": "Added manual featured supporter \"Manual One\" (PKR 5,000, badge: Executive Patron).",
+    "id": "aud-1795390536378-c4b864",
+    "createdAt": "2026-11-22T23:35:36.379Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795390392778-46a08a",
+    "createdAt": "2026-11-22T23:33:12.778Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-1795390392737-95e618",
+    "details": "Permanently deleted supporter leaderboard entry sup-1795390392737-95e618.",
+    "id": "aud-1795390392775-a9d658",
+    "createdAt": "2026-11-22T23:33:12.775Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-1795390392725-4d0bec",
+    "details": "Permanently deleted supporter leaderboard entry sup-1795390392725-4d0bec.",
+    "id": "aud-1795390392770-bd781a",
+    "createdAt": "2026-11-22T23:33:12.770Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=1, showAmounts=false, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795390392760-52a6f1",
+    "createdAt": "2026-11-22T23:33:12.760Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_updated",
+    "targetId": "sup-1795390392725-4d0bec",
+    "details": "Updated supporter entry \"Manual One\" (manual_featured, PKR 5,000, active=false, removed=false).",
+    "id": "aud-1795390392754-8034e3",
+    "createdAt": "2026-11-22T23:33:12.754Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_updated",
+    "targetId": "sup-1795390392725-4d0bec",
+    "details": "Updated supporter entry \"Manual One\" (manual_featured, PKR 5,000, active=false, removed=true).",
+    "id": "aud-1795390392745-b6a9ec",
+    "createdAt": "2026-11-22T23:33:12.745Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_created",
+    "targetId": "sup-1795390392737-95e618",
+    "details": "Added manual featured supporter \"Manual Two\" (PKR 2,500, badge: Founding Supporter).",
+    "id": "aud-1795390392737-0854e2",
+    "createdAt": "2026-11-22T23:33:12.738Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_created",
+    "targetId": "sup-1795390392725-4d0bec",
+    "details": "Added manual featured supporter \"Manual One\" (PKR 5,000, badge: Executive Patron).",
+    "id": "aud-1795390392725-7f0a99",
+    "createdAt": "2026-11-22T23:33:12.725Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795390345374-e7fcdf",
+    "createdAt": "2026-11-22T23:32:25.374Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390345324-5-5419",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390345324-5-5419.",
+    "id": "aud-1795390345369-ed3408",
+    "createdAt": "2026-11-22T23:32:25.369Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390345324-4-b2af",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390345324-4-b2af.",
+    "id": "aud-1795390345364-a39b50",
+    "createdAt": "2026-11-22T23:32:25.364Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390345324-3-8fd6",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390345324-3-8fd6.",
+    "id": "aud-1795390345361-870d7f",
+    "createdAt": "2026-11-22T23:32:25.361Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390345324-2-66bb",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390345324-2-66bb.",
+    "id": "aud-1795390345358-cb4726",
+    "createdAt": "2026-11-22T23:32:25.358Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390345324-1-7b41",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390345324-1-7b41.",
+    "id": "aud-1795390345354-bb49c4",
+    "createdAt": "2026-11-22T23:32:25.354Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-ver-1795390344908-d90cfa9b",
+    "details": "Permanently deleted supporter leaderboard entry sup-ver-1795390344908-d90cfa9b.",
+    "id": "aud-1795390345350-883945",
+    "createdAt": "2026-11-22T23:32:25.350Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-1795390345330-e8d636",
+    "details": "Permanently deleted supporter leaderboard entry sup-1795390345330-e8d636.",
+    "id": "aud-1795390345343-64c71a",
+    "createdAt": "2026-11-22T23:32:25.343Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_updated",
+    "targetId": "sup-1795390345330-e8d636",
+    "details": "Updated supporter entry \"Edited Patron\" (manual_featured, PKR 12,000, active=true, removed=false).",
+    "id": "aud-1795390345339-4d986b",
+    "createdAt": "2026-11-22T23:32:25.339Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_created",
+    "targetId": "sup-1795390345330-e8d636",
+    "details": "Added manual featured supporter \"Manual VIP Patron\" (PKR 15,000, badge: Executive Patron).",
+    "id": "aud-1795390345330-bfbbdb",
+    "createdAt": "2026-11-22T23:32:25.330Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_created",
+    "details": "Created 5 initial editable manual featured supporter entries.",
+    "id": "aud-1795390345325-c481e1",
+    "createdAt": "2026-11-22T23:32:25.325Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "payment_approved",
+    "targetId": "ord-1795390344559-88d6ce3d",
+    "details": "Approved new Standard (PKR 1,599) for qa_supporter4_1795390344481@example.com. Membership sub-1795390344908-069e62 active until 2026-12-22T23:32:24.908Z.",
+    "id": "aud-1795390344909-c8ed13",
+    "createdAt": "2026-11-22T23:32:24.909Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "order_deleted",
+    "targetId": "ord-1795390265306-dd14347a",
+    "details": "Deleted payment request ord-1795390265306-dd14347a (Plus, status: rejected) for qa_supporter3_1795390264497@example.com.",
+    "id": "aud-1795390266001-4aca03",
+    "createdAt": "2026-11-22T23:31:06.001Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795390265989-85bc45",
+    "createdAt": "2026-11-22T23:31:05.989Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390265960-5-28e0",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390265960-5-28e0.",
+    "id": "aud-1795390265985-9bf545",
+    "createdAt": "2026-11-22T23:31:05.985Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390265960-4-2d93",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390265960-4-2d93.",
+    "id": "aud-1795390265981-1c1c2d",
+    "createdAt": "2026-11-22T23:31:05.981Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390265960-3-2e62",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390265960-3-2e62.",
+    "id": "aud-1795390265978-dd4186",
+    "createdAt": "2026-11-22T23:31:05.978Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390265960-2-7b06",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390265960-2-7b06.",
+    "id": "aud-1795390265974-bc3ca8",
+    "createdAt": "2026-11-22T23:31:05.974Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-feat-1795390265960-1-e059",
+    "details": "Permanently deleted supporter leaderboard entry sup-feat-1795390265960-1-e059.",
+    "id": "aud-1795390265971-ef953c",
+    "createdAt": "2026-11-22T23:31:05.971Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-ver-1795390264970-0e307f8e",
+    "details": "Permanently deleted supporter leaderboard entry sup-ver-1795390264970-0e307f8e.",
+    "id": "aud-1795390265964-78d343",
+    "createdAt": "2026-11-22T23:31:05.965Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_created",
+    "details": "Created 5 initial editable manual featured supporter entries.",
+    "id": "aud-1795390265960-9c1936",
+    "createdAt": "2026-11-22T23:31:05.960Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "payment_rejected",
+    "targetId": "ord-1795390265306-dd14347a",
+    "details": "Rejected payment ord-1795390265306-dd14347a for qa_supporter3_1795390264497@example.com. Reason: Receipt amount not received",
+    "id": "aud-1795390265624-cbe3a4",
+    "createdAt": "2026-11-22T23:31:05.624Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "payment_approved",
+    "targetId": "ord-1795390264592-18e1cf59",
+    "details": "Approved new Standard (PKR 1,599) for qa_supporter3_1795390264497@example.com. Membership sub-1795390264970-061de6 active until 2026-12-22T23:31:04.970Z.",
+    "id": "aud-1795390264970-ef924e",
+    "createdAt": "2026-11-22T23:31:04.970Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795390178397-be0cf7",
+    "createdAt": "2026-11-22T23:29:38.397Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-ver-1795390178070-8fbec252",
+    "details": "Permanently deleted supporter leaderboard entry sup-ver-1795390178070-8fbec252.",
+    "id": "aud-1795390178394-0ee9bf",
+    "createdAt": "2026-11-22T23:29:38.394Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "payment_approved",
+    "targetId": "ord-1795390177226-0c15b300",
+    "details": "Approved new Standard (PKR 1,599) for qa_supporter2_1795390177145@example.com. Membership sub-1795390178070-a42ac9 active until 2026-12-22T23:29:38.070Z.",
+    "id": "aud-1795390178070-657e22",
+    "createdAt": "2026-11-22T23:29:38.070Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "order_deleted",
+    "targetId": "ord-1795390117122-ff8447e2",
+    "details": "Deleted payment request ord-1795390117122-ff8447e2 (Standard, status: awaiting_payment) for qa_supporter_1795390117016@example.com.",
+    "id": "aud-1795390119658-d7a03d",
+    "createdAt": "2026-11-22T23:28:39.658Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795390119652-85015a",
+    "createdAt": "2026-11-22T23:28:39.652Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_entry_deleted",
+    "targetId": "sup-ver-1795390119315-3c0c284c",
+    "details": "Permanently deleted supporter leaderboard entry sup-ver-1795390119315-3c0c284c.",
+    "id": "aud-1795390119648-ebeb88",
+    "createdAt": "2026-11-22T23:28:39.648Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "payment_approved",
+    "targetId": "ord-1795390117130-69229179",
+    "details": "Approved new Standard (PKR 1,599) for qa_supporter_1795390117016@example.com. Membership sub-1795390119315-e13d8d active until 2026-12-22T23:28:39.315Z.",
+    "id": "aud-1795390119316-352527",
+    "createdAt": "2026-11-22T23:28:39.316Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "order_correction_requested",
+    "targetId": "ord-1795390117130-69229179",
+    "details": "Requested new screenshot / correction on order ord-1795390117130-69229179 (qa_supporter_1795390117016@example.com): Please upload clearer receipt showing transaction ID.",
+    "id": "aud-1795390118240-7da3a0",
+    "createdAt": "2026-11-22T23:28:38.240Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "member_deleted",
+    "targetId": "mem-1795389936936-7ca8ac",
+    "details": "Deleted customer account qa_supporter_1795389936861@example.com (QA Supporter) along with 0 request(s) and 0 past membership(s).",
+    "id": "aud-1795389937018-e17542",
+    "createdAt": "2026-11-22T23:25:37.018Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "order_deleted",
+    "targetId": "ord-1795389936969-dd420943",
+    "details": "Deleted payment request ord-1795389936969-dd420943 (Standard, status: awaiting_payment) for qa_supporter_1795389936861@example.com.",
+    "id": "aud-1795389937009-0e5444",
+    "createdAt": "2026-11-22T23:25:37.009Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "order_deleted",
+    "targetId": "ord-1795389936961-0151c4c1",
+    "details": "Deleted payment request ord-1795389936961-0151c4c1 (Standard, status: awaiting_payment) for qa_supporter_1795389936861@example.com.",
+    "id": "aud-1795389936989-31e22b",
+    "createdAt": "2026-11-22T23:25:36.989Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795389936985-faaf89",
+    "createdAt": "2026-11-22T23:25:36.985Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "member_deleted",
+    "targetId": "mem-1795389824674-5d98e7",
+    "details": "Deleted customer account qa_supporter_1795389824603@example.com (QA Supporter) along with 0 request(s) and 0 past membership(s).",
+    "id": "aud-1795389824724-9d7056",
+    "createdAt": "2026-11-22T23:23:44.724Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795389824714-39c0d9",
+    "createdAt": "2026-11-22T23:23:44.714Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795389465823-c30650",
+    "createdAt": "2026-11-22T23:17:45.823Z"
+  },
+  {
+    "adminId": "adm-1794577927114-c1a5a6",
+    "adminEmail": "partner@feviqo.com",
+    "action": "supporter_settings_updated",
+    "targetId": "main",
+    "details": "Updated Supporters Leaderboard settings (enabled=true, max=10, showAmounts=true, autoRank=true, manualPriority=true, manualFeatured=true).",
+    "id": "aud-1795389100574-026d2b",
+    "createdAt": "2026-11-22T23:11:40.575Z"
+  },
+  {
     "adminId": "adm-1",
     "adminEmail": "rexanmedia01@gmail.com",
     "action": "user_unblocked",

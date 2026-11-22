@@ -103,6 +103,12 @@ service cloud.firestore {
           'creditsUsedPkr', 'creditsUsedUsd', 'creditsRefundedAt', 'discountTotalPkr', 'discountTotalUsd',
           'expectedAmount', 'currency', 'paymentRegion', 'paymentMethod', 'visitorCountryCode',
           'indicativeLocalDisplay', 'durationDays', 'selectedDramaIds',
+          'subscriptionPricePkr', 'optionalContributionPkr', 'expectedTotalPkr',
+          'customerDeclaredAmountPkr', 'verifiedReceivedAmountPkr',
+          'verifiedSubscriptionPricePkr', 'verifiedContributionPkr',
+          'leaderboardDisplayName', 'showExactAmount', 'leaderboardEligible',
+          'leaderboardEntryId', 'leaderboardCountedAt',
+          'correctionRequestedAt', 'correctionRequestNote', 'correctionRequestedByAdminEmail',
           'status', 'provider', 'qrImageUrl', 'proofFileName', 'proofOriginalName',
           'proofMimeType', 'proofDataUrl', 'proofSubmittedAt', 'paymentNote',
           'rejectionReason', 'reviewedByAdminId', 'reviewedByAdminEmail', 'reviewedAt',
@@ -118,9 +124,9 @@ service cloud.firestore {
         && (!('targetMembershipId' in data) || isBoundedString(data.targetMembershipId, 0, 128))
         && (data.planId in ['starter', 'standard', 'plus', 'vip'])
         && isBoundedString(data.planName, 1, 64)
-        && data.amountPkr is number && data.amountPkr >= 0 && data.amountPkr <= 1000000
+        && data.amountPkr is number && data.amountPkr >= 0 && data.amountPkr <= 1500000
         && (!('amountUsd' in data) || (data.amountUsd is number && data.amountUsd >= 0 && data.amountUsd <= 10000))
-        && (!('originalAmountPkr' in data) || (data.originalAmountPkr is number && data.originalAmountPkr >= 0 && data.originalAmountPkr <= 1000000))
+        && (!('originalAmountPkr' in data) || (data.originalAmountPkr is number && data.originalAmountPkr >= 0 && data.originalAmountPkr <= 1500000))
         && (!('originalAmountUsd' in data) || (data.originalAmountUsd is number && data.originalAmountUsd >= 0 && data.originalAmountUsd <= 10000))
         && (!('promoCodeId' in data) || isBoundedString(data.promoCodeId, 0, 128))
         && (!('promoCode' in data) || isBoundedString(data.promoCode, 0, 40))
@@ -135,7 +141,22 @@ service cloud.firestore {
         && (!('creditsRefundedAt' in data) || isBoundedString(data.creditsRefundedAt, 0, 64))
         && (!('discountTotalPkr' in data) || (data.discountTotalPkr is number && data.discountTotalPkr >= 0 && data.discountTotalPkr <= 1000000))
         && (!('discountTotalUsd' in data) || (data.discountTotalUsd is number && data.discountTotalUsd >= 0 && data.discountTotalUsd <= 10000))
-        && (!('expectedAmount' in data) || (data.expectedAmount is number && data.expectedAmount >= 0 && data.expectedAmount <= 1000000))
+        && (!('expectedAmount' in data) || (data.expectedAmount is number && data.expectedAmount >= 0 && data.expectedAmount <= 1500000))
+        && (!('subscriptionPricePkr' in data) || (data.subscriptionPricePkr is number && data.subscriptionPricePkr >= 0 && data.subscriptionPricePkr <= 1000000))
+        && (!('optionalContributionPkr' in data) || (data.optionalContributionPkr is number && data.optionalContributionPkr >= 0 && data.optionalContributionPkr <= 500000))
+        && (!('expectedTotalPkr' in data) || (data.expectedTotalPkr is number && data.expectedTotalPkr >= 0 && data.expectedTotalPkr <= 1500000))
+        && (!('customerDeclaredAmountPkr' in data) || (data.customerDeclaredAmountPkr is number && data.customerDeclaredAmountPkr >= 0 && data.customerDeclaredAmountPkr <= 5000000))
+        && (!('verifiedReceivedAmountPkr' in data) || (data.verifiedReceivedAmountPkr is number && data.verifiedReceivedAmountPkr >= 0 && data.verifiedReceivedAmountPkr <= 5000000))
+        && (!('verifiedSubscriptionPricePkr' in data) || (data.verifiedSubscriptionPricePkr is number && data.verifiedSubscriptionPricePkr >= 0 && data.verifiedSubscriptionPricePkr <= 1000000))
+        && (!('verifiedContributionPkr' in data) || (data.verifiedContributionPkr is number && data.verifiedContributionPkr >= 0 && data.verifiedContributionPkr <= 5000000))
+        && (!('leaderboardDisplayName' in data) || isBoundedString(data.leaderboardDisplayName, 0, 60))
+        && (!('showExactAmount' in data) || data.showExactAmount is bool)
+        && (!('leaderboardEligible' in data) || data.leaderboardEligible is bool)
+        && (!('leaderboardEntryId' in data) || isBoundedString(data.leaderboardEntryId, 0, 128))
+        && (!('leaderboardCountedAt' in data) || isBoundedString(data.leaderboardCountedAt, 0, 64))
+        && (!('correctionRequestedAt' in data) || isBoundedString(data.correctionRequestedAt, 0, 64))
+        && (!('correctionRequestNote' in data) || isBoundedString(data.correctionRequestNote, 0, 500))
+        && (!('correctionRequestedByAdminEmail' in data) || isBoundedString(data.correctionRequestedByAdminEmail, 0, 200))
         && (!('currency' in data) || (data.currency in ['PKR', 'USD']))
         && (!('paymentRegion' in data) || (data.paymentRegion in ['pakistan', 'international']))
         && (!('paymentMethod' in data) || (data.paymentMethod in ['bank_qr', 'binance_qr', 'admin_assigned', 'free']))
@@ -161,6 +182,57 @@ service cloud.firestore {
         && isBoundedString(data.createdAtIso, 10, 64)
         && isBoundedString(data.updatedAtIso, 10, 64)
         && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSupporterLeaderboardEntry(data) {
+      return data.keys().hasAll([
+          'id', 'displayName', 'contributionAmount', 'amountVisible', 'badge',
+          'entryType', 'active', 'featured', 'removed', 'createdAtIso', 'updatedAtIso', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'displayName', 'contributionAmount', 'amountVisible', 'badge',
+          'displayPriority', 'entryType', 'active', 'featured', 'removed',
+          'createdAtIso', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && isBoundedString(data.displayName, 1, 60)
+        && data.contributionAmount is number && data.contributionAmount >= 0 && data.contributionAmount <= 5000000
+        && data.amountVisible is bool
+        && isBoundedString(data.badge, 0, 48)
+        && (!('displayPriority' in data) || data.displayPriority == null || (data.displayPriority is number && data.displayPriority >= 1 && data.displayPriority <= 999))
+        && (data.entryType in ['manual_featured', 'verified_customer'])
+        && data.active is bool
+        && data.featured is bool
+        && data.removed is bool
+        && isBoundedString(data.createdAtIso, 10, 64)
+        && isBoundedString(data.updatedAtIso, 10, 64)
+        && (!('createdAt' in data) || data.createdAt is timestamp)
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSupporterLeaderboardSettings(data) {
+      return data.keys().hasAll([
+          'id', 'enabled', 'maxDisplayed', 'showAmountsGlobally',
+          'allowAutomaticRanking', 'allowManualPriority', 'showBadges',
+          'showSubtitle', 'includeManualFeatured', 'updatedAtIso', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'enabled', 'maxDisplayed', 'showAmountsGlobally',
+          'allowAutomaticRanking', 'allowManualPriority', 'showBadges',
+          'showSubtitle', 'includeManualFeatured', 'updatedAtIso', 'createdAt', 'updatedAt'
+        ])
+        && data.id == 'main'
+        && data.enabled is bool
+        && data.maxDisplayed is number && data.maxDisplayed >= 1 && data.maxDisplayed <= 50
+        && data.showAmountsGlobally is bool
+        && data.allowAutomaticRanking is bool
+        && data.allowManualPriority is bool
+        && data.showBadges is bool
+        && data.showSubtitle is bool
+        && data.includeManualFeatured is bool
+        && isBoundedString(data.updatedAtIso, 10, 64)
+        && (!('createdAt' in data) || data.createdAt is timestamp)
         && data.updatedAt is timestamp;
     }
 
@@ -674,6 +746,15 @@ service cloud.firestore {
           || (
             incoming().ownerUid == request.auth.uid
             && incoming().status == 'awaiting_payment'
+            && !('verifiedReceivedAmountPkr' in incoming())
+            && !('verifiedSubscriptionPricePkr' in incoming())
+            && !('verifiedContributionPkr' in incoming())
+            && !('leaderboardEntryId' in incoming())
+            && !('leaderboardCountedAt' in incoming())
+            && !('correctionRequestedAt' in incoming())
+            && !('correctionRequestNote' in incoming())
+            && !('correctionRequestedByAdminEmail' in incoming())
+            && (!('leaderboardEligible' in incoming()) || incoming().leaderboardEligible == false)
             && exists(/databases/$(database)/documents/members/$(incoming().memberId))
             && get(/databases/$(database)/documents/members/$(incoming().memberId)).data.ownerUid == request.auth.uid
           )
@@ -696,6 +777,7 @@ service cloud.firestore {
             && incoming().diff(existing()).affectedKeys().hasOnly([
               'status', 'proofFileName', 'proofOriginalName', 'proofMimeType',
               'proofDataUrl', 'proofSubmittedAt', 'paymentNote', 'rejectionReason',
+              'customerDeclaredAmountPkr', 'leaderboardDisplayName', 'showExactAmount',
               'updatedAtIso', 'updatedAt'
             ])
           )
@@ -1067,6 +1149,36 @@ service cloud.firestore {
       allow get: if isValidId(notificationId) && isAdmin();
       allow list: if isBootstrappedAdmin();
       allow create, update, delete: if false;
+    }
+
+    // Public PII-free FEVIQO Top Supporters Leaderboard (live updates for Membership Page)
+    match /supportersLeaderboard/{entryId} {
+      allow get: if isValidId(entryId)
+        && ((existing().active == true && existing().removed != true) || isAdmin());
+      allow list: if (resource.data.active == true && resource.data.removed != true) || isAdmin();
+      allow create: if isValidId(entryId) && isAdmin()
+        && isValidSupporterLeaderboardEntry(incoming())
+        && incoming().id == entryId
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(entryId) && isAdmin()
+        && isValidSupporterLeaderboardEntry(incoming())
+        && incoming().id == existing().id
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(entryId) && isAdmin();
+    }
+
+    match /supportersLeaderboardSettings/{settingId} {
+      allow get: if isValidId(settingId) && (settingId == 'main' || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(settingId) && isAdmin()
+        && isValidSupporterLeaderboardSettings(incoming())
+        && incoming().id == settingId
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(settingId) && isAdmin()
+        && isValidSupporterLeaderboardSettings(incoming())
+        && incoming().id == existing().id
+        && incoming().updatedAt == request.time;
+      allow delete: if false;
     }
   }
 }

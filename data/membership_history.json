@@ -1,1 +1,339 @@
-[]
+[
+  {
+    "memberId": "mem-1795390344544-2c0bbf",
+    "membershipId": "sub-1795390344908-069e62",
+    "orderId": "ord-1795390344559-88d6ce3d",
+    "event": "payment_approved",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Standard payment approved (PKR 1,599 via bank_qr) and active until 2026-12-22T23:32:24.908Z.",
+    "id": "hist-1795390344909-cfab45",
+    "createdAt": "2026-11-22T23:32:24.909Z"
+  },
+  {
+    "memberId": "mem-1795390344544-2c0bbf",
+    "orderId": "ord-1795390344559-88d6ce3d",
+    "event": "proof_submitted",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Payment proof submitted for Standard (PKR 1,599 · Declared paid: PKR 1,599 via Bank QR) — pending manual verification.",
+    "id": "hist-1795390344570-86c22f",
+    "createdAt": "2026-11-22T23:32:24.570Z"
+  },
+  {
+    "memberId": "mem-1795390344544-2c0bbf",
+    "orderId": "ord-1795390344559-88d6ce3d",
+    "event": "checkout_created",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "New payment request ord-1795390344559-88d6ce3d created for Standard (PKR 1,599 (Plan PKR 599 + Support PKR 1,000)).",
+    "id": "hist-1795390344559-2f6e19",
+    "createdAt": "2026-11-22T23:32:24.559Z"
+  },
+  {
+    "memberId": "mem-1795390344544-2c0bbf",
+    "event": "account_created",
+    "details": "Personal FEVIQO account created for qa_supporter4_1795390344481@example.com.",
+    "id": "hist-1795390344552-4538b4",
+    "createdAt": "2026-11-22T23:32:24.552Z"
+  },
+  {
+    "memberId": "mem-1795390264575-7c4b58",
+    "orderId": "ord-1795390265306-dd14347a",
+    "event": "payment_rejected",
+    "planId": "plus",
+    "planName": "Plus",
+    "amountPkr": 3399,
+    "amountUsd": 3.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti",
+      "teskilat"
+    ],
+    "details": "Payment submission rejected: Receipt amount not received",
+    "id": "hist-1795390265624-e1f037",
+    "createdAt": "2026-11-22T23:31:05.624Z"
+  },
+  {
+    "memberId": "mem-1795390264575-7c4b58",
+    "orderId": "ord-1795390265306-dd14347a",
+    "event": "proof_submitted",
+    "planId": "plus",
+    "planName": "Plus",
+    "amountPkr": 3399,
+    "amountUsd": 3.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti",
+      "teskilat"
+    ],
+    "details": "Payment proof submitted for Plus (PKR 3,399 · Declared paid: PKR 3,399 via Bank QR) — pending manual verification.",
+    "id": "hist-1795390265316-452641",
+    "createdAt": "2026-11-22T23:31:05.316Z"
+  },
+  {
+    "memberId": "mem-1795390264575-7c4b58",
+    "orderId": "ord-1795390265306-dd14347a",
+    "event": "checkout_created",
+    "planId": "plus",
+    "planName": "Plus",
+    "amountPkr": 3399,
+    "amountUsd": 3.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti",
+      "teskilat"
+    ],
+    "details": "New payment request ord-1795390265306-dd14347a created for Plus (PKR 3,399 (Plan PKR 899 + Support PKR 2,500)).",
+    "id": "hist-1795390265306-604c81",
+    "createdAt": "2026-11-22T23:31:05.307Z"
+  },
+  {
+    "memberId": "mem-1795390264575-7c4b58",
+    "membershipId": "sub-1795390264970-061de6",
+    "orderId": "ord-1795390264592-18e1cf59",
+    "event": "payment_approved",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Standard payment approved (PKR 1,599 via bank_qr) and active until 2026-12-22T23:31:04.970Z.",
+    "id": "hist-1795390264970-40b27c",
+    "createdAt": "2026-11-22T23:31:04.970Z"
+  },
+  {
+    "memberId": "mem-1795390264575-7c4b58",
+    "orderId": "ord-1795390264592-18e1cf59",
+    "event": "proof_submitted",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Payment proof submitted for Standard (PKR 1,599 · Declared paid: PKR 1,599 via Bank QR) — pending manual verification.",
+    "id": "hist-1795390264605-90cd2b",
+    "createdAt": "2026-11-22T23:31:04.605Z"
+  },
+  {
+    "memberId": "mem-1795390264575-7c4b58",
+    "orderId": "ord-1795390264592-18e1cf59",
+    "event": "checkout_created",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "New payment request ord-1795390264592-18e1cf59 created for Standard (PKR 1,599 (Plan PKR 599 + Support PKR 1,000)).",
+    "id": "hist-1795390264592-449941",
+    "createdAt": "2026-11-22T23:31:04.592Z"
+  },
+  {
+    "memberId": "mem-1795390264575-7c4b58",
+    "event": "account_created",
+    "details": "Personal FEVIQO account created for qa_supporter3_1795390264497@example.com.",
+    "id": "hist-1795390264583-3dbe01",
+    "createdAt": "2026-11-22T23:31:04.583Z"
+  },
+  {
+    "memberId": "mem-1795390177210-fcb585",
+    "membershipId": "sub-1795390178070-a42ac9",
+    "orderId": "ord-1795390177226-0c15b300",
+    "event": "payment_approved",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Standard payment approved (PKR 1,599 via bank_qr) and active until 2026-12-22T23:29:38.070Z.",
+    "id": "hist-1795390178070-9047e3",
+    "createdAt": "2026-11-22T23:29:38.070Z"
+  },
+  {
+    "memberId": "mem-1795390177210-fcb585",
+    "orderId": "ord-1795390177226-0c15b300",
+    "event": "proof_submitted",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Payment proof submitted for Standard (PKR 1,599 · Declared paid: PKR 1,599 via Bank QR) — pending manual verification.",
+    "id": "hist-1795390177243-450f5b",
+    "createdAt": "2026-11-22T23:29:37.243Z"
+  },
+  {
+    "memberId": "mem-1795390177210-fcb585",
+    "orderId": "ord-1795390177226-0c15b300",
+    "event": "checkout_created",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "New payment request ord-1795390177226-0c15b300 created for Standard (PKR 1,599 (Plan PKR 599 + Support PKR 1,000)).",
+    "id": "hist-1795390177226-5511a1",
+    "createdAt": "2026-11-22T23:29:37.226Z"
+  },
+  {
+    "memberId": "mem-1795390177210-fcb585",
+    "event": "account_created",
+    "details": "Personal FEVIQO account created for qa_supporter2_1795390177145@example.com.",
+    "id": "hist-1795390177218-af6df2",
+    "createdAt": "2026-11-22T23:29:37.218Z"
+  },
+  {
+    "memberId": "mem-1795390117086-75e054",
+    "membershipId": "sub-1795390119315-e13d8d",
+    "orderId": "ord-1795390117130-69229179",
+    "event": "payment_approved",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1099,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Standard payment approved (PKR 1,599 via bank_qr) and active until 2026-12-22T23:28:39.315Z.",
+    "id": "hist-1795390119316-0030e8",
+    "createdAt": "2026-11-22T23:28:39.316Z"
+  },
+  {
+    "memberId": "mem-1795390117086-75e054",
+    "orderId": "ord-1795390117130-69229179",
+    "event": "proof_submitted",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1099,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Payment proof submitted for Standard (PKR 1,099 · Declared paid: PKR 1,599 via Bank QR) — pending manual verification.",
+    "id": "hist-1795390118602-209fa8",
+    "createdAt": "2026-11-22T23:28:38.602Z"
+  },
+  {
+    "memberId": "mem-1795390117086-75e054",
+    "orderId": "ord-1795390117130-69229179",
+    "event": "proof_correction_requested",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1099,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Admin requested a new payment screenshot / correction: Please upload clearer receipt showing transaction ID.",
+    "id": "hist-1795390118239-5273e1",
+    "createdAt": "2026-11-22T23:28:38.239Z"
+  },
+  {
+    "memberId": "mem-1795390117086-75e054",
+    "orderId": "ord-1795390117130-69229179",
+    "event": "proof_submitted",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1099,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "Payment proof submitted for Standard (PKR 1,099 · Declared paid: PKR 1,099 via Bank QR) — pending manual verification.",
+    "id": "hist-1795390117154-9b2448",
+    "createdAt": "2026-11-22T23:28:37.154Z"
+  },
+  {
+    "memberId": "mem-1795390117086-75e054",
+    "orderId": "ord-1795390117130-69229179",
+    "event": "checkout_created",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 1099,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "New payment request ord-1795390117130-69229179 created for Standard (PKR 1,099 (Plan PKR 599 + Support PKR 500)).",
+    "id": "hist-1795390117130-77cf84",
+    "createdAt": "2026-11-22T23:28:37.130Z"
+  },
+  {
+    "memberId": "mem-1795390117086-75e054",
+    "orderId": "ord-1795390117122-ff8447e2",
+    "event": "checkout_created",
+    "planId": "standard",
+    "planName": "Standard",
+    "amountPkr": 599,
+    "amountUsd": 2.5,
+    "currency": "PKR",
+    "selectedDramaIds": [
+      "yeralti"
+    ],
+    "details": "New payment request ord-1795390117122-ff8447e2 created for Standard (PKR 599).",
+    "id": "hist-1795390117122-c80ca7",
+    "createdAt": "2026-11-22T23:28:37.122Z"
+  },
+  {
+    "memberId": "mem-1795390117086-75e054",
+    "event": "account_created",
+    "details": "Personal FEVIQO account created for qa_supporter_1795390117016@example.com.",
+    "id": "hist-1795390117094-539c4f",
+    "createdAt": "2026-11-22T23:28:37.094Z"
+  },
+  {
+    "memberId": "mem-1795389902337-1f8223",
+    "event": "account_created",
+    "details": "Personal FEVIQO account connected via Google for editempirepro1@gmail.com.",
+    "id": "hist-1795389902349-d5f854",
+    "createdAt": "2026-11-22T23:25:02.349Z"
+  },
+  {
+    "memberId": "mem-1795389465798-f4f472",
+    "event": "account_created",
+    "details": "Personal FEVIQO account created for qa_supporter_1795389465728@example.com.",
+    "id": "hist-1795389465806-eb64c1",
+    "createdAt": "2026-11-22T23:17:45.806Z"
+  }
+]

@@ -255,6 +255,63 @@
         "expectedAmount": {
           "type": "number"
         },
+        "subscriptionPricePkr": {
+          "type": "number"
+        },
+        "optionalContributionPkr": {
+          "type": "number"
+        },
+        "expectedTotalPkr": {
+          "type": "number"
+        },
+        "customerDeclaredAmountPkr": {
+          "type": "number"
+        },
+        "verifiedReceivedAmountPkr": {
+          "type": "number"
+        },
+        "verifiedSubscriptionPricePkr": {
+          "type": "number"
+        },
+        "verifiedContributionPkr": {
+          "type": "number"
+        },
+        "leaderboardDisplayName": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 60
+        },
+        "showExactAmount": {
+          "type": "boolean"
+        },
+        "leaderboardEligible": {
+          "type": "boolean"
+        },
+        "leaderboardEntryId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "leaderboardCountedAt": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "correctionRequestedAt": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "correctionRequestNote": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 500
+        },
+        "correctionRequestedByAdminEmail": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 200
+        },
         "currency": {
           "type": "string",
           "enum": ["PKR", "USD"]
@@ -1416,6 +1473,47 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "eventType", "category", "status", "phoneValid", "createdAt", "updatedAt"]
+    },
+    "SupporterLeaderboardEntry": {
+      "title": "SupporterLeaderboardEntry",
+      "description": "Publicly readable, PII-free FEVIQO Top Supporters leaderboard entry (verified customer contribution or admin-curated featured patron).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 3, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "contributionAmount": { "type": "number" },
+        "amountVisible": { "type": "boolean" },
+        "badge": { "type": "string", "minLength": 0, "maxLength": 48 },
+        "displayPriority": { "type": ["number", "null"] },
+        "entryType": { "type": "string", "enum": ["manual_featured", "verified_customer"] },
+        "active": { "type": "boolean" },
+        "featured": { "type": "boolean" },
+        "removed": { "type": "boolean" },
+        "createdAtIso": { "type": "string", "format": "date-time" },
+        "updatedAtIso": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "displayName", "contributionAmount", "amountVisible", "badge", "entryType", "active", "featured", "removed", "createdAtIso", "updatedAtIso", "updatedAt"]
+    },
+    "SupporterLeaderboardSettings": {
+      "title": "SupporterLeaderboardSettings",
+      "description": "Admin-configurable display and ranking settings for the public FEVIQO Top Supporters leaderboard.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "enum": ["main"] },
+        "enabled": { "type": "boolean" },
+        "maxDisplayed": { "type": "number" },
+        "showAmountsGlobally": { "type": "boolean" },
+        "allowAutomaticRanking": { "type": "boolean" },
+        "allowManualPriority": { "type": "boolean" },
+        "showBadges": { "type": "boolean" },
+        "showSubtitle": { "type": "boolean" },
+        "includeManualFeatured": { "type": "boolean" },
+        "updatedAtIso": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "enabled", "maxDisplayed", "showAmountsGlobally", "allowAutomaticRanking", "allowManualPriority", "showBadges", "showSubtitle", "includeManualFeatured", "updatedAtIso", "updatedAt"]
     }
   },
   "firestore": {
@@ -1546,6 +1644,14 @@
     "/whatsappNotifications/{notificationId}": {
       "schema": { "$ref": "#/entities/WhatsAppNotification" },
       "description": "One-click WhatsApp customer notification queue records generated from real Firestore customer and membership lifecycle events."
+    },
+    "/supportersLeaderboard/{entryId}": {
+      "schema": { "$ref": "#/entities/SupporterLeaderboardEntry" },
+      "description": "Publicly readable, PII-free FEVIQO Top Supporters leaderboard entries managed by admins and verified customer contributions."
+    },
+    "/supportersLeaderboardSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/SupporterLeaderboardSettings" },
+      "description": "Admin-managed settings controlling public visibility, ranking, and badges on the FEVIQO Top Supporters leaderboard."
     }
   }
 }

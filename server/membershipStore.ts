@@ -31,6 +31,16 @@ import {
   mergeCampaignCloudSnapshot,
   syncCampaignDocsToFirestore,
 } from './referralCampaignStore';
+import {
+  MAX_CONTRIBUTION_PKR,
+  MAX_ADMIN_SUPPORTER_AMOUNT_PKR,
+  sanitizeLeaderboardDisplayName,
+  recordVerifiedCustomerSupporterFromOrder,
+  mergeSupportersCloudSnapshot,
+  syncSupportersDocsToFirestore,
+  SupporterLeaderboardEntry,
+  SupporterLeaderboardSettings,
+} from './supportersLeaderboardStore';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const PRIVATE_PROOFS_DIR = path.join(DATA_DIR, 'private_proofs');
@@ -267,6 +277,22 @@ export interface MembershipOrder {
   reviewedByAdminEmail?: string;
   reviewedAt?: string;
   paidAt?: string;
+  // Optional Extra Contribution, Customer Payment Declaration & Admin Verification fields
+  subscriptionPricePkr?: number;
+  optionalContributionPkr?: number;
+  expectedTotalPkr?: number;
+  customerDeclaredAmountPkr?: number;
+  verifiedReceivedAmountPkr?: number;
+  verifiedSubscriptionPricePkr?: number;
+  verifiedContributionPkr?: number;
+  leaderboardDisplayName?: string;
+  showExactAmount?: boolean;
+  leaderboardEligible?: boolean;
+  leaderboardEntryId?: string;
+  leaderboardCountedAt?: string;
+  correctionRequestedAt?: string;
+  correctionRequestNote?: string;
+  correctionRequestedByAdminEmail?: string;
   createdAt: string;
   paidAtMs?: number;
   updatedAt: string;
@@ -281,6 +307,7 @@ export interface MembershipHistoryEntry {
     | 'account_created'
     | 'checkout_created'
     | 'proof_submitted'
+    | 'proof_correction_requested'
     | 'payment_approved'
     | 'payment_rejected'
     | 'membership_activated'
@@ -311,6 +338,7 @@ export type CustomerNotificationType =
   | 'membership_renewed'
   | 'membership_extended'
   | 'payment_rejected'
+  | 'payment_correction_requested'
   | 'referral_reward'
   | 'episode_published'
   | 'security_alert';
@@ -584,7 +612,12 @@ export interface AdminAuditEntry {
     | 'whatsapp_notification_cancelled'
     | 'automation_bot_started'
     | 'automation_bot_stopped'
-    | 'historical_campaign_launched';
+    | 'historical_campaign_launched'
+    | 'order_correction_requested'
+    | 'supporter_entry_created'
+    | 'supporter_entry_updated'
+    | 'supporter_entry_deleted'
+    | 'supporter_settings_updated';
   targetId?: string;
   details: string;
   createdAt: string;
@@ -3773,6 +3806,9 @@ export async function createMembershipCheckoutOrder(params: {
   indicativeLocalDisplay?: string;
   promoCode?: string;
   applyCredits?: boolean;
+  optionalContributionPkr?: number;
+  leaderboardDisplayName?: string;
+  showExactAmount?: boolean;
 }): Promise<
   | {
       success: true;
@@ -3887,7 +3923,36 @@ export async function createMembershipCheckoutOrder(params: {
     paymentRegion === 'international' ? 'binance_qr' : 'bank_qr';
   const currency: PaymentCurrency =
     paymentRegion === 'international' ? 'USD' : 'PKR';
-  const expectedAmount = quote.finalAmount;
+
+  // Validate optional extra contribution (PKR only; never alters plan entitlements or duration)
+  let optionalContributionPkr = 0;
+  if (params.optionalContributionPkr !== undefined && params.optionalContributionPkr !== null && String(params.optionalContributionPkr).trim() !== '') {
+    const rawContribution = Number(params.optionalContributionPkr);
+    if (!Number.isFinite(rawContribution) || rawContribution < 0) {
+      return {
+        success: false,
+        error: 'Optional contribution amount cannot be negative or invalid.',
+        code: 'INVALID_CONTRIBUTION',
+        statusCode: 400,
+      };
+    }
+    if (rawContribution > MAX_CONTRIBUTION_PKR) {
+      return {
+        success: false,
+        error: `Optional contribution cannot exceed PKR ${MAX_CONTRIBUTION_PKR.toLocaleString()} per order.`,
+        code: 'INVALID_CONTRIBUTION',
+        statusCode: 400,
+      };
+    }
+    optionalContributionPkr = paymentRegion === 'pakistan' ? Math.round(rawContribution) : 0;
+  }
+
+  const subscriptionPricePkr = quote.finalAmountPkr;
+  const expectedTotalPkr = subscriptionPricePkr + optionalContributionPkr;
+  const expectedAmount =
+    paymentRegion === 'international' ? quote.finalAmountUsd : expectedTotalPkr;
+  const leaderboardDisplayName = sanitizeLeaderboardDisplayName(params.leaderboardDisplayName);
+  const showExactAmount = params.showExactAmount !== false;
 
   const qrImageUrl = getQrUrlForPlan(plan.id, paymentRegion);
   const now = new Date().toISOString();
@@ -3934,7 +3999,10 @@ export async function createMembershipCheckoutOrder(params: {
     planName: plan.name,
     originalAmountPkr: quote.originalAmountPkr,
     originalAmountUsd: quote.originalAmountUsd,
-    amountPkr: quote.finalAmountPkr,
+    subscriptionPricePkr,
+    optionalContributionPkr,
+    expectedTotalPkr,
+    amountPkr: expectedTotalPkr,
     amountUsd: quote.finalAmountUsd,
     promoCodeId: quote.promoApplied?.id,
     promoCode: quote.promoApplied?.code,
@@ -3955,6 +4023,9 @@ export async function createMembershipCheckoutOrder(params: {
     indicativeLocalDisplay: params.indicativeLocalDisplay?.trim().slice(0, 64),
     durationDays: plan.durationDays,
     selectedDramaIds: normalizedDramaIds,
+    leaderboardDisplayName,
+    showExactAmount,
+    leaderboardEligible: false,
     status: 'awaiting_payment',
     provider: paymentMethod,
     qrImageUrl,
@@ -3968,7 +4039,11 @@ export async function createMembershipCheckoutOrder(params: {
   mirrorOrderServer(order);
 
   const amountLabel =
-    currency === 'USD' ? `$${expectedAmount.toFixed(2)} USD` : `PKR ${expectedAmount.toLocaleString()}`;
+    currency === 'USD'
+      ? `$${expectedAmount.toFixed(2)} USD`
+      : optionalContributionPkr > 0
+      ? `PKR ${expectedTotalPkr.toLocaleString()} (Plan PKR ${subscriptionPricePkr.toLocaleString()} + Support PKR ${optionalContributionPkr.toLocaleString()})`
+      : `PKR ${expectedTotalPkr.toLocaleString()}`;
 
   appendHistory({
     memberId: member.id,
@@ -4003,6 +4078,9 @@ export function submitOrderPaymentProof(params: {
   originalName: string;
   paymentNote?: string;
   proofDataUrl?: string;
+  customerDeclaredAmountPkr?: number | string;
+  leaderboardDisplayName?: string;
+  showExactAmount?: boolean | string;
 }):
   | { success: true; order: MembershipOrder; member: SafeMember }
   | { success: false; error: string; statusCode: number } {
@@ -4041,6 +4119,34 @@ export function submitOrderPaymentProof(params: {
     };
   }
 
+  // Validate required customer-declared actual amount paid (PKR for bank_qr; positive number required)
+  const isUsdOrder = order.currency === 'USD' || order.paymentMethod === 'binance_qr';
+  const rawDeclared = params.customerDeclaredAmountPkr;
+  let declaredAmountPkr: number | undefined;
+  if (!isUsdOrder) {
+    if (rawDeclared === undefined || rawDeclared === null || String(rawDeclared).trim() === '') {
+      return {
+        success: false,
+        error: 'Please enter how much you actually paid (PKR) before submitting your screenshot.',
+        statusCode: 400,
+      };
+    }
+    const parsedDeclared = Number(String(rawDeclared).replace(/,/g, '').trim());
+    if (!Number.isFinite(parsedDeclared) || parsedDeclared <= 0 || parsedDeclared > MAX_ADMIN_SUPPORTER_AMOUNT_PKR) {
+      return {
+        success: false,
+        error: `Please enter a valid positive payment amount in PKR (between 1 and ${MAX_ADMIN_SUPPORTER_AMOUNT_PKR.toLocaleString()}).`,
+        statusCode: 400,
+      };
+    }
+    declaredAmountPkr = Math.round(parsedDeclared);
+  } else if (rawDeclared !== undefined && rawDeclared !== null && String(rawDeclared).trim() !== '') {
+    const parsedDeclared = Number(String(rawDeclared).replace(/,/g, '').trim());
+    if (Number.isFinite(parsedDeclared) && parsedDeclared > 0 && parsedDeclared <= MAX_ADMIN_SUPPORTER_AMOUNT_PKR) {
+      declaredAmountPkr = Number(parsedDeclared.toFixed(2));
+    }
+  }
+
   const proofFileName = `proof-${order.id}-${crypto.randomBytes(10).toString('hex')}.${detected.ext}`;
   const destPath = path.join(PRIVATE_PROOFS_DIR, proofFileName);
   fs.writeFileSync(destPath, params.fileBuffer);
@@ -4075,8 +4181,21 @@ export function submitOrderPaymentProof(params: {
   }
   order.proofSubmittedAt = nowIso;
   order.paymentNote = params.paymentNote ? String(params.paymentNote).trim().slice(0, 400) : undefined;
+  if (declaredAmountPkr !== undefined) {
+    order.customerDeclaredAmountPkr = declaredAmountPkr;
+  }
+  if (params.leaderboardDisplayName !== undefined) {
+    order.leaderboardDisplayName = sanitizeLeaderboardDisplayName(params.leaderboardDisplayName);
+  }
+  if (params.showExactAmount !== undefined) {
+    order.showExactAmount =
+      params.showExactAmount === true || params.showExactAmount === 'true' || params.showExactAmount === '1';
+  }
   order.status = 'pending_verification';
   order.rejectionReason = undefined;
+  order.correctionRequestedAt = undefined;
+  order.correctionRequestNote = undefined;
+  order.correctionRequestedByAdminEmail = undefined;
   order.updatedAt = nowIso;
   orders[idx] = order;
   writeJson(ORDERS_FILE, orders);
@@ -4085,7 +4204,11 @@ export function submitOrderPaymentProof(params: {
   const amountLabel =
     order.currency === 'USD'
       ? `$${(order.amountUsd ?? order.expectedAmount ?? 0).toFixed(2)} USD`
-      : `PKR ${order.amountPkr.toLocaleString()}`;
+      : `PKR ${(order.expectedTotalPkr ?? order.amountPkr).toLocaleString()}`;
+  const declaredLabel =
+    declaredAmountPkr !== undefined && !isUsdOrder
+      ? ` · Declared paid: PKR ${declaredAmountPkr.toLocaleString()}`
+      : '';
 
   appendHistory({
     memberId: member.id,
@@ -4098,7 +4221,7 @@ export function submitOrderPaymentProof(params: {
     amountUsd: order.amountUsd,
     currency: order.currency,
     selectedDramaIds: order.selectedDramaIds,
-    details: `${order.orderType === 'renewal' ? 'Renewal payment' : 'Payment'} proof submitted for ${order.planName} (${amountLabel} via ${order.paymentMethod === 'binance_qr' ? 'Binance QR' : 'Bank QR'}) — pending manual verification.`,
+    details: `${order.orderType === 'renewal' ? 'Renewal payment' : 'Payment'} proof submitted for ${order.planName} (${amountLabel}${declaredLabel} via ${order.paymentMethod === 'binance_qr' ? 'Binance QR' : 'Bank QR'}) — pending manual verification.`,
   });
 
   return { success: true, order, member };
@@ -4160,6 +4283,9 @@ export function getAuthorizedProofFile(params: {
 export function approvePaymentRequest(params: {
   orderId: string;
   admin: SafeAdmin;
+  verifiedReceivedAmountPkr?: number;
+  verifiedSubscriptionPricePkr?: number;
+  verifiedContributionPkr?: number;
 }):
   | {
       success: true;
@@ -4167,6 +4293,7 @@ export function approvePaymentRequest(params: {
       membership: MembershipRecord;
       member: SafeMember | null;
       wasRenewal: boolean;
+      supporterEntry: SupporterLeaderboardEntry | null;
     }
   | { success: false; error: string; statusCode: number } {
   const orders = readAllOrders();
@@ -4190,6 +4317,51 @@ export function approvePaymentRequest(params: {
     return { success: false, error: 'Order references an invalid plan.', statusCode: 400 };
   }
 
+  const paymentCurrency: PaymentCurrency = order.currency === 'USD' ? 'USD' : 'PKR';
+  const defaultSubPricePkr =
+    order.subscriptionPricePkr !== undefined
+      ? Math.max(0, Math.round(Number(order.subscriptionPricePkr) || 0))
+      : Math.max(
+          0,
+          Math.round((Number(order.amountPkr) || plan.pricePkr) - (Number(order.optionalContributionPkr) || 0))
+        );
+  const defaultContribPkr = Math.max(0, Math.round(Number(order.optionalContributionPkr) || 0));
+
+  let verifiedSubscriptionPricePkr = defaultSubPricePkr;
+  let verifiedContributionPkr = defaultContribPkr;
+  let verifiedReceivedAmountPkr = defaultSubPricePkr + defaultContribPkr;
+
+  if (paymentCurrency === 'PKR') {
+    if (params.verifiedSubscriptionPricePkr !== undefined && params.verifiedSubscriptionPricePkr !== null) {
+      const val = Number(params.verifiedSubscriptionPricePkr);
+      if (!Number.isFinite(val) || val < 0 || val > MAX_ADMIN_SUPPORTER_AMOUNT_PKR) {
+        return { success: false, error: 'Invalid verified subscription price (PKR).', statusCode: 400 };
+      }
+      verifiedSubscriptionPricePkr = Math.round(val);
+    }
+
+    if (params.verifiedContributionPkr !== undefined && params.verifiedContributionPkr !== null) {
+      const val = Number(params.verifiedContributionPkr);
+      if (!Number.isFinite(val) || val < 0 || val > MAX_ADMIN_SUPPORTER_AMOUNT_PKR) {
+        return { success: false, error: 'Invalid verified optional contribution amount (PKR).', statusCode: 400 };
+      }
+      verifiedContributionPkr = Math.round(val);
+    }
+
+    if (params.verifiedReceivedAmountPkr !== undefined && params.verifiedReceivedAmountPkr !== null) {
+      const val = Number(params.verifiedReceivedAmountPkr);
+      if (!Number.isFinite(val) || val < 0 || val > MAX_ADMIN_SUPPORTER_AMOUNT_PKR) {
+        return { success: false, error: 'Invalid verified received amount (PKR).', statusCode: 400 };
+      }
+      verifiedReceivedAmountPkr = Math.round(val);
+      if (params.verifiedContributionPkr === undefined || params.verifiedContributionPkr === null) {
+        verifiedContributionPkr = Math.max(0, verifiedReceivedAmountPkr - verifiedSubscriptionPricePkr);
+      }
+    } else {
+      verifiedReceivedAmountPkr = verifiedSubscriptionPricePkr + verifiedContributionPkr;
+    }
+  }
+
   const nowMs = Date.now();
   const nowIso = new Date(nowMs).toISOString();
 
@@ -4199,6 +4371,42 @@ export function approvePaymentRequest(params: {
   order.reviewedByAdminEmail = params.admin.email;
   order.reviewedAt = nowIso;
   order.rejectionReason = undefined;
+  order.correctionRequestedAt = undefined;
+  order.correctionRequestNote = undefined;
+  order.correctionRequestedByAdminEmail = undefined;
+
+  if (paymentCurrency === 'PKR') {
+    order.subscriptionPricePkr = order.subscriptionPricePkr ?? defaultSubPricePkr;
+    order.optionalContributionPkr = order.optionalContributionPkr ?? defaultContribPkr;
+    order.expectedTotalPkr = order.expectedTotalPkr ?? (order.subscriptionPricePkr + order.optionalContributionPkr);
+    order.verifiedSubscriptionPricePkr = verifiedSubscriptionPricePkr;
+    order.verifiedContributionPkr = verifiedContributionPkr;
+    order.verifiedReceivedAmountPkr = verifiedReceivedAmountPkr;
+    order.leaderboardEligible = verifiedContributionPkr > 0;
+  }
+
+  // Record verified customer supporter entry ONLY when verifiedContributionPkr > 0 and NOT already counted
+  let supporterEntry: SupporterLeaderboardEntry | null = null;
+  if (
+    paymentCurrency === 'PKR' &&
+    verifiedContributionPkr > 0 &&
+    !order.leaderboardCountedAt &&
+    !order.leaderboardEntryId
+  ) {
+    supporterEntry = recordVerifiedCustomerSupporterFromOrder({
+      orderId: order.id,
+      displayName: order.leaderboardDisplayName || 'Anonymous Patron',
+      verifiedContributionPkr,
+      showExactAmount: order.showExactAmount !== false,
+      adminEmail: params.admin.email,
+    });
+    if (supporterEntry) {
+      order.leaderboardEntryId = supporterEntry.id;
+      order.leaderboardCountedAt = nowIso;
+      order.leaderboardEligible = true;
+    }
+  }
+
   order.updatedAt = nowIso;
   orders[idx] = order;
   writeJson(ORDERS_FILE, orders);
@@ -4214,13 +4422,16 @@ export function approvePaymentRequest(params: {
   const orderMember = getMemberById(order.memberId);
   const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
   const durationMs = order.durationDays * 24 * 60 * 60 * 1000;
-  const paymentCurrency: PaymentCurrency = order.currency === 'USD' ? 'USD' : 'PKR';
   const paymentRegion: PaymentRegion = order.paymentRegion === 'international' ? 'international' : 'pakistan';
   const paymentMethod: PaymentMethod = order.paymentMethod || (paymentRegion === 'international' ? 'binance_qr' : 'bank_qr');
+  const subscriptionPriceForRecord =
+    paymentCurrency === 'USD'
+      ? Number(order.amountUsd ?? order.expectedAmount ?? plan.priceUsd)
+      : verifiedSubscriptionPricePkr;
   const paidAmount =
     paymentCurrency === 'USD'
       ? Number(order.amountUsd ?? order.expectedAmount ?? plan.priceUsd)
-      : Number(order.amountPkr ?? plan.pricePkr);
+      : verifiedReceivedAmountPkr;
 
   let resultingMembership: MembershipRecord | null = null;
   let wasRenewal = false;
@@ -4248,7 +4459,7 @@ export function approvePaymentRequest(params: {
       target.orderId = order.id;
       target.planId = plan.id;
       target.planName = plan.name;
-      target.pricePkr = Number(order.amountPkr ?? plan.pricePkr);
+      target.pricePkr = subscriptionPriceForRecord;
       target.priceUsd = order.amountUsd ?? plan.priceUsd;
       target.originalAmountPkr = order.originalAmountPkr ?? plan.pricePkr;
       target.originalAmountUsd = order.originalAmountUsd ?? plan.priceUsd;
@@ -4308,7 +4519,7 @@ export function approvePaymentRequest(params: {
       orderId: order.id,
       planId: plan.id,
       planName: plan.name,
-      pricePkr: Number(order.amountPkr ?? plan.pricePkr),
+      pricePkr: subscriptionPriceForRecord,
       priceUsd: order.amountUsd ?? plan.priceUsd,
       originalAmountPkr: order.originalAmountPkr ?? plan.pricePkr,
       originalAmountUsd: order.originalAmountUsd ?? plan.priceUsd,
@@ -4403,6 +4614,7 @@ export function approvePaymentRequest(params: {
     membership: resultingMembership,
     member: getMemberById(order.memberId),
     wasRenewal,
+    supporterEntry,
   };
 }
 
@@ -4489,6 +4701,98 @@ export function rejectPaymentRequest(params: {
     ctaLabel: 'Open My Account',
     ctaHref: '/membership?tab=account',
     dedupeKey: `${order.id}:rejected:${nowIso}`,
+    emailStatus: 'not_sent',
+  });
+
+  return {
+    success: true,
+    order,
+    member: getMemberById(order.memberId),
+  };
+}
+
+export function requestOrderCorrectionByAdmin(params: {
+  orderId: string;
+  note: string;
+  admin: SafeAdmin;
+}):
+  | { success: true; order: MembershipOrder; member: SafeMember | null }
+  | { success: false; error: string; statusCode: number } {
+  const cleanNote = (params.note || '').trim();
+  if (cleanNote.length < 3) {
+    return {
+      success: false,
+      error: 'Please enter a clear correction message for the customer (at least 3 characters).',
+      statusCode: 400,
+    };
+  }
+
+  const orders = readAllOrders();
+  const idx = orders.findIndex((o) => o.id === params.orderId);
+  if (idx === -1) {
+    return { success: false, error: 'Payment request not found.', statusCode: 404 };
+  }
+
+  const order = orders[idx];
+  if (order.status === 'approved') {
+    return {
+      success: false,
+      error: 'Cannot request a new screenshot for an already approved payment.',
+      statusCode: 409,
+    };
+  }
+
+  const nowIso = new Date().toISOString();
+  order.status = 'awaiting_payment';
+  order.correctionRequestedAt = nowIso;
+  order.correctionRequestNote = cleanNote.slice(0, 500);
+  order.correctionRequestedByAdminEmail = params.admin.email;
+  order.reviewedByAdminId = params.admin.id;
+  order.reviewedByAdminEmail = params.admin.email;
+  order.reviewedAt = nowIso;
+  order.updatedAt = nowIso;
+  orders[idx] = order;
+  writeJson(ORDERS_FILE, orders);
+  mirrorOrderServer(order);
+
+  appendHistory({
+    memberId: order.memberId,
+    membershipId: order.targetMembershipId,
+    orderId: order.id,
+    event: 'proof_correction_requested',
+    planId: order.planId,
+    planName: order.planName,
+    amountPkr: order.amountPkr,
+    amountUsd: order.amountUsd,
+    currency: order.currency,
+    selectedDramaIds: order.selectedDramaIds,
+    details: `Admin requested a new payment screenshot / correction: ${order.correctionRequestNote}`,
+  });
+
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'order_correction_requested',
+    targetId: order.id,
+    details: `Requested new screenshot / correction on order ${order.id} (${order.customerEmail || order.memberId}): ${order.correctionRequestNote}`,
+  });
+
+  createCustomerNotificationRecord({
+    memberId: order.memberId,
+    ownerUid: order.ownerUid,
+    customerEmail: order.customerEmail,
+    membershipId: order.targetMembershipId,
+    orderId: order.id,
+    planId: order.planId,
+    dramaIds: order.selectedDramaIds,
+    type: 'payment_correction_requested',
+    title: `New screenshot requested for ${order.planName}`,
+    titleUr: `${order.planName} کے لیے ادائیگی کا نیا اسکرین شاٹ درکار ہے`,
+    message: `Admin note: ${order.correctionRequestNote}. Please upload a clearer payment screenshot and confirm the amount transferred.`,
+    messageUr: `ایڈمن نوٹ: ${order.correctionRequestNote}۔ براہ کرم واضح اسکرین شاٹ اور منتقل کی گئی رقم دوبارہ جمع کروائیں۔`,
+    ctaLabel: 'Upload New Screenshot',
+    ctaHref: '/membership?tab=account',
+    dedupeKey: `${order.id}:correction:${nowIso}`,
     emailStatus: 'not_sent',
   });
 
@@ -6163,6 +6467,8 @@ export function mergeCloudSyncSnapshot(payload: {
   commissionPayments?: Array<any>;
   monthlyCommissionReports?: Array<any>;
   blockedUsers?: Array<Partial<BlockedUserRecord>>;
+  supportersLeaderboard?: Array<Partial<SupporterLeaderboardEntry>>;
+  supportersLeaderboardSettings?: Partial<SupporterLeaderboardSettings> | null;
   config?: Partial<MembershipConfig> | null;
 }) {
   const tombstones = readDeletedTombstones();
@@ -6359,6 +6665,21 @@ export function mergeCloudSyncSnapshot(payload: {
         reviewedByAdminEmail: inc.reviewedByAdminEmail,
         reviewedAt: inc.reviewedAt,
         paidAt: inc.paidAt,
+        subscriptionPricePkr: inc.subscriptionPricePkr !== undefined ? Number(inc.subscriptionPricePkr) : undefined,
+        optionalContributionPkr: inc.optionalContributionPkr !== undefined ? Number(inc.optionalContributionPkr) : undefined,
+        expectedTotalPkr: inc.expectedTotalPkr !== undefined ? Number(inc.expectedTotalPkr) : undefined,
+        customerDeclaredAmountPkr: inc.customerDeclaredAmountPkr !== undefined ? Number(inc.customerDeclaredAmountPkr) : undefined,
+        verifiedReceivedAmountPkr: inc.verifiedReceivedAmountPkr !== undefined ? Number(inc.verifiedReceivedAmountPkr) : undefined,
+        verifiedSubscriptionPricePkr: inc.verifiedSubscriptionPricePkr !== undefined ? Number(inc.verifiedSubscriptionPricePkr) : undefined,
+        verifiedContributionPkr: inc.verifiedContributionPkr !== undefined ? Number(inc.verifiedContributionPkr) : undefined,
+        leaderboardDisplayName: inc.leaderboardDisplayName,
+        showExactAmount: inc.showExactAmount,
+        leaderboardEligible: inc.leaderboardEligible,
+        leaderboardEntryId: inc.leaderboardEntryId,
+        leaderboardCountedAt: inc.leaderboardCountedAt,
+        correctionRequestedAt: inc.correctionRequestedAt,
+        correctionRequestNote: inc.correctionRequestNote,
+        correctionRequestedByAdminEmail: inc.correctionRequestedByAdminEmail,
         createdAt: inc.createdAt || new Date().toISOString(),
         updatedAt: inc.updatedAt || new Date().toISOString(),
       };
@@ -6543,6 +6864,11 @@ export function mergeCloudSyncSnapshot(payload: {
     campaignCommissions: payload.campaignCommissions,
     commissionPayments: payload.commissionPayments,
     monthlyCommissionReports: payload.monthlyCommissionReports,
+  });
+
+  mergeSupportersCloudSnapshot({
+    supportersLeaderboard: payload.supportersLeaderboard,
+    supportersLeaderboardSettings: payload.supportersLeaderboardSettings,
   });
 
   const recovery = reconcileAndRecoverMissingMemberships();
@@ -7286,6 +7612,7 @@ export async function syncServerFirestoreSnapshot(): Promise<ReturnType<typeof g
     for (const b of overview.blockedUsers) mirrorBlockedUserServer(b);
     mirrorConfigServer(overview.config);
     syncCampaignDocsToFirestore();
+    syncSupportersDocsToFirestore();
     return overview;
   }
   return getAdminMembershipsOverview();

@@ -50,6 +50,15 @@ import {
 } from './src/seo/seoIndexingService';
 import { MEMBERSHIP_PLANS, MEMBERSHIP_DRAMAS, getDramaById, MembershipPlanId, PaymentRegion } from './src/data/membershipCatalog';
 import {
+  getPublicSupportersLeaderboard,
+  getAdminSupportersLeaderboardOverview,
+  createSupporterEntryByAdmin,
+  seedInitialFeaturedSupportersByAdmin,
+  updateSupporterEntryByAdmin,
+  deleteSupporterEntryByAdmin,
+  updateSupporterLeaderboardSettingsByAdmin,
+} from './server/supportersLeaderboardStore';
+import {
   registerMember,
   loginMember,
   verifyMemberSessionToken,
@@ -66,6 +75,7 @@ import {
   getAuthorizedProofFile,
   approvePaymentRequest,
   rejectPaymentRequest,
+  requestOrderCorrectionByAdmin,
   extendMembershipByAdmin,
   revokeMembershipByAdmin,
   deleteOrderByAdmin,
@@ -3862,6 +3872,9 @@ app.post('/api/membership/checkout', async (req, res) => {
       indicativeLocalDisplay,
       promoCode,
       applyCredits,
+      optionalContributionPkr,
+      leaderboardDisplayName,
+      showExactAmount,
     } = req.body || {};
     const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
     const host = req.headers.host || 'localhost:3000';
@@ -3879,6 +3892,9 @@ app.post('/api/membership/checkout', async (req, res) => {
       indicativeLocalDisplay,
       promoCode: typeof promoCode === 'string' ? promoCode : undefined,
       applyCredits: Boolean(applyCredits),
+      optionalContributionPkr,
+      leaderboardDisplayName: typeof leaderboardDisplayName === 'string' ? leaderboardDisplayName : undefined,
+      showExactAmount: showExactAmount !== undefined ? Boolean(showExactAmount) : true,
     });
 
     if ('error' in result) {
@@ -4038,6 +4054,9 @@ app.post(
         originalName: file.originalname,
         paymentNote: req.body?.paymentNote,
         proofDataUrl: req.body?.proofDataUrl,
+        customerDeclaredAmountPkr: req.body?.customerDeclaredAmountPkr ?? req.body?.customerDeclaredAmount,
+        leaderboardDisplayName: req.body?.leaderboardDisplayName,
+        showExactAmount: req.body?.showExactAmount,
       });
 
       if ('error' in submission) {
@@ -4060,7 +4079,12 @@ app.post(
       const orderAmountDisplay =
         order.currency === 'USD'
           ? `$${Number(order.amountUsd ?? order.expectedAmount ?? 0).toFixed(2)} USD`
-          : `PKR ${order.amountPkr.toLocaleString()}`;
+          : `PKR ${(order.expectedTotalPkr ?? order.amountPkr).toLocaleString()}`;
+      const subscriptionBreakdownRow =
+        order.currency !== 'USD'
+          ? `<tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Subscription / Contribution</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">Plan: PKR ${Number(order.subscriptionPricePkr ?? order.amountPkr).toLocaleString()} · Extra Support: PKR ${Number(order.optionalContributionPkr ?? 0).toLocaleString()}</td></tr>
+             <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Customer Declared Paid</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;color:#0B0B0D;">PKR ${Number(order.customerDeclaredAmountPkr ?? 0).toLocaleString()}</td></tr>`
+          : '';
       const orderTypeLabel = order.orderType === 'renewal' ? 'Membership Renewal' : 'New Membership';
 
       const adminEmailHtml = `
@@ -4083,7 +4107,8 @@ app.post(
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Customer Email</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(member.email)}</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Customer Phone</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(member.phone || 'Not provided')}</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Plan Selected</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;">${escapeHtml(order.planName)}</td></tr>
-              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Amount</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;color:#16A34A;">${escapeHtml(orderAmountDisplay)}</td></tr>
+              <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Expected Total</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;color:#16A34A;">${escapeHtml(orderAmountDisplay)}</td></tr>
+              ${subscriptionBreakdownRow}
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Duration</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${order.durationDays} Days</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Selected Dramas</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(dramaTitles)}</td></tr>
               <tr><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;color:#64748B;">Submission Time</td><td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">${escapeHtml(order.proofSubmittedAt || order.updatedAt)}</td></tr>
@@ -4134,6 +4159,19 @@ app.post(
 );
 
 // Protected payment proof image viewer — strictly authorized for owning member or active admin
+// Public sanitized Top Supporters Leaderboard (strictly zero PII, zero unverified payments)
+app.get('/api/membership/supporters-leaderboard', (_req, res) => {
+  try {
+    const leaderboard = getPublicSupportersLeaderboard();
+    return res.json({
+      success: true,
+      ...leaderboard,
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to load supporters leaderboard.' });
+  }
+});
+
 app.get('/api/membership/orders/:orderId/proof', (req, res) => {
   const memberId = getAuthenticatedMemberId(req);
   const admin = getAuthenticatedAdmin(req);
@@ -4734,12 +4772,23 @@ app.get('/api/admin/memberships/overview', requireAdmin, (req: any, res) => {
 app.post('/api/admin/memberships/requests/:orderId/approve', requireAdmin, async (req: any, res) => {
   try {
     const { orderId } = req.params;
-    const result = approvePaymentRequest({ orderId, admin: req.admin });
+    const {
+      verifiedReceivedAmountPkr,
+      verifiedSubscriptionPricePkr,
+      verifiedContributionPkr,
+    } = req.body || {};
+    const result = approvePaymentRequest({
+      orderId,
+      admin: req.admin,
+      verifiedReceivedAmountPkr,
+      verifiedSubscriptionPricePkr,
+      verifiedContributionPkr,
+    });
     if ('error' in result) {
       return res.status(result.statusCode).json({ success: false, error: result.error });
     }
 
-    const { order, membership, member, wasRenewal } = result;
+    const { order, membership, member, wasRenewal, supporterEntry } = result;
     const dramaTitles = membership.selectedDramaIds
       .map((id) => getDramaById(id)?.title || id)
       .join(', ');
@@ -4803,6 +4852,7 @@ app.post('/api/admin/memberships/requests/:orderId/approve', requireAdmin, async
       order,
       membership,
       wasRenewal,
+      supporterEntry,
       overview: getAdminMembershipsOverview(),
     });
   } catch {
@@ -4870,6 +4920,220 @@ app.post('/api/admin/memberships/requests/:orderId/reject', requireAdmin, async 
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to reject payment request.' });
+  }
+});
+
+// Admin action: Request New Screenshot / Payment Correction (does not activate membership or count toward leaderboard)
+app.post('/api/admin/memberships/requests/:orderId/request-correction', requireAdmin, async (req: any, res) => {
+  try {
+    const { orderId } = req.params;
+    const note = String(req.body?.note ?? req.body?.reason ?? '').trim();
+    const result = requestOrderCorrectionByAdmin({ orderId, note, admin: req.admin });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+
+    const { order, member } = result;
+    if (member?.email) {
+      const correctionEmailHtml = `
+        <div style="font-family:Inter,Arial,sans-serif;background:#F8FAFC;padding:24px;color:#0B0B0D;">
+          <div style="max-width:580px;margin:0 auto;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:16px;padding:28px;">
+            <div style="font-size:12px;font-weight:700;color:#D97706;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">
+              FEVIQO Payment Screenshot Correction Requested
+            </div>
+            <h2 style="margin:0 0 12px 0;font-size:20px;color:#0B0B0D;">
+              Please upload a new payment screenshot
+            </h2>
+            <p style="font-size:14px;color:#475569;line-height:1.6;">
+              Hello ${escapeHtml(member.fullName)}, our verification team reviewed Request ${escapeHtml(order.id)} and needs a clearer screenshot or amount confirmation before activating your membership.
+            </p>
+            <p style="font-size:13px;background:#FFFBEB;border:1px solid #FDE68A;padding:12px;border-radius:10px;color:#92400E;">
+              <strong>Admin Note:</strong> ${escapeHtml(order.correctionRequestNote || '')}
+            </p>
+            <p style="font-size:13px;color:#475569;">
+              Please sign in to your FEVIQO Account to upload a clearer screenshot and confirm how much you actually paid.
+            </p>
+          </div>
+        </div>
+      `;
+
+      await dispatchTrackedEmail({
+        orderId: order.id,
+        to: member.email,
+        subject: 'FEVIQO Payment — New Screenshot Requested',
+        html: correctionEmailHtml,
+        type: 'member_payment_rejected',
+      });
+    }
+
+    return res.json({
+      success: true,
+      order,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to send screenshot correction request.' });
+  }
+});
+
+// Admin Supporters Leaderboard Management endpoints (protected by requireAdmin)
+app.get('/api/admin/memberships/supporters-leaderboard', requireAdmin, (_req: any, res) => {
+  try {
+    return res.json({
+      success: true,
+      ...getAdminSupportersLeaderboardOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to load supporters leaderboard overview.' });
+  }
+});
+
+app.post('/api/admin/memberships/supporters-leaderboard/entries', requireAdmin, (req: any, res) => {
+  try {
+    const {
+      displayName,
+      contributionAmount,
+      amountVisible,
+      badge,
+      displayPriority,
+      active,
+      featured,
+    } = req.body || {};
+    const result = createSupporterEntryByAdmin({
+      displayName,
+      contributionAmount,
+      amountVisible,
+      badge,
+      displayPriority,
+      active,
+      featured,
+      adminEmail: req.admin.email,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'supporter_entry_created',
+      targetId: result.entry.id,
+      details: `Added manual featured supporter "${result.entry.displayName}" (PKR ${result.entry.contributionAmount.toLocaleString()}, badge: ${result.entry.badge || 'none'}).`,
+    });
+    return res.status(201).json({
+      success: true,
+      entry: result.entry,
+      ...getAdminSupportersLeaderboardOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to create supporter leaderboard entry.' });
+  }
+});
+
+app.post('/api/admin/memberships/supporters-leaderboard/seed-featured', requireAdmin, (req: any, res) => {
+  try {
+    const result = seedInitialFeaturedSupportersByAdmin(req.admin.email);
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'supporter_entry_created',
+      details: `Created ${result.created.length} initial editable manual featured supporter entries.`,
+    });
+    return res.status(201).json({
+      success: true,
+      created: result.created,
+      ...getAdminSupportersLeaderboardOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to create initial featured supporters.' });
+  }
+});
+
+app.patch('/api/admin/memberships/supporters-leaderboard/entries/:entryId', requireAdmin, (req: any, res) => {
+  try {
+    const { entryId } = req.params;
+    const {
+      displayName,
+      contributionAmount,
+      amountVisible,
+      badge,
+      displayPriority,
+      active,
+      featured,
+      removed,
+    } = req.body || {};
+    const result = updateSupporterEntryByAdmin({
+      entryId,
+      displayName,
+      contributionAmount,
+      amountVisible,
+      badge,
+      displayPriority,
+      active,
+      featured,
+      removed,
+      adminEmail: req.admin.email,
+    });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'supporter_entry_updated',
+      targetId: result.entry.id,
+      details: `Updated supporter entry "${result.entry.displayName}" (${result.entry.entryType}, PKR ${result.entry.contributionAmount.toLocaleString()}, active=${result.entry.active}, removed=${result.entry.removed}).`,
+    });
+    return res.json({
+      success: true,
+      entry: result.entry,
+      ...getAdminSupportersLeaderboardOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to update supporter leaderboard entry.' });
+  }
+});
+
+app.delete('/api/admin/memberships/supporters-leaderboard/entries/:entryId', requireAdmin, (req: any, res) => {
+  try {
+    const { entryId } = req.params;
+    const result = deleteSupporterEntryByAdmin(entryId);
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'supporter_entry_deleted',
+      targetId: entryId,
+      details: `Permanently deleted supporter leaderboard entry ${entryId}.`,
+    });
+    return res.json({
+      success: true,
+      deletedId: result.deletedId,
+      ...getAdminSupportersLeaderboardOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to delete supporter leaderboard entry.' });
+  }
+});
+
+app.put('/api/admin/memberships/supporters-leaderboard/settings', requireAdmin, (req: any, res) => {
+  try {
+    const settings = updateSupporterLeaderboardSettingsByAdmin(req.body || {});
+    appendAdminAudit({
+      adminId: req.admin.id,
+      adminEmail: req.admin.email,
+      action: 'supporter_settings_updated',
+      targetId: 'main',
+      details: `Updated Supporters Leaderboard settings (enabled=${settings.enabled}, max=${settings.maxDisplayed}, showAmounts=${settings.showAmountsGlobally}, autoRank=${settings.allowAutomaticRanking}, manualPriority=${settings.allowManualPriority}, manualFeatured=${settings.includeManualFeatured}).`,
+    });
+    return res.json({
+      success: true,
+      settings,
+      ...getAdminSupportersLeaderboardOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to update supporters leaderboard settings.' });
   }
 });
 

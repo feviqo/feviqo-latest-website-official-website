@@ -30,10 +30,13 @@ import {
   RotateCcw,
   MessageSquare,
   Bot,
+  Trophy,
+  Heart,
 } from 'lucide-react';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { ReferralCampaignsPanel } from '../admin/ReferralCampaignsPanel';
 import { MuxSecurityPanel } from '../admin/MuxSecurityPanel';
+import { AdminSupportersLeaderboardTab } from '../admin/AdminSupportersLeaderboardTab';
 import { AppRoute } from '../../types';
 import { Navbar } from '../Navbar';
 import { Footer } from '../Footer';
@@ -61,6 +64,7 @@ import {
   fetchAdminMembershipsOverview,
   approvePaymentOrder,
   rejectPaymentOrder,
+  requestOrderCorrectionAdmin,
   assignCustomerMembership,
   extendMembershipByAdmin,
   runAdminLifecycleReminders,
@@ -104,6 +108,7 @@ import {
   purgeTombstonesFromFirestore,
   syncBlockedUserToFirestore,
   deleteBlockedUserInFirestore,
+  syncSupporterEntryToFirestore,
 } from '../../services/firestoreMembershipSync';
 
 interface MembershipAdminPageProps {
@@ -117,6 +122,7 @@ interface MembershipAdminPageProps {
 type AdminTab =
   | 'requests'
   | 'memberships'
+  | 'supporters'
   | 'promos'
   | 'campaigns'
   | 'security'
@@ -180,6 +186,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
   // Selected request detail & action state
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null);
+  const [verifiedReceivedInput, setVerifiedReceivedInput] = useState<string>('');
+  const [verifiedSubscriptionInput, setVerifiedSubscriptionInput] = useState<string>('');
+  const [verifiedContributionInput, setVerifiedContributionInput] = useState<string>('');
+  const [correctionNoteInput, setCorrectionNoteInput] = useState('');
   const [rejectReasonInput, setRejectReasonInput] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
 
@@ -388,6 +398,8 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
           campaignCommissions: cloudSnap.campaignCommissions,
           commissionPayments: cloudSnap.commissionPayments,
           monthlyCommissionReports: cloudSnap.monthlyCommissionReports,
+          supportersLeaderboard: cloudSnap.supportersLeaderboard,
+          supportersLeaderboardSettings: cloudSnap.supportersLeaderboardSettings,
         });
         let latestOverview = 'overview' in mergeRes ? mergeRes.overview : opts?.seedOverview || null;
         if ('recovery' in mergeRes && mergeRes.recovery && mergeRes.recovery.recoveredCount > 0) {
@@ -827,24 +839,123 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
     }
   };
 
-  const handleApproveRequest = async (orderId: string) => {
+  const prepareApproveConfirmation = (req: MembershipOrder) => {
+    const isUsd = req.paymentMethod === 'binance_qr' || req.currency === 'USD';
+    if (!isUsd) {
+      const optContrib = Math.max(0, Math.round(Number(req.optionalContributionPkr) || 0));
+      const expectedTotal = Math.max(0, Math.round(Number(req.expectedTotalPkr ?? req.amountPkr ?? 0)));
+      const subPrice = Math.max(
+        0,
+        Math.round(
+          typeof req.subscriptionPricePkr === 'number'
+            ? req.subscriptionPricePkr
+            : Math.max(0, expectedTotal - optContrib)
+        )
+      );
+      const defaultReceived =
+        typeof req.customerDeclaredAmountPkr === 'number' && req.customerDeclaredAmountPkr > 0
+          ? Math.round(req.customerDeclaredAmountPkr)
+          : expectedTotal;
+      const defaultContrib = Math.max(0, defaultReceived - subPrice);
+      setVerifiedReceivedInput(String(defaultReceived));
+      setVerifiedSubscriptionInput(String(subPrice));
+      setVerifiedContributionInput(String(defaultContrib));
+    } else {
+      setVerifiedReceivedInput('');
+      setVerifiedSubscriptionInput('');
+      setVerifiedContributionInput('');
+    }
+    setConfirmApproveId(req.id);
+  };
+
+  const handleApproveRequest = async (orderId: string, isUsdOrder = false) => {
+    let verificationPayload:
+      | {
+          verifiedReceivedAmountPkr?: number;
+          verifiedSubscriptionPricePkr?: number;
+          verifiedContributionPkr?: number;
+        }
+      | undefined;
+
+    if (!isUsdOrder) {
+      const rec = Number(verifiedReceivedInput);
+      const sub = Number(verifiedSubscriptionInput);
+      const con = Number(verifiedContributionInput);
+      if (
+        !Number.isFinite(rec) ||
+        rec < 0 ||
+        !Number.isFinite(sub) ||
+        sub < 0 ||
+        !Number.isFinite(con) ||
+        con < 0
+      ) {
+        setFeedbackBanner({
+          type: 'error',
+          text: 'Please enter valid non-negative PKR values for verified received, subscription, and contribution amounts.',
+        });
+        return;
+      }
+      verificationPayload = {
+        verifiedReceivedAmountPkr: Math.round(rec),
+        verifiedSubscriptionPricePkr: Math.round(sub),
+        verifiedContributionPkr: Math.round(con),
+      };
+    }
+
     setActionBusy(true);
     setFeedbackBanner(null);
     try {
-      const res = await approvePaymentOrder(orderId);
+      const res = await approvePaymentOrder(orderId, verificationPayload);
       if ('error' in res) {
         setFeedbackBanner({ type: 'error', text: res.error });
       } else {
         setOverview(res.overview);
         setConfirmApproveId(null);
         mirrorToCloudQuietly(res.overview);
+        if (res.supporterEntry && isFirebaseAdminUser()) {
+          void syncSupporterEntryToFirestore(res.supporterEntry).catch(() => {});
+        }
+        const supporterNote = res.supporterEntry
+          ? ` Verified extra contribution (PKR ${res.supporterEntry.contributionAmount.toLocaleString()}) added to FEVIQO Top Supporters.`
+          : '';
         setFeedbackBanner({
           type: 'success',
-          text: `Payment request ${orderId} approved and customer membership activated immediately.`,
+          text: `Payment request ${orderId} approved and customer membership activated immediately.${supporterNote}`,
         });
       }
     } catch {
       setFeedbackBanner({ type: 'error', text: 'Failed to approve payment request.' });
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleRequestCorrection = async (orderId: string) => {
+    if (!correctionNoteInput.trim() || correctionNoteInput.trim().length < 3) {
+      setFeedbackBanner({
+        type: 'error',
+        text: 'Please enter a clear note explaining what screenshot or payment correction is needed.',
+      });
+      return;
+    }
+    setActionBusy(true);
+    setFeedbackBanner(null);
+    try {
+      const res = await requestOrderCorrectionAdmin(orderId, correctionNoteInput.trim());
+      if ('error' in res) {
+        setFeedbackBanner({ type: 'error', text: res.error });
+      } else {
+        setOverview(res.overview);
+        setCorrectionNoteInput('');
+        setConfirmApproveId(null);
+        mirrorToCloudQuietly(res.overview);
+        setFeedbackBanner({
+          type: 'success',
+          text: `New screenshot / correction requested for ${orderId}. Order returned to awaiting payment and customer notified.`,
+        });
+      }
+    } catch {
+      setFeedbackBanner({ type: 'error', text: 'Failed to request payment correction.' });
     } finally {
       setActionBusy(false);
     }
@@ -2272,6 +2383,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 [
                   { id: 'requests', label: 'Payment Verification', icon: CheckCircle2 },
                   { id: 'memberships', label: 'Memberships', icon: Users },
+                  { id: 'supporters', label: 'Supporters Leaderboard', icon: Trophy },
                   { id: 'promos', label: 'Promo & Referrals', icon: Tag },
                   { id: 'campaigns', label: 'Referral Campaigns & Link Analytics', icon: Link2 },
                   { id: 'security', label: 'Mux Video Security', icon: Lock },
@@ -2447,6 +2559,60 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                 <div className="text-emerald-700 font-bold tabular-nums mt-0.5">
                                   {formatOrderAmount(req)}
                                 </div>
+                                {!isBinance && (() => {
+                                  const optContrib = Math.max(0, Math.round(Number(req.optionalContributionPkr) || 0));
+                                  const expectedTotal = Math.max(0, Math.round(Number(req.expectedTotalPkr ?? req.amountPkr ?? 0)));
+                                  const subPrice = Math.max(
+                                    0,
+                                    Math.round(
+                                      typeof req.subscriptionPricePkr === 'number'
+                                        ? req.subscriptionPricePkr
+                                        : Math.max(0, expectedTotal - optContrib)
+                                    )
+                                  );
+                                  const declared =
+                                    typeof req.customerDeclaredAmountPkr === 'number' && req.customerDeclaredAmountPkr > 0
+                                      ? Math.round(req.customerDeclaredAmountPkr)
+                                      : null;
+                                  const isMismatch = declared !== null && declared !== expectedTotal;
+                                  return (
+                                    <div className="mt-1 space-y-0.5 text-[11px] tabular-nums">
+                                      {optContrib > 0 && (
+                                        <div className="text-slate-600">
+                                          Plan PKR {subPrice.toLocaleString()} +{' '}
+                                          <span className="font-semibold text-rose-600 inline-flex items-center gap-0.5">
+                                            <Heart className="w-2.5 h-2.5 fill-rose-500" />
+                                            PKR {optContrib.toLocaleString()}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {declared !== null && (
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-slate-600">
+                                            Declared:{' '}
+                                            <strong className="text-[#0F172A]">
+                                              PKR {declared.toLocaleString()}
+                                            </strong>
+                                          </span>
+                                          {isMismatch ? (
+                                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px]">
+                                              Mismatch
+                                            </span>
+                                          ) : (
+                                            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                                              Exact
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {req.correctionRequestNote && req.status === 'awaiting_payment' && (
+                                        <div className="text-amber-700 font-semibold">
+                                          Correction Requested
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                                 {(req.promoCode || (req.discountTotalPkr || 0) > 0 || (req.discountTotalUsd || 0) > 0) && (
                                   <div className="text-[11px] text-emerald-700 font-medium mt-0.5 flex items-center gap-1.5">
                                     {req.promoCode && (
@@ -4820,6 +4986,14 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 onErrorMessage={(msg) => setFeedbackBanner({ type: 'error', text: msg })}
               />
             )}
+
+            {/* TAB: SUPPORTERS LEADERBOARD MANAGEMENT */}
+            {overview && activeTab === 'supporters' && (
+              <AdminSupportersLeaderboardTab
+                onSuccessMessage={(msg) => setFeedbackBanner({ type: 'success', text: msg })}
+                onErrorMessage={(msg) => setFeedbackBanner({ type: 'error', text: msg })}
+              />
+            )}
           </>
         )}
       </main>
@@ -4918,7 +5092,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   <dt className="text-slate-500 font-medium">Phone</dt>
                   <dd className="font-medium text-[#0F172A] tabular-nums">{selectedRequest.customerPhone || '—'}</dd>
 
-                  <dt className="text-slate-500 font-medium">Amount</dt>
+                  <dt className="text-slate-500 font-medium">Expected Total</dt>
                   <dd className="font-semibold text-[#16A34A] tabular-nums">
                     {formatOrderAmount(selectedRequest)}
                     {selectedRequest.indicativeLocalDisplay && (
@@ -4927,6 +5101,121 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       </span>
                     )}
                   </dd>
+
+                  {(() => {
+                    const isUsd = selectedRequest.paymentMethod === 'binance_qr' || selectedRequest.currency === 'USD';
+                    if (isUsd) return null;
+                    const optContrib = Math.max(0, Math.round(Number(selectedRequest.optionalContributionPkr) || 0));
+                    const expectedTotal = Math.max(
+                      0,
+                      Math.round(Number(selectedRequest.expectedTotalPkr ?? selectedRequest.amountPkr ?? 0))
+                    );
+                    const subPrice = Math.max(
+                      0,
+                      Math.round(
+                        typeof selectedRequest.subscriptionPricePkr === 'number'
+                          ? selectedRequest.subscriptionPricePkr
+                          : Math.max(0, expectedTotal - optContrib)
+                      )
+                    );
+                    const declared =
+                      typeof selectedRequest.customerDeclaredAmountPkr === 'number' &&
+                      selectedRequest.customerDeclaredAmountPkr > 0
+                        ? Math.round(selectedRequest.customerDeclaredAmountPkr)
+                        : null;
+                    const isMismatch = declared !== null && declared !== expectedTotal;
+
+                    return (
+                      <>
+                        <dt className="text-slate-500 font-medium">Plan Price</dt>
+                        <dd className="font-semibold text-[#0F172A] tabular-nums">
+                          PKR {subPrice.toLocaleString()}
+                        </dd>
+
+                        <dt className="text-slate-500 font-medium">Contribution</dt>
+                        <dd className="font-semibold tabular-nums text-rose-700">
+                          {optContrib > 0 ? `+ PKR ${optContrib.toLocaleString()}` : 'PKR 0 (None)'}
+                        </dd>
+
+                        <dt className="text-slate-500 font-medium">Customer Declared</dt>
+                        <dd className="tabular-nums">
+                          {declared !== null ? (
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-bold text-[#0F172A]">
+                                PKR {declared.toLocaleString()}
+                              </span>
+                              {isMismatch ? (
+                                <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold">
+                                  Differs from Expected (PKR {expectedTotal.toLocaleString()})
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                                  Matches Expected
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs">Not declared yet</span>
+                          )}
+                        </dd>
+
+                        {(optContrib > 0 || (selectedRequest.verifiedContributionPkr || 0) > 0) && (
+                          <>
+                            <dt className="text-slate-500 font-medium">Leaderboard</dt>
+                            <dd className="text-xs text-slate-700 space-y-0.5">
+                              <div>
+                                Name:{' '}
+                                <strong className="text-[#0F172A]">
+                                  {selectedRequest.leaderboardDisplayName || 'Anonymous Patron'}
+                                </strong>
+                              </div>
+                              <div>
+                                Visibility:{' '}
+                                <strong className="text-[#0F172A]">
+                                  {selectedRequest.showExactAmount === false
+                                    ? 'Amount Hidden'
+                                    : 'Show Exact Amount'}
+                                </strong>
+                              </div>
+                              {selectedRequest.leaderboardCountedAt && (
+                                <div className="text-emerald-700 font-semibold">
+                                  Counted on Leaderboard ({selectedRequest.leaderboardEntryId})
+                                </div>
+                              )}
+                            </dd>
+                          </>
+                        )}
+
+                        {selectedRequest.status === 'approved' &&
+                          typeof selectedRequest.verifiedReceivedAmountPkr === 'number' && (
+                            <>
+                              <dt className="text-emerald-700 font-medium">Admin Verified</dt>
+                              <dd className="text-xs text-emerald-900 tabular-nums space-y-0.5">
+                                <div>
+                                  Received:{' '}
+                                  <strong>
+                                    PKR {selectedRequest.verifiedReceivedAmountPkr.toLocaleString()}
+                                  </strong>
+                                </div>
+                                <div>
+                                  Plan:{' '}
+                                  <strong>
+                                    PKR{' '}
+                                    {(
+                                      selectedRequest.verifiedSubscriptionPricePkr ?? subPrice
+                                    ).toLocaleString()}
+                                  </strong>{' '}
+                                  · Contrib:{' '}
+                                  <strong>
+                                    PKR {(selectedRequest.verifiedContributionPkr ?? 0).toLocaleString()}
+                                  </strong>
+                                </div>
+                              </dd>
+                            </>
+                          )}
+                      </>
+                    );
+                  })()}
 
                   {(() => {
                     const isUsd = selectedRequest.paymentMethod === 'binance_qr' || selectedRequest.currency === 'USD';
@@ -4995,6 +5284,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                     </>
                   )}
 
+                  {selectedRequest.correctionRequestNote && (
+                    <>
+                      <dt className="text-amber-700 font-medium">Correction Note</dt>
+                      <dd className="font-semibold text-amber-800 text-xs">
+                        {selectedRequest.correctionRequestNote}
+                      </dd>
+                    </>
+                  )}
+
                   {selectedRequest.rejectionReason && (
                     <>
                       <dt className="text-red-700 font-medium">Rejection</dt>
@@ -5021,76 +5319,188 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   )}
                 </dl>
 
-                {selectedRequest.status !== 'approved' && (
-                  <div className="space-y-4">
-                    {/* Approve Section with Confirmation Guard */}
-                    {confirmApproveId !== selectedRequest.id ? (
-                      <button
-                        type="button"
-                        disabled={actionBusy}
-                        onClick={() => setConfirmApproveId(selectedRequest.id)}
-                        className="w-full py-3 px-4 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white text-sm font-semibold inline-flex items-center justify-center gap-2 cursor-pointer transition whitespace-nowrap"
-                      >
-                        <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span>
-                          {selectedRequest.orderType === 'renewal'
-                            ? 'Approve Renewal & Extend Membership'
-                            : 'Approve Payment & Activate Membership'}
-                        </span>
-                      </button>
-                    ) : (
-                      <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3">
-                        <p className="text-[13px] font-semibold text-emerald-950 leading-relaxed">
-                          {selectedRequest.orderType === 'renewal'
-                            ? `Confirm renewal approval for ${formatOrderAmount(selectedRequest)}? This adds +${selectedRequest.durationDays} days to membership ${selectedRequest.targetMembershipId} (New Expiry: ${formatDateTime(getProjectedExtendedExpiry(selectedRequest))}).`
-                            : `Confirm approval for ${formatOrderAmount(selectedRequest)}? This immediately activates ${selectedRequest.planName} (${selectedRequest.durationDays} days).`}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            disabled={actionBusy}
-                            onClick={() => handleApproveRequest(selectedRequest.id)}
-                            className="flex-1 py-2 rounded-lg bg-[#16A34A] text-white text-xs font-semibold cursor-pointer"
-                          >
-                            {actionBusy ? 'Approving...' : 'Yes, Confirm Approve'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setConfirmApproveId(null)}
-                            className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Reject Section (Reason Required) */}
-                    {selectedRequest.status !== 'rejected' && (
-                      <div className="p-4 rounded-xl border border-red-200 bg-red-50/40 space-y-2.5">
-                        <label className="block text-xs font-semibold text-red-900">
-                          Reject Payment (Reason Required)
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={rejectReasonInput}
-                          onChange={(e) => setRejectReasonInput(e.target.value)}
-                          placeholder="e.g. Amount does not match plan or screenshot is blurry"
-                          className="w-full px-3 py-2 text-[13px] bg-white border border-red-200 rounded-lg focus:outline-none focus:border-red-400"
-                        />
+                {selectedRequest.status !== 'approved' && (() => {
+                  const isUsdOrder =
+                    selectedRequest.paymentMethod === 'binance_qr' ||
+                    selectedRequest.currency === 'USD';
+                  const parsedVerifiedContrib = Number(verifiedContributionInput) || 0;
+                  return (
+                    <div className="space-y-4">
+                      {/* 1. Approve Section with Editable Verified Amounts */}
+                      {confirmApproveId !== selectedRequest.id ? (
                         <button
                           type="button"
                           disabled={actionBusy}
-                          onClick={() => handleRejectRequest(selectedRequest.id)}
-                          className="w-full py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition"
+                          onClick={() => prepareApproveConfirmation(selectedRequest)}
+                          className="w-full py-3 px-4 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white text-sm font-semibold inline-flex items-center justify-center gap-2 cursor-pointer transition whitespace-nowrap"
                         >
-                          <XCircle className="w-4 h-4 shrink-0" />
-                          <span>Reject Payment</span>
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span>
+                            {selectedRequest.orderType === 'renewal'
+                              ? 'Approve Renewal & Extend Membership'
+                              : 'Approve Payment & Activate Membership'}
+                          </span>
                         </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      ) : (
+                        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-3">
+                          <p className="text-[13px] font-semibold text-emerald-950 leading-relaxed">
+                            {selectedRequest.orderType === 'renewal'
+                              ? `Verify received amount & confirm renewal for ${selectedRequest.planName} (+${selectedRequest.durationDays} days).`
+                              : `Verify received amount & activate ${selectedRequest.planName} (${selectedRequest.durationDays} days).`}
+                          </p>
+
+                          {!isUsdOrder && (
+                            <div className="space-y-2.5 bg-white rounded-xl border border-emerald-200 p-3 text-xs">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <div className="space-y-1">
+                                  <label className="block text-[11px] font-semibold text-slate-700">
+                                    Verified Received (PKR)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={5000000}
+                                    value={verifiedReceivedInput}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setVerifiedReceivedInput(val);
+                                      const recNum = Number(val);
+                                      const subNum = Number(verifiedSubscriptionInput) || 0;
+                                      if (Number.isFinite(recNum) && recNum >= 0) {
+                                        setVerifiedContributionInput(
+                                          String(Math.max(0, Math.round(recNum - subNum)))
+                                        );
+                                      }
+                                    }}
+                                    className="w-full px-2.5 py-1.5 font-bold tabular-nums border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="block text-[11px] font-semibold text-slate-700">
+                                    Plan Price (PKR)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={1000000}
+                                    value={verifiedSubscriptionInput}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setVerifiedSubscriptionInput(val);
+                                      const subNum = Number(val);
+                                      const recNum = Number(verifiedReceivedInput) || 0;
+                                      if (Number.isFinite(subNum) && subNum >= 0) {
+                                        setVerifiedContributionInput(
+                                          String(Math.max(0, Math.round(recNum - subNum)))
+                                        );
+                                      }
+                                    }}
+                                    className="w-full px-2.5 py-1.5 font-bold tabular-nums border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="block text-[11px] font-semibold text-slate-700">
+                                    Contribution (PKR)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={5000000}
+                                    value={verifiedContributionInput}
+                                    onChange={(e) => setVerifiedContributionInput(e.target.value)}
+                                    className="w-full px-2.5 py-1.5 font-bold tabular-nums text-emerald-700 border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-600"
+                                  />
+                                </div>
+                              </div>
+                              <div className="text-[11px] text-slate-600">
+                                {parsedVerifiedContrib > 0 ? (
+                                  <span className="text-emerald-800 font-semibold">
+                                    Will record verified supporter entry: &quot;
+                                    {selectedRequest.leaderboardDisplayName || 'Anonymous Patron'}&quot;
+                                    (PKR {Math.round(parsedVerifiedContrib).toLocaleString()}).
+                                  </span>
+                                ) : (
+                                  <span>
+                                    Verified extra contribution is PKR 0 — membership activates
+                                    normally without adding a leaderboard entry.
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={actionBusy}
+                              onClick={() => handleApproveRequest(selectedRequest.id, isUsdOrder)}
+                              className="flex-1 py-2 rounded-lg bg-[#16A34A] text-white text-xs font-semibold cursor-pointer"
+                            >
+                              {actionBusy ? 'Approving...' : 'Yes, Confirm Approve'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmApproveId(null)}
+                              className="px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. Request New Screenshot / Correction */}
+                      {selectedRequest.status !== 'rejected' && (
+                        <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/50 space-y-2.5">
+                          <label className="block text-xs font-semibold text-amber-950">
+                            Request New Screenshot / Payment Correction
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={correctionNoteInput}
+                            onChange={(e) => setCorrectionNoteInput(e.target.value)}
+                            placeholder="e.g. Please re-upload a clearer screenshot showing the transaction ID and amount."
+                            className="w-full px-3 py-2 text-[13px] bg-white border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400"
+                          />
+                          <button
+                            type="button"
+                            disabled={actionBusy}
+                            onClick={() => handleRequestCorrection(selectedRequest.id)}
+                            className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-[#0F172A] hover:text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition"
+                          >
+                            <RotateCcw className="w-4 h-4 shrink-0" />
+                            <span>Request New Screenshot / Correction</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* 3. Reject Section (Reason Required) */}
+                      {selectedRequest.status !== 'rejected' && (
+                        <div className="p-4 rounded-xl border border-red-200 bg-red-50/40 space-y-2.5">
+                          <label className="block text-xs font-semibold text-red-900">
+                            Reject Payment (Reason Required)
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={rejectReasonInput}
+                            onChange={(e) => setRejectReasonInput(e.target.value)}
+                            placeholder="e.g. Amount does not match plan or payment not received"
+                            className="w-full px-3 py-2 text-[13px] bg-white border border-red-200 rounded-lg focus:outline-none focus:border-red-400"
+                          />
+                          <button
+                            type="button"
+                            disabled={actionBusy}
+                            onClick={() => handleRejectRequest(selectedRequest.id)}
+                            className="w-full py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition"
+                          >
+                            <XCircle className="w-4 h-4 shrink-0" />
+                            <span>Reject Payment</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {(() => {
                   const linkedToActive =

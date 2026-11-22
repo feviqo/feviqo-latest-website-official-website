@@ -8,6 +8,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  onSnapshot,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
@@ -24,6 +25,10 @@ import type {
   AdminEmailNotification,
   CustomerNotification,
   SchedulerRunLog,
+  SupporterLeaderboardEntry,
+  SupporterLeaderboardSettings,
+  PublicSupporterLeaderboardRow,
+  PublicSupportersLeaderboardResponse,
 } from './membershipService';
 
 const BOOTSTRAP_ADMIN_EMAILS = new Set(['rexanmedia01@gmail.com', 'partner@feviqo.com']);
@@ -307,6 +312,11 @@ export async function syncOrderToFirestore(
         discountTotalPkr: Math.max(0, Number(order.discountTotalPkr) || 0),
         discountTotalUsd: Math.max(0, Number(order.discountTotalUsd) || 0),
         expectedAmount: Math.max(0, Number(order.expectedAmount ?? (order.currency === 'USD' ? order.amountUsd : order.amountPkr)) || 0),
+        subscriptionPricePkr: Math.max(0, Number(order.subscriptionPricePkr ?? Math.max(0, (Number(order.amountPkr) || 0) - (Number(order.optionalContributionPkr) || 0))) || 0),
+        optionalContributionPkr: Math.max(0, Math.min(500000, Number(order.optionalContributionPkr) || 0)),
+        expectedTotalPkr: Math.max(0, Number(order.expectedTotalPkr ?? order.amountPkr) || 0),
+        leaderboardDisplayName: clampStr(order.leaderboardDisplayName || 'Anonymous Patron', 60),
+        showExactAmount: order.showExactAmount !== false,
         currency: order.currency === 'USD' ? 'USD' : 'PKR',
         paymentRegion: order.paymentRegion === 'international' ? 'international' : 'pakistan',
         paymentMethod: safePaymentMethod,
@@ -333,9 +343,41 @@ export async function syncOrderToFirestore(
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
+      if (isFirebaseAdminUser()) {
+        if (typeof order.customerDeclaredAmountPkr === 'number' && Number.isFinite(order.customerDeclaredAmountPkr)) {
+          payload.customerDeclaredAmountPkr = Math.max(0, Math.min(5000000, Math.round(order.customerDeclaredAmountPkr)));
+        }
+        if (typeof order.verifiedReceivedAmountPkr === 'number' && Number.isFinite(order.verifiedReceivedAmountPkr)) {
+          payload.verifiedReceivedAmountPkr = Math.max(0, Math.min(5000000, Math.round(order.verifiedReceivedAmountPkr)));
+        }
+        if (typeof order.verifiedSubscriptionPricePkr === 'number' && Number.isFinite(order.verifiedSubscriptionPricePkr)) {
+          payload.verifiedSubscriptionPricePkr = Math.max(0, Math.min(1000000, Math.round(order.verifiedSubscriptionPricePkr)));
+        }
+        if (typeof order.verifiedContributionPkr === 'number' && Number.isFinite(order.verifiedContributionPkr)) {
+          payload.verifiedContributionPkr = Math.max(0, Math.min(5000000, Math.round(order.verifiedContributionPkr)));
+        }
+        if (typeof order.leaderboardEligible === 'boolean') {
+          payload.leaderboardEligible = order.leaderboardEligible;
+        }
+        if (order.leaderboardEntryId) {
+          payload.leaderboardEntryId = clampStr(order.leaderboardEntryId, 128);
+        }
+        if (order.leaderboardCountedAt) {
+          payload.leaderboardCountedAt = clampStr(order.leaderboardCountedAt, 64);
+        }
+        if (order.correctionRequestedAt) {
+          payload.correctionRequestedAt = clampStr(order.correctionRequestedAt, 64);
+        }
+        if (order.correctionRequestNote) {
+          payload.correctionRequestNote = clampStr(order.correctionRequestNote, 500);
+        }
+        if (order.correctionRequestedByAdminEmail) {
+          payload.correctionRequestedByAdminEmail = clampStr(order.correctionRequestedByAdminEmail, 200);
+        }
+      }
       await setDoc(ref, payload);
       if (isNonAdminDirectProof) {
-        await updateDoc(ref, {
+        const directUpdate: Record<string, unknown> = {
           status: 'pending_verification',
           proofFileName: clampStr(order.proofFileName || '', 256),
           proofOriginalName: clampStr(order.proofOriginalName || '', 256),
@@ -346,7 +388,17 @@ export async function syncOrderToFirestore(
           rejectionReason: '',
           updatedAtIso: clampStr(order.updatedAt || new Date().toISOString(), 64),
           updatedAt: serverTimestamp(),
-        });
+        };
+        if (typeof order.customerDeclaredAmountPkr === 'number' && Number.isFinite(order.customerDeclaredAmountPkr)) {
+          directUpdate.customerDeclaredAmountPkr = Math.max(0, Math.min(5000000, Math.round(order.customerDeclaredAmountPkr)));
+        }
+        if (order.leaderboardDisplayName !== undefined) {
+          directUpdate.leaderboardDisplayName = clampStr(order.leaderboardDisplayName || 'Anonymous Patron', 60);
+        }
+        if (typeof order.showExactAmount === 'boolean') {
+          directUpdate.showExactAmount = order.showExactAmount;
+        }
+        await updateDoc(ref, directUpdate);
       }
     } else if (isFirebaseAdminUser()) {
       const updatePayload: Record<string, unknown> = {
@@ -361,15 +413,54 @@ export async function syncOrderToFirestore(
         reviewedByAdminEmail: clampStr(order.reviewedByAdminEmail || '', 200),
         reviewedAt: clampStr(order.reviewedAt || '', 64),
         paidAt: clampStr(order.paidAt || '', 64),
+        correctionRequestedAt: clampStr(order.correctionRequestedAt || '', 64),
+        correctionRequestNote: clampStr(order.correctionRequestNote || '', 500),
+        correctionRequestedByAdminEmail: clampStr(order.correctionRequestedByAdminEmail || '', 200),
         updatedAtIso: clampStr(order.updatedAt || new Date().toISOString(), 64),
         updatedAt: serverTimestamp(),
       };
+      if (typeof order.subscriptionPricePkr === 'number' && Number.isFinite(order.subscriptionPricePkr)) {
+        updatePayload.subscriptionPricePkr = Math.max(0, Math.min(1000000, Math.round(order.subscriptionPricePkr)));
+      }
+      if (typeof order.optionalContributionPkr === 'number' && Number.isFinite(order.optionalContributionPkr)) {
+        updatePayload.optionalContributionPkr = Math.max(0, Math.min(500000, Math.round(order.optionalContributionPkr)));
+      }
+      if (typeof order.expectedTotalPkr === 'number' && Number.isFinite(order.expectedTotalPkr)) {
+        updatePayload.expectedTotalPkr = Math.max(0, Math.min(1500000, Math.round(order.expectedTotalPkr)));
+      }
+      if (typeof order.customerDeclaredAmountPkr === 'number' && Number.isFinite(order.customerDeclaredAmountPkr)) {
+        updatePayload.customerDeclaredAmountPkr = Math.max(0, Math.min(5000000, Math.round(order.customerDeclaredAmountPkr)));
+      }
+      if (typeof order.verifiedReceivedAmountPkr === 'number' && Number.isFinite(order.verifiedReceivedAmountPkr)) {
+        updatePayload.verifiedReceivedAmountPkr = Math.max(0, Math.min(5000000, Math.round(order.verifiedReceivedAmountPkr)));
+      }
+      if (typeof order.verifiedSubscriptionPricePkr === 'number' && Number.isFinite(order.verifiedSubscriptionPricePkr)) {
+        updatePayload.verifiedSubscriptionPricePkr = Math.max(0, Math.min(1000000, Math.round(order.verifiedSubscriptionPricePkr)));
+      }
+      if (typeof order.verifiedContributionPkr === 'number' && Number.isFinite(order.verifiedContributionPkr)) {
+        updatePayload.verifiedContributionPkr = Math.max(0, Math.min(5000000, Math.round(order.verifiedContributionPkr)));
+      }
+      if (order.leaderboardDisplayName !== undefined) {
+        updatePayload.leaderboardDisplayName = clampStr(order.leaderboardDisplayName || 'Anonymous Patron', 60);
+      }
+      if (typeof order.showExactAmount === 'boolean') {
+        updatePayload.showExactAmount = order.showExactAmount;
+      }
+      if (typeof order.leaderboardEligible === 'boolean') {
+        updatePayload.leaderboardEligible = order.leaderboardEligible;
+      }
+      if (order.leaderboardEntryId !== undefined) {
+        updatePayload.leaderboardEntryId = clampStr(order.leaderboardEntryId || '', 128);
+      }
+      if (order.leaderboardCountedAt !== undefined) {
+        updatePayload.leaderboardCountedAt = clampStr(order.leaderboardCountedAt || '', 64);
+      }
       if (proofUrl && proofUrl.length <= 800000) {
         updatePayload.proofDataUrl = proofUrl;
       }
       await updateDoc(ref, updatePayload);
     } else {
-      await updateDoc(ref, {
+      const customerUpdate: Record<string, unknown> = {
         status: 'pending_verification',
         proofFileName: clampStr(order.proofFileName || '', 256),
         proofOriginalName: clampStr(order.proofOriginalName || '', 256),
@@ -380,7 +471,17 @@ export async function syncOrderToFirestore(
         rejectionReason: '',
         updatedAtIso: clampStr(order.updatedAt || new Date().toISOString(), 64),
         updatedAt: serverTimestamp(),
-      });
+      };
+      if (typeof order.customerDeclaredAmountPkr === 'number' && Number.isFinite(order.customerDeclaredAmountPkr)) {
+        customerUpdate.customerDeclaredAmountPkr = Math.max(0, Math.min(5000000, Math.round(order.customerDeclaredAmountPkr)));
+      }
+      if (order.leaderboardDisplayName !== undefined) {
+        customerUpdate.leaderboardDisplayName = clampStr(order.leaderboardDisplayName || 'Anonymous Patron', 60);
+      }
+      if (typeof order.showExactAmount === 'boolean') {
+        customerUpdate.showExactAmount = order.showExactAmount;
+      }
+      await updateDoc(ref, customerUpdate);
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
@@ -870,6 +971,8 @@ export interface CloudMembershipSnapshot {
   campaignCommissions?: any[];
   commissionPayments?: any[];
   monthlyCommissionReports?: any[];
+  supportersLeaderboard?: SupporterLeaderboardEntry[];
+  supportersLeaderboardSettings?: SupporterLeaderboardSettings | null;
 }
 
 export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSnapshot> {
@@ -952,6 +1055,21 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
         discountTotalPkr: data.discountTotalPkr || 0,
         discountTotalUsd: data.discountTotalUsd || 0,
         expectedAmount: data.expectedAmount,
+        subscriptionPricePkr: typeof data.subscriptionPricePkr === 'number' ? data.subscriptionPricePkr : undefined,
+        optionalContributionPkr: typeof data.optionalContributionPkr === 'number' ? data.optionalContributionPkr : 0,
+        expectedTotalPkr: typeof data.expectedTotalPkr === 'number' ? data.expectedTotalPkr : data.amountPkr,
+        customerDeclaredAmountPkr: typeof data.customerDeclaredAmountPkr === 'number' ? data.customerDeclaredAmountPkr : undefined,
+        verifiedReceivedAmountPkr: typeof data.verifiedReceivedAmountPkr === 'number' ? data.verifiedReceivedAmountPkr : undefined,
+        verifiedSubscriptionPricePkr: typeof data.verifiedSubscriptionPricePkr === 'number' ? data.verifiedSubscriptionPricePkr : undefined,
+        verifiedContributionPkr: typeof data.verifiedContributionPkr === 'number' ? data.verifiedContributionPkr : undefined,
+        leaderboardDisplayName: data.leaderboardDisplayName || undefined,
+        showExactAmount: typeof data.showExactAmount === 'boolean' ? data.showExactAmount : true,
+        leaderboardEligible: typeof data.leaderboardEligible === 'boolean' ? data.leaderboardEligible : undefined,
+        leaderboardEntryId: data.leaderboardEntryId || undefined,
+        leaderboardCountedAt: data.leaderboardCountedAt || undefined,
+        correctionRequestedAt: data.correctionRequestedAt || undefined,
+        correctionRequestNote: data.correctionRequestNote || undefined,
+        correctionRequestedByAdminEmail: data.correctionRequestedByAdminEmail || undefined,
         currency: data.currency || 'PKR',
         paymentRegion: data.paymentRegion || 'pakistan',
         paymentMethod: data.paymentMethod || 'bank_qr',
@@ -1183,6 +1301,57 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
     console.error('[Firestore pull] blockedUsers failed:', err);
   }
 
+  const supportersLeaderboard: SupporterLeaderboardEntry[] = [];
+  let supportersLeaderboardSettings: SupporterLeaderboardSettings | null = null;
+
+  try {
+    const snap = await getDocs(collection(db, 'supportersLeaderboard'));
+    snap.forEach((d) => {
+      const data = d.data();
+      const nowIso = new Date().toISOString();
+      supportersLeaderboard.push({
+        id: data.id || d.id,
+        displayName: clampNonEmpty(data.displayName, 'Anonymous Patron', 60),
+        contributionAmount: Math.max(0, Math.round(Number(data.contributionAmount) || 0)),
+        amountVisible: data.amountVisible !== false,
+        badge: clampStr(data.badge || '', 48),
+        displayPriority:
+          typeof data.displayPriority === 'number' && Number.isFinite(data.displayPriority)
+            ? Math.round(data.displayPriority)
+            : null,
+        entryType: data.entryType === 'verified_customer' ? 'verified_customer' : 'manual_featured',
+        active: data.active !== false,
+        featured: Boolean(data.featured),
+        removed: Boolean(data.removed),
+        createdAt: toIsoString(data.createdAtIso || data.createdAt, nowIso),
+        updatedAt: toIsoString(data.updatedAtIso || data.updatedAt, nowIso),
+      });
+    });
+  } catch (err) {
+    console.error('[Firestore pull] supportersLeaderboard failed:', err);
+  }
+
+  try {
+    const sSnap = await getDoc(doc(db, 'supportersLeaderboardSettings', 'main'));
+    if (sSnap.exists()) {
+      const data = sSnap.data();
+      supportersLeaderboardSettings = {
+        id: 'main',
+        enabled: data.enabled !== false,
+        maxDisplayed: Math.max(1, Math.min(50, Math.round(Number(data.maxDisplayed) || 10))),
+        showAmountsGlobally: data.showAmountsGlobally !== false,
+        allowAutomaticRanking: data.allowAutomaticRanking !== false,
+        allowManualPriority: data.allowManualPriority !== false,
+        showBadges: data.showBadges !== false,
+        showSubtitle: data.showSubtitle !== false,
+        includeManualFeatured: data.includeManualFeatured !== false,
+        updatedAt: toIsoString(data.updatedAtIso || data.updatedAt, new Date().toISOString()),
+      };
+    }
+  } catch (err) {
+    console.error('[Firestore pull] supportersLeaderboardSettings/main failed:', err);
+  }
+
   if (pullErrors.length >= 4 && members.length === 0 && orders.length === 0 && memberships.length === 0) {
     throw new Error(`Firestore read failed across collections: ${pullErrors.join(' | ')}`);
   }
@@ -1204,6 +1373,8 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
     campaignCommissions,
     commissionPayments,
     monthlyCommissionReports,
+    supportersLeaderboard,
+    supportersLeaderboardSettings,
   };
 }
 
@@ -1236,6 +1407,8 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
   campaignCommissions?: any[];
   commissionPayments?: any[];
   monthlyCommissionReports?: any[];
+  supportersLeaderboard?: SupporterLeaderboardEntry[];
+  supportersLeaderboardSettings?: SupporterLeaderboardSettings | null;
 }): Promise<CloudPushReport> {
   const report: CloudPushReport = {
     syncedMembers: 0,
@@ -1385,6 +1558,28 @@ export async function pushAdminSnapshotToFirestore(snapshot: {
     }
   }
 
+  if (Array.isArray(snapshot.supportersLeaderboard)) {
+    for (const entry of snapshot.supportersLeaderboard) {
+      if (entry && entry.id) {
+        try {
+          await syncSupporterEntryToFirestore(entry);
+        } catch (err) {
+          report.failedCount += 1;
+          report.errors.push(`supporter(${entry.id}): ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+    }
+  }
+
+  if (snapshot.supportersLeaderboardSettings) {
+    try {
+      await syncSupporterSettingsToFirestore(snapshot.supportersLeaderboardSettings);
+    } catch (err) {
+      report.failedCount += 1;
+      report.errors.push(`supporterSettings: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   return report;
 }
 
@@ -1416,6 +1611,21 @@ export async function fetchMemberCloudOrders(memberId: string): Promise<Membersh
           amountPkr: data.amountPkr,
           amountUsd: data.amountUsd,
           expectedAmount: data.expectedAmount,
+          subscriptionPricePkr: typeof data.subscriptionPricePkr === 'number' ? data.subscriptionPricePkr : undefined,
+          optionalContributionPkr: typeof data.optionalContributionPkr === 'number' ? data.optionalContributionPkr : 0,
+          expectedTotalPkr: typeof data.expectedTotalPkr === 'number' ? data.expectedTotalPkr : data.amountPkr,
+          customerDeclaredAmountPkr: typeof data.customerDeclaredAmountPkr === 'number' ? data.customerDeclaredAmountPkr : undefined,
+          verifiedReceivedAmountPkr: typeof data.verifiedReceivedAmountPkr === 'number' ? data.verifiedReceivedAmountPkr : undefined,
+          verifiedSubscriptionPricePkr: typeof data.verifiedSubscriptionPricePkr === 'number' ? data.verifiedSubscriptionPricePkr : undefined,
+          verifiedContributionPkr: typeof data.verifiedContributionPkr === 'number' ? data.verifiedContributionPkr : undefined,
+          leaderboardDisplayName: data.leaderboardDisplayName || undefined,
+          showExactAmount: typeof data.showExactAmount === 'boolean' ? data.showExactAmount : true,
+          leaderboardEligible: typeof data.leaderboardEligible === 'boolean' ? data.leaderboardEligible : undefined,
+          leaderboardEntryId: data.leaderboardEntryId || undefined,
+          leaderboardCountedAt: data.leaderboardCountedAt || undefined,
+          correctionRequestedAt: data.correctionRequestedAt || undefined,
+          correctionRequestNote: data.correctionRequestNote || undefined,
+          correctionRequestedByAdminEmail: data.correctionRequestedByAdminEmail || undefined,
           currency: data.currency || 'PKR',
           paymentRegion: data.paymentRegion || 'pakistan',
           paymentMethod: data.paymentMethod || 'bank_qr',
@@ -1448,3 +1658,287 @@ export async function fetchMemberCloudOrders(memberId: string): Promise<Membersh
     handleFirestoreError(err, OperationType.LIST, path);
   }
 }
+
+// =========================================================================
+// FEVIQO TOP SUPPORTERS LEADERBOARD — FIRESTORE SYNC & REAL-TIME LISTENER
+// =========================================================================
+
+const DEFAULT_CLIENT_LEADERBOARD_SETTINGS: SupporterLeaderboardSettings = {
+  id: 'main',
+  enabled: true,
+  maxDisplayed: 10,
+  showAmountsGlobally: true,
+  allowAutomaticRanking: true,
+  allowManualPriority: true,
+  showBadges: true,
+  showSubtitle: true,
+  includeManualFeatured: true,
+  updatedAt: new Date(0).toISOString(),
+};
+
+/**
+ * Admin-only: Mirrors a sanitized, PII-free supporter entry directly to Firestore
+ * so the public Membership Page leaderboard updates in real time.
+ */
+export async function syncSupporterEntryToFirestore(
+  entry: SupporterLeaderboardEntry
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !user.emailVerified || !isFirebaseAdminUser()) return;
+  const entryId = sanitizeId(entry.id);
+  const path = `supportersLeaderboard/${entryId}`;
+  try {
+    const ref = doc(db, 'supportersLeaderboard', entryId);
+    const snap = await getDoc(ref);
+    const nowIso = new Date().toISOString();
+    const cleanPayload: Record<string, unknown> = {
+      id: entryId,
+      displayName: clampNonEmpty(entry.displayName, 'Anonymous Patron', 60),
+      contributionAmount: Math.max(0, Math.min(5000000, Math.round(Number(entry.contributionAmount) || 0))),
+      amountVisible: entry.amountVisible !== false,
+      badge: clampStr(entry.badge || '', 48),
+      displayPriority:
+        entry.displayPriority !== null &&
+        entry.displayPriority !== undefined &&
+        Number.isFinite(Number(entry.displayPriority))
+          ? Math.max(1, Math.min(999, Math.round(Number(entry.displayPriority))))
+          : null,
+      entryType: entry.entryType === 'verified_customer' ? 'verified_customer' : 'manual_featured',
+      active: entry.active !== false,
+      featured: Boolean(entry.featured),
+      removed: Boolean(entry.removed),
+      createdAtIso: clampNonEmpty(entry.createdAt, nowIso, 64),
+      updatedAtIso: clampNonEmpty(entry.updatedAt, nowIso, 64),
+      updatedAt: serverTimestamp(),
+    };
+    if (!snap.exists()) {
+      cleanPayload.createdAt = serverTimestamp();
+      await setDoc(ref, cleanPayload);
+    } else {
+      await updateDoc(ref, cleanPayload);
+    }
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteSupporterEntryInFirestore(entryId: string): Promise<void> {
+  if (!isFirebaseAdminUser() || !entryId) return;
+  await deleteFirestoreDocSafely('supportersLeaderboard', entryId);
+}
+
+export async function syncSupporterSettingsToFirestore(
+  settings: SupporterLeaderboardSettings
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !user.emailVerified || !isFirebaseAdminUser()) return;
+  const path = 'supportersLeaderboardSettings/main';
+  try {
+    const ref = doc(db, 'supportersLeaderboardSettings', 'main');
+    const snap = await getDoc(ref);
+    const payload: Record<string, unknown> = {
+      id: 'main',
+      enabled: settings.enabled !== false,
+      maxDisplayed: Math.max(1, Math.min(50, Math.round(Number(settings.maxDisplayed) || 10))),
+      showAmountsGlobally: settings.showAmountsGlobally !== false,
+      allowAutomaticRanking: settings.allowAutomaticRanking !== false,
+      allowManualPriority: settings.allowManualPriority !== false,
+      showBadges: settings.showBadges !== false,
+      showSubtitle: settings.showSubtitle !== false,
+      includeManualFeatured: settings.includeManualFeatured !== false,
+      updatedAtIso: clampNonEmpty(settings.updatedAt, new Date().toISOString(), 64),
+      updatedAt: serverTimestamp(),
+    };
+    if (!snap.exists()) {
+      payload.createdAt = serverTimestamp();
+      await setDoc(ref, payload);
+    } else {
+      await updateDoc(ref, payload);
+    }
+  } catch (err) {
+    handleFirestoreError(err, OperationType.WRITE, path);
+  }
+}
+
+function defaultBadgeForRankClient(rank: number): string {
+  if (rank === 1) return 'Executive Patron';
+  if (rank <= 3) return 'Founding Supporter';
+  return 'Community Patron';
+}
+
+export function computePublicSupportersLeaderboardClient(
+  entries: SupporterLeaderboardEntry[],
+  settings: SupporterLeaderboardSettings
+): PublicSupportersLeaderboardResponse {
+  if (!settings.enabled) {
+    return {
+      enabled: false,
+      settings,
+      entries: [],
+      updatedAt: settings.updatedAt,
+    };
+  }
+
+  const eligible = entries.filter((entry) => {
+    if (!entry || entry.removed || !entry.active) return false;
+    if (entry.entryType === 'manual_featured' && !settings.includeManualFeatured) return false;
+    return true;
+  });
+
+  const sorted = [...eligible].sort((a, b) => {
+    if (settings.allowManualPriority) {
+      const aHasP = a.displayPriority !== null && a.displayPriority !== undefined;
+      const bHasP = b.displayPriority !== null && b.displayPriority !== undefined;
+      if (aHasP && bHasP && a.displayPriority !== b.displayPriority) {
+        return Number(a.displayPriority) - Number(b.displayPriority);
+      }
+      if (aHasP && !bHasP) return -1;
+      if (!aHasP && bHasP) return 1;
+    }
+
+    if (settings.allowAutomaticRanking) {
+      if (b.contributionAmount !== a.contributionAmount) {
+        return b.contributionAmount - a.contributionAmount;
+      }
+    }
+
+    if (a.featured !== b.featured) return a.featured ? -1 : 1;
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
+
+  const limited = sorted.slice(0, Math.max(1, Math.min(50, settings.maxDisplayed || 10)));
+
+  const rows: PublicSupporterLeaderboardRow[] = limited.map((entry, idx) => {
+    const rank = idx + 1;
+    const showAmount = settings.showAmountsGlobally && entry.amountVisible;
+    const tier: 'rank1' | 'top3' | 'standard' =
+      rank === 1 ? 'rank1' : rank <= 3 ? 'top3' : 'standard';
+    const badge = settings.showBadges
+      ? entry.badge?.trim() || defaultBadgeForRankClient(rank)
+      : '';
+
+    return {
+      rank,
+      id: entry.id,
+      displayName: clampNonEmpty(entry.displayName, 'Anonymous Patron', 60),
+      contributionAmount: showAmount ? entry.contributionAmount : null,
+      amountDisplay: showAmount
+        ? `PKR ${Number(entry.contributionAmount || 0).toLocaleString('en-PK')}`
+        : 'Amount Hidden',
+      amountVisible: showAmount,
+      badge,
+      featured: Boolean(entry.featured || rank <= 3),
+      tier,
+    };
+  });
+
+  const latestUpdatedAt = [
+    settings.updatedAt,
+    ...limited.map((e) => e.updatedAt).filter(Boolean),
+  ]
+    .sort()
+    .pop() || new Date().toISOString();
+
+  return {
+    enabled: true,
+    settings,
+    entries: rows,
+    updatedAt: latestUpdatedAt,
+  };
+}
+
+/**
+ * Subscribes to live public Firestore updates for the FEVIQO Top Supporters Leaderboard.
+ * Automatically ignores empty initial Firestore states until at least one Firestore doc exists,
+ * so REST API hydration is not clobbered before Firestore is populated.
+ */
+export function subscribeToPublicSupportersLeaderboard(
+  onUpdate: (data: PublicSupportersLeaderboardResponse) => void
+): () => void {
+  let currentEntries: SupporterLeaderboardEntry[] = [];
+  let currentSettings: SupporterLeaderboardSettings = { ...DEFAULT_CLIENT_LEADERBOARD_SETTINGS };
+  let hasEntriesSnap = false;
+  let hasSettingsDoc = false;
+
+  const emitIfReady = () => {
+    if (!hasEntriesSnap && !hasSettingsDoc) return;
+    if (currentEntries.length === 0 && !hasSettingsDoc) return;
+    onUpdate(computePublicSupportersLeaderboardClient(currentEntries, currentSettings));
+  };
+
+  const entriesQuery = query(
+    collection(db, 'supportersLeaderboard'),
+    where('active', '==', true),
+    where('removed', '==', false)
+  );
+
+  const unsubEntries = onSnapshot(
+    entriesQuery,
+    (snapshot) => {
+      hasEntriesSnap = true;
+      const list: SupporterLeaderboardEntry[] = [];
+      snapshot.forEach((d) => {
+        const data = d.data();
+        const nowIso = new Date().toISOString();
+        list.push({
+          id: data.id || d.id,
+          displayName: clampNonEmpty(data.displayName, 'Anonymous Patron', 60),
+          contributionAmount: Math.max(0, Math.round(Number(data.contributionAmount) || 0)),
+          amountVisible: data.amountVisible !== false,
+          badge: clampStr(data.badge || '', 48),
+          displayPriority:
+            typeof data.displayPriority === 'number' && Number.isFinite(data.displayPriority)
+              ? Math.round(data.displayPriority)
+              : null,
+          entryType: data.entryType === 'verified_customer' ? 'verified_customer' : 'manual_featured',
+          active: data.active !== false,
+          featured: Boolean(data.featured),
+          removed: Boolean(data.removed),
+          createdAt: toIsoString(data.createdAtIso || data.createdAt, nowIso),
+          updatedAt: toIsoString(data.updatedAtIso || data.updatedAt, nowIso),
+        });
+      });
+      currentEntries = list;
+      emitIfReady();
+    },
+    (err) => {
+      console.warn('[Firestore] Public supportersLeaderboard listener unavailable:', err?.message || err);
+    }
+  );
+
+  const unsubSettings = onSnapshot(
+    doc(db, 'supportersLeaderboardSettings', 'main'),
+    (snap) => {
+      if (snap.exists()) {
+        hasSettingsDoc = true;
+        const data = snap.data();
+        currentSettings = {
+          id: 'main',
+          enabled: data.enabled !== false,
+          maxDisplayed: Math.max(1, Math.min(50, Math.round(Number(data.maxDisplayed) || 10))),
+          showAmountsGlobally: data.showAmountsGlobally !== false,
+          allowAutomaticRanking: data.allowAutomaticRanking !== false,
+          allowManualPriority: data.allowManualPriority !== false,
+          showBadges: data.showBadges !== false,
+          showSubtitle: data.showSubtitle !== false,
+          includeManualFeatured: data.includeManualFeatured !== false,
+          updatedAt: toIsoString(data.updatedAtIso || data.updatedAt, new Date().toISOString()),
+        };
+        emitIfReady();
+      }
+    },
+    (err) => {
+      console.warn('[Firestore] Public supportersLeaderboardSettings listener unavailable:', err?.message || err);
+    }
+  );
+
+  return () => {
+    try {
+      unsubEntries();
+    } catch {}
+    try {
+      unsubSettings();
+    } catch {}
+  };
+}
+

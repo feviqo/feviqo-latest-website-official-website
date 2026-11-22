@@ -1,5 +1,125 @@
 [
   {
+    "id": "failed-1795390345313-4mna",
+    "to": "qa_supporter4_1795390344481@example.com",
+    "subject": "FEVIQO Membership Activated — Standard",
+    "type": "member_payment_approved",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:32:25.313Z"
+  },
+  {
+    "id": "failed-1795390344897-ysic",
+    "to": "partner@feviqo.com",
+    "subject": "New FEVIQO Membership Payment — Verification Required",
+    "type": "admin_payment_verification",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:32:24.897Z"
+  },
+  {
+    "id": "failed-1795390265947-mi9j",
+    "to": "qa_supporter3_1795390264497@example.com",
+    "subject": "FEVIQO Membership Payment Requires New Proof",
+    "type": "member_payment_rejected",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:31:05.947Z"
+  },
+  {
+    "id": "failed-1795390265616-rupy",
+    "to": "partner@feviqo.com",
+    "subject": "New FEVIQO Membership Payment — Verification Required",
+    "type": "admin_payment_verification",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:31:05.616Z"
+  },
+  {
+    "id": "failed-1795390265286-i0tg",
+    "to": "qa_supporter3_1795390264497@example.com",
+    "subject": "FEVIQO Membership Activated — Standard",
+    "type": "member_payment_approved",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:31:05.286Z"
+  },
+  {
+    "id": "failed-1795390264961-e8tk",
+    "to": "partner@feviqo.com",
+    "subject": "New FEVIQO Membership Payment — Verification Required",
+    "type": "admin_payment_verification",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:31:04.961Z"
+  },
+  {
+    "id": "failed-1795390178378-7uz8",
+    "to": "qa_supporter2_1795390177145@example.com",
+    "subject": "FEVIQO Membership Activated — Standard",
+    "type": "member_payment_approved",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:29:38.378Z"
+  },
+  {
+    "id": "failed-1795390178062-9c3s",
+    "to": "partner@feviqo.com",
+    "subject": "New FEVIQO Membership Payment — Verification Required",
+    "type": "admin_payment_verification",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:29:38.062Z"
+  },
+  {
+    "id": "failed-1795390119625-2kxp",
+    "to": "qa_supporter_1795390117016@example.com",
+    "subject": "FEVIQO Membership Activated — Standard",
+    "type": "member_payment_approved",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:28:39.625Z"
+  },
+  {
+    "id": "failed-1795390119308-376o",
+    "to": "partner@feviqo.com",
+    "subject": "New FEVIQO Membership Payment — Verification Required",
+    "type": "admin_payment_verification",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:28:39.308Z"
+  },
+  {
+    "id": "failed-1795390118593-0ve5",
+    "to": "qa_supporter_1795390117016@example.com",
+    "subject": "FEVIQO Payment — New Screenshot Requested",
+    "type": "member_payment_rejected",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:28:38.593Z"
+  },
+  {
+    "id": "failed-1795390118018-vsyj",
+    "to": "partner@feviqo.com",
+    "subject": "New FEVIQO Membership Payment — Verification Required",
+    "type": "admin_payment_verification",
+    "provider": "none",
+    "status": "failed",
+    "error": "Fallback: Make sure you open this page through a web server, FormSubmit will not work in pages browsed as HTML files.",
+    "sentAt": "2026-11-22T23:28:38.018Z"
+  },
+  {
     "id": "fs-1794576545520",
     "to": "rexanmedia01@gmail.com",
     "subject": "New FEVIQO Membership Payment — Verification Required",

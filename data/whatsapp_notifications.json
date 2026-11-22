@@ -1,0 +1,556 @@
+[
+  {
+    "id": "waq_mwsh20kj_fbffb7c8",
+    "idempotencyKey": "fallback:membership.approved:ord-1795390344559-88d6ce3d",
+    "eventType": "payment_approved",
+    "category": "activation",
+    "status": "pending",
+    "customerName": "QA Supporter Four",
+    "customerEmail": "qa_supporter4_1795390344481@example.com",
+    "memberId": "mem-1795390344544-2c0bbf",
+    "membershipId": "sub-1795390344908-069e62",
+    "orderId": "ord-1795390344559-88d6ce3d",
+    "planName": "Standard",
+    "amountDisplay": "PKR 1,599",
+    "expiresAt": "2026-12-22T23:32:24.908Z",
+    "rawPhone": "03009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Four,\nYour FEVIQO membership is now active.\n\nPlan: Standard\nAmount: PKR 1,599\nStart Date: 22 Nov 2026\nExpiry Date: 22 Dec 2026\nStatus: Active\n\nAccess your dramas here:\nhttps://feviqo.com/membership",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Four,\nYour FEVIQO membership is now active.\n\nPlan: Standard\nAmount: PKR 1,599\nStart Date: 22 Nov 2026\nExpiry Date: 22 Dec 2026\nStatus: Active\n\nAccess your dramas here:\nhttps://feviqo.com/membership",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Four%2C%0AYour%20FEVIQO%20membership%20is%20now%20active.%0A%0APlan%3A%20Standard%0AAmount%3A%20PKR%201%2C599%0AStart%20Date%3A%2022%20Nov%202026%0AExpiry%20Date%3A%2022%20Dec%202026%0AStatus%3A%20Active%0A%0AAccess%20your%20dramas%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsh20kj_eea525e5",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_approved notification for +923009876543.",
+        "createdAt": "2026-11-22T23:32:25.315Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:32:25.315Z",
+    "updatedAt": "2026-11-22T23:32:25.315Z"
+  },
+  {
+    "id": "waq_mwsh2090_2b53672c",
+    "idempotencyKey": "fallback:membership.proof_submitted:ord-1795390344559-88d6ce3d",
+    "eventType": "payment_submitted",
+    "category": "payment",
+    "status": "pending",
+    "customerName": "QA Supporter Four",
+    "customerEmail": "qa_supporter4_1795390344481@example.com",
+    "memberId": "mem-1795390344544-2c0bbf",
+    "orderId": "ord-1795390344559-88d6ce3d",
+    "planName": "Standard",
+    "rawPhone": "03009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Four,\nWe have received your payment submission for Standard.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Four,\nWe have received your payment submission for Standard.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Four%2C%0AWe%20have%20received%20your%20payment%20submission%20for%20Standard.%0A%0AYour%20payment%20is%20currently%20under%20verification.%20You%20will%20receive%20access%20shortly%20once%20confirmed.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsh2090_2f88b197",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_submitted notification for +923009876543.",
+        "createdAt": "2026-11-22T23:32:24.900Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:32:24.900Z",
+    "updatedAt": "2026-11-22T23:32:24.900Z"
+  },
+  {
+    "id": "waq_mwsh1zzd_233ee38c",
+    "idempotencyKey": "fallback:user.registered:mem-1795390344544-2c0bbf",
+    "eventType": "customer_registration",
+    "category": "registration",
+    "status": "pending",
+    "customerName": "QA Supporter Four",
+    "customerEmail": "qa_supporter4_1795390344481@example.com",
+    "memberId": "mem-1795390344544-2c0bbf",
+    "rawPhone": "+923009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Four,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Four,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Four%2C%0AWelcome%20to%20FEVIQO!%0A%0AYour%20account%20is%20ready.%20Select%20your%20preferred%20drama%20membership%20plan%20and%20complete%20your%20setup%20anytime%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership%0A%0AReply%20to%20this%20message%20if%20you%20need%20help%20choosing%20a%20plan.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsh1zzd_6ba564d7",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared customer_registration notification for +923009876543.",
+        "createdAt": "2026-11-22T23:32:24.553Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:32:24.553Z",
+    "updatedAt": "2026-11-22T23:32:24.553Z"
+  },
+  {
+    "id": "waq_mwsh0bbw_2e885ff6",
+    "idempotencyKey": "fallback:membership.rejected:ord-1795390265306-dd14347a",
+    "eventType": "payment_rejected",
+    "category": "rejection",
+    "status": "pending",
+    "customerName": "QA Supporter Three",
+    "customerEmail": "qa_supporter3_1795390264497@example.com",
+    "memberId": "mem-1795390264575-7c4b58",
+    "orderId": "ord-1795390265306-dd14347a",
+    "rawPhone": "03009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Three,\nYour payment verification could not be completed.\n\nReason: Receipt amount not received\n\nPlease reply here or upload a valid payment screenshot at https://feviqo.com/account.\nSupport: +923227811264",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Three,\nYour payment verification could not be completed.\n\nReason: Receipt amount not received\n\nPlease reply here or upload a valid payment screenshot at https://feviqo.com/account.\nSupport: +923227811264",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Three%2C%0AYour%20payment%20verification%20could%20not%20be%20completed.%0A%0AReason%3A%20Receipt%20amount%20not%20received%0A%0APlease%20reply%20here%20or%20upload%20a%20valid%20payment%20screenshot%20at%20https%3A%2F%2Ffeviqo.com%2Faccount.%0ASupport%3A%20%2B923227811264",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsh0bbw_b58187e5",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_rejected notification for +923009876543.",
+        "createdAt": "2026-11-22T23:31:05.948Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:31:05.948Z",
+    "updatedAt": "2026-11-22T23:31:05.948Z"
+  },
+  {
+    "id": "waq_mwsh0b2p_2ea0a9bd",
+    "idempotencyKey": "fallback:membership.proof_submitted:ord-1795390265306-dd14347a",
+    "eventType": "payment_submitted",
+    "category": "payment",
+    "status": "pending",
+    "customerName": "QA Supporter Three",
+    "customerEmail": "qa_supporter3_1795390264497@example.com",
+    "memberId": "mem-1795390264575-7c4b58",
+    "orderId": "ord-1795390265306-dd14347a",
+    "planName": "Plus",
+    "rawPhone": "03009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Three,\nWe have received your payment submission for Plus.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Three,\nWe have received your payment submission for Plus.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Three%2C%0AWe%20have%20received%20your%20payment%20submission%20for%20Plus.%0A%0AYour%20payment%20is%20currently%20under%20verification.%20You%20will%20receive%20access%20shortly%20once%20confirmed.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsh0b2p_88e2d20e",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_submitted notification for +923009876543.",
+        "createdAt": "2026-11-22T23:31:05.617Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:31:05.617Z",
+    "updatedAt": "2026-11-22T23:31:05.617Z"
+  },
+  {
+    "id": "waq_mwsh0atj_4483f06a",
+    "idempotencyKey": "fallback:membership.approved:ord-1795390264592-18e1cf59",
+    "eventType": "payment_approved",
+    "category": "activation",
+    "status": "pending",
+    "customerName": "QA Supporter Three",
+    "customerEmail": "qa_supporter3_1795390264497@example.com",
+    "memberId": "mem-1795390264575-7c4b58",
+    "membershipId": "sub-1795390264970-061de6",
+    "orderId": "ord-1795390264592-18e1cf59",
+    "planName": "Standard",
+    "amountDisplay": "PKR 1,599",
+    "expiresAt": "2026-12-22T23:31:04.970Z",
+    "rawPhone": "03009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Three,\nYour FEVIQO membership is now active.\n\nPlan: Standard\nAmount: PKR 1,599\nStart Date: 22 Nov 2026\nExpiry Date: 22 Dec 2026\nStatus: Active\n\nAccess your dramas here:\nhttps://feviqo.com/membership",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Three,\nYour FEVIQO membership is now active.\n\nPlan: Standard\nAmount: PKR 1,599\nStart Date: 22 Nov 2026\nExpiry Date: 22 Dec 2026\nStatus: Active\n\nAccess your dramas here:\nhttps://feviqo.com/membership",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Three%2C%0AYour%20FEVIQO%20membership%20is%20now%20active.%0A%0APlan%3A%20Standard%0AAmount%3A%20PKR%201%2C599%0AStart%20Date%3A%2022%20Nov%202026%0AExpiry%20Date%3A%2022%20Dec%202026%0AStatus%3A%20Active%0A%0AAccess%20your%20dramas%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsh0atj_3f73db6a",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_approved notification for +923009876543.",
+        "createdAt": "2026-11-22T23:31:05.287Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:31:05.287Z",
+    "updatedAt": "2026-11-22T23:31:05.287Z"
+  },
+  {
+    "id": "waq_mwsh0akj_382d55fb",
+    "idempotencyKey": "fallback:membership.proof_submitted:ord-1795390264592-18e1cf59",
+    "eventType": "payment_submitted",
+    "category": "payment",
+    "status": "pending",
+    "customerName": "QA Supporter Three",
+    "customerEmail": "qa_supporter3_1795390264497@example.com",
+    "memberId": "mem-1795390264575-7c4b58",
+    "orderId": "ord-1795390264592-18e1cf59",
+    "planName": "Standard",
+    "rawPhone": "03009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Three,\nWe have received your payment submission for Standard.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Three,\nWe have received your payment submission for Standard.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Three%2C%0AWe%20have%20received%20your%20payment%20submission%20for%20Standard.%0A%0AYour%20payment%20is%20currently%20under%20verification.%20You%20will%20receive%20access%20shortly%20once%20confirmed.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsh0akj_c2b1abba",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_submitted notification for +923009876543.",
+        "createdAt": "2026-11-22T23:31:04.963Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:31:04.963Z",
+    "updatedAt": "2026-11-22T23:31:04.963Z"
+  },
+  {
+    "id": "waq_mwsh0aa1_848d895b",
+    "idempotencyKey": "fallback:user.registered:mem-1795390264575-7c4b58",
+    "eventType": "customer_registration",
+    "category": "registration",
+    "status": "pending",
+    "customerName": "QA Supporter Three",
+    "customerEmail": "qa_supporter3_1795390264497@example.com",
+    "memberId": "mem-1795390264575-7c4b58",
+    "rawPhone": "+923009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Three,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Three,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Three%2C%0AWelcome%20to%20FEVIQO!%0A%0AYour%20account%20is%20ready.%20Select%20your%20preferred%20drama%20membership%20plan%20and%20complete%20your%20setup%20anytime%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership%0A%0AReply%20to%20this%20message%20if%20you%20need%20help%20choosing%20a%20plan.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsh0aa1_e9144d95",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared customer_registration notification for +923009876543.",
+        "createdAt": "2026-11-22T23:31:04.585Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:31:04.585Z",
+    "updatedAt": "2026-11-22T23:31:04.585Z"
+  },
+  {
+    "id": "waq_mwsgyfrf_0950896e",
+    "idempotencyKey": "fallback:membership.approved:ord-1795390177226-0c15b300",
+    "eventType": "payment_approved",
+    "category": "activation",
+    "status": "pending",
+    "customerName": "QA Supporter Two",
+    "customerEmail": "qa_supporter2_1795390177145@example.com",
+    "memberId": "mem-1795390177210-fcb585",
+    "membershipId": "sub-1795390178070-a42ac9",
+    "orderId": "ord-1795390177226-0c15b300",
+    "planName": "Standard",
+    "amountDisplay": "PKR 1,599",
+    "expiresAt": "2026-12-22T23:29:38.070Z",
+    "rawPhone": "03009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Two,\nYour FEVIQO membership is now active.\n\nPlan: Standard\nAmount: PKR 1,599\nStart Date: 22 Nov 2026\nExpiry Date: 22 Dec 2026\nStatus: Active\n\nAccess your dramas here:\nhttps://feviqo.com/membership",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Two,\nYour FEVIQO membership is now active.\n\nPlan: Standard\nAmount: PKR 1,599\nStart Date: 22 Nov 2026\nExpiry Date: 22 Dec 2026\nStatus: Active\n\nAccess your dramas here:\nhttps://feviqo.com/membership",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Two%2C%0AYour%20FEVIQO%20membership%20is%20now%20active.%0A%0APlan%3A%20Standard%0AAmount%3A%20PKR%201%2C599%0AStart%20Date%3A%2022%20Nov%202026%0AExpiry%20Date%3A%2022%20Dec%202026%0AStatus%3A%20Active%0A%0AAccess%20your%20dramas%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgyfrf_c6767a26",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_approved notification for +923009876543.",
+        "createdAt": "2026-11-22T23:29:38.379Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:29:38.379Z",
+    "updatedAt": "2026-11-22T23:29:38.379Z"
+  },
+  {
+    "id": "waq_mwsgyfin_b46b3fbb",
+    "idempotencyKey": "fallback:membership.proof_submitted:ord-1795390177226-0c15b300",
+    "eventType": "payment_submitted",
+    "category": "payment",
+    "status": "pending",
+    "customerName": "QA Supporter Two",
+    "customerEmail": "qa_supporter2_1795390177145@example.com",
+    "memberId": "mem-1795390177210-fcb585",
+    "orderId": "ord-1795390177226-0c15b300",
+    "planName": "Standard",
+    "rawPhone": "03009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Two,\nWe have received your payment submission for Standard.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Two,\nWe have received your payment submission for Standard.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Two%2C%0AWe%20have%20received%20your%20payment%20submission%20for%20Standard.%0A%0AYour%20payment%20is%20currently%20under%20verification.%20You%20will%20receive%20access%20shortly%20once%20confirmed.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgyfin_c30a0b38",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_submitted notification for +923009876543.",
+        "createdAt": "2026-11-22T23:29:38.063Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:29:38.063Z",
+    "updatedAt": "2026-11-22T23:29:38.063Z"
+  },
+  {
+    "id": "waq_mwsgyev8_1952a417",
+    "idempotencyKey": "fallback:user.registered:mem-1795390177210-fcb585",
+    "eventType": "customer_registration",
+    "category": "registration",
+    "status": "pending",
+    "customerName": "QA Supporter Two",
+    "customerEmail": "qa_supporter2_1795390177145@example.com",
+    "memberId": "mem-1795390177210-fcb585",
+    "rawPhone": "+923009876543",
+    "waDigits": "923009876543",
+    "recipientPhone": "+923009876543",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter Two,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter Two,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "waUrl": "https://wa.me/923009876543?text=Assalam%20o%20Alaikum%20QA%20Supporter%20Two%2C%0AWelcome%20to%20FEVIQO!%0A%0AYour%20account%20is%20ready.%20Select%20your%20preferred%20drama%20membership%20plan%20and%20complete%20your%20setup%20anytime%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership%0A%0AReply%20to%20this%20message%20if%20you%20need%20help%20choosing%20a%20plan.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgyev8_1573355e",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared customer_registration notification for +923009876543.",
+        "createdAt": "2026-11-22T23:29:37.220Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:29:37.220Z",
+    "updatedAt": "2026-11-22T23:29:37.220Z"
+  },
+  {
+    "id": "waq_mwsgx6fj_e5442512",
+    "idempotencyKey": "fallback:membership.approved:ord-1795390117130-69229179",
+    "eventType": "payment_approved",
+    "category": "activation",
+    "status": "pending",
+    "customerName": "QA Supporter",
+    "customerEmail": "qa_supporter_1795390117016@example.com",
+    "memberId": "mem-1795390117086-75e054",
+    "membershipId": "sub-1795390119315-e13d8d",
+    "orderId": "ord-1795390117130-69229179",
+    "planName": "Standard",
+    "amountDisplay": "PKR 1,099",
+    "expiresAt": "2026-12-22T23:28:39.315Z",
+    "rawPhone": "03001234567",
+    "waDigits": "923001234567",
+    "recipientPhone": "+923001234567",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter,\nYour FEVIQO membership is now active.\n\nPlan: Standard\nAmount: PKR 1,099\nStart Date: 22 Nov 2026\nExpiry Date: 22 Dec 2026\nStatus: Active\n\nAccess your dramas here:\nhttps://feviqo.com/membership",
+    "defaultMessage": "Assalam o Alaikum QA Supporter,\nYour FEVIQO membership is now active.\n\nPlan: Standard\nAmount: PKR 1,099\nStart Date: 22 Nov 2026\nExpiry Date: 22 Dec 2026\nStatus: Active\n\nAccess your dramas here:\nhttps://feviqo.com/membership",
+    "waUrl": "https://wa.me/923001234567?text=Assalam%20o%20Alaikum%20QA%20Supporter%2C%0AYour%20FEVIQO%20membership%20is%20now%20active.%0A%0APlan%3A%20Standard%0AAmount%3A%20PKR%201%2C099%0AStart%20Date%3A%2022%20Nov%202026%0AExpiry%20Date%3A%2022%20Dec%202026%0AStatus%3A%20Active%0A%0AAccess%20your%20dramas%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgx6fj_2307dc41",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_approved notification for +923001234567.",
+        "createdAt": "2026-11-22T23:28:39.631Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:28:39.631Z",
+    "updatedAt": "2026-11-22T23:28:39.631Z"
+  },
+  {
+    "id": "waq_mwsgx56s_249ee3a3",
+    "idempotencyKey": "fallback:membership.proof_submitted:ord-1795390117130-69229179",
+    "eventType": "payment_submitted",
+    "category": "payment",
+    "status": "pending",
+    "customerName": "QA Supporter",
+    "customerEmail": "qa_supporter_1795390117016@example.com",
+    "memberId": "mem-1795390117086-75e054",
+    "orderId": "ord-1795390117130-69229179",
+    "planName": "Standard",
+    "rawPhone": "03001234567",
+    "waDigits": "923001234567",
+    "recipientPhone": "+923001234567",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter,\nWe have received your payment submission for Standard.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter,\nWe have received your payment submission for Standard.\n\nYour payment is currently under verification. You will receive access shortly once confirmed.",
+    "waUrl": "https://wa.me/923001234567?text=Assalam%20o%20Alaikum%20QA%20Supporter%2C%0AWe%20have%20received%20your%20payment%20submission%20for%20Standard.%0A%0AYour%20payment%20is%20currently%20under%20verification.%20You%20will%20receive%20access%20shortly%20once%20confirmed.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgx56s_f304a4d3",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared payment_submitted notification for +923001234567.",
+        "createdAt": "2026-11-22T23:28:38.020Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:28:38.020Z",
+    "updatedAt": "2026-11-22T23:28:38.020Z"
+  },
+  {
+    "id": "waq_mwsgx4h4_935569d2",
+    "idempotencyKey": "fallback:user.registered:mem-1795390117086-75e054",
+    "eventType": "customer_registration",
+    "category": "registration",
+    "status": "pending",
+    "customerName": "QA Supporter",
+    "customerEmail": "qa_supporter_1795390117016@example.com",
+    "memberId": "mem-1795390117086-75e054",
+    "rawPhone": "+923001234567",
+    "waDigits": "923001234567",
+    "recipientPhone": "+923001234567",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "waUrl": "https://wa.me/923001234567?text=Assalam%20o%20Alaikum%20QA%20Supporter%2C%0AWelcome%20to%20FEVIQO!%0A%0AYour%20account%20is%20ready.%20Select%20your%20preferred%20drama%20membership%20plan%20and%20complete%20your%20setup%20anytime%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership%0A%0AReply%20to%20this%20message%20if%20you%20need%20help%20choosing%20a%20plan.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgx4h4_8eba1683",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared customer_registration notification for +923001234567.",
+        "createdAt": "2026-11-22T23:28:37.096Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:28:37.096Z",
+    "updatedAt": "2026-11-22T23:28:37.096Z"
+  },
+  {
+    "id": "waq_mwsgt9gx_7bc7ef01",
+    "idempotencyKey": "fallback:user.registered:mem-1795389936936-7ca8ac",
+    "eventType": "customer_registration",
+    "category": "registration",
+    "status": "pending",
+    "customerName": "QA Supporter",
+    "customerEmail": "qa_supporter_1795389936861@example.com",
+    "memberId": "mem-1795389936936-7ca8ac",
+    "rawPhone": "+923001234567",
+    "waDigits": "923001234567",
+    "recipientPhone": "+923001234567",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "waUrl": "https://wa.me/923001234567?text=Assalam%20o%20Alaikum%20QA%20Supporter%2C%0AWelcome%20to%20FEVIQO!%0A%0AYour%20account%20is%20ready.%20Select%20your%20preferred%20drama%20membership%20plan%20and%20complete%20your%20setup%20anytime%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership%0A%0AReply%20to%20this%20message%20if%20you%20need%20help%20choosing%20a%20plan.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgt9gx_27a786f2",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared customer_registration notification for +923001234567.",
+        "createdAt": "2026-11-22T23:25:36.945Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:25:36.945Z",
+    "updatedAt": "2026-11-22T23:25:36.945Z"
+  },
+  {
+    "id": "waq_mwsgsirx_bb489e32",
+    "idempotencyKey": "fallback:user.registered:mem-1795389902337-1f8223",
+    "eventType": "customer_registration",
+    "category": "registration",
+    "status": "failed",
+    "customerName": "Rehan",
+    "customerEmail": "editempirepro1@gmail.com",
+    "memberId": "mem-1795389902337-1f8223",
+    "rawPhone": "",
+    "waDigits": "",
+    "recipientPhone": "missing_phone",
+    "phoneValid": false,
+    "phoneError": "Customer phone number is missing.",
+    "message": "Assalam o Alaikum Rehan,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "defaultMessage": "Assalam o Alaikum Rehan,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "failureReason": "Customer phone number is missing.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgsiry_979057d0",
+        "action": "created",
+        "actor": "system",
+        "details": "Flagged invalid/incomplete phone (empty): Customer phone number is missing.",
+        "createdAt": "2026-11-22T23:25:02.349Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:25:02.349Z",
+    "updatedAt": "2026-11-22T23:25:02.349Z"
+  },
+  {
+    "id": "waq_mwsgquui_897be890",
+    "idempotencyKey": "fallback:user.registered:mem-1795389824674-5d98e7",
+    "eventType": "customer_registration",
+    "category": "registration",
+    "status": "pending",
+    "customerName": "QA Supporter",
+    "customerEmail": "qa_supporter_1795389824603@example.com",
+    "memberId": "mem-1795389824674-5d98e7",
+    "rawPhone": "+923001234567",
+    "waDigits": "923001234567",
+    "recipientPhone": "+923001234567",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "waUrl": "https://wa.me/923001234567?text=Assalam%20o%20Alaikum%20QA%20Supporter%2C%0AWelcome%20to%20FEVIQO!%0A%0AYour%20account%20is%20ready.%20Select%20your%20preferred%20drama%20membership%20plan%20and%20complete%20your%20setup%20anytime%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership%0A%0AReply%20to%20this%20message%20if%20you%20need%20help%20choosing%20a%20plan.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgquui_8b8b6065",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared customer_registration notification for +923001234567.",
+        "createdAt": "2026-11-22T23:23:44.682Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:23:44.682Z",
+    "updatedAt": "2026-11-22T23:23:44.682Z"
+  },
+  {
+    "id": "waq_mwsgj5xz_09949b94",
+    "idempotencyKey": "fallback:user.registered:mem-1795389465798-f4f472",
+    "eventType": "customer_registration",
+    "category": "registration",
+    "status": "pending",
+    "customerName": "QA Supporter",
+    "customerEmail": "qa_supporter_1795389465728@example.com",
+    "memberId": "mem-1795389465798-f4f472",
+    "rawPhone": "+923001234567",
+    "waDigits": "923001234567",
+    "recipientPhone": "+923001234567",
+    "phoneValid": true,
+    "message": "Assalam o Alaikum QA Supporter,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "defaultMessage": "Assalam o Alaikum QA Supporter,\nWelcome to FEVIQO!\n\nYour account is ready. Select your preferred drama membership plan and complete your setup anytime here:\nhttps://feviqo.com/membership\n\nReply to this message if you need help choosing a plan.",
+    "waUrl": "https://wa.me/923001234567?text=Assalam%20o%20Alaikum%20QA%20Supporter%2C%0AWelcome%20to%20FEVIQO!%0A%0AYour%20account%20is%20ready.%20Select%20your%20preferred%20drama%20membership%20plan%20and%20complete%20your%20setup%20anytime%20here%3A%0Ahttps%3A%2F%2Ffeviqo.com%2Fmembership%0A%0AReply%20to%20this%20message%20if%20you%20need%20help%20choosing%20a%20plan.",
+    "openCount": 0,
+    "actionLog": [
+      {
+        "id": "waact_mwsgj5xz_12e8d2ba",
+        "action": "created",
+        "actor": "system",
+        "details": "Prepared customer_registration notification for +923001234567.",
+        "createdAt": "2026-11-22T23:17:45.815Z"
+      }
+    ],
+    "createdAt": "2026-11-22T23:17:45.815Z",
+    "updatedAt": "2026-11-22T23:17:45.815Z"
+  }
+]

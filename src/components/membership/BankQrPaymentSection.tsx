@@ -47,11 +47,26 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [paymentNote, setPaymentNote] = useState(order.paymentNote || '');
+  const [declaredAmountInput, setDeclaredAmountInput] = useState<string>(() => {
+    if (typeof order.customerDeclaredAmountPkr === 'number' && order.customerDeclaredAmountPkr > 0) {
+      return String(Math.round(order.customerDeclaredAmountPkr));
+    }
+    return '';
+  });
   const [uploading, setUploading] = useState(false);
   const [confirmingFree, setConfirmingFree] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [whatsappNotice, setWhatsappNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setPaymentNote(order.paymentNote || '');
+    if (typeof order.customerDeclaredAmountPkr === 'number' && order.customerDeclaredAmountPkr > 0) {
+      setDeclaredAmountInput(String(Math.round(order.customerDeclaredAmountPkr)));
+    } else {
+      setDeclaredAmountInput('');
+    }
+  }, [order.id, order.customerDeclaredAmountPkr, order.paymentNote]);
 
   useEffect(() => {
     return () => {
@@ -68,11 +83,27 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
     order.currency === 'USD';
   const isRenewal = order.orderType === 'renewal';
   const usdAmount = Number(order.expectedAmount ?? order.amountUsd ?? 0);
-  const payableAmount = isInternational ? usdAmount : Number(order.amountPkr ?? 0);
+  const optionalContributionPkr = !isInternational
+    ? Math.max(0, Math.round(Number(order.optionalContributionPkr) || 0))
+    : 0;
+  const expectedTotalPkr = !isInternational
+    ? Math.max(0, Math.round(Number(order.expectedTotalPkr ?? order.amountPkr ?? 0)))
+    : 0;
+  const subscriptionPricePkr = !isInternational
+    ? Math.max(
+        0,
+        Math.round(
+          typeof order.subscriptionPricePkr === 'number'
+            ? order.subscriptionPricePkr
+            : Math.max(0, expectedTotalPkr - optionalContributionPkr)
+        )
+      )
+    : 0;
+  const payableAmount = isInternational ? usdAmount : expectedTotalPkr;
   const isZeroBalance = payableAmount <= 0;
   const originalAmount = isInternational
     ? Number(order.originalAmountUsd ?? order.amountUsd ?? 0)
-    : Number(order.originalAmountPkr ?? order.amountPkr ?? 0);
+    : Number(order.originalAmountPkr ?? subscriptionPricePkr ?? 0);
   const promoDiscount = isInternational
     ? Number(order.promoDiscountUsd ?? 0)
     : Number(order.promoDiscountPkr ?? 0);
@@ -86,6 +117,15 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
   const formatCurrencyAmt = (val: number) =>
     isInternational ? `$${val.toFixed(2)} USD` : `PKR ${Math.round(val).toLocaleString()}`;
   const exactAmountLabel = formatCurrencyAmt(payableAmount);
+  const parsedDeclaredPkr = Number(declaredAmountInput.replace(/,/g, '').trim());
+  const declaredAmountValid =
+    !isInternational &&
+    declaredAmountInput.trim() !== '' &&
+    Number.isFinite(parsedDeclaredPkr) &&
+    parsedDeclaredPkr > 0 &&
+    parsedDeclaredPkr <= 5000000;
+  const declaredDiffersFromExpected =
+    declaredAmountValid && Math.round(parsedDeclaredPkr) !== expectedTotalPkr;
 
   const qrUrl = isInternational
     ? order.qrImageUrl ||
@@ -143,15 +183,42 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
       return;
     }
 
+    if (!isInternational) {
+      const cleaned = declaredAmountInput.replace(/,/g, '').trim();
+      const parsed = Number(cleaned);
+      if (!cleaned || !Number.isFinite(parsed) || parsed <= 0) {
+        setUploadError(
+          isUrdu
+            ? 'براہ کرم بتائیں کہ آپ نے اصل میں کتنی رقم (PKR) ادا کی ہے۔'
+            : 'Please enter a valid positive amount in PKR for "How much did you actually pay? (PKR)".'
+        );
+        return;
+      }
+      if (parsed > 5000000) {
+        setUploadError(
+          isUrdu
+            ? 'درج کردہ رقم 5,000,000 PKR سے زیادہ نہیں ہو سکتی۔'
+            : 'Declared payment amount cannot exceed PKR 5,000,000.'
+        );
+        return;
+      }
+    }
+
     setUploading(true);
     setUploadError(null);
     try {
       const proofDataUrl = await compressProofImageToDataUrl(selectedFile).catch(() => '');
+      const declaredAmountPkr = !isInternational
+        ? Math.round(Number(declaredAmountInput.replace(/,/g, '').trim()))
+        : undefined;
       const res = await submitOrderPaymentProofFile({
         orderId: order.id,
         file: selectedFile,
         paymentNote,
         proofDataUrl: proofDataUrl || undefined,
+        customerDeclaredAmountPkr: declaredAmountPkr,
+        leaderboardDisplayName: order.leaderboardDisplayName,
+        showExactAmount: order.showExactAmount,
       });
 
       if ('error' in res) {
@@ -220,11 +287,18 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
     `Email: ${member.email}`,
     member.phone ? `Phone: ${member.phone}` : '',
     `Plan: ${order.planName} (${order.durationDays} Days)`,
+    !isInternational ? `Subscription Price: PKR ${subscriptionPricePkr.toLocaleString()}` : '',
+    optionalContributionPkr > 0
+      ? `Optional FEVIQO Contribution: PKR ${optionalContributionPkr.toLocaleString()}`
+      : '',
     hasSavings ? `Original Price: ${formatCurrencyAmt(originalAmount)}` : '',
     order.promoCode ? `Promo Applied: ${order.promoCode} (-${formatCurrencyAmt(promoDiscount)})` : '',
     referralDiscount > 0 ? `Referral Discount: -${formatCurrencyAmt(referralDiscount)}` : '',
     creditsUsed > 0 ? `Wallet Credits Used: -${formatCurrencyAmt(creditsUsed)}` : '',
-    `Amount Paid: ${exactAmountLabel}`,
+    `Expected Total: ${exactAmountLabel}`,
+    typeof order.customerDeclaredAmountPkr === 'number' && order.customerDeclaredAmountPkr > 0
+      ? `Declared Amount Transferred: PKR ${order.customerDeclaredAmountPkr.toLocaleString()}`
+      : '',
     `Selected Drama(s): ${dramaTitlesText}`,
     isZeroBalance ? '(Zero-balance order confirmed on FEVIQO)' : '(Payment screenshot attached below)',
   ]
@@ -317,6 +391,23 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
               {t(MEMBERSHIP_COPY.subbar.myAccountTab)}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Admin Correction / New Screenshot Requested Alert */}
+      {order.status === 'awaiting_payment' && order.correctionRequestNote && (
+        <div role="alert" className="rounded-2xl bg-amber-50 border-2 border-amber-300 p-5 space-y-2">
+          <div className="flex items-start gap-2.5 text-sm font-bold text-amber-950">
+            <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+            <span>
+              {isUrdu
+                ? 'ایڈمن نے نیا اسکرین شاٹ / تصحیح طلب کی ہے'
+                : 'New Payment Screenshot / Correction Requested by Admin'}
+            </span>
+          </div>
+          <p className="text-xs text-amber-900 leading-relaxed pl-7">
+            <strong>{isUrdu ? 'ایڈمن نوٹ:' : 'Admin Note:'}</strong> {order.correctionRequestNote}
+          </p>
         </div>
       )}
 
@@ -448,11 +539,61 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
                 <div className="font-bold text-[#0B0B0D] mt-0.5 text-sm">{order.planName}</div>
               </div>
               <div>
-                <div className="text-zinc-500">{t(MEMBERSHIP_COPY.payment.totalAmountLabel)}</div>
+                <div className="text-zinc-500">
+                  {isUrdu ? 'متوقع کل رقم' : 'Expected Total Payable'}
+                </div>
                 <div className="font-bold text-[#16A34A] mt-0.5 text-sm tabular-nums" dir="ltr">
                   {exactAmountLabel}
                 </div>
               </div>
+              {!isInternational && (optionalContributionPkr > 0 || typeof order.customerDeclaredAmountPkr === 'number') && (
+                <div className="sm:col-span-2 rounded-xl bg-zinc-50 border border-zinc-200 p-3.5 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-zinc-600">
+                    <span>{isUrdu ? 'سبسکرپشن پلان کی قیمت' : 'Subscription Price'}</span>
+                    <span dir="ltr" className="font-semibold text-[#0B0B0D] tabular-nums">
+                      PKR {subscriptionPricePkr.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-zinc-600">
+                    <span>{isUrdu ? 'اختیاری تعاون (Support FEVIQO)' : 'Optional Extra Contribution'}</span>
+                    <span dir="ltr" className="font-semibold text-[#16A34A] tabular-nums">
+                      {optionalContributionPkr > 0
+                        ? `+ PKR ${optionalContributionPkr.toLocaleString()}`
+                        : 'PKR 0'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-1.5 border-t border-zinc-200 font-bold text-[#0B0B0D]">
+                    <span>{isUrdu ? 'متوقع کل رقم' : 'Expected Total'}</span>
+                    <span dir="ltr" className="tabular-nums text-[#16A34A]">
+                      PKR {expectedTotalPkr.toLocaleString()}
+                    </span>
+                  </div>
+                  {typeof order.customerDeclaredAmountPkr === 'number' && order.customerDeclaredAmountPkr > 0 && (
+                    <div className="flex justify-between pt-1 border-t border-zinc-200/80 text-zinc-700">
+                      <span>{isUrdu ? 'آپ کی درج کردہ ادا شدہ رقم' : 'Your Declared Amount Paid'}</span>
+                      <span dir="ltr" className="font-bold text-[#0B0B0D] tabular-nums">
+                        PKR {order.customerDeclaredAmountPkr.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {optionalContributionPkr > 0 && (
+                    <div className="pt-1 text-[11px] text-zinc-500 flex flex-wrap items-center justify-between gap-2">
+                      <span>
+                        Leaderboard Name:{' '}
+                        <strong className="text-zinc-800">
+                          {order.leaderboardDisplayName || 'Anonymous Patron'}
+                        </strong>
+                      </span>
+                      <span>
+                        Amount Visibility:{' '}
+                        <strong className="text-zinc-800">
+                          {order.showExactAmount === false ? 'Amount Hidden' : 'Show Exact Amount'}
+                        </strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
               {hasSavings && (
                 <div className="sm:col-span-2 rounded-xl bg-emerald-50/70 border border-emerald-200 p-3.5 space-y-1.5 text-xs">
                   <div className="flex justify-between text-zinc-600">
@@ -671,6 +812,77 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
                   </span>
                   <span className="text-xs text-zinc-500">JPG, JPEG, PNG, WebP (Required)</span>
                 </button>
+              )}
+
+              {/* Customer Payment Declaration Field (Required for PKR Bank QR) */}
+              {!isInternational && (
+                <div className="rounded-xl bg-white border border-zinc-200 p-4 space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs pb-2 border-b border-zinc-100">
+                    <span className="text-zinc-600">
+                      Subscription: <strong className="text-[#0B0B0D] tabular-nums">PKR {subscriptionPricePkr.toLocaleString()}</strong>
+                      {optionalContributionPkr > 0 && (
+                        <>
+                          {' '}+ Contribution:{' '}
+                          <strong className="text-[#16A34A] tabular-nums">
+                            PKR {optionalContributionPkr.toLocaleString()}
+                          </strong>
+                        </>
+                      )}
+                    </span>
+                    <span className="font-bold text-[#16A34A] tabular-nums" dir="ltr">
+                      Expected Total: PKR {expectedTotalPkr.toLocaleString()}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor={`declared-amount-${order.id}`}
+                      className="block text-xs font-bold text-[#0B0B0D]"
+                    >
+                      How much did you actually pay? (PKR) <span className="text-red-600">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">
+                        PKR
+                      </span>
+                      <input
+                        id={`declared-amount-${order.id}`}
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={5000000}
+                        step={1}
+                        required
+                        dir="ltr"
+                        value={declaredAmountInput}
+                        onChange={(e) => {
+                          setDeclaredAmountInput(e.target.value);
+                          setUploadError(null);
+                        }}
+                        placeholder={`e.g. ${expectedTotalPkr}`}
+                        className="w-full pl-12 pr-3.5 py-2.5 text-sm font-semibold tabular-nums bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                      />
+                    </div>
+                    <p className="text-[11px] text-zinc-500">
+                      Enter the exact total amount you transferred via bank transfer. Your payment
+                      will be manually verified by an admin before membership activation.
+                    </p>
+                    {declaredDiffersFromExpected && (
+                      <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] text-amber-900">
+                        Note: Your entered amount (PKR{' '}
+                        <span className="font-bold tabular-nums">
+                          {Math.round(parsedDeclaredPkr).toLocaleString()}
+                        </span>
+                        ) differs from the expected total (PKR{' '}
+                        <span className="font-bold tabular-nums">
+                          {expectedTotalPkr.toLocaleString()}
+                        </span>
+                        ). You can still submit — our admin will verify the exact received amount
+                        from your screenshot.
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               <div className="space-y-1">

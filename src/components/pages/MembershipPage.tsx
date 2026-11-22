@@ -14,6 +14,8 @@ import {
   Wallet,
   X,
   Lock,
+  Heart,
+  RotateCcw,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
@@ -54,6 +56,7 @@ import {
 import { MembershipAuthModal } from '../membership/MembershipAuthModal';
 import { MembershipAccountPanel } from '../membership/MembershipAccountPanel';
 import { BankQrPaymentSection } from '../membership/BankQrPaymentSection';
+import { SupportersLeaderboardSection } from '../membership/SupportersLeaderboardSection';
 import { notifyMembershipAuthChanged } from '../membership/useDramaEntitlement';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MEMBERSHIP_COPY } from '../../i18n/membershipTranslations';
@@ -108,6 +111,59 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
   const [pricingQuote, setPricingQuote] = useState<CheckoutPricingQuote | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
+
+  // Optional Extra Contribution ("Support FEVIQO ❤️") & Leaderboard Display Preferences
+  const [optionalContributionPkr, setOptionalContributionPkr] = useState<number>(0);
+  const [customContributionInput, setCustomContributionInput] = useState<string>('');
+  const [contributionError, setContributionError] = useState<string | null>(null);
+  const [leaderboardDisplayName, setLeaderboardDisplayName] = useState<string>('');
+  const [showExactAmount, setShowExactAmount] = useState<boolean>(true);
+
+  const MAX_OPTIONAL_CONTRIBUTION_PKR = 500000;
+
+  const handleQuickAddContribution = (delta: number) => {
+    setContributionError(null);
+    setOptionalContributionPkr((prev) => {
+      const next = prev + delta;
+      if (next > MAX_OPTIONAL_CONTRIBUTION_PKR) {
+        setContributionError(
+          `Optional contribution cannot exceed PKR ${MAX_OPTIONAL_CONTRIBUTION_PKR.toLocaleString()}.`
+        );
+        return prev;
+      }
+      setCustomContributionInput(next > 0 ? String(next) : '');
+      return next;
+    });
+  };
+
+  const handleCustomContributionChange = (raw: string) => {
+    setCustomContributionInput(raw);
+    const trimmed = raw.replace(/,/g, '').trim();
+    if (!trimmed) {
+      setOptionalContributionPkr(0);
+      setContributionError(null);
+      return;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setContributionError('Please enter a valid non-negative contribution amount in PKR.');
+      return;
+    }
+    if (parsed > MAX_OPTIONAL_CONTRIBUTION_PKR) {
+      setContributionError(
+        `Optional contribution cannot exceed PKR ${MAX_OPTIONAL_CONTRIBUTION_PKR.toLocaleString()}.`
+      );
+      return;
+    }
+    setContributionError(null);
+    setOptionalContributionPkr(Math.round(parsed));
+  };
+
+  const handleResetContribution = () => {
+    setOptionalContributionPkr(0);
+    setCustomContributionInput('');
+    setContributionError(null);
+  };
 
   // Payment region, geo pricing, renewal mode & episode deep-link context
   const [paymentRegion, setPaymentRegion] = useState<PaymentRegion>('pakistan');
@@ -521,6 +577,10 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
     try {
       const indicativeLocalDisplay =
         paymentRegion === 'international' ? getPlanIndicativeLocal(plan) : undefined;
+      const safeContributionPkr =
+        paymentRegion === 'pakistan'
+          ? Math.max(0, Math.min(MAX_OPTIONAL_CONTRIBUTION_PKR, Math.round(optionalContributionPkr || 0)))
+          : 0;
       const res = await createMembershipCheckout({
         planId: plan.id,
         selectedDramaIds: dramaIds,
@@ -531,6 +591,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         indicativeLocalDisplay,
         promoCode: appliedPromoCode || undefined,
         applyCredits,
+        optionalContributionPkr: safeContributionPkr,
+        leaderboardDisplayName: leaderboardDisplayName.trim() || 'Anonymous Patron',
+        showExactAmount,
       });
 
       if (!res.success || !res.order) {
@@ -583,6 +646,11 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
 
     setSelectionWarning(null);
     setCheckoutError(null);
+
+    if (paymentRegion === 'pakistan' && contributionError) {
+      setCheckoutError(contributionError);
+      return;
+    }
 
     if (selectedPlan.dramaLimit !== 'all') {
       if (selectedDramaIds.length === 0) {
@@ -1228,6 +1296,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                           setPaymentRegion('international');
                           setRegionManuallySet(true);
                           setActivePaymentOrder(null);
+                          handleResetContribution();
                         }}
                         className={`px-3.5 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${
                           paymentRegion === 'international'
@@ -1656,214 +1725,378 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                           pricingQuote.creditsUsed > 0)
                     );
 
+                    const activeContributionPkr =
+                      paymentRegion === 'pakistan' ? Math.max(0, optionalContributionPkr) : 0;
+                    const totalWithContribution =
+                      paymentRegion === 'pakistan' ? finalVal + activeContributionPkr : finalVal;
+
                     return (
-                      <div className="rounded-2xl bg-white border border-zinc-200 p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                        <div className="lg:col-span-7 space-y-4">
-                          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#16A34A]">
-                            <Tag className="w-3.5 h-3.5" />
-                            <span>{t(MEMBERSHIP_COPY.promo.sectionTitle)}</span>
+                      <div className="space-y-6">
+                        {/* Optional Extra Contribution Section — "Support FEVIQO ❤️" (Pakistan PKR Checkout) */}
+                        {paymentRegion === 'pakistan' && (
+                          <div
+                            id="support-feviqo-contribution"
+                            className="rounded-2xl bg-white border border-zinc-200 p-5 sm:p-6 space-y-5"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                              <div className="space-y-1.5">
+                                <div className="inline-flex items-center gap-2 text-base sm:text-lg font-bold text-[#0B0B0D]">
+                                  <Heart className="w-4 h-4 text-rose-500 fill-rose-500 shrink-0" />
+                                  <span>Support FEVIQO ❤️</span>
+                                  <span className="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 text-[10px] font-bold uppercase tracking-wider">
+                                    Optional
+                                  </span>
+                                </div>
+                                <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed max-w-2xl">
+                                  Love what we do? Add an optional contribution to help us bring more
+                                  Urdu-dubbed entertainment to everyone.
+                                </p>
+                              </div>
+                              {activeContributionPkr > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={handleResetContribution}
+                                  className="self-start px-3 py-1.5 rounded-lg border border-zinc-300 hover:bg-zinc-100 text-xs font-semibold text-zinc-700 inline-flex items-center gap-1.5 transition cursor-pointer shrink-0"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                  <span>Reset to PKR 0</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Quick-Add Buttons + Custom Amount Input */}
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                              <div className="lg:col-span-7 space-y-2">
+                                <div className="text-xs font-semibold text-zinc-700">
+                                  Quick-add optional contribution (PKR)
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {[100, 500, 1000, 2500].map((amt) => (
+                                    <button
+                                      key={amt}
+                                      type="button"
+                                      onClick={() => handleQuickAddContribution(amt)}
+                                      className="px-3.5 py-2 rounded-xl border border-zinc-300 hover:border-[#22C55E] hover:bg-emerald-50 text-[#0B0B0D] text-xs font-bold tabular-nums transition cursor-pointer"
+                                    >
+                                      +{amt.toLocaleString()} PKR
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="lg:col-span-5 space-y-1.5">
+                                <label
+                                  htmlFor="custom-contribution-pkr"
+                                  className="block text-xs font-semibold text-zinc-700"
+                                >
+                                  Or enter custom amount (PKR)
+                                </label>
+                                <div className="relative">
+                                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">
+                                    PKR
+                                  </span>
+                                  <input
+                                    id="custom-contribution-pkr"
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={0}
+                                    max={MAX_OPTIONAL_CONTRIBUTION_PKR}
+                                    step={50}
+                                    dir="ltr"
+                                    value={customContributionInput}
+                                    onChange={(e) => handleCustomContributionChange(e.target.value)}
+                                    placeholder="0"
+                                    className="w-full pl-12 pr-3.5 py-2.5 text-sm font-semibold tabular-nums bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {contributionError && (
+                              <div
+                                role="alert"
+                                className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2"
+                              >
+                                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                <span>{contributionError}</span>
+                              </div>
+                            )}
+
+                            {/* Leaderboard Display Preferences (shown when contributing > 0) */}
+                            {activeContributionPkr > 0 && (
+                              <div className="rounded-xl bg-[#F8FAFC] border border-zinc-200 p-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                                <div className="md:col-span-7 space-y-1">
+                                  <label
+                                    htmlFor="leaderboard-display-name"
+                                    className="block text-xs font-semibold text-zinc-700"
+                                  >
+                                    Leaderboard Display Name (Optional)
+                                  </label>
+                                  <input
+                                    id="leaderboard-display-name"
+                                    type="text"
+                                    maxLength={60}
+                                    value={leaderboardDisplayName}
+                                    onChange={(e) => setLeaderboardDisplayName(e.target.value)}
+                                    placeholder="Anonymous Patron"
+                                    className="w-full px-3.5 py-2 text-xs sm:text-sm bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                                  />
+                                  <p className="text-[11px] text-zinc-500">
+                                    Shown on the public Top Supporters leaderboard after admin
+                                    verification. Leave blank to display as &quot;Anonymous Patron&quot;.
+                                  </p>
+                                </div>
+                                <div className="md:col-span-5">
+                                  <label className="flex items-start gap-2.5 cursor-pointer p-3 rounded-xl bg-white border border-zinc-200 hover:border-zinc-400 transition">
+                                    <input
+                                      type="checkbox"
+                                      checked={showExactAmount}
+                                      onChange={(e) => setShowExactAmount(e.target.checked)}
+                                      className="mt-0.5 h-4 w-4 accent-[#16A34A] rounded cursor-pointer"
+                                    />
+                                    <div className="text-xs space-y-0.5">
+                                      <div className="font-semibold text-[#0B0B0D]">
+                                        Show exact contribution amount
+                                      </div>
+                                      <div className="text-[11px] text-zinc-500">
+                                        {showExactAmount
+                                          ? `Displays PKR ${activeContributionPkr.toLocaleString()}`
+                                          : 'Displays "Amount Hidden"'}
+                                      </div>
+                                    </div>
+                                  </label>
+                                </div>
+                              </div>
+                            )}
+
+                            <p className="text-[11px] text-zinc-500">
+                              Your contribution is 100% optional and helps fund Urdu dubbing on
+                              FEVIQO. Your selected {selectedPlan.name} plan duration and drama
+                              entitlements remain unchanged.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="rounded-2xl bg-white border border-zinc-200 p-5 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                          <div className="lg:col-span-7 space-y-4">
+                            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-[#16A34A]">
+                              <Tag className="w-3.5 h-3.5" />
+                              <span>{t(MEMBERSHIP_COPY.promo.sectionTitle)}</span>
+                            </div>
+
+                            <form onSubmit={handleApplyPromoCode} className="space-y-2">
+                              <label htmlFor="checkout-promo-input" className="block text-xs font-semibold text-zinc-700">
+                                {t(MEMBERSHIP_COPY.promo.inputLabel)}
+                              </label>
+                              <div className="flex flex-col sm:flex-row gap-2.5">
+                                <input
+                                  id="checkout-promo-input"
+                                  type="text"
+                                  dir="ltr"
+                                  value={promoCodeInput}
+                                  onChange={(e) => {
+                                    setPromoCodeInput(normalizeReferralInput(e.target.value));
+                                    setPromoError(null);
+                                  }}
+                                  placeholder={t(MEMBERSHIP_COPY.promo.inputPlaceholder)}
+                                  className="flex-1 px-3.5 py-2.5 text-sm font-mono uppercase bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="submit"
+                                    disabled={promoLoading || !promoCodeInput.trim()}
+                                    className="px-4 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] disabled:opacity-50 text-xs font-semibold transition cursor-pointer whitespace-nowrap"
+                                  >
+                                    {promoLoading
+                                      ? t(MEMBERSHIP_COPY.promo.applyingBtn)
+                                      : t(MEMBERSHIP_COPY.promo.applyBtn)}
+                                  </button>
+                                  {appliedPromoCode && (
+                                    <button
+                                      type="button"
+                                      onClick={handleRemovePromoCode}
+                                      className="px-3 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-xs font-semibold text-zinc-700 inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                      <span>{t(MEMBERSHIP_COPY.promo.removeBtn)}</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </form>
+
+                            {promoError && (
+                              <div
+                                role="alert"
+                                className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2"
+                              >
+                                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                                <span>{promoError}</span>
+                              </div>
+                            )}
+
+                            {pricingQuote?.promoApplied && (
+                              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
+                                <div className="font-semibold">
+                                  {t(MEMBERSHIP_COPY.promo.appliedBadge)}:{' '}
+                                  <span className="font-mono font-bold text-[#16A34A]" dir="ltr">
+                                    {pricingQuote.promoApplied.code}
+                                  </span>
+                                  {pricingQuote.promoApplied.description ? ` · ${pricingQuote.promoApplied.description}` : ''}
+                                </div>
+                                <span className="font-bold text-[#16A34A]" dir="ltr">
+                                  -{formatQuoteAmount(pricingQuote.promoDiscount)}
+                                </span>
+                              </div>
+                            )}
+
+                            {pricingQuote?.referralDiscountApplied && (
+                              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-semibold">
+                                  {t(MEMBERSHIP_COPY.promo.referralFirstOrderBadge)}
+                                </span>
+                                <span className="font-bold text-[#16A34A]" dir="ltr">
+                                  -{formatQuoteAmount(pricingQuote.referralDiscount)}
+                                </span>
+                              </div>
+                            )}
+
+                            {account && availableCredits > 0 && (
+                              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-[#F8FAFC] cursor-pointer hover:border-[#22C55E] transition">
+                                <input
+                                  type="checkbox"
+                                  checked={applyCredits}
+                                  onChange={(e) => setApplyCredits(e.target.checked)}
+                                  className="mt-0.5 h-4 w-4 accent-[#16A34A] rounded cursor-pointer"
+                                />
+                                <div className="text-xs space-y-0.5">
+                                  <div className="font-bold text-[#0B0B0D] flex items-center gap-1.5">
+                                    <Wallet className="w-3.5 h-3.5 text-[#16A34A]" />
+                                    <span>{t(MEMBERSHIP_COPY.promo.applyCreditsLabel)}</span>
+                                  </div>
+                                  <div className="text-zinc-600">
+                                    {t(MEMBERSHIP_COPY.promo.availableCreditsLabel)}{' '}
+                                    <strong className="text-[#0B0B0D]" dir="ltr">
+                                      {formatQuoteAmount(availableCredits)}
+                                    </strong>
+                                  </div>
+                                </div>
+                              </label>
+                            )}
                           </div>
 
-                          <form onSubmit={handleApplyPromoCode} className="space-y-2">
-                            <label htmlFor="checkout-promo-input" className="block text-xs font-semibold text-zinc-700">
-                              {t(MEMBERSHIP_COPY.promo.inputLabel)}
-                            </label>
-                            <div className="flex flex-col sm:flex-row gap-2.5">
-                              <input
-                                id="checkout-promo-input"
-                                type="text"
-                                dir="ltr"
-                                value={promoCodeInput}
-                                onChange={(e) => {
-                                  setPromoCodeInput(normalizeReferralInput(e.target.value));
-                                  setPromoError(null);
-                                }}
-                                placeholder={t(MEMBERSHIP_COPY.promo.inputPlaceholder)}
-                                className="flex-1 px-3.5 py-2.5 text-sm font-mono uppercase bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
-                              />
-                              <div className="flex items-center gap-2">
-                                <button
-                                  type="submit"
-                                  disabled={promoLoading || !promoCodeInput.trim()}
-                                  className="px-4 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] disabled:opacity-50 text-xs font-semibold transition cursor-pointer whitespace-nowrap"
-                                >
-                                  {promoLoading
-                                    ? t(MEMBERSHIP_COPY.promo.applyingBtn)
-                                    : t(MEMBERSHIP_COPY.promo.applyBtn)}
-                                </button>
-                                {appliedPromoCode && (
-                                  <button
-                                    type="button"
-                                    onClick={handleRemovePromoCode}
-                                    className="px-3 py-2.5 rounded-xl border border-zinc-300 hover:bg-zinc-100 text-xs font-semibold text-zinc-700 inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                    <span>{t(MEMBERSHIP_COPY.promo.removeBtn)}</span>
-                                  </button>
-                                )}
-                              </div>
+                          {/* Itemized Checkout Price Summary */}
+                          <div className="lg:col-span-5 rounded-xl border border-zinc-200 bg-[#F8FAFC] p-4 sm:p-5 space-y-2.5 text-xs">
+                            <div className="flex items-center justify-between text-zinc-600">
+                              <span>
+                                Subscription Price ({selectedPlan.name})
+                              </span>
+                              <span className="font-semibold text-[#0B0B0D] tabular-nums" dir="ltr">
+                                {formatQuoteAmount(origVal)}
+                              </span>
                             </div>
-                          </form>
-
-                          {promoError && (
-                            <div
-                              role="alert"
-                              className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2"
-                            >
-                              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                              <span>{promoError}</span>
-                            </div>
-                          )}
-
-                          {pricingQuote?.promoApplied && (
-                            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
-                              <div className="font-semibold">
-                                {t(MEMBERSHIP_COPY.promo.appliedBadge)}:{' '}
-                                <span className="font-mono font-bold text-[#16A34A]" dir="ltr">
-                                  {pricingQuote.promoApplied.code}
+                            {pricingQuote && pricingQuote.promoDiscount > 0 && (
+                              <div className="flex items-center justify-between text-[#16A34A] font-semibold">
+                                <span>
+                                  {t(MEMBERSHIP_COPY.promo.promoDiscount)} ({pricingQuote.promoApplied?.code})
                                 </span>
-                                {pricingQuote.promoApplied.description ? ` · ${pricingQuote.promoApplied.description}` : ''}
+                                <span className="tabular-nums" dir="ltr">
+                                  -{formatQuoteAmount(pricingQuote.promoDiscount)}
+                                </span>
                               </div>
-                              <span className="font-bold text-[#16A34A]" dir="ltr">
-                                -{formatQuoteAmount(pricingQuote.promoDiscount)}
+                            )}
+                            {pricingQuote && pricingQuote.referralDiscount > 0 && (
+                              <div className="flex items-center justify-between text-[#16A34A] font-semibold">
+                                <span>{t(MEMBERSHIP_COPY.promo.referralDiscount)}</span>
+                                <span className="tabular-nums" dir="ltr">
+                                  -{formatQuoteAmount(pricingQuote.referralDiscount)}
+                                </span>
+                              </div>
+                            )}
+                            {pricingQuote && pricingQuote.creditsUsed > 0 && (
+                              <div className="flex items-center justify-between text-[#16A34A] font-semibold">
+                                <span>{t(MEMBERSHIP_COPY.promo.walletCredits)}</span>
+                                <span className="tabular-nums" dir="ltr">
+                                  -{formatQuoteAmount(pricingQuote.creditsUsed)}
+                                </span>
+                              </div>
+                            )}
+                            {paymentRegion === 'pakistan' && (
+                              <div className="flex items-center justify-between text-zinc-600">
+                                <span>Optional Contribution</span>
+                                <span
+                                  className={`font-semibold tabular-nums ${
+                                    activeContributionPkr > 0 ? 'text-[#16A34A]' : 'text-zinc-500'
+                                  }`}
+                                  dir="ltr"
+                                >
+                                  {activeContributionPkr > 0
+                                    ? `+ PKR ${activeContributionPkr.toLocaleString()}`
+                                    : 'PKR 0'}
+                                </span>
+                              </div>
+                            )}
+                            <div className="pt-2.5 border-t border-zinc-200 flex items-center justify-between text-sm font-bold text-[#0B0B0D]">
+                              <span>Total Payable</span>
+                              <span className="text-lg text-[#16A34A] tabular-nums" dir="ltr">
+                                {formatQuoteAmount(totalWithContribution)}
                               </span>
                             </div>
-                          )}
-
-                          {pricingQuote?.referralDiscountApplied && (
-                            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-wrap items-center justify-between gap-2">
-                              <span className="font-semibold">
-                                {t(MEMBERSHIP_COPY.promo.referralFirstOrderBadge)}
-                              </span>
-                              <span className="font-bold text-[#16A34A]" dir="ltr">
-                                -{formatQuoteAmount(pricingQuote.referralDiscount)}
-                              </span>
-                            </div>
-                          )}
-
-                          {account && availableCredits > 0 && (
-                            <label className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-[#F8FAFC] cursor-pointer hover:border-[#22C55E] transition">
-                              <input
-                                type="checkbox"
-                                checked={applyCredits}
-                                onChange={(e) => setApplyCredits(e.target.checked)}
-                                className="mt-0.5 h-4 w-4 accent-[#16A34A] rounded cursor-pointer"
-                              />
-                              <div className="text-xs space-y-0.5">
-                                <div className="font-bold text-[#0B0B0D] flex items-center gap-1.5">
-                                  <Wallet className="w-3.5 h-3.5 text-[#16A34A]" />
-                                  <span>{t(MEMBERSHIP_COPY.promo.applyCreditsLabel)}</span>
-                                </div>
-                                <div className="text-zinc-600">
-                                  {t(MEMBERSHIP_COPY.promo.availableCreditsLabel)}{' '}
-                                  <strong className="text-[#0B0B0D]" dir="ltr">
-                                    {formatQuoteAmount(availableCredits)}
-                                  </strong>
-                                </div>
+                            {hasAnyDiscount && totalWithContribution === 0 && (
+                              <div className="pt-1 text-[11px] font-semibold text-[#16A34A]">
+                                {t(MEMBERSHIP_COPY.promo.zeroBalanceTitle)}
                               </div>
-                            </label>
-                          )}
+                            )}
+                          </div>
                         </div>
 
-                        {/* Itemized Checkout Price Summary */}
-                        <div className="lg:col-span-5 rounded-xl border border-zinc-200 bg-[#F8FAFC] p-4 sm:p-5 space-y-2.5 text-xs">
-                          <div className="flex items-center justify-between text-zinc-600">
+                        {/* Checkout Action Bar */}
+                        <div className="rounded-2xl bg-white border border-zinc-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="text-sm font-bold text-[#0B0B0D] flex flex-wrap items-center gap-2">
+                              <span>{selectedPlan.name} ·</span>
+                              <span dir="ltr" className="text-[#16A34A] font-bold tabular-nums">
+                                {formatQuoteAmount(totalWithContribution)}
+                              </span>
+                              {activeContributionPkr > 0 && (
+                                <span className="text-xs font-medium text-zinc-500 tabular-nums" dir="ltr">
+                                  (Plan {formatQuoteAmount(finalVal)} + Contribution PKR{' '}
+                                  {activeContributionPkr.toLocaleString()})
+                                </span>
+                              )}
+                              <span>({t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})</span>
+                              {renewMembershipId ? ` · ${t(MEMBERSHIP_COPY.payment.orderTypeRenewal)}` : ''}
+                            </div>
+                            <div className="text-xs text-zinc-600">
+                              {account
+                                ? `${t(MEMBERSHIP_COPY.dramaSelection.signedInAs)} ${account.member.email}`
+                                : t(MEMBERSHIP_COPY.dramaSelection.guestCheckoutNote)}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={checkingOut || Boolean(contributionError)}
+                            onClick={handleCheckoutSubmit}
+                            className="px-6 py-3.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] disabled:opacity-60 text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer shrink-0"
+                          >
                             <span>
-                              {t(MEMBERSHIP_COPY.promo.originalPrice)} ({selectedPlan.name})
+                              {checkingOut
+                                ? t(MEMBERSHIP_COPY.dramaSelection.preparingCheckout)
+                                : account
+                                ? totalWithContribution <= 0
+                                  ? t(MEMBERSHIP_COPY.promo.zeroBalanceBtn)
+                                  : paymentRegion === 'international'
+                                  ? t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentUsd)
+                                  : t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentPkr)
+                                : t(MEMBERSHIP_COPY.dramaSelection.continueSignInCheckout)}
                             </span>
-                            <span className="font-semibold text-[#0B0B0D] tabular-nums" dir="ltr">
-                              {formatQuoteAmount(origVal)}
-                            </span>
-                          </div>
-                          {pricingQuote && pricingQuote.promoDiscount > 0 && (
-                            <div className="flex items-center justify-between text-[#16A34A] font-semibold">
-                              <span>
-                                {t(MEMBERSHIP_COPY.promo.promoDiscount)} ({pricingQuote.promoApplied?.code})
-                              </span>
-                              <span className="tabular-nums" dir="ltr">
-                                -{formatQuoteAmount(pricingQuote.promoDiscount)}
-                              </span>
-                            </div>
-                          )}
-                          {pricingQuote && pricingQuote.referralDiscount > 0 && (
-                            <div className="flex items-center justify-between text-[#16A34A] font-semibold">
-                              <span>{t(MEMBERSHIP_COPY.promo.referralDiscount)}</span>
-                              <span className="tabular-nums" dir="ltr">
-                                -{formatQuoteAmount(pricingQuote.referralDiscount)}
-                              </span>
-                            </div>
-                          )}
-                          {pricingQuote && pricingQuote.creditsUsed > 0 && (
-                            <div className="flex items-center justify-between text-[#16A34A] font-semibold">
-                              <span>{t(MEMBERSHIP_COPY.promo.walletCredits)}</span>
-                              <span className="tabular-nums" dir="ltr">
-                                -{formatQuoteAmount(pricingQuote.creditsUsed)}
-                              </span>
-                            </div>
-                          )}
-                          <div className="pt-2.5 border-t border-zinc-200 flex items-center justify-between text-sm font-bold text-[#0B0B0D]">
-                            <span>{t(MEMBERSHIP_COPY.promo.netPayable)}</span>
-                            <span className="text-lg text-[#16A34A] tabular-nums" dir="ltr">
-                              {formatQuoteAmount(finalVal)}
-                            </span>
-                          </div>
-                          {hasAnyDiscount && finalVal === 0 && (
-                            <div className="pt-1 text-[11px] font-semibold text-[#16A34A]">
-                              {t(MEMBERSHIP_COPY.promo.zeroBalanceTitle)}
-                            </div>
-                          )}
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
                     );
                   })()}
-
-                  {/* Checkout Action Bar */}
-                  <div className="rounded-2xl bg-white border border-zinc-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="text-sm font-bold text-[#0B0B0D] flex flex-wrap items-center gap-2">
-                        <span>{selectedPlan.name} ·</span>
-                        {pricingQuote && pricingQuote.finalAmount < pricingQuote.originalAmount ? (
-                          <>
-                            <span dir="ltr" className="text-zinc-400 line-through font-normal">
-                              {formatQuoteAmount(pricingQuote.originalAmount)}
-                            </span>
-                            <span dir="ltr" className="text-[#16A34A] font-bold">
-                              {formatQuoteAmount(pricingQuote.finalAmount)}
-                            </span>
-                          </>
-                        ) : (
-                          <span dir="ltr">{getPlanDisplayPrice(selectedPlan)}</span>
-                        )}
-                        <span>({t(MEMBERSHIP_COPY.plans.items[selectedPlan.id].durationLabel)})</span>
-                        {renewMembershipId ? ` · ${t(MEMBERSHIP_COPY.payment.orderTypeRenewal)}` : ''}
-                      </div>
-                      <div className="text-xs text-zinc-600">
-                        {account
-                          ? `${t(MEMBERSHIP_COPY.dramaSelection.signedInAs)} ${account.member.email}`
-                          : t(MEMBERSHIP_COPY.dramaSelection.guestCheckoutNote)}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      disabled={checkingOut}
-                      onClick={handleCheckoutSubmit}
-                      className="px-6 py-3.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] disabled:opacity-60 text-sm font-semibold inline-flex items-center justify-center gap-2 transition cursor-pointer shrink-0"
-                    >
-                      <span>
-                        {checkingOut
-                          ? t(MEMBERSHIP_COPY.dramaSelection.preparingCheckout)
-                          : account
-                          ? pricingQuote && pricingQuote.finalAmount <= 0
-                            ? t(MEMBERSHIP_COPY.promo.zeroBalanceBtn)
-                            : paymentRegion === 'international'
-                            ? t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentUsd)
-                            : t(MEMBERSHIP_COPY.dramaSelection.proceedToPaymentPkr)
-                          : t(MEMBERSHIP_COPY.dramaSelection.continueSignInCheckout)}
-                      </span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
                 </>
               )}
 
@@ -1900,6 +2133,24 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
               )}
             </div>
           </section>
+        )}
+
+        {/* FEVIQO Top Supporters Live Leaderboard */}
+        {!isPaymentScreenshotLocked && (
+          <SupportersLeaderboardSection
+            onSupportClick={() => {
+              if (!selectedPlan && !hasActiveVip) {
+                scrollToSection(pricingRef.current);
+              } else {
+                const el = document.getElementById('support-feviqo-contribution');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                  scrollToSection(pricingRef.current);
+                }
+              }
+            }}
+          />
         )}
 
         {/* Important Membership Information */}

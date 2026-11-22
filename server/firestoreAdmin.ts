@@ -185,6 +185,8 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
   commissionPayments: any[];
   monthlyCommissionReports: any[];
   blockedUsers: any[];
+  supportersLeaderboard: any[];
+  supportersLeaderboardSettings: Record<string, any> | null;
   config: Record<string, any> | null;
 } | null> {
   const db = getAdminFirestoreDb();
@@ -208,6 +210,8 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       paySnap,
       reportSnap,
       blockedSnap,
+      supportersSnap,
+      supporterSettingsSnap,
       cfgSnap,
     ] = await Promise.all([
       db.collection('members').get(),
@@ -227,6 +231,8 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       db.collection('commissionPayments').get(),
       db.collection('monthlyCommissionReports').get(),
       db.collection('blockedUsers').get(),
+      db.collection('supportersLeaderboard').get(),
+      db.collection('supportersLeaderboardSettings').doc('main').get(),
       db.collection('membershipConfig').doc('public').get(),
     ]);
 
@@ -334,6 +340,16 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
     const commissionPayments = normalizeGeneric(paySnap);
     const monthlyCommissionReports = normalizeGeneric(reportSnap);
     const blockedUsers = normalizeGeneric(blockedSnap);
+    const supportersLeaderboard = normalizeGeneric(supportersSnap);
+    let supportersLeaderboardSettings: Record<string, any> | null = null;
+    if (supporterSettingsSnap.exists) {
+      const data = supporterSettingsSnap.data() || {};
+      supportersLeaderboardSettings = {
+        ...data,
+        id: 'main',
+        updatedAt: toIso(data.updatedAtIso || data.updatedAt) || new Date().toISOString(),
+      };
+    }
 
     let config: Record<string, any> | null = null;
     if (cfgSnap.exists) {
@@ -362,6 +378,8 @@ export async function pullSnapshotFromFirestoreServer(): Promise<{
       commissionPayments,
       monthlyCommissionReports,
       blockedUsers,
+      supportersLeaderboard,
+      supportersLeaderboardSettings,
       config,
     };
   } catch (err: any) {

@@ -1,0 +1,116 @@
+[
+  {
+    "memberId": "mem-1795390344544-2c0bbf",
+    "ownerUid": "email_member",
+    "customerEmail": "qa_supporter4_1795390344481@example.com",
+    "membershipId": "sub-1795390344908-069e62",
+    "orderId": "ord-1795390344559-88d6ce3d",
+    "planId": "standard",
+    "dramaIds": [
+      "yeralti"
+    ],
+    "type": "membership_approved",
+    "title": "Standard membership activated",
+    "titleUr": "آپ کی Standard ممبرشپ فعال ہو گئی",
+    "message": "Your payment (PKR 1,599) has been verified. Yeralti - Urdu Dub is now unlocked until Tue, 22 Dec 2026 23:32:24 GMT.",
+    "messageUr": "آپ کی ادائیگی (PKR 1,599) کی تصدیق ہو گئی ہے۔ اب آپ کے منتخب کردہ ڈرامے ان لاک ہو چکے ہیں۔",
+    "ctaLabel": "Watch Unlocked Dramas",
+    "ctaHref": "/yeralti",
+    "dedupeKey": "ord-1795390344559-88d6ce3d:approved:2026-12-22T23:32:24.908Z",
+    "emailStatus": "not_sent",
+    "id": "mnotif-1795390344909-029072",
+    "isRead": false,
+    "createdAt": "2026-11-22T23:32:24.909Z"
+  },
+  {
+    "memberId": "mem-1795390264575-7c4b58",
+    "ownerUid": "email_member",
+    "customerEmail": "qa_supporter3_1795390264497@example.com",
+    "membershipId": "sub-1795390264970-061de6",
+    "orderId": "ord-1795390264592-18e1cf59",
+    "planId": "standard",
+    "dramaIds": [
+      "yeralti"
+    ],
+    "type": "membership_approved",
+    "title": "Standard membership activated",
+    "titleUr": "آپ کی Standard ممبرشپ فعال ہو گئی",
+    "message": "Your payment (PKR 1,599) has been verified. Yeralti - Urdu Dub is now unlocked until Tue, 22 Dec 2026 23:31:04 GMT.",
+    "messageUr": "آپ کی ادائیگی (PKR 1,599) کی تصدیق ہو گئی ہے۔ اب آپ کے منتخب کردہ ڈرامے ان لاک ہو چکے ہیں۔",
+    "ctaLabel": "Watch Unlocked Dramas",
+    "ctaHref": "/yeralti",
+    "dedupeKey": "ord-1795390264592-18e1cf59:approved:2026-12-22T23:31:04.970Z",
+    "emailStatus": "not_sent",
+    "id": "mnotif-1795390264970-e8c666",
+    "isRead": false,
+    "createdAt": "2026-11-22T23:31:04.970Z"
+  },
+  {
+    "memberId": "mem-1795390177210-fcb585",
+    "ownerUid": "email_member",
+    "customerEmail": "qa_supporter2_1795390177145@example.com",
+    "membershipId": "sub-1795390178070-a42ac9",
+    "orderId": "ord-1795390177226-0c15b300",
+    "planId": "standard",
+    "dramaIds": [
+      "yeralti"
+    ],
+    "type": "membership_approved",
+    "title": "Standard membership activated",
+    "titleUr": "آپ کی Standard ممبرشپ فعال ہو گئی",
+    "message": "Your payment (PKR 1,599) has been verified. Yeralti - Urdu Dub is now unlocked until Tue, 22 Dec 2026 23:29:38 GMT.",
+    "messageUr": "آپ کی ادائیگی (PKR 1,599) کی تصدیق ہو گئی ہے۔ اب آپ کے منتخب کردہ ڈرامے ان لاک ہو چکے ہیں۔",
+    "ctaLabel": "Watch Unlocked Dramas",
+    "ctaHref": "/yeralti",
+    "dedupeKey": "ord-1795390177226-0c15b300:approved:2026-12-22T23:29:38.070Z",
+    "emailStatus": "not_sent",
+    "id": "mnotif-1795390178071-e143ea",
+    "isRead": false,
+    "createdAt": "2026-11-22T23:29:38.071Z"
+  },
+  {
+    "memberId": "mem-1795390117086-75e054",
+    "ownerUid": "email_member",
+    "customerEmail": "qa_supporter_1795390117016@example.com",
+    "membershipId": "sub-1795390119315-e13d8d",
+    "orderId": "ord-1795390117130-69229179",
+    "planId": "standard",
+    "dramaIds": [
+      "yeralti"
+    ],
+    "type": "membership_approved",
+    "title": "Standard membership activated",
+    "titleUr": "آپ کی Standard ممبرشپ فعال ہو گئی",
+    "message": "Your payment (PKR 1,599) has been verified. Yeralti - Urdu Dub is now unlocked until Tue, 22 Dec 2026 23:28:39 GMT.",
+    "messageUr": "آپ کی ادائیگی (PKR 1,599) کی تصدیق ہو گئی ہے۔ اب آپ کے منتخب کردہ ڈرامے ان لاک ہو چکے ہیں۔",
+    "ctaLabel": "Watch Unlocked Dramas",
+    "ctaHref": "/yeralti",
+    "dedupeKey": "ord-1795390117130-69229179:approved:2026-12-22T23:28:39.315Z",
+    "emailStatus": "not_sent",
+    "id": "mnotif-1795390119316-cc2732",
+    "isRead": false,
+    "createdAt": "2026-11-22T23:28:39.316Z"
+  },
+  {
+    "memberId": "mem-1795390117086-75e054",
+    "ownerUid": "email_member",
+    "customerEmail": "qa_supporter_1795390117016@example.com",
+    "orderId": "ord-1795390117130-69229179",
+    "planId": "standard",
+    "dramaIds": [
+      "yeralti"
+    ],
+    "type": "payment_correction_requested",
+    "title": "New screenshot requested for Standard",
+    "titleUr": "Standard کے لیے ادائیگی کا نیا اسکرین شاٹ درکار ہے",
+    "message": "Admin note: Please upload clearer receipt showing transaction ID.. Please upload a clearer payment screenshot and confirm the amount transferred.",
+    "messageUr": "ایڈمن نوٹ: Please upload clearer receipt showing transaction ID.۔ براہ کرم واضح اسکرین شاٹ اور منتقل کی گئی رقم دوبارہ جمع کروائیں۔",
+    "ctaLabel": "Upload New Screenshot",
+    "ctaHref": "/membership?tab=account",
+    "dedupeKey": "ord-1795390117130-69229179:correction:2026-11-22T23:28:38.239Z",
+    "emailStatus": "not_sent",
+    "id": "mnotif-1795390118240-4bf3d8",
+    "isRead": false,
+    "createdAt": "2026-11-22T23:28:38.240Z"
+  }
+]

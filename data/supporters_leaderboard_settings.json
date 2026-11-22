@@ -1,0 +1,12 @@
+{
+  "id": "main",
+  "enabled": true,
+  "maxDisplayed": 10,
+  "showAmountsGlobally": true,
+  "allowAutomaticRanking": true,
+  "allowManualPriority": true,
+  "showBadges": true,
+  "showSubtitle": true,
+  "includeManualFeatured": true,
+  "updatedAt": "2026-11-22T23:35:36.456Z"
+}

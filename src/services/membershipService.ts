@@ -143,6 +143,21 @@ export interface MembershipOrder {
   discountTotalPkr?: number;
   discountTotalUsd?: number;
   expectedAmount?: number;
+  subscriptionPricePkr?: number;
+  optionalContributionPkr?: number;
+  expectedTotalPkr?: number;
+  customerDeclaredAmountPkr?: number;
+  verifiedReceivedAmountPkr?: number;
+  verifiedSubscriptionPricePkr?: number;
+  verifiedContributionPkr?: number;
+  leaderboardDisplayName?: string;
+  showExactAmount?: boolean;
+  leaderboardEligible?: boolean;
+  leaderboardEntryId?: string;
+  leaderboardCountedAt?: string;
+  correctionRequestedAt?: string;
+  correctionRequestNote?: string;
+  correctionRequestedByAdminEmail?: string;
   currency?: PaymentCurrency;
   paymentRegion?: PaymentRegion;
   paymentMethod?: PaymentMethod;
@@ -178,6 +193,7 @@ export interface MembershipHistoryEntry {
     | 'account_created'
     | 'checkout_created'
     | 'proof_submitted'
+    | 'proof_correction_requested'
     | 'payment_approved'
     | 'payment_rejected'
     | 'membership_activated'
@@ -208,7 +224,73 @@ export type CustomerNotificationType =
   | 'membership_renewed'
   | 'membership_extended'
   | 'payment_rejected'
+  | 'payment_correction_requested'
   | 'referral_reward';
+
+export type SupporterEntryType = 'manual_featured' | 'verified_customer';
+
+export interface SupporterLeaderboardEntry {
+  id: string;
+  displayName: string;
+  contributionAmount: number;
+  amountVisible: boolean;
+  badge: string;
+  displayPriority: number | null;
+  entryType: SupporterEntryType;
+  active: boolean;
+  featured: boolean;
+  removed: boolean;
+  createdAt: string;
+  updatedAt: string;
+  sourceOrderId?: string;
+  updatedByAdminEmail?: string;
+}
+
+export interface SupporterLeaderboardSettings {
+  id: 'main';
+  enabled: boolean;
+  maxDisplayed: number;
+  showAmountsGlobally: boolean;
+  allowAutomaticRanking: boolean;
+  allowManualPriority: boolean;
+  showBadges: boolean;
+  showSubtitle: boolean;
+  includeManualFeatured: boolean;
+  updatedAt: string;
+}
+
+export interface PublicSupporterLeaderboardRow {
+  rank: number;
+  id: string;
+  displayName: string;
+  contributionAmount: number | null;
+  amountDisplay: string;
+  amountVisible: boolean;
+  badge: string;
+  featured: boolean;
+  tier: 'rank1' | 'top3' | 'standard';
+}
+
+export interface PublicSupportersLeaderboardResponse {
+  enabled: boolean;
+  settings: SupporterLeaderboardSettings;
+  entries: PublicSupporterLeaderboardRow[];
+  updatedAt: string;
+}
+
+export interface AdminSupportersLeaderboardOverview {
+  entries: SupporterLeaderboardEntry[];
+  settings: SupporterLeaderboardSettings;
+  publicPreview: PublicSupportersLeaderboardResponse;
+  stats: {
+    totalEntries: number;
+    activeEntries: number;
+    verifiedCustomerCount: number;
+    manualFeaturedCount: number;
+    removedCount: number;
+    verifiedContributionTotalPkr: number;
+  };
+}
 
 export interface CustomerNotification {
   id: string;
@@ -1174,6 +1256,9 @@ export async function createMembershipCheckout(payload: {
   indicativeLocalDisplay?: string;
   promoCode?: string;
   applyCredits?: boolean;
+  optionalContributionPkr?: number;
+  leaderboardDisplayName?: string;
+  showExactAmount?: boolean;
 }): Promise<{
   success: boolean;
   code?: string;
@@ -1240,6 +1325,9 @@ export async function submitOrderPaymentProofFile(payload: {
   file: File;
   paymentNote?: string;
   proofDataUrl?: string;
+  customerDeclaredAmountPkr?: number;
+  leaderboardDisplayName?: string;
+  showExactAmount?: boolean;
 }): Promise<
   | {
       success: true;
@@ -1256,6 +1344,19 @@ export async function submitOrderPaymentProofFile(payload: {
   }
   if (payload.proofDataUrl) {
     form.append('proofDataUrl', payload.proofDataUrl);
+  }
+  if (
+    payload.customerDeclaredAmountPkr !== undefined &&
+    payload.customerDeclaredAmountPkr !== null &&
+    Number.isFinite(Number(payload.customerDeclaredAmountPkr))
+  ) {
+    form.append('customerDeclaredAmountPkr', String(Math.round(Number(payload.customerDeclaredAmountPkr))));
+  }
+  if (payload.leaderboardDisplayName !== undefined) {
+    form.append('leaderboardDisplayName', payload.leaderboardDisplayName.trim());
+  }
+  if (payload.showExactAmount !== undefined) {
+    form.append('showExactAmount', payload.showExactAmount ? 'true' : 'false');
   }
   const res = await fetch(`/api/membership/orders/${encodeURIComponent(payload.orderId)}/proof`, {
     method: 'POST',
@@ -1668,15 +1769,31 @@ export async function fetchAdminMembershipsOverview(): Promise<
   return parseJsonSafe(res);
 }
 
-export async function approvePaymentOrder(orderId: string): Promise<
-  { success: true; order?: MembershipOrder; membership?: AdminMembershipRecord; wasRenewal?: boolean; overview: AdminMembershipsOverview } | { success: false; error: string }
+export async function approvePaymentOrder(
+  orderId: string,
+  verification?: {
+    verifiedReceivedAmountPkr?: number;
+    verifiedSubscriptionPricePkr?: number;
+    verifiedContributionPkr?: number;
+  }
+): Promise<
+  | {
+      success: true;
+      order?: MembershipOrder;
+      membership?: AdminMembershipRecord;
+      supporterEntry?: SupporterLeaderboardEntry | null;
+      wasRenewal?: boolean;
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
 > {
   const res = await fetch(
     `/api/admin/memberships/requests/${encodeURIComponent(orderId)}/approve`,
     {
       method: 'POST',
       credentials: 'include',
-      headers: adminHeaders(),
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(verification || {}),
     }
   );
   return parseJsonSafe(res);
@@ -1693,6 +1810,30 @@ export async function rejectPaymentOrder(
       headers: adminHeaders({ 'Content-Type': 'application/json' }),
       credentials: 'include',
       body: JSON.stringify({ reason }),
+    }
+  );
+  return parseJsonSafe(res);
+}
+
+export async function requestOrderCorrectionAdmin(
+  orderId: string,
+  note: string
+): Promise<
+  | {
+      success: true;
+      order: MembershipOrder;
+      notification?: CustomerNotification;
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch(
+    `/api/admin/memberships/requests/${encodeURIComponent(orderId)}/request-correction`,
+    {
+      method: 'POST',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+      body: JSON.stringify({ note }),
     }
   );
   return parseJsonSafe(res);
@@ -1779,6 +1920,8 @@ export async function syncAdminCloudState(snapshot: {
   campaignCommissions?: any[];
   commissionPayments?: any[];
   monthlyCommissionReports?: any[];
+  supportersLeaderboard?: SupporterLeaderboardEntry[];
+  supportersLeaderboardSettings?: SupporterLeaderboardSettings | null;
 }): Promise<
   | {
       success: true;
@@ -2941,4 +3084,126 @@ export async function revokeAdminMuxPlaybackSession(
   );
   return parseJsonSafe(res);
 }
+
+// =========================================================================
+// FEVIQO TOP SUPPORTERS LEADERBOARD (PUBLIC & ADMIN)
+// =========================================================================
+
+export async function fetchPublicSupportersLeaderboard(): Promise<
+  ({ success: true } & PublicSupportersLeaderboardResponse) | { success: false; error: string }
+> {
+  const res = await fetch('/api/membership/supporters-leaderboard', {
+    credentials: 'include',
+  });
+  return parseJsonSafe(res);
+}
+
+export async function fetchAdminSupportersLeaderboard(): Promise<
+  ({ success: true } & AdminSupportersLeaderboardOverview) | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/supporters-leaderboard', {
+    credentials: 'include',
+    headers: adminHeaders(),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function createSupporterEntryAdmin(payload: {
+  displayName: string;
+  contributionAmount: number;
+  amountVisible?: boolean;
+  badge?: string;
+  displayPriority?: number | null;
+  entryType?: SupporterEntryType;
+  active?: boolean;
+  featured?: boolean;
+}): Promise<
+  | ({ success: true; entry: SupporterLeaderboardEntry } & AdminSupportersLeaderboardOverview)
+  | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/supporters-leaderboard/entries', {
+    method: 'POST',
+    credentials: 'include',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function seedInitialFeaturedSupportersAdmin(): Promise<
+  | ({
+      success: true;
+      created: SupporterLeaderboardEntry[];
+      skippedCount: number;
+    } & AdminSupportersLeaderboardOverview)
+  | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/supporters-leaderboard/seed-featured', {
+    method: 'POST',
+    credentials: 'include',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({}),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function updateSupporterEntryAdmin(
+  entryId: string,
+  payload: Partial<{
+    displayName: string;
+    contributionAmount: number;
+    amountVisible: boolean;
+    badge: string;
+    displayPriority: number | null;
+    active: boolean;
+    featured: boolean;
+    removed: boolean;
+  }>
+): Promise<
+  | ({ success: true; entry: SupporterLeaderboardEntry } & AdminSupportersLeaderboardOverview)
+  | { success: false; error: string }
+> {
+  const res = await fetch(
+    `/api/admin/memberships/supporters-leaderboard/entries/${encodeURIComponent(entryId)}`,
+    {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    }
+  );
+  return parseJsonSafe(res);
+}
+
+export async function deleteSupporterEntryAdmin(
+  entryId: string
+): Promise<
+  | ({ success: true; deletedId: string } & AdminSupportersLeaderboardOverview)
+  | { success: false; error: string }
+> {
+  const res = await fetch(
+    `/api/admin/memberships/supporters-leaderboard/entries/${encodeURIComponent(entryId)}`,
+    {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: adminHeaders(),
+    }
+  );
+  return parseJsonSafe(res);
+}
+
+export async function updateSupporterLeaderboardSettingsAdmin(
+  payload: Partial<Omit<SupporterLeaderboardSettings, 'id' | 'updatedAt'>>
+): Promise<
+  ({ success: true } & AdminSupportersLeaderboardOverview) | { success: false; error: string }
+> {
+  const res = await fetch('/api/admin/memberships/supporters-leaderboard/settings', {
+    method: 'PUT',
+    credentials: 'include',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  return parseJsonSafe(res);
+}
+
 
