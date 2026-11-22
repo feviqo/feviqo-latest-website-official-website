@@ -523,7 +523,13 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                         {latestEpisode.title}
                       </h2>
                       <p className="text-xs text-slate-500 flex items-center gap-3">
-                        <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> October 2026</span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />{' '}
+                          {new Date(latestEpisode.airDate).toLocaleDateString('en-US', {
+                            month: 'long',
+                            year: 'numeric',
+                          })}
+                        </span>
                         <span>·</span>
                         <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {latestEpisode.duration}</span>
                       </p>

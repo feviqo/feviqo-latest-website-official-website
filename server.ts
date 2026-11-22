@@ -7174,7 +7174,6 @@ if (!process.env.CONTROL_PLANE_PORT) {
         'https://feviqo.com/mehmed-fetihler-sultani/episode-87',
         'https://feviqo.com/gunesin-dogdugu-yer',
         'https://feviqo.com/gunesin-dogdugu-yer/episode-9',
-        'https://feviqo.com/gunesin-dogdugu-yer/episode-8',
         'https://feviqo.com/gunesin-dogdugu-yer/episode-7',
         'https://feviqo.com/gunesin-dogdugu-yer/episode-5',
         'https://feviqo.com/yeralti',

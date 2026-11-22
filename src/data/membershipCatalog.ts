@@ -364,19 +364,6 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
         requiredPlanLevel: 'any_active',
       },
       {
-        slug: 'episode-8',
-        number: 8,
-        title: 'Güneşin Doğduğu Yer Episode 8 (Bolum 8) — Urdu Dubbed',
-        duration: '2h 28m',
-        releaseDate: '2026-11-10',
-        thumbnail: 'https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh',
-        shortSummary:
-          'A pivotal family confrontation changes every alliance in Episode 8 Urdu Dubbed HD — exclusive for FEVIQO Premium Members.',
-        accessType: 'premium',
-        isPublished: true,
-        requiredPlanLevel: 'any_active',
-      },
-      {
         slug: 'episode-7',
         number: 7,
         title: 'Güneşin Doğduğu Yer Episode 7 (Bolum 7)',

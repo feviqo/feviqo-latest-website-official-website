@@ -798,7 +798,7 @@ export function getSEOConfigForPath(pathname: string): PageSEOConfig {
     return { ...cfg, path: cleanPath, canonicalUrl: 'https://feviqo.com/gallery' };
   }
 
-  // Dynamic drama episode routes (e.g., /teskilat/episode-192, /mehmed-fetihler-sultani/episode-91, /gunesin-dogdugu-yer/episode-8)
+  // Dynamic drama episode routes (e.g., /teskilat/episode-192, /mehmed-fetihler-sultani/episode-91, /gunesin-dogdugu-yer/episode-9)
   const teskilatEpMatch = cleanPath.match(/^\/(?:teskilat|teskilat-urdu)\/episode-(\d+)$/);
   if (teskilatEpMatch) {
     const epNum = teskilatEpMatch[1];
