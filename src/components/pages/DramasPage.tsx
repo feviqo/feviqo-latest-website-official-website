@@ -11,6 +11,7 @@ import { AdNativeBanner } from '../AdNativeBanner';
 import { getDramaById } from '../../data/membershipCatalog';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
+import { DramaMemberBar } from '../membership/DramaMemberBar';
 import { YERALTI_LOGO_URL, YERALTI_POSTER_URL } from '../../data/yeraltiData';
 
 interface DramasPageProps {
@@ -282,6 +283,8 @@ export const DramasPage: React.FC<DramasPageProps> = ({
         onNavigateFlow={onNavigateFlow}
         onNavigatePage={onNavigatePage}
       />
+
+      <DramaMemberBar onNavigatePage={onNavigatePage} />
 
       {/* RE-ARCHITECTED STACKED HERO SECTION (IDENTICAL ON PHONE & DESKTOP): 100% PICTURE SIGHT WITH SOLID READABLE DARK PLATE BELOW */}
       <section className="relative w-full bg-black text-white overflow-hidden">

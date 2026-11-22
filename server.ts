@@ -113,6 +113,9 @@ import {
   buildBlockedAccountMessage,
   blockUserEmailByAdmin,
   unblockUserEmailByAdmin,
+  updateMemberPhoneByAdmin,
+  ensurePermanentBlockedPhoneEnforcement,
+  readDeletedTombstones,
   LifecycleEmailDispatcher,
   SafeAdmin,
 } from './server/membershipStore';
@@ -3526,6 +3529,39 @@ app.get('/api/membership/qr/:planId/download', (req, res) => {
   return res.sendFile(diskPath);
 });
 
+function autoEnableMemberWhatsAppPreferences(
+  member: { id: string; googleUid?: string; email?: string; fullName?: string; phone?: string },
+  source: string
+): void {
+  try {
+    const rawPhone = String(member.phone || '').trim();
+    if (!rawPhone) return;
+    const phoneE164 = normalizePhoneE164(rawPhone);
+    if (!phoneE164) return;
+    const existing = getMemberNotificationPreferences({
+      memberId: member.id,
+      phone: phoneE164,
+    });
+    if (existing?.optedOut) return;
+    upsertMemberNotificationPreferences({
+      memberId: member.id,
+      ownerUid: member.googleUid,
+      email: member.email,
+      fullName: member.fullName,
+      phone: phoneE164,
+      membershipUpdates: true,
+      renewalReminders: true,
+      newEpisodeAlerts: true,
+      promotionalMessages: true,
+      leadEnquiryConsent: existing?.leadEnquiryConsent ?? false,
+      optedOut: false,
+      source,
+    });
+  } catch {
+    // Non-blocking preference initialization
+  }
+}
+
 app.post('/api/membership/register', (req, res) => {
   try {
     const { email, password, confirmPassword, fullName, phone, referralCode, cachedSnapshot } = req.body || {};
@@ -3549,6 +3585,7 @@ app.post('/api/membership/register', (req, res) => {
       attributionToken: campCtx.attributionToken,
       campaignSlug: campCtx.campaignSlug,
     });
+    autoEnableMemberWhatsAppPreferences(result.member, 'account_registration');
     setMemberSessionCookie(req, res, result.token);
     const account = getMemberAccountState(result.member.id);
     // Fire-and-forget WhatsApp registration automation (never blocks signup)
@@ -3557,9 +3594,9 @@ app.post('/api/membership/register', (req, res) => {
       fullName: result.member.fullName,
       email: result.member.email,
       phone: result.member.phone,
-      whatsappOptIn: req.body?.whatsappOptIn === true,
-      promotionalOptIn: req.body?.promotionalOptIn === true,
-      consentSource: 'registration_form',
+      whatsappOptIn: true,
+      promotionalOptIn: true,
+      consentSource: 'account_registration',
     });
     return res.status(201).json({
       success: true,
@@ -3588,6 +3625,7 @@ app.post('/api/membership/login', (req, res) => {
         error: result.error,
       });
     }
+    autoEnableMemberWhatsAppPreferences(result.member, 'account_signin');
     setMemberSessionCookie(req, res, result.token);
     const account = getMemberAccountState(result.member.id);
     return res.json({
@@ -3631,6 +3669,7 @@ app.post('/api/membership/google-auth', async (req, res) => {
         error: result.error,
       });
     }
+    autoEnableMemberWhatsAppPreferences(result.member, 'google_signin');
     if (Date.now() - Date.parse(result.member.createdAt) < 10 * 60 * 1000) {
       const campCtx = extractCampaignAttributionFromRequest(req);
       attachCampaignAttributionToUser({
@@ -3643,8 +3682,8 @@ app.post('/api/membership/google-auth', async (req, res) => {
         fullName: result.member.fullName,
         email: result.member.email,
         phone: result.member.phone,
-        whatsappOptIn: req.body?.whatsappOptIn === true,
-        promotionalOptIn: req.body?.promotionalOptIn === true,
+        whatsappOptIn: true,
+        promotionalOptIn: true,
         consentSource: 'google_registration',
       });
     }
@@ -3770,27 +3809,8 @@ app.post('/api/membership/profile/phone', (req, res) => {
     if (!account) {
       return res.status(404).json({ success: false, error: 'Account not found.' });
     }
-    // Explicitly record WhatsApp permission when a Google signup completes their phone number and opts in
-    if (req.body?.whatsappOptIn === true || req.body?.promotionalOptIn === true) {
-      try {
-        upsertMemberNotificationPreferences({
-          memberId: account.member.id,
-          ownerUid: account.member.googleUid,
-          email: account.member.email,
-          fullName: account.member.fullName,
-          phone: account.member.phone,
-          membershipUpdates: req.body?.whatsappOptIn === true,
-          renewalReminders: req.body?.whatsappOptIn === true,
-          newEpisodeAlerts: req.body?.whatsappOptIn === true,
-          promotionalMessages: req.body?.promotionalOptIn === true,
-          leadEnquiryConsent: false,
-          optedOut: false,
-          source: 'phone_completion_modal',
-        });
-      } catch {
-        // Non-blocking preference recording
-      }
-    }
+    // Automatically enable WhatsApp notifications on phone save unless explicitly opted out
+    autoEnableMemberWhatsAppPreferences(account.member, 'phone_completion_modal');
     return res.json({ success: true, ...account });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to save phone number.' });
@@ -4382,7 +4402,7 @@ async function handleProtectedStreamProxy(
     return res.status(403).json({ success: false, code: 'DOWNLOADER_BLOCKED', error: 'Blocked client.' });
   }
 
-  const rl = checkPlaybackRateLimit(`stream:${ip}`, 420, 60_000);
+  const rl = checkPlaybackRateLimit(`stream:${ip}`, 2400, 60_000);
   if (!rl.allowed) {
     appendMuxSecurityEvent({
       type: 'rate_limit_blocked',
@@ -4949,6 +4969,7 @@ app.post('/api/admin/memberships/sync', requireAdmin, async (req: any, res) => {
     return res.json({
       success: true,
       overview: getAdminMembershipsOverview(),
+      tombstones: merged.tombstones || readDeletedTombstones(),
       recovery: recovery.recoveredCount >= (merged.lastRecovery?.recoveredCount || 0) ? recovery : merged.lastRecovery,
     });
   } catch {
@@ -5033,6 +5054,25 @@ app.delete('/api/admin/memberships/requests/:orderId', requireAdmin, (req: any, 
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to delete payment request.' });
+  }
+});
+
+app.patch('/api/admin/memberships/accounts/:memberId/phone', requireAdmin, (req: any, res) => {
+  try {
+    const { memberId } = req.params;
+    const phone = typeof req.body?.phone === 'string' ? req.body.phone.trim() : '';
+    const result = updateMemberPhoneByAdmin({ memberId, phone, admin: req.admin });
+    if ('error' in result) {
+      return res.status(result.statusCode).json({ success: false, error: result.error });
+    }
+    autoEnableMemberWhatsAppPreferences(result.member, 'admin_phone_correction');
+    return res.json({
+      success: true,
+      member: result.member,
+      overview: getAdminMembershipsOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to update customer phone number.' });
   }
 });
 
@@ -6533,7 +6573,7 @@ app.post('/api/admin/automation/bot/start', requireAdmin, async (req: any, res) 
     return res.json({
       success: true,
       settings: result.settings,
-      workerSummary: result.workerSummary,
+      workerSummary: result.workerResult,
       overview: getAdminAutomationOverview(),
     });
   } catch {
@@ -6718,16 +6758,20 @@ app.post('/api/admin/automation/episodes/publish-notify', requireAdmin, async (r
 });
 
 // 6B. Historical Customer Campaigns (Admin-Controlled Preview & Launch)
+const normalizeCampaignSegment = (raw: unknown): HistoricalCampaignSegment | null => {
+  const s = String(raw || '').trim();
+  if (s === 'registered_never_purchased' || s === 'never_purchased') return 'never_purchased';
+  if (s === 'selected_plan_unpaid') return 'selected_plan_unpaid';
+  if (s === 'expired_memberships' || s === 'expired_members') return 'expired_members';
+  if (s === 'pending_renewals') return 'pending_renewals';
+  if (s === 'active_members' || s === 'all_consented') return 'all_consented';
+  return null;
+};
+
 app.post('/api/admin/automation/campaigns/preview', requireAdmin, (req: any, res) => {
   try {
-    const segment = String(req.body?.segment || 'registered_never_purchased') as HistoricalCampaignSegment;
-    const validSegments: HistoricalCampaignSegment[] = [
-      'registered_never_purchased',
-      'selected_plan_unpaid',
-      'expired_memberships',
-      'active_members',
-    ];
-    if (!validSegments.includes(segment)) {
+    const segment = normalizeCampaignSegment(req.body?.segment || 'never_purchased');
+    if (!segment) {
       return res.status(400).json({ success: false, error: 'Invalid historical campaign segment.' });
     }
     const preview = previewHistoricalCampaign(segment);
@@ -6739,14 +6783,8 @@ app.post('/api/admin/automation/campaigns/preview', requireAdmin, (req: any, res
 
 app.post('/api/admin/automation/campaigns/launch', requireAdmin, async (req: any, res) => {
   try {
-    const segment = String(req.body?.segment || '') as HistoricalCampaignSegment;
-    const validSegments: HistoricalCampaignSegment[] = [
-      'registered_never_purchased',
-      'selected_plan_unpaid',
-      'expired_memberships',
-      'active_members',
-    ];
-    if (!validSegments.includes(segment)) {
+    const segment = normalizeCampaignSegment(req.body?.segment);
+    if (!segment) {
       return res.status(400).json({ success: false, error: 'Invalid historical campaign segment.' });
     }
     const validModes: WhatsAppSendingMode[] = ['automatic', 'manual', 'automatic_with_fallback', 'disabled'];
@@ -6781,6 +6819,7 @@ app.get('/api/admin/automation/whatsapp-notifications', requireAdmin, (req: any,
       search: req.query?.recipientSearch ? String(req.query.recipientSearch) : undefined,
       membershipStatus: req.query?.membershipStatus ? String(req.query.membershipStatus) : undefined,
       dramaId: req.query?.dramaId ? String(req.query.dramaId) : undefined,
+      includeBlocked: req.query?.includeBlocked !== '0',
     });
     return res.json({
       success: true,
@@ -6795,7 +6834,7 @@ app.get('/api/admin/automation/whatsapp-notifications', requireAdmin, (req: any,
 
 app.put('/api/admin/automation/whatsapp-notifications/settings', requireAdmin, (req: any, res) => {
   try {
-    const settings = saveOneClickQueueSettings(req.body || {}, req.admin.email);
+    const settings = saveOneClickQueueSettings(req.body || {}, req.admin);
     return res.json({
       success: true,
       settings,
@@ -6810,12 +6849,18 @@ app.patch('/api/admin/automation/whatsapp-notifications/:id', requireAdmin, (req
   try {
     const result = editOneClickNotification({
       id: req.params.id,
-      messageText: typeof req.body?.messageText === 'string' ? req.body.messageText : undefined,
+      message:
+        typeof req.body?.messageText === 'string'
+          ? req.body.messageText
+          : typeof req.body?.message === 'string'
+          ? req.body.message
+          : undefined,
       rawPhone: typeof req.body?.rawPhone === 'string' ? req.body.rawPhone : undefined,
-      actor: req.admin.email,
+      admin: req.admin,
     });
     if (!result.ok) {
-      return res.status(400).json({ success: false, error: result.error });
+      const errMsg = 'error' in result ? result.error : 'Failed to update WhatsApp notification.';
+      return res.status(400).json({ success: false, error: errMsg });
     }
     return res.json({
       success: true,
@@ -6830,10 +6875,11 @@ app.post('/api/admin/automation/whatsapp-notifications/:id/open', requireAdmin, 
   try {
     const result = markOneClickNotificationOpened({
       id: req.params.id,
-      actor: req.admin.email,
+      admin: req.admin,
     });
     if (!result.ok) {
-      return res.status(400).json({ success: false, error: result.error });
+      const errMsg = 'error' in result ? result.error : 'Failed to open WhatsApp notification.';
+      return res.status(400).json({ success: false, error: errMsg });
     }
     return res.json({
       success: true,
@@ -6849,11 +6895,11 @@ app.post('/api/admin/automation/whatsapp-notifications/:id/confirm-sent', requir
   try {
     const result = markOneClickNotificationConfirmedSent({
       id: req.params.id,
-      actor: req.admin.email,
-      note: typeof req.body?.note === 'string' ? req.body.note : undefined,
+      admin: req.admin,
     });
     if (!result.ok) {
-      return res.status(400).json({ success: false, error: result.error });
+      const errMsg = 'error' in result ? result.error : 'Failed to confirm WhatsApp message sent.';
+      return res.status(400).json({ success: false, error: errMsg });
     }
     return res.json({
       success: true,
@@ -6868,11 +6914,12 @@ app.post('/api/admin/automation/whatsapp-notifications/:id/cancel', requireAdmin
   try {
     const result = cancelOneClickNotification({
       id: req.params.id,
-      actor: req.admin.email,
+      admin: req.admin,
       reason: typeof req.body?.reason === 'string' ? req.body.reason : undefined,
     });
     if (!result.ok) {
-      return res.status(400).json({ success: false, error: result.error });
+      const errMsg = 'error' in result ? result.error : 'Failed to cancel WhatsApp notification.';
+      return res.status(400).json({ success: false, error: errMsg });
     }
     return res.json({
       success: true,
@@ -6901,6 +6948,7 @@ app.post('/api/admin/automation/whatsapp-notifications/manual-prepare', requireA
     const {
       memberIds,
       eventType,
+      campaignPurpose,
       customMessage,
       dramaId,
       episodeNumber,
@@ -6918,6 +6966,7 @@ app.post('/api/admin/automation/whatsapp-notifications/manual-prepare', requireA
     const result = prepareManualWhatsAppMessagesForMembers({
       memberIds: memberIds.map((id: any) => String(id)),
       eventType,
+      campaignPurpose: typeof campaignPurpose === 'string' ? (campaignPurpose as any) : undefined,
       customMessage: typeof customMessage === 'string' && customMessage.trim() ? customMessage.trim() : undefined,
       dramaId: typeof dramaId === 'string' && dramaId.trim() ? dramaId.trim() : undefined,
       episodeNumber: episodeNumber ? Number(episodeNumber) : undefined,
@@ -6946,14 +6995,16 @@ app.post('/api/admin/automation/whatsapp-notifications/episode-queue', requireAd
     const result = queueEpisodePublishedOneClickNotifications({
       dramaId: String(dramaId),
       episodeSlug: String(episodeSlug || `episode-${episodeNumber}`),
+      seasonNumber: Number(req.body?.seasonNumber) || 1,
       episodeNumber: Number(episodeNumber),
+      episodeTitle: String(req.body?.episodeTitle || `Episode ${episodeNumber}`),
       episodeUrl: episodeUrl ? String(episodeUrl) : undefined,
       accessType: accessType === 'free' || accessType === 'premium' ? accessType : undefined,
       selectedMemberIds: Array.isArray(selectedMemberIds) ? selectedMemberIds.map((id: any) => String(id)) : undefined,
-      adminEmail: req.admin.email,
     });
     if (!result.ok) {
-      return res.status(400).json({ success: false, error: result.error });
+      const errMsg = 'error' in result ? result.error : 'Failed to queue manual episode WhatsApp notifications.';
+      return res.status(400).json({ success: false, error: errMsg });
     }
     return res.json({
       success: true,
@@ -7290,6 +7341,13 @@ async function startServer() {
         return res.sendFile(path.join(distPath, 'index.html'));
       }
     });
+  }
+
+  // Enforce permanent blocks (including 03335455723) immediately on startup
+  try {
+    ensurePermanentBlockedPhoneEnforcement(true);
+  } catch (err) {
+    console.warn('[PermanentBlockEnforcement] Startup check error:', err);
   }
 
   const server = app.listen(PORT, '0.0.0.0', () => {

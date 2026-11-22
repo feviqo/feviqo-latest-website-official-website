@@ -351,6 +351,19 @@ export const MEMBERSHIP_DRAMAS: CatalogDramaMeta[] = [
     hubPath: '/gunesin-dogdugu-yer',
     episodes: [
       {
+        slug: 'episode-9',
+        number: 9,
+        title: 'Güneşin Doğduğu Yer Episode 9 (Bolum 9) — Urdu Dubbed',
+        duration: '2h 30m',
+        releaseDate: '2026-11-21',
+        thumbnail: 'https://lh3.googleusercontent.com/d/1UikNqWzQcGxbQx8sSqgjaTDN47iGhxgd',
+        shortSummary:
+          'Güneşin Doğduğu Yer Episode 9 in Urdu Dubbed HD raises every family rivalry to a dramatic climax — exclusive for FEVIQO Premium Members.',
+        accessType: 'premium',
+        isPublished: true,
+        requiredPlanLevel: 'any_active',
+      },
+      {
         slug: 'episode-8',
         number: 8,
         title: 'Güneşin Doğduğu Yer Episode 8 (Bolum 8) — Urdu Dubbed',

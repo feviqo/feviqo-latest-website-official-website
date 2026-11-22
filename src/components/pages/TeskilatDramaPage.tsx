@@ -31,6 +31,7 @@ import {
   Lock
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
+import { DramaMemberBar } from '../membership/DramaMemberBar';
 import { NativeVideoPlayer } from '../NativeVideoPlayer';
 import { AppRoute } from '../../types';
 import { AdBanner468x60 } from '../AdBanner468x60';
@@ -794,6 +795,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
         onNavigateFlow={onNavigateFlow}
         onNavigatePage={onNavigatePage}
       />
+
+      <DramaMemberBar dramaId="teskilat" onNavigatePage={onNavigatePage} />
 
       {/* TOP IN-STREAM SPONSORSHIP / AD PLACEMENT HEADER BANNER */}
       <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">

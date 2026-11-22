@@ -80,10 +80,21 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
     };
   }, [refreshEntitlement]);
 
-  // Mid-stream session & membership revocation heartbeat check every 30s
+  // Mid-stream session & membership revocation heartbeat check every 45s
   useEffect(() => {
     const entries = Object.entries(unlockedStreams).filter(([, url]) => Boolean(url));
     if (entries.length === 0) return;
+
+    const REVOCATION_CODES = new Set([
+      'UNAUTHENTICATED',
+      'ACCOUNT_BLOCKED',
+      'NO_ACTIVE_MEMBERSHIP',
+      'MEMBERSHIP_CANCELLED',
+      'MEMBERSHIP_EXPIRED',
+      'DRAMA_NOT_INCLUDED',
+      'PLAYBACK_SESSION_REVOKED',
+      'PLAYBACK_SESSION_MISMATCH',
+    ]);
 
     const timer = window.setInterval(async () => {
       for (const [key] of entries) {
@@ -93,26 +104,44 @@ export function useDramaEntitlement(_defaultDramaId?: string) {
         const episodeSlug = key.slice(idx + 1);
         const sessionId = playbackSessionIds[key];
         const hb = await sendPlaybackHeartbeat(dramaId, episodeSlug, sessionId);
-        if (!hb.allowed) {
-          setUnlockedStreams((prev) => {
-            const next = { ...prev };
-            delete next[key];
-            return next;
-          });
-          setPlaybackSessionIds((prev) => {
-            const next = { ...prev };
-            delete next[key];
-            return next;
-          });
-          setPlaybackWatermarks((prev) => {
-            const next = { ...prev };
-            delete next[key];
-            return next;
-          });
-          refreshEntitlement();
+        if (hb.allowed) continue;
+
+        // If only the playback session aged out, silently refresh session without interrupting playback
+        if (hb.code === 'PLAYBACK_SESSION_EXPIRED') {
+          try {
+            const renewed = await requestProtectedEpisodeStream(dramaId, episodeSlug);
+            if ('streamUrl' in renewed && renewed.success && renewed.playbackSessionId) {
+              setPlaybackSessionIds((prev) => ({ ...prev, [key]: renewed.playbackSessionId! }));
+              continue;
+            }
+          } catch {
+            continue;
+          }
         }
+
+        // Only tear down playback on explicit server authorization/revocation denial (never transient 5xx/network blips)
+        if (!hb.code || !REVOCATION_CODES.has(hb.code)) {
+          continue;
+        }
+
+        setUnlockedStreams((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        setPlaybackSessionIds((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        setPlaybackWatermarks((prev) => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+        refreshEntitlement();
       }
-    }, 30000);
+    }, 45000);
 
     return () => window.clearInterval(timer);
   }, [unlockedStreams, playbackSessionIds, refreshEntitlement]);

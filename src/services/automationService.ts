@@ -344,6 +344,12 @@ export interface ManualWhatsAppCustomerRecipientView {
   formattedPhone: string;
   waDigits: string;
   phoneValid: boolean;
+  phoneSource?:
+    | 'account_profile'
+    | 'whatsapp_pref'
+    | 'membership_record'
+    | 'order_record'
+    | 'missing';
   phoneError?: string;
   membershipStatus:
     | 'active'
@@ -360,6 +366,9 @@ export interface ManualWhatsAppCustomerRecipientView {
   hasWhatsappConsent: boolean;
   hasEpisodeConsent: boolean;
   optedOut: boolean;
+  isBlocked?: boolean;
+  blockedReason?: string;
+  blockedAt?: string;
   latestManualStatus?: 'pending' | 'opened' | 'confirmed_sent' | 'failed' | 'cancelled';
   latestManualNotificationId?: string;
   latestManualEventType?: string;
@@ -893,6 +902,7 @@ export async function fetchManualWhatsAppCenter(filters?: {
   error?: string;
 }> {
   const qs = new URLSearchParams();
+  qs.set('includeBlocked', '1');
   if (filters?.category) qs.set('category', filters.category);
   if (filters?.status) qs.set('status', filters.status);
   if (filters?.search) qs.set('search', filters.search);
@@ -996,6 +1006,12 @@ export async function syncManualWhatsAppReminders(): Promise<{
 export async function prepareManualWhatsAppMessages(payload: {
   memberIds: string[];
   eventType: string;
+  campaignPurpose?:
+    | 'free_episode'
+    | 'premium_access'
+    | 'premium_promotion'
+    | 'general_membership_promo'
+    | 'custom';
   customMessage?: string;
   dramaId?: string;
   episodeNumber?: number;
@@ -1008,6 +1024,8 @@ export async function prepareManualWhatsAppMessages(payload: {
   createdCount?: number;
   failedPhoneCount?: number;
   skippedOptedOutCount?: number;
+  skippedBlockedCount?: number;
+  skippedNotEntitledCount?: number;
   notifications?: OneClickWhatsAppNotificationView[];
   error?: string;
 }> {

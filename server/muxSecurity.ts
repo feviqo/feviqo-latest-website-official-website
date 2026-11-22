@@ -100,8 +100,8 @@ export interface MuxSecurityStatus {
 }
 
 const MAX_CONCURRENT_SESSIONS = 3;
-const SESSION_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours (re-validated against membership expiry on every call)
-const PROXY_URL_TTL_SECONDS = 90; // short-lived HMAC URLs inside rewritten manifests
+const SESSION_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours (re-validated against membership status & revocation on every request)
+const PROXY_URL_TTL_SECONDS = 6 * 60 * 60; // 6 hours for full VOD episode playback without mid-episode 403 expiry
 
 const DOWNLOADER_UA_PATTERNS: RegExp[] = [
   /\bIDM\b/i,
@@ -224,8 +224,8 @@ export function getMuxSecurityStatus(): MuxSecurityStatus {
   const keyObj = parseMuxPrivateKey();
   const restrictionId = (process.env.MUX_PLAYBACK_RESTRICTION_ID || '').trim() || null;
   const drmId = (process.env.MUX_DRM_CONFIGURATION_ID || '').trim() || null;
-  const ttlRaw = Number(process.env.MUX_JWT_TTL_SECONDS || 300);
-  const jwtTtlSeconds = Number.isFinite(ttlRaw) ? Math.min(900, Math.max(60, Math.round(ttlRaw))) : 300;
+  const ttlRaw = Number(process.env.MUX_JWT_TTL_SECONDS || 14400);
+  const jwtTtlSeconds = Number.isFinite(ttlRaw) ? Math.min(21600, Math.max(300, Math.round(ttlRaw))) : 14400;
   const signedUrlsEnabled = Boolean(keyId && keyObj);
 
   const signingKeyIdMasked = keyId
@@ -565,12 +565,26 @@ export function getPlaybackSessionById(sessionId: string): MuxPlaybackSession | 
   return sessions.find((s) => s.id === sessionId) || null;
 }
 
+const lastSessionDiskTouchMs = new Map<string, number>();
+
 export function touchPlaybackSession(sessionId: string): void {
+  const nowMs = Date.now();
+  const prevTouch = lastSessionDiskTouchMs.get(sessionId) || 0;
+  if (nowMs - prevTouch < 25_000) {
+    return;
+  }
+  lastSessionDiskTouchMs.set(sessionId, nowMs);
   const sessions = readJson<MuxPlaybackSession[]>(SESSIONS_FILE, []);
   const idx = sessions.findIndex((s) => s.id === sessionId);
   if (idx === -1) return;
-  sessions[idx].lastActivityAt = new Date().toISOString();
+  sessions[idx].lastActivityAt = new Date(nowMs).toISOString();
   sessions[idx].requestCount = (sessions[idx].requestCount || 0) + 1;
+  // Sliding expiration window so active viewers watching a 2.5h+ episode never hit mid-stream expiry
+  const extendedMs = nowMs + SESSION_TTL_MS;
+  const currentExpMs = Date.parse(sessions[idx].expiresAt) || 0;
+  if (extendedMs > currentExpMs) {
+    sessions[idx].expiresAt = new Date(extendedMs).toISOString();
+  }
   writeJson(SESSIONS_FILE, sessions);
 }
 

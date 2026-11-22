@@ -25,6 +25,7 @@ import {
   Lock
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
+import { DramaMemberBar } from '../membership/DramaMemberBar';
 import { Footer } from '../Footer';
 import { AdBanner468x60 } from '../AdBanner468x60';
 import { AdBanner160x300 } from '../AdBanner160x300';
@@ -283,6 +284,8 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
         onNavigateFlow={onNavigateFlow}
         onNavigatePage={onNavigatePage}
       />
+
+      <DramaMemberBar dramaId="mehmed-fetihler-sultani" onNavigatePage={onNavigatePage} />
 
       {/* TOP IN-STREAM SPONSORSHIP / AD PLACEMENT HEADER BANNER */}
       <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">

@@ -1,3 +1,10 @@
+export type ManualCampaignPurpose =
+  | 'free_episode'
+  | 'premium_access'
+  | 'premium_promotion'
+  | 'general_membership_promo'
+  | 'custom';
+
 export type OneClickEventType =
   | 'customer_registration'
   | 'signup_followup_unpaid'
@@ -12,6 +19,9 @@ export type OneClickEventType =
   | 'expiry_reminder_1d'
   | 'membership_expired'
   | 'episode_published'
+  | 'premium_episode_promo'
+  | 'general_membership_promo'
+  | 'custom_message'
   | 'account_security_alert'
   | 'creative_enquiry';
 
@@ -254,7 +264,11 @@ export function getNotificationCategoryForEvent(
     case 'membership_expired':
       return 'expiry';
     case 'episode_published':
+    case 'premium_episode_promo':
+    case 'custom_message':
       return 'episodes';
+    case 'general_membership_promo':
+      return 'registration';
     case 'account_security_alert':
       return 'security';
     case 'creative_enquiry':
@@ -493,6 +507,50 @@ export function generateOneClickWhatsAppMessage(
           ``,
           `Visit FEVIQO Premium for more Urdu-dubbed entertainment.`,
         ].join('\n'),
+      };
+    }
+
+    case 'premium_episode_promo': {
+      const seriesName = String(input.seriesName || '').trim();
+      const epNum = String(input.episodeNumber ?? '').trim();
+      if (!seriesName || !epNum) {
+        return { ok: false, error: 'Series name and episode number are required.' };
+      }
+      return {
+        ok: true,
+        message: [
+          `New Premium Episode Available on FEVIQO! 🎬`,
+          ``,
+          `Drama: ${seriesName}`,
+          `Episode: ${epNum}`,
+          ``,
+          `This episode is available to FEVIQO Premium members.`,
+          ``,
+          `Get your membership here:`,
+          `https://feviqo.com/membership`,
+        ].join('\n'),
+      };
+    }
+
+    case 'general_membership_promo': {
+      return {
+        ok: true,
+        message: [
+          `Assalam o Alaikum ${customerName},`,
+          `Watch exclusive Urdu-dubbed Turkish dramas in HD on FEVIQO! 🎬`,
+          ``,
+          `Choose your preferred plan (Starter, Standard, Plus, or VIP) and unlock instant access to the latest episodes:`,
+          `https://feviqo.com/membership`,
+          ``,
+          `Reply here if you need any help choosing or activating your membership.`,
+        ].join('\n'),
+      };
+    }
+
+    case 'custom_message': {
+      return {
+        ok: false,
+        error: 'Enter your custom message text below to preview and send.',
       };
     }
 

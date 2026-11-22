@@ -1,19 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  Ban,
   Check,
   CheckCircle2,
-  Clock,
   Copy,
   Edit3,
   ExternalLink,
   Filter,
+  Megaphone,
   MessageSquare,
   Phone,
   RefreshCw,
   Search,
   Send,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   Tv,
   Users,
@@ -35,7 +37,9 @@ import {
   prepareManualWhatsAppMessages,
   syncManualWhatsAppReminders,
 } from '../../services/automationService';
+import { updateMemberPhoneAdmin } from '../../services/membershipService';
 import {
+  ManualCampaignPurpose,
   OneClickEventType,
   buildWhatsAppWaMeUrl,
   generateOneClickWhatsAppMessage,
@@ -51,12 +55,63 @@ interface AdminWhatsAppCenterPageProps {
 
 type CenterViewTab = 'directory' | 'queue';
 
-const EVENT_TYPE_OPTIONS: Array<{
+type DirectoryQuickFilter =
+  | 'all_registered'
+  | 'eligible_promo'
+  | 'entitled_drama'
+  | 'missing_consent'
+  | 'missing_phone'
+  | 'blocked';
+
+const CAMPAIGN_PURPOSE_OPTIONS: Array<{
+  value: ManualCampaignPurpose;
+  label: string;
+  shortLabel: string;
+  description: string;
+}> = [
+  {
+    value: 'premium_promotion',
+    label: 'Premium Episode Promotion / Membership Purchase Invitation',
+    shortLabel: 'Premium Episode Promo',
+    description:
+      'Entitled active members get the authorized episode watch link. Non-entitled registered users get a promotional invite to feviqo.com/membership (never the protected stream link).',
+  },
+  {
+    value: 'premium_access',
+    label: 'Premium Episode Access Notification (Entitled Members Only)',
+    shortLabel: 'Premium Access Only',
+    description:
+      'Strictly limited to active paid members entitled to the selected drama. Sends the authorized episode watch link.',
+  },
+  {
+    value: 'free_episode',
+    label: 'Free Episode Announcement',
+    shortLabel: 'Free Episode',
+    description:
+      'Sends a free Urdu-dubbed episode watch announcement to all non-blocked registered customers.',
+  },
+  {
+    value: 'general_membership_promo',
+    label: 'General Membership Promotion',
+    shortLabel: 'Membership Promo',
+    description:
+      'Invites registered customers to explore and purchase a FEVIQO Starter, Standard, Plus, or VIP membership.',
+  },
+  {
+    value: 'custom',
+    label: 'Custom Message / Account Lifecycle Template',
+    shortLabel: 'Custom / Lifecycle',
+    description:
+      'Send a custom WhatsApp message or choose any payment, expiry, renewal, or support lifecycle template.',
+  },
+];
+
+const LIFECYCLE_EVENT_TYPE_OPTIONS: Array<{
   value: OneClickEventType;
   label: string;
   category: string;
 }> = [
-  { value: 'episode_published', label: 'New Episode Alert', category: 'Episodes' },
+  { value: 'custom_message', label: 'Custom Message Text', category: 'Custom' },
   { value: 'customer_registration', label: 'Welcome / Registration', category: 'Registration' },
   { value: 'signup_followup_unpaid', label: 'Signed Up (No Plan Yet) Follow-up', category: 'Registration' },
   { value: 'plan_selected', label: 'Plan Selected (Pending Payment)', category: 'Payment' },
@@ -105,6 +160,14 @@ const MEMBERSHIP_STATUS_LABELS: Record<
     label: 'Registered (Free)',
     badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
   },
+};
+
+const PHONE_SOURCE_LABELS: Record<string, string> = {
+  account_profile: 'Account profile',
+  whatsapp_pref: 'WhatsApp profile',
+  membership_record: 'Membership record',
+  order_record: 'Checkout / payment record',
+  missing: 'Missing',
 };
 
 function manualStatusMeta(status?: string): { label: string; className: string } {
@@ -185,24 +248,32 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
     invalidPhones: 0,
   });
   const [notifications, setNotifications] = useState<OneClickWhatsAppNotificationView[]>([]);
-  const [recipients, setRecipients] = useState<ManualWhatsAppCustomerRecipientView[]>([]);
+  const [allRecipients, setAllRecipients] = useState<ManualWhatsAppCustomerRecipientView[]>([]);
   const [dramasCatalog, setDramasCatalog] = useState<AdminAutomationOverview['dramasCatalog']>([]);
 
   // Directory Filters
+  const [quickFilter, setQuickFilter] = useState<DirectoryQuickFilter>('all_registered');
   const [recipientSearch, setRecipientSearch] = useState('');
   const [membershipFilter, setMembershipFilter] = useState('all');
   const [dramaFilter, setDramaFilter] = useState('all');
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [previewMemberId, setPreviewMemberId] = useState<string | null>(null);
 
-  // Message Composer for Directory
-  const [eventType, setEventType] = useState<OneClickEventType>('episode_published');
+  // Campaign Purpose & Message Composer
+  const [campaignPurpose, setCampaignPurpose] =
+    useState<ManualCampaignPurpose>('premium_promotion');
+  const [lifecycleEventType, setLifecycleEventType] =
+    useState<OneClickEventType>('signup_followup_unpaid');
   const [selectedDramaId, setSelectedDramaId] = useState('mehmed-fetihler-sultani');
   const [selectedEpisodeSlug, setSelectedEpisodeSlug] = useState('');
-  const [episodeAccessType, setEpisodeAccessType] = useState<'free' | 'premium'>('premium');
   const [rejectionReason, setRejectionReason] = useState('');
   const [customMessage, setCustomMessage] = useState('');
   const [preparingBulk, setPreparingBulk] = useState(false);
+
+  // Inline Customer Phone Correction State (Directory)
+  const [editingMemberPhoneId, setEditingMemberPhoneId] = useState<string | null>(null);
+  const [memberPhoneDraft, setMemberPhoneDraft] = useState('');
+  const [savingMemberPhone, setSavingMemberPhone] = useState(false);
 
   // Queue Filters
   const [queueCategoryFilter, setQueueCategoryFilter] = useState('all');
@@ -229,19 +300,19 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
           category: queueCategoryFilter === 'all' ? undefined : queueCategoryFilter,
           status: queueStatusFilter === 'all' ? undefined : queueStatusFilter,
           search: queueSearch.trim() || undefined,
-          recipientSearch: recipientSearch.trim() || undefined,
-          membershipStatus: membershipFilter === 'all' ? undefined : membershipFilter,
-          dramaId: dramaFilter === 'all' ? undefined : dramaFilter,
         }),
         fetchAdminAutomationOverview(),
       ]);
 
       if (!centerRes.success) {
-        setBanner({ type: 'error', text: centerRes.error || 'Failed to load Manual WhatsApp Center.' });
+        setBanner({
+          type: 'error',
+          text: centerRes.error || 'Failed to load Manual WhatsApp Center.',
+        });
       } else {
         if (centerRes.stats) setStats(centerRes.stats);
         setNotifications(centerRes.notifications || []);
-        setRecipients(centerRes.recipients || []);
+        setAllRecipients(centerRes.recipients || []);
       }
 
       if (overviewRes.success && overviewRes.dramasCatalog) {
@@ -258,14 +329,7 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
     } finally {
       setLoading(false);
     }
-  }, [
-    dramaFilter,
-    membershipFilter,
-    queueCategoryFilter,
-    queueSearch,
-    queueStatusFilter,
-    recipientSearch,
-  ]);
+  }, [queueCategoryFilter, queueSearch, queueStatusFilter]);
 
   useEffect(() => {
     loadCenterData();
@@ -285,7 +349,6 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
       const firstEp = activeDrama.episodes[0];
       if (firstEp) {
         setSelectedEpisodeSlug(firstEp.slug);
-        setEpisodeAccessType(firstEp.accessType === 'free' ? 'free' : 'premium');
       }
     }
   }, [activeDrama, selectedEpisodeSlug]);
@@ -299,26 +362,320 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
     );
   }, [activeDrama, selectedEpisodeSlug]);
 
+  const isEpisodeCampaign =
+    campaignPurpose === 'free_episode' ||
+    campaignPurpose === 'premium_access' ||
+    campaignPurpose === 'premium_promotion';
+
+  const effectiveEpisodeAccessType: 'free' | 'premium' =
+    campaignPurpose === 'free_episode' ? 'free' : 'premium';
+
   const episodeWatchLink = useMemo(() => {
     if (!activeDrama) return 'https://feviqo.com/dramas';
     const base = `https://feviqo.com/dramas/${activeDrama.slug}`;
     return activeEpisode ? `${base}?episode=${encodeURIComponent(activeEpisode.slug)}` : base;
   }, [activeDrama, activeEpisode]);
 
+  const isEntitledToSelectedDrama = useCallback(
+    (r: ManualWhatsAppCustomerRecipientView): boolean => {
+      if (r.isBlocked) return false;
+      if (!activeDrama) return r.membershipStatus === 'active';
+      return r.membershipStatus === 'active' && r.entitledDramaIds.includes(activeDrama.id);
+    },
+    [activeDrama]
+  );
+
+  // Per-recipient eligibility evaluation for the active Campaign Purpose
+  const evaluateRecipientEligibility = useCallback(
+    (
+      r: ManualWhatsAppCustomerRecipientView
+    ): {
+      selectable: boolean;
+      role: 'entitled' | 'promo_target' | 'general_target' | 'ineligible';
+      badgeLabel: string;
+      badgeClass: string;
+      reason?: string;
+    } => {
+      if (r.isBlocked) {
+        return {
+          selectable: false,
+          role: 'ineligible',
+          badgeLabel: 'Blocked Customer',
+          badgeClass: 'bg-red-100 text-red-800 border-red-300',
+          reason: r.blockedReason || 'Account permanently blocked by admin',
+        };
+      }
+      if (r.optedOut) {
+        return {
+          selectable: false,
+          role: 'ineligible',
+          badgeLabel: 'Opted Out (STOP)',
+          badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
+          reason: 'Customer opted out of WhatsApp messages (STOP)',
+        };
+      }
+      if (!r.phoneValid) {
+        return {
+          selectable: false,
+          role: 'ineligible',
+          badgeLabel: r.rawPhone ? 'Invalid Phone' : 'Phone number missing',
+          badgeClass: 'bg-red-50 text-red-700 border-red-200',
+          reason: r.phoneError || 'Phone number missing — add a valid number to send',
+        };
+      }
+
+      const entitled = isEntitledToSelectedDrama(r);
+
+      if (campaignPurpose === 'premium_access') {
+        if (!entitled) {
+          return {
+            selectable: false,
+            role: 'ineligible',
+            badgeLabel: `Not entitled to ${activeDrama?.title || 'Drama'} Premium`,
+            badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+            reason: `Mode A (Access Only): Not entitled to ${activeDrama?.title || 'selected drama'} Premium. Switch to "Premium Episode Promotion" to send a membership invite instead.`,
+          };
+        }
+        return {
+          selectable: true,
+          role: 'entitled',
+          badgeLabel: 'Entitled · Access Link',
+          badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        };
+      }
+
+      if (campaignPurpose === 'premium_promotion') {
+        if (entitled) {
+          return {
+            selectable: true,
+            role: 'entitled',
+            badgeLabel: 'Entitled · Watch Link',
+            badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+          };
+        }
+        return {
+          selectable: true,
+          role: 'promo_target',
+          badgeLabel: 'Eligible for Premium Promotion',
+          badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+        };
+      }
+
+      if (campaignPurpose === 'free_episode') {
+        return {
+          selectable: true,
+          role: 'general_target',
+          badgeLabel: 'Eligible · Free Episode',
+          badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        };
+      }
+
+      if (campaignPurpose === 'general_membership_promo') {
+        return {
+          selectable: true,
+          role: entitled ? 'entitled' : 'promo_target',
+          badgeLabel:
+            r.membershipStatus === 'active'
+              ? 'Active Member · Promo'
+              : 'Eligible for Membership Promo',
+          badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+        };
+      }
+
+      return {
+        selectable: true,
+        role: 'general_target',
+        badgeLabel: 'Eligible',
+        badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+      };
+    },
+    [activeDrama, campaignPurpose, isEntitledToSelectedDrama]
+  );
+
+  // Exact counts across ALL customers (before search/quick-filter narrowing)
+  const directoryCounts = useMemo(() => {
+    const nonBlocked = allRecipients.filter((r) => !r.isBlocked);
+    const blocked = allRecipients.filter((r) => Boolean(r.isBlocked));
+    const entitledDrama = nonBlocked.filter((r) => isEntitledToSelectedDrama(r));
+    const eligiblePromo = nonBlocked.filter(
+      (r) => r.phoneValid && !r.optedOut && !isEntitledToSelectedDrama(r)
+    );
+    const missingConsent = nonBlocked.filter((r) => !r.hasWhatsappConsent || r.optedOut);
+    const missingPhone = nonBlocked.filter((r) => !r.phoneValid);
+
+    return {
+      allRegistered: nonBlocked.length,
+      entitledDrama: entitledDrama.length,
+      eligiblePromo: eligiblePromo.length,
+      missingConsent: missingConsent.length,
+      missingPhone: missingPhone.length,
+      blocked: blocked.length,
+    };
+  }, [allRecipients, isEntitledToSelectedDrama]);
+
+  // Apply quick filter + search + membership dropdown + drama dropdown
+  const filteredRecipients = useMemo(() => {
+    let list = allRecipients;
+
+    switch (quickFilter) {
+      case 'all_registered':
+        list = list.filter((r) => !r.isBlocked);
+        break;
+      case 'eligible_promo':
+        list = list.filter(
+          (r) => !r.isBlocked && r.phoneValid && !r.optedOut && !isEntitledToSelectedDrama(r)
+        );
+        break;
+      case 'entitled_drama':
+        list = list.filter((r) => !r.isBlocked && isEntitledToSelectedDrama(r));
+        break;
+      case 'missing_consent':
+        list = list.filter((r) => !r.isBlocked && (!r.hasWhatsappConsent || r.optedOut));
+        break;
+      case 'missing_phone':
+        list = list.filter((r) => !r.isBlocked && !r.phoneValid);
+        break;
+      case 'blocked':
+        list = list.filter((r) => Boolean(r.isBlocked));
+        break;
+    }
+
+    if (membershipFilter !== 'all') {
+      list = list.filter((r) => r.membershipStatus === membershipFilter);
+    }
+    if (dramaFilter !== 'all') {
+      list = list.filter((r) => r.entitledDramaIds.includes(dramaFilter));
+    }
+    if (recipientSearch.trim()) {
+      const q = recipientSearch.trim().toLowerCase();
+      list = list.filter((r) =>
+        `${r.customerName} ${r.customerEmail} ${r.rawPhone} ${r.formattedPhone} ${r.planName} ${r.entitledDramaTitles.join(' ')} ${r.blockedReason || ''}`
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+    return list;
+  }, [
+    allRecipients,
+    dramaFilter,
+    isEntitledToSelectedDrama,
+    membershipFilter,
+    quickFilter,
+    recipientSearch,
+  ]);
+
+  const selectableVisibleRecipients = useMemo(
+    () => filteredRecipients.filter((r) => evaluateRecipientEligibility(r).selectable),
+    [evaluateRecipientEligibility, filteredRecipients]
+  );
+
+  // Clear selections that become ineligible when switching campaign purpose or filters
+  useEffect(() => {
+    const selectableSet = new Set(
+      allRecipients.filter((r) => evaluateRecipientEligibility(r).selectable).map((r) => r.memberId)
+    );
+    setSelectedMemberIds((prev) => {
+      const next = prev.filter((id) => selectableSet.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [allRecipients, evaluateRecipientEligibility]);
+
+  const resolveEventTypeForRequest = useCallback((): OneClickEventType => {
+    switch (campaignPurpose) {
+      case 'free_episode':
+      case 'premium_access':
+        return 'episode_published';
+      case 'premium_promotion':
+        return 'premium_episode_promo';
+      case 'general_membership_promo':
+        return 'general_membership_promo';
+      case 'custom':
+        return lifecycleEventType;
+    }
+  }, [campaignPurpose, lifecycleEventType]);
+
   const buildPersonalizedMessageForRecipient = useCallback(
-    (recipient: ManualWhatsAppCustomerRecipientView): { ok: true; message: string } | { ok: false; error: string } => {
+    (
+      recipient: ManualWhatsAppCustomerRecipientView
+    ): { ok: true; message: string; variant: 'entitled' | 'promo' | 'standard' } | { ok: false; error: string } => {
+      const entitled = isEntitledToSelectedDrama(recipient);
+      const safeLink =
+        campaignPurpose === 'premium_promotion' && !entitled
+          ? 'https://feviqo.com/membership'
+          : campaignPurpose === 'general_membership_promo'
+          ? 'https://feviqo.com/membership'
+          : episodeWatchLink;
+
       if (customMessage.trim()) {
         const replaced = customMessage
           .replace(/\{\{name\}\}/gi, recipient.customerName || 'Valued Member')
           .replace(/\{\{plan\}\}/gi, recipient.planName || 'FEVIQO Membership')
           .replace(/\{\{drama\}\}/gi, activeDrama?.title || 'FEVIQO Drama')
           .replace(/\{\{episode\}\}/gi, activeEpisode ? String(activeEpisode.number) : '')
-          .replace(/\{\{link\}\}/gi, episodeWatchLink);
-        return { ok: true, message: replaced.trim() };
+          .replace(/\{\{link\}\}/gi, safeLink);
+        return {
+          ok: true,
+          message: replaced.trim(),
+          variant:
+            campaignPurpose === 'premium_promotion'
+              ? entitled
+                ? 'entitled'
+                : 'promo'
+              : 'standard',
+        };
       }
 
-      return generateOneClickWhatsAppMessage({
-        eventType,
+      if (campaignPurpose === 'premium_promotion') {
+        if (entitled) {
+          const res = generateOneClickWhatsAppMessage({
+            eventType: 'episode_published',
+            customerName: recipient.customerName,
+            planName: recipient.planName || 'FEVIQO Membership',
+            seriesName: activeDrama?.title,
+            episodeNumber: activeEpisode?.number ?? 1,
+            episodeLink: episodeWatchLink,
+            accessType: 'premium',
+          });
+          if (res.ok) return { ok: true, message: res.message, variant: 'entitled' };
+          return { ok: false, error: 'error' in res ? res.error : 'Invalid episode message.' };
+        }
+        const res = generateOneClickWhatsAppMessage({
+          eventType: 'premium_episode_promo',
+          customerName: recipient.customerName,
+          seriesName: activeDrama?.title,
+          episodeNumber: activeEpisode?.number ?? 1,
+        });
+        if (res.ok) return { ok: true, message: res.message, variant: 'promo' };
+        return { ok: false, error: 'error' in res ? res.error : 'Invalid promo message.' };
+      }
+
+      if (campaignPurpose === 'premium_access' || campaignPurpose === 'free_episode') {
+        const res = generateOneClickWhatsAppMessage({
+          eventType: 'episode_published',
+          customerName: recipient.customerName,
+          planName: recipient.planName || 'FEVIQO Membership',
+          seriesName: activeDrama?.title,
+          episodeNumber: activeEpisode?.number ?? 1,
+          episodeLink: episodeWatchLink,
+          accessType: effectiveEpisodeAccessType,
+        });
+        if (res.ok) {
+          return { ok: true, message: res.message, variant: entitled ? 'entitled' : 'standard' };
+        }
+        return { ok: false, error: 'error' in res ? res.error : 'Invalid episode message.' };
+      }
+
+      if (campaignPurpose === 'general_membership_promo') {
+        const res = generateOneClickWhatsAppMessage({
+          eventType: 'general_membership_promo',
+          customerName: recipient.customerName,
+        });
+        if (res.ok) return { ok: true, message: res.message, variant: 'promo' };
+        return { ok: false, error: 'error' in res ? res.error : 'Invalid promo message.' };
+      }
+
+      const res = generateOneClickWhatsAppMessage({
+        eventType: lifecycleEventType,
         customerName: recipient.customerName,
         planName: recipient.planName || 'FEVIQO Membership',
         expiryDate: recipient.expiresAt,
@@ -326,48 +683,105 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
         seriesName: activeDrama?.title,
         episodeNumber: activeEpisode?.number ?? 1,
         episodeLink: episodeWatchLink,
-        accessType: episodeAccessType,
+        accessType: effectiveEpisodeAccessType,
       });
+      if (res.ok) return { ok: true, message: res.message, variant: 'standard' };
+      return { ok: false, error: 'error' in res ? res.error : 'Fill required fields to preview.' };
     },
     [
       activeDrama,
       activeEpisode,
+      campaignPurpose,
       customMessage,
-      episodeAccessType,
+      effectiveEpisodeAccessType,
       episodeWatchLink,
-      eventType,
+      isEntitledToSelectedDrama,
+      lifecycleEventType,
       rejectionReason,
     ]
   );
 
-  const eligibleRecipients = useMemo(
-    () =>
-      recipients.filter((r) => {
-        if (!r.phoneValid || r.optedOut) return false;
-        if (eventType === 'episode_published' && episodeAccessType === 'premium' && activeDrama) {
-          return r.membershipStatus === 'active' && r.entitledDramaIds.includes(activeDrama.id);
-        }
-        return true;
-      }),
-    [activeDrama, episodeAccessType, eventType, recipients]
-  );
+  // Representative recipients for Dual Preview (Entitled vs Non-Entitled Promo)
+  const sampleEntitledRecipient = useMemo<ManualWhatsAppCustomerRecipientView>(() => {
+    const found = allRecipients.find((r) => !r.isBlocked && isEntitledToSelectedDrama(r));
+    if (found) return found;
+    return {
+      memberId: 'sample_entitled',
+      customerName: 'Active VIP Member',
+      customerEmail: 'member@feviqo.com',
+      rawPhone: '+923001234567',
+      formattedPhone: '+923001234567',
+      waDigits: '923001234567',
+      phoneValid: true,
+      membershipStatus: 'active',
+      planName: 'VIP Plan',
+      entitledDramaIds: activeDrama ? [activeDrama.id] : [],
+      entitledDramaTitles: activeDrama ? [activeDrama.title] : [],
+      hasWhatsappConsent: true,
+      hasEpisodeConsent: true,
+      optedOut: false,
+      isBlocked: false,
+    };
+  }, [activeDrama, allRecipients, isEntitledToSelectedDrama]);
+
+  const samplePromoRecipient = useMemo<ManualWhatsAppCustomerRecipientView>(() => {
+    const found = allRecipients.find(
+      (r) => !r.isBlocked && !isEntitledToSelectedDrama(r) && !r.optedOut
+    );
+    if (found) return found;
+    return {
+      memberId: 'sample_promo',
+      customerName: 'Registered Customer',
+      customerEmail: 'customer@feviqo.com',
+      rawPhone: '+923001234567',
+      formattedPhone: '+923001234567',
+      waDigits: '923001234567',
+      phoneValid: true,
+      membershipStatus: 'never_purchased',
+      planName: 'No Plan',
+      entitledDramaIds: [],
+      entitledDramaTitles: [],
+      hasWhatsappConsent: true,
+      hasEpisodeConsent: true,
+      optedOut: false,
+      isBlocked: false,
+    };
+  }, [allRecipients, isEntitledToSelectedDrama]);
 
   const previewRecipient = useMemo(() => {
     if (previewMemberId) {
-      const found = recipients.find((r) => r.memberId === previewMemberId);
+      const found = allRecipients.find((r) => r.memberId === previewMemberId);
       if (found) return found;
     }
     if (selectedMemberIds.length > 0) {
-      const found = recipients.find((r) => r.memberId === selectedMemberIds[0]);
+      const found = allRecipients.find((r) => r.memberId === selectedMemberIds[0]);
       if (found) return found;
     }
-    return eligibleRecipients[0] || recipients[0] || null;
-  }, [eligibleRecipients, previewMemberId, recipients, selectedMemberIds]);
+    return selectableVisibleRecipients[0] || filteredRecipients[0] || null;
+  }, [allRecipients, filteredRecipients, previewMemberId, selectableVisibleRecipients, selectedMemberIds]);
 
-  const previewMessageResult = useMemo(() => {
+  const entitledPreviewMsg = useMemo(
+    () => buildPersonalizedMessageForRecipient(sampleEntitledRecipient),
+    [buildPersonalizedMessageForRecipient, sampleEntitledRecipient]
+  );
+
+  const promoPreviewMsg = useMemo(
+    () => buildPersonalizedMessageForRecipient(samplePromoRecipient),
+    [buildPersonalizedMessageForRecipient, samplePromoRecipient]
+  );
+
+  const singlePreviewMsg = useMemo(() => {
     if (!previewRecipient) return null;
     return buildPersonalizedMessageForRecipient(previewRecipient);
   }, [buildPersonalizedMessageForRecipient, previewRecipient]);
+
+  const selectedBreakdown = useMemo(() => {
+    const set = new Set(selectedMemberIds);
+    const chosen = allRecipients.filter((r) => set.has(r.memberId));
+    const entitledCount = chosen.filter((r) => isEntitledToSelectedDrama(r)).length;
+    const promoCount = chosen.length - entitledCount;
+    return { total: chosen.length, entitledCount, promoCount };
+  }, [allRecipients, isEntitledToSelectedDrama, selectedMemberIds]);
 
   const toggleSelectMember = (memberId: string) => {
     setSelectedMemberIds((prev) =>
@@ -376,7 +790,7 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
   };
 
   const handleSelectAllEligible = () => {
-    const eligibleIds = eligibleRecipients.map((r) => r.memberId);
+    const eligibleIds = selectableVisibleRecipients.map((r) => r.memberId);
     const allSelected =
       eligibleIds.length > 0 && eligibleIds.every((id) => selectedMemberIds.includes(id));
     if (allSelected) {
@@ -386,41 +800,92 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
     }
   };
 
-  const handlePrepareSelectedInQueue = async () => {
-    if (selectedMemberIds.length === 0) {
-      setBanner({ type: 'error', text: 'Select at least one customer from the directory first.' });
+  const handleSaveMemberPhone = async (memberId: string) => {
+    const trimmed = memberPhoneDraft.trim();
+    if (!trimmed) {
+      setBanner({
+        type: 'error',
+        text: 'Enter a valid WhatsApp phone number (e.g. 03001234567 or +923001234567).',
+      });
       return;
     }
-    if (eventType === 'payment_rejected' && !rejectionReason.trim() && !customMessage.trim()) {
+    setSavingMemberPhone(true);
+    setBanner(null);
+    try {
+      const res = await updateMemberPhoneAdmin(memberId, trimmed);
+      if ('error' in res) {
+        setBanner({ type: 'error', text: res.error || 'Could not update customer phone number.' });
+        return;
+      }
+      setEditingMemberPhoneId(null);
+      setMemberPhoneDraft('');
+      setBanner({
+        type: 'success',
+        text: `Updated WhatsApp phone for ${res.member.fullName || res.member.email} to ${res.member.phone}.`,
+      });
+      await loadCenterData();
+    } catch {
+      setBanner({ type: 'error', text: 'Failed to save customer phone number.' });
+    } finally {
+      setSavingMemberPhone(false);
+    }
+  };
+
+  const handlePrepareSelectedInQueue = async () => {
+    if (selectedMemberIds.length === 0) {
+      setBanner({ type: 'error', text: 'Select at least one eligible customer first.' });
+      return;
+    }
+    const eventTypeToSend = resolveEventTypeForRequest();
+    if (eventTypeToSend === 'payment_rejected' && !rejectionReason.trim() && !customMessage.trim()) {
       setBanner({
         type: 'error',
         text: 'Enter the actual rejection reason before preparing payment rejection messages.',
       });
       return;
     }
+    if (eventTypeToSend === 'custom_message' && !customMessage.trim()) {
+      setBanner({
+        type: 'error',
+        text: 'Write your custom message text before preparing drafts.',
+      });
+      return;
+    }
+
     setPreparingBulk(true);
     setBanner(null);
     try {
       const res = await prepareManualWhatsAppMessages({
         memberIds: selectedMemberIds,
-        eventType,
+        eventType: eventTypeToSend,
+        campaignPurpose,
         customMessage: customMessage.trim() || undefined,
-        dramaId: eventType === 'episode_published' ? activeDrama?.id : undefined,
-        episodeNumber: eventType === 'episode_published' ? activeEpisode?.number : undefined,
-        episodeSlug: eventType === 'episode_published' ? activeEpisode?.slug : undefined,
-        episodeLink: eventType === 'episode_published' ? episodeWatchLink : undefined,
-        accessType: eventType === 'episode_published' ? episodeAccessType : undefined,
-        rejectionReason: eventType === 'payment_rejected' ? rejectionReason.trim() : undefined,
+        dramaId: isEpisodeCampaign ? activeDrama?.id : undefined,
+        episodeNumber: isEpisodeCampaign ? activeEpisode?.number : undefined,
+        episodeSlug: isEpisodeCampaign ? activeEpisode?.slug : undefined,
+        episodeLink: isEpisodeCampaign ? episodeWatchLink : undefined,
+        accessType: isEpisodeCampaign ? effectiveEpisodeAccessType : undefined,
+        rejectionReason: eventTypeToSend === 'payment_rejected' ? rejectionReason.trim() : undefined,
       });
       if (!res.success) {
-        setBanner({ type: 'error', text: res.error || 'Failed to prepare manual WhatsApp messages.' });
+        setBanner({
+          type: 'error',
+          text: res.error || 'Failed to prepare manual WhatsApp messages.',
+        });
         return;
+      }
+      const notes: string[] = [];
+      if (res.failedPhoneCount) notes.push(`${res.failedPhoneCount} need phone correction`);
+      if (res.skippedOptedOutCount) notes.push(`${res.skippedOptedOutCount} opted-out skipped`);
+      if (res.skippedBlockedCount) notes.push(`${res.skippedBlockedCount} blocked skipped`);
+      if (res.skippedNotEntitledCount) {
+        notes.push(`${res.skippedNotEntitledCount} not entitled skipped`);
       }
       setBanner({
         type: 'success',
         text: `Prepared ${res.createdCount || 0} personalized WhatsApp draft(s) in the Manual Queue.${
-          res.failedPhoneCount ? ` ${res.failedPhoneCount} need phone correction.` : ''
-        }${res.skippedOptedOutCount ? ` ${res.skippedOptedOutCount} opted-out customer(s) skipped.` : ''}`,
+          notes.length ? ` (${notes.join(', ')})` : ''
+        }`,
       });
       setSelectedMemberIds([]);
       setViewTab('queue');
@@ -432,20 +897,20 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
     }
   };
 
-  // Called when clicking native <a href={waUrl}> on a Directory row:
-  // prepares & logs "Opened in WhatsApp" without blocking the native link navigation!
   const handleDirectDirectoryOpen = async (recipient: ManualWhatsAppCustomerRecipientView) => {
     try {
+      const eventTypeToSend = resolveEventTypeForRequest();
       const prepared = await prepareManualWhatsAppMessages({
         memberIds: [recipient.memberId],
-        eventType,
+        eventType: eventTypeToSend,
+        campaignPurpose,
         customMessage: customMessage.trim() || undefined,
-        dramaId: eventType === 'episode_published' ? activeDrama?.id : undefined,
-        episodeNumber: eventType === 'episode_published' ? activeEpisode?.number : undefined,
-        episodeSlug: eventType === 'episode_published' ? activeEpisode?.slug : undefined,
-        episodeLink: eventType === 'episode_published' ? episodeWatchLink : undefined,
-        accessType: eventType === 'episode_published' ? episodeAccessType : undefined,
-        rejectionReason: eventType === 'payment_rejected' ? rejectionReason.trim() : undefined,
+        dramaId: isEpisodeCampaign ? activeDrama?.id : undefined,
+        episodeNumber: isEpisodeCampaign ? activeEpisode?.number : undefined,
+        episodeSlug: isEpisodeCampaign ? activeEpisode?.slug : undefined,
+        episodeLink: isEpisodeCampaign ? episodeWatchLink : undefined,
+        accessType: isEpisodeCampaign ? effectiveEpisodeAccessType : undefined,
+        rejectionReason: eventTypeToSend === 'payment_rejected' ? rejectionReason.trim() : undefined,
       });
       const created = prepared.notifications?.[0];
       if (created?.id) {
@@ -458,7 +923,7 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
         await loadCenterData();
       }
     } catch {
-      // Non-blocking: the native wa.me anchor already opened WhatsApp for the admin
+      // Non-blocking: native wa.me link already opened WhatsApp
     }
   };
 
@@ -483,7 +948,10 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
     try {
       const res = await confirmManualWhatsAppNotificationSent(notificationId);
       if (!res.success) {
-        setBanner({ type: 'error', text: res.error || 'Could not mark message as manually sent.' });
+        setBanner({
+          type: 'error',
+          text: res.error || 'Could not mark message as manually sent.',
+        });
         return;
       }
       if (memberId && res.notification) {
@@ -503,7 +971,10 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
     setBusyNotificationId(notificationId);
     setBanner(null);
     try {
-      const res = await cancelManualWhatsAppNotification(notificationId, 'Cancelled by administrator');
+      const res = await cancelManualWhatsAppNotification(
+        notificationId,
+        'Cancelled by administrator'
+      );
       if (!res.success) {
         setBanner({ type: 'error', text: res.error || 'Failed to cancel notification.' });
         return;
@@ -517,7 +988,7 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
   const handleStartEdit = (n: OneClickWhatsAppNotificationView) => {
     setEditingId(n.id);
     setEditPhone(n.phoneE164 || n.rawPhone || '');
-    setEditMessage(n.messageText || '');
+    setEditMessage(n.messageText || (n as any).message || '');
   };
 
   const handleSaveEdit = async (notificationId: string) => {
@@ -537,7 +1008,9 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
         type: 'success',
         text: res.notification?.phoneValid
           ? 'Updated message and validated WhatsApp link.'
-          : `Saved edits, but phone is still invalid: ${res.notification?.phoneError || 'Check country code.'}`,
+          : `Saved edits, but phone is still invalid: ${
+              res.notification?.phoneError || 'Check country code.'
+            }`,
       });
       await loadCenterData();
     } finally {
@@ -556,7 +1029,9 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
       }
       setBanner({
         type: 'success',
-        text: `Synced manual lifecycle reminders: ${res.summary?.queued || 0} queued, ${res.summary?.skipped || 0} skipped.`,
+        text: `Synced manual lifecycle reminders: ${res.summary?.queued || 0} queued, ${
+          res.summary?.skipped || 0
+        } skipped.`,
       });
       await loadCenterData();
     } finally {
@@ -569,6 +1044,10 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
     setCopiedId(id);
     setTimeout(() => setCopiedId((curr) => (curr === id ? null : curr)), 1600);
   };
+
+  const activePurposeMeta =
+    CAMPAIGN_PURPOSE_OPTIONS.find((opt) => opt.value === campaignPurpose) ||
+    CAMPAIGN_PURPOSE_OPTIONS[0];
 
   return (
     <AdminPortalAuthGate
@@ -593,7 +1072,7 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                   Manual WhatsApp Center
                 </h1>
                 <p className="text-sm text-slate-600 max-w-3xl">
-                  Send personalized WhatsApp messages directly through WhatsApp Web/App independently of the Meta Cloud API. Every link formats international numbers strictly without guessing missing country codes, tracks <strong>Opened in WhatsApp</strong>, and waits for your explicit <strong>Mark as Sent</strong> confirmation.
+                  Reconciles verified customer WhatsApp numbers across profiles, memberships, and checkout records. Supports both <strong>Premium Access Notifications</strong> (entitled members only) and <strong>Premium Episode Promotions</strong> (sends membership link to non-entitled registered users without exposing protected stream URLs).
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -650,24 +1129,45 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <div className="bg-white rounded-xl border border-slate-200 p-4">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Customer Directory
+                Registered Users
               </div>
-              <div className="mt-1 text-2xl font-bold text-[#0F172A]">{recipients.length}</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Non-blocked accounts</div>
+              <div className="mt-1 text-2xl font-bold text-[#0F172A]">
+                {directoryCounts.allRegistered}
+              </div>
+              <div className="text-[11px] text-slate-500 mt-0.5">
+                {directoryCounts.blocked} blocked excluded
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-indigo-200 p-4">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-indigo-700">
+                Eligible for Promo
+              </div>
+              <div className="mt-1 text-2xl font-bold text-indigo-900">
+                {directoryCounts.eligiblePromo}
+              </div>
+              <div className="text-[11px] text-indigo-700/80 mt-0.5">Non-entitled valid phones</div>
+            </div>
+            <div className="bg-white rounded-xl border border-emerald-200 p-4">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
+                Entitled to Drama
+              </div>
+              <div className="mt-1 text-2xl font-bold text-emerald-900">
+                {directoryCounts.entitledDrama}
+              </div>
+              <div className="text-[11px] text-emerald-700/80 mt-0.5 truncate">
+                {activeDrama?.title || 'Selected drama'}
+              </div>
             </div>
             <div className="bg-white rounded-xl border border-amber-200 p-4">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">
-                Pending Manual
+                Pending / Opened
               </div>
-              <div className="mt-1 text-2xl font-bold text-amber-900">{stats.pending}</div>
-              <div className="text-[11px] text-amber-700/80 mt-0.5">Ready to open</div>
-            </div>
-            <div className="bg-white rounded-xl border border-sky-200 p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-sky-700">
-                Opened in WhatsApp
+              <div className="mt-1 text-2xl font-bold text-amber-900">
+                {stats.pending + stats.opened}
               </div>
-              <div className="mt-1 text-2xl font-bold text-sky-900">{stats.opened}</div>
-              <div className="text-[11px] text-sky-700/80 mt-0.5">Awaiting confirmation</div>
+              <div className="text-[11px] text-amber-700/80 mt-0.5">
+                {stats.pending} pending · {stats.opened} opened
+              </div>
             </div>
             <div className="bg-white rounded-xl border border-emerald-200 p-4">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">
@@ -678,17 +1178,12 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
             </div>
             <div className="bg-white rounded-xl border border-red-200 p-4">
               <div className="text-[11px] font-semibold uppercase tracking-wider text-red-700">
-                Invalid Phones
+                Missing / Invalid #
               </div>
-              <div className="mt-1 text-2xl font-bold text-red-800">{stats.invalidPhones}</div>
-              <div className="text-[11px] text-red-600/80 mt-0.5">Needs country code</div>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                Cancelled
+              <div className="mt-1 text-2xl font-bold text-red-800">
+                {directoryCounts.missingPhone}
               </div>
-              <div className="mt-1 text-2xl font-bold text-slate-700">{stats.cancelled}</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Skipped or blocked</div>
+              <div className="text-[11px] text-red-600/80 mt-0.5">Inline fix available</div>
             </div>
           </div>
 
@@ -704,7 +1199,7 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
               }`}
             >
               <Users className="w-4 h-4" />
-              <span>Customer Recipient List ({recipients.length})</span>
+              <span>Customer Recipient Directory ({allRecipients.length})</span>
             </button>
             <button
               type="button"
@@ -717,78 +1212,79 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
             >
               <MessageSquare className="w-4 h-4" />
               <span>
-                Manual Queue &amp; Tracking ({stats.pending + stats.opened} active / {stats.total} total)
+                Manual Queue &amp; Tracking ({stats.pending + stats.opened} active / {stats.total}{' '}
+                total)
               </span>
             </button>
           </div>
 
           {viewTab === 'directory' ? (
             <div className="space-y-5">
-              {/* Message Composer + Live Preview */}
+              {/* Message Composer + Live Previews */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
                   <div className="flex items-center justify-between gap-2">
                     <h2 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-[#16A34A]" />
-                      <span>1. Choose Message Category &amp; Content</span>
+                      <Megaphone className="w-4 h-4 text-[#16A34A]" />
+                      <span>1. Choose Campaign Purpose &amp; Content</span>
                     </h2>
                     <span className="text-[11px] font-medium text-slate-500">
-                      Generates real <code className="bg-slate-100 px-1.5 py-0.5 rounded">wa.me</code> links
+                      Generates real <code className="bg-slate-100 px-1.5 py-0.5 rounded">wa.me</code>{' '}
+                      links
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="block text-xs font-semibold text-slate-700">
-                        Message Category
-                      </label>
-                      <select
-                        value={eventType}
-                        onChange={(e) => setEventType(e.target.value as OneClickEventType)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:outline-none focus:border-[#0F172A]"
-                      >
-                        {EVENT_TYPE_OPTIONS.map((opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            [{opt.category}] {opt.label}
-                          </option>
-                        ))}
-                      </select>
+                  {/* Campaign Purpose Selector */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Campaign Purpose
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                      {CAMPAIGN_PURPOSE_OPTIONS.map((opt) => {
+                        const active = campaignPurpose === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setCampaignPurpose(opt.value)}
+                            className={`text-left px-3 py-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
+                              active
+                                ? opt.value === 'premium_promotion'
+                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                  : 'bg-[#0F172A] text-white border-[#0F172A] shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            <div>{opt.shortLabel}</div>
+                          </button>
+                        );
+                      })}
                     </div>
-
-                    {eventType === 'episode_published' && (
-                      <div className="space-y-1">
-                        <label className="block text-xs font-semibold text-slate-700">
-                          Episode Access Type
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setEpisodeAccessType('free')}
-                            className={`py-2 px-3 rounded-xl text-xs font-semibold border cursor-pointer transition ${
-                              episodeAccessType === 'free'
-                                ? 'bg-emerald-600 text-white border-emerald-600'
-                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                            }`}
-                          >
-                            Free Episode
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setEpisodeAccessType('premium')}
-                            className={`py-2 px-3 rounded-xl text-xs font-semibold border cursor-pointer transition ${
-                              episodeAccessType === 'premium'
-                                ? 'bg-[#0F172A] text-white border-[#0F172A]'
-                                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                            }`}
-                          >
-                            Premium Episode
-                          </button>
-                        </div>
+                    <div
+                      className={`text-[11px] rounded-xl px-3.5 py-2.5 border flex items-start gap-2 ${
+                        campaignPurpose === 'premium_promotion'
+                          ? 'bg-indigo-50 border-indigo-200 text-indigo-900'
+                          : campaignPurpose === 'premium_access'
+                          ? 'bg-amber-50 border-amber-200 text-amber-900'
+                          : 'bg-slate-50 border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {campaignPurpose === 'premium_promotion' ? (
+                        <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-indigo-600" />
+                      ) : campaignPurpose === 'premium_access' ? (
+                        <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
+                      )}
+                      <div>
+                        <div className="font-semibold">{activePurposeMeta.label}</div>
+                        <div className="opacity-90 mt-0.5">{activePurposeMeta.description}</div>
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  {eventType === 'episode_published' && (
+                  {/* Episode selector for episode-based campaigns */}
+                  {isEpisodeCampaign && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
                       <div className="space-y-1">
                         <label className="block text-xs font-semibold text-slate-700">Drama</label>
@@ -818,102 +1314,252 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                           ))}
                         </select>
                       </div>
-                      {episodeAccessType === 'premium' && (
-                        <div className="sm:col-span-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-start gap-2">
-                          <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-700" />
+                    </div>
+                  )}
+
+                  {/* Lifecycle template picker when in Custom / Lifecycle mode */}
+                  {campaignPurpose === 'custom' && (
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold text-slate-700">
+                          Lifecycle Template or Custom Message
+                        </label>
+                        <select
+                          value={lifecycleEventType}
+                          onChange={(e) => setLifecycleEventType(e.target.value as OneClickEventType)}
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-medium bg-white focus:outline-none focus:border-[#0F172A]"
+                        >
+                          {LIFECYCLE_EVENT_TYPE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              [{opt.category}] {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {lifecycleEventType === 'payment_rejected' && (
+                        <div className="space-y-1">
+                          <label className="block text-xs font-semibold text-red-700">
+                            Actual Rejection Reason (Required)
+                          </label>
+                          <input
+                            type="text"
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            placeholder="e.g. Payment receipt amount does not match selected Starter PKR plan."
+                            className="w-full px-3 py-2 rounded-xl border border-red-300 text-xs focus:outline-none focus:border-red-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      {campaignPurpose === 'custom' && lifecycleEventType === 'custom_message'
+                        ? 'Custom WhatsApp Message Text'
+                        : 'Optional Custom Message Override (leave blank to use FEVIQO template)'}
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={customMessage}
+                      onChange={(e) => setCustomMessage(e.target.value)}
+                      placeholder="Placeholders: {{name}}, {{plan}}, {{drama}}, {{episode}}, {{link}} (for non-entitled users, {{link}} safely becomes https://feviqo.com/membership)"
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-[#0F172A]"
+                    />
+                  </div>
+                </div>
+
+                {/* Live Personalized Message Preview(s) */}
+                <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-between space-y-4">
+                  {campaignPurpose === 'premium_promotion' ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-sm font-bold text-[#0F172A]">
+                          Separate Previews (Entitled vs Promo)
+                        </h2>
+                        <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+                          Mode B Protection Active
+                        </span>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-3 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-indigo-900">
+                            <span>Non-Entitled Customers ({directoryCounts.eligiblePromo})</span>
+                            <span className="text-[10px] font-semibold bg-white px-2 py-0.5 rounded border border-indigo-200 text-indigo-700">
+                              Membership Link Only
+                            </span>
+                          </div>
+                          {promoPreviewMsg.ok ? (
+                            <div className="text-[11px] text-slate-800 whitespace-pre-wrap leading-relaxed font-mono max-h-36 overflow-y-auto">
+                              {promoPreviewMsg.message}
+                            </div>
+                          ) : (
+                            <div className="text-[11px] text-red-700">
+                              {'error' in promoPreviewMsg ? promoPreviewMsg.error : 'Invalid promo preview.'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-emerald-900">
+                            <span>Entitled Members ({directoryCounts.entitledDrama})</span>
+                            <span className="text-[10px] font-semibold bg-white px-2 py-0.5 rounded border border-emerald-200 text-emerald-700">
+                              Authorized Watch Link
+                            </span>
+                          </div>
+                          {entitledPreviewMsg.ok ? (
+                            <div className="text-[11px] text-slate-800 whitespace-pre-wrap leading-relaxed font-mono max-h-36 overflow-y-auto">
+                              {entitledPreviewMsg.message}
+                            </div>
+                          ) : (
+                            <div className="text-[11px] text-red-700">
+                              {'error' in entitledPreviewMsg ? entitledPreviewMsg.error : 'Invalid preview.'}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-sm font-bold text-[#0F172A]">
+                          Live Personalized Message Preview
+                        </h2>
+                        {previewRecipient && (
+                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md truncate max-w-[160px]">
+                            {previewRecipient.customerName}
+                          </span>
+                        )}
+                      </div>
+
+                      {!previewRecipient ? (
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
+                          No matching customers found for the current filters.
+                        </div>
+                      ) : singlePreviewMsg?.ok ? (
+                        <div className="rounded-xl bg-[#ECFDF5] border border-emerald-200 p-4 text-xs text-slate-800 whitespace-pre-wrap leading-relaxed font-mono max-h-60 overflow-y-auto">
+                          {singlePreviewMsg.message}
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                           <span>
-                            Premium protection active: Only active paid members entitled to{' '}
-                            <strong>{activeDrama?.title || 'this drama'}</strong> are marked eligible for Premium episode links.
+                            {singlePreviewMsg && 'error' in singlePreviewMsg
+                              ? singlePreviewMsg.error
+                              : 'Fill required fields to preview.'}
                           </span>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {eventType === 'payment_rejected' && (
-                    <div className="space-y-1">
-                      <label className="block text-xs font-semibold text-red-700">
-                        Actual Rejection Reason (Required)
-                      </label>
-                      <input
-                        type="text"
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                        placeholder="e.g. Payment receipt amount does not match selected Starter PKR plan."
-                        className="w-full px-3 py-2 rounded-xl border border-red-300 text-xs focus:outline-none focus:border-red-500"
-                      />
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <label className="block text-xs font-semibold text-slate-700">
-                      Optional Custom Message Override (leave blank to use FEVIQO template)
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={customMessage}
-                      onChange={(e) => setCustomMessage(e.target.value)}
-                      placeholder="Optional custom text. Placeholders supported: {{name}}, {{plan}}, {{drama}}, {{episode}}, {{link}}"
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-[#0F172A]"
-                    />
-                  </div>
-                </div>
-
-                {/* Live Personalized Message Preview */}
-                <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <h2 className="text-sm font-bold text-[#0F172A]">
-                        Live Personalized Message Preview
-                      </h2>
-                      {previewRecipient && (
-                        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                          {previewRecipient.customerName}
-                        </span>
-                      )}
-                    </div>
-
-                    {!previewRecipient ? (
-                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
-                        No matching customers found for the current filters.
-                      </div>
-                    ) : previewMessageResult?.ok ? (
-                      <div className="rounded-xl bg-[#ECFDF5] border border-emerald-200 p-4 text-xs text-slate-800 whitespace-pre-wrap leading-relaxed font-mono max-h-56 overflow-y-auto">
-                        {previewMessageResult.message}
-                      </div>
-                    ) : (
-                      <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2">
-                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span>{previewMessageResult?.error || 'Fill required fields to preview.'}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-[11px] text-slate-500">
-                      Selected: <strong className="text-[#0F172A]">{selectedMemberIds.length}</strong> · Eligible:{' '}
-                      <strong className="text-emerald-700">{eligibleRecipients.length}</strong>
+                  {/* Recipient Counts Summary + Prepare Button */}
+                  <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600">
+                      <span>
+                        Selected:{' '}
+                        <strong className="text-[#0F172A]">{selectedBreakdown.total}</strong>
+                        {campaignPurpose === 'premium_promotion' && selectedBreakdown.total > 0 && (
+                          <span className="text-slate-500">
+                            {' '}
+                            ({selectedBreakdown.entitledCount} watch · {selectedBreakdown.promoCount}{' '}
+                            promo)
+                          </span>
+                        )}
+                      </span>
+                      <span>
+                        Eligible in view:{' '}
+                        <strong className="text-emerald-700">
+                          {selectableVisibleRecipients.length}
+                        </strong>
+                      </span>
                     </div>
                     <button
                       type="button"
                       disabled={preparingBulk || selectedMemberIds.length === 0}
                       onClick={handlePrepareSelectedInQueue}
-                      className="px-4 py-2 rounded-xl bg-[#0F172A] hover:bg-[#16A34A] text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition disabled:opacity-50"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#16A34A] text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer transition disabled:opacity-50"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>
                         {preparingBulk
                           ? 'Preparing...'
-                          : `Prepare ${selectedMemberIds.length} in Manual Queue`}
+                          : `Prepare ${selectedMemberIds.length} Message(s) in Manual Queue`}
                       </span>
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Filter Bar */}
+              {/* 6 Quick Audience Filter Tabs + Search & Dropdown Filters */}
               <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                <div className="flex flex-wrap items-center gap-2">
+                  {(
+                    [
+                      {
+                        key: 'all_registered',
+                        label: 'All Registered Customers',
+                        count: directoryCounts.allRegistered,
+                      },
+                      {
+                        key: 'eligible_promo',
+                        label: 'Eligible for Premium Promotion',
+                        count: directoryCounts.eligiblePromo,
+                      },
+                      {
+                        key: 'entitled_drama',
+                        label: 'Entitled to Selected Drama',
+                        count: directoryCounts.entitledDrama,
+                      },
+                      {
+                        key: 'missing_consent',
+                        label: 'Missing WhatsApp Consent',
+                        count: directoryCounts.missingConsent,
+                      },
+                      {
+                        key: 'missing_phone',
+                        label: 'Missing / Invalid Phone',
+                        count: directoryCounts.missingPhone,
+                      },
+                      {
+                        key: 'blocked',
+                        label: 'Blocked Customers',
+                        count: directoryCounts.blocked,
+                      },
+                    ] as Array<{ key: DirectoryQuickFilter; label: string; count: number }>
+                  ).map((tab) => {
+                    const active = quickFilter === tab.key;
+                    return (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setQuickFilter(tab.key)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border inline-flex items-center gap-1.5 cursor-pointer transition ${
+                          active
+                            ? tab.key === 'blocked'
+                              ? 'bg-red-700 text-white border-red-700'
+                              : tab.key === 'eligible_promo'
+                              ? 'bg-indigo-600 text-white border-indigo-600'
+                              : 'bg-[#0F172A] text-white border-[#0F172A]'
+                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                        }`}
+                      >
+                        <span>{tab.label}</span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                            active ? 'bg-white/20 text-white' : 'bg-white text-slate-600'
+                          }`}
+                        >
+                          {tab.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center pt-2 border-t border-slate-100">
                   <div className="md:col-span-4 relative">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -938,7 +1584,7 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                       <option value="expired">Expired Memberships</option>
                       <option value="rejected">Payment Rejected</option>
                       <option value="cancelled">Cancelled</option>
-                      <option value="never_purchased">Registered (Never Purchased)</option>
+                      <option value="never_purchased">Registered (Free)</option>
                     </select>
                   </div>
                   <div className="md:col-span-3 flex items-center gap-2">
@@ -960,12 +1606,15 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                     <button
                       type="button"
                       onClick={handleSelectAllEligible}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold cursor-pointer transition"
+                      disabled={selectableVisibleRecipients.length === 0}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold cursor-pointer transition disabled:opacity-50"
                     >
-                      {eligibleRecipients.length > 0 &&
-                      eligibleRecipients.every((r) => selectedMemberIds.includes(r.memberId))
+                      {selectableVisibleRecipients.length > 0 &&
+                      selectableVisibleRecipients.every((r) =>
+                        selectedMemberIds.includes(r.memberId)
+                      )
                         ? 'Clear Selection'
-                        : `Select Eligible (${eligibleRecipients.length})`}
+                        : `Select Eligible (${selectableVisibleRecipients.length})`}
                     </button>
                   </div>
                 </div>
@@ -980,53 +1629,49 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                         <th className="py-3 px-4 w-10">Sel</th>
                         <th className="py-3 px-4">Customer</th>
                         <th className="py-3 px-4">WhatsApp Number</th>
-                        <th className="py-3 px-4">Membership &amp; Drama Entitlement</th>
+                        <th className="py-3 px-4">Membership &amp; Eligibility</th>
                         <th className="py-3 px-4">Manual Status</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {recipients.length === 0 ? (
+                      {filteredRecipients.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="py-10 text-center text-slate-500">
                             No customers match the current search or filter criteria.
                           </td>
                         </tr>
                       ) : (
-                        recipients.map((r) => {
+                        filteredRecipients.map((r) => {
                           const statusInfo =
                             MEMBERSHIP_STATUS_LABELS[r.membershipStatus] ||
                             MEMBERSHIP_STATUS_LABELS.never_purchased;
+                          const eligibility = evaluateRecipientEligibility(r);
                           const directRec = directNotificationByMember[r.memberId];
-                          const currentManualStatus =
-                            directRec?.status || r.latestManualStatus;
+                          const currentManualStatus = directRec?.status || r.latestManualStatus;
                           const currentNotificationId =
                             directRec?.id || r.latestManualNotificationId;
                           const manualMeta = manualStatusMeta(currentManualStatus);
 
-                          const premiumBlocked =
-                            eventType === 'episode_published' &&
-                            episodeAccessType === 'premium' &&
-                            activeDrama &&
-                            !(
-                              r.membershipStatus === 'active' &&
-                              r.entitledDramaIds.includes(activeDrama.id)
-                            );
-
                           const msgResult = buildPersonalizedMessageForRecipient(r);
                           const waBuild =
-                            r.phoneValid && !r.optedOut && !premiumBlocked && msgResult.ok
+                            eligibility.selectable && msgResult.ok
                               ? buildWhatsAppWaMeUrl(r.formattedPhone || r.rawPhone, msgResult.message)
                               : null;
 
                           const isSelected = selectedMemberIds.includes(r.memberId);
+                          const isEditingThisPhone = editingMemberPhoneId === r.memberId;
 
                           return (
                             <tr
                               key={r.memberId}
                               onClick={() => setPreviewMemberId(r.memberId)}
                               className={`hover:bg-slate-50/80 transition ${
-                                previewRecipient?.memberId === r.memberId ? 'bg-emerald-50/30' : ''
+                                r.isBlocked
+                                  ? 'bg-red-50/30'
+                                  : previewRecipient?.memberId === r.memberId
+                                  ? 'bg-emerald-50/30'
+                                  : ''
                               }`}
                             >
                               <td
@@ -1036,60 +1681,139 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
-                                  disabled={!r.phoneValid || r.optedOut || Boolean(premiumBlocked)}
+                                  disabled={!eligibility.selectable}
+                                  title={eligibility.reason || 'Select recipient'}
                                   onChange={() => toggleSelectMember(r.memberId)}
                                   className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:opacity-40"
                                 />
                               </td>
                               <td className="py-3.5 px-4 align-top">
-                                <div className="font-semibold text-[#0F172A]">{r.customerName}</div>
+                                <div className="font-semibold text-[#0F172A] flex items-center gap-1.5">
+                                  <span>{r.customerName}</span>
+                                  {r.isBlocked && (
+                                    <Ban className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                                  )}
+                                </div>
                                 <div className="text-[11px] text-slate-500">{r.customerEmail}</div>
                                 <div className="mt-1 flex flex-wrap gap-1">
-                                  {r.optedOut ? (
+                                  {r.isBlocked ? (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-800 border border-red-300">
+                                      Permanently Blocked
+                                    </span>
+                                  ) : r.optedOut ? (
                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
                                       Opted Out (STOP)
                                     </span>
                                   ) : r.hasWhatsappConsent ? (
                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                      API Opt-In
+                                      WhatsApp Enabled
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                                      No Auto Opt-In
+                                      Legacy (Manual Eligible)
                                     </span>
                                   )}
                                 </div>
                               </td>
-                              <td className="py-3.5 px-4 align-top">
-                                {r.phoneValid ? (
+                              <td
+                                className="py-3.5 px-4 align-top"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {isEditingThisPhone ? (
+                                  <div className="space-y-1.5 min-w-[200px]">
+                                    <input
+                                      type="text"
+                                      value={memberPhoneDraft}
+                                      onChange={(e) => setMemberPhoneDraft(e.target.value)}
+                                      placeholder="03001234567 or +923001234567"
+                                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-mono bg-white"
+                                    />
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        disabled={savingMemberPhone}
+                                        onClick={() => handleSaveMemberPhone(r.memberId)}
+                                        className="px-2.5 py-1 rounded-md bg-[#0F172A] hover:bg-[#16A34A] text-white text-[10px] font-semibold cursor-pointer disabled:opacity-50"
+                                      >
+                                        {savingMemberPhone ? 'Saving...' : 'Save'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingMemberPhoneId(null);
+                                          setMemberPhoneDraft('');
+                                        }}
+                                        className="px-2 py-1 rounded-md border border-slate-200 text-slate-600 text-[10px] font-semibold cursor-pointer"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : r.phoneValid ? (
                                   <div>
                                     <div className="font-mono font-semibold text-[#0F172A] flex items-center gap-1">
-                                      <Phone className="w-3 h-3 text-emerald-600" />
+                                      <Phone className="w-3 h-3 text-emerald-600 shrink-0" />
                                       <span>{r.formattedPhone}</span>
                                     </div>
-                                    {r.rawPhone !== r.formattedPhone && (
-                                      <div className="text-[10px] text-slate-400">
-                                        Saved as: {r.rawPhone}
-                                      </div>
-                                    )}
+                                    <div className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                                      <span>
+                                        Source:{' '}
+                                        {PHONE_SOURCE_LABELS[r.phoneSource || 'account_profile'] ||
+                                          'Account profile'}
+                                      </span>
+                                      {!r.isBlocked && !r.memberId.startsWith('blocked_') && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingMemberPhoneId(r.memberId);
+                                            setMemberPhoneDraft(r.formattedPhone || r.rawPhone);
+                                          }}
+                                          className="text-slate-500 hover:text-[#0F172A] underline cursor-pointer"
+                                        >
+                                          Edit
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 ) : (
-                                  <div className="space-y-0.5">
+                                  <div className="space-y-1">
                                     <div className="font-mono text-red-700 font-semibold">
-                                      {r.rawPhone || 'No number'}
+                                      {r.rawPhone || 'Phone number missing'}
                                     </div>
-                                    <div className="text-[10px] text-red-600 max-w-[200px]">
-                                      {r.phoneError || 'Missing country code'}
-                                    </div>
+                                    {r.phoneError && r.phoneError !== 'Phone number missing' && (
+                                      <div className="text-[10px] text-red-600 max-w-[200px]">
+                                        {r.phoneError}
+                                      </div>
+                                    )}
+                                    {!r.isBlocked && !r.memberId.startsWith('blocked_') && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingMemberPhoneId(r.memberId);
+                                          setMemberPhoneDraft(r.rawPhone || '');
+                                        }}
+                                        className="px-2 py-1 rounded-md border border-red-200 bg-red-50 hover:bg-red-100 text-red-800 text-[10px] font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Edit3 className="w-3 h-3" />
+                                        <span>Add / Fix Phone</span>
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                               </td>
                               <td className="py-3.5 px-4 align-top space-y-1">
-                                <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${statusInfo.badgeClass}`}
-                                >
-                                  {statusInfo.label}
-                                </span>
+                                <div className="flex flex-wrap items-center gap-1">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${statusInfo.badgeClass}`}
+                                  >
+                                    {statusInfo.label}
+                                  </span>
+                                  <span
+                                    className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border ${eligibility.badgeClass}`}
+                                  >
+                                    {eligibility.badgeLabel}
+                                  </span>
+                                </div>
                                 {r.planName && r.planName !== 'No Plan' && (
                                   <div className="text-[11px] text-slate-600 font-medium">
                                     Plan: {r.planName}
@@ -1104,9 +1828,9 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                                     No active drama entitlement
                                   </div>
                                 )}
-                                {premiumBlocked && (
-                                  <div className="text-[10px] font-semibold text-amber-700">
-                                    Not entitled to {activeDrama?.title} Premium
+                                {eligibility.reason && (
+                                  <div className="text-[10px] text-slate-500 max-w-[240px]">
+                                    {eligibility.reason}
                                   </div>
                                 )}
                               </td>
@@ -1133,24 +1857,35 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={() => handleDirectDirectoryOpen(r)}
-                                      className="px-3 py-1.5 rounded-lg bg-[#16A34A] hover:bg-[#15803D] text-white text-[11px] font-semibold inline-flex items-center gap-1.5 transition shadow-xs"
+                                      className={`px-3 py-1.5 rounded-lg text-white text-[11px] font-semibold inline-flex items-center gap-1.5 transition shadow-xs ${
+                                        eligibility.role === 'promo_target'
+                                          ? 'bg-indigo-600 hover:bg-indigo-700'
+                                          : 'bg-[#16A34A] hover:bg-[#15803D]'
+                                      }`}
                                     >
                                       <ExternalLink className="w-3 h-3" />
-                                      <span>SEND ON WHATSAPP</span>
+                                      <span>
+                                        {eligibility.role === 'promo_target'
+                                          ? 'SEND PROMO ON WHATSAPP'
+                                          : 'SEND ON WHATSAPP'}
+                                      </span>
                                     </a>
                                   ) : (
-                                    <span className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-400 text-[11px] font-semibold">
-                                      {r.optedOut
+                                    <span className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-[11px] font-semibold">
+                                      {r.isBlocked
+                                        ? 'Blocked'
+                                        : r.optedOut
                                         ? 'Opted Out'
-                                        : premiumBlocked
-                                        ? 'Not Entitled'
                                         : !r.phoneValid
-                                        ? 'Invalid Phone'
-                                        : 'Check Message'}
+                                        ? 'Fix Phone First'
+                                        : !eligibility.selectable
+                                        ? 'Not Entitled'
+                                        : 'Enter Message'}
                                     </span>
                                   )}
 
                                   {currentNotificationId &&
+                                    !r.isBlocked &&
                                     currentManualStatus !== 'confirmed_sent' &&
                                     currentManualStatus !== 'cancelled' && (
                                       <button
@@ -1197,8 +1932,8 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white"
                   >
                     <option value="all">All Categories</option>
-                    <option value="episodes">Episodes</option>
-                    <option value="registration">Registration</option>
+                    <option value="episodes">Episodes &amp; Promos</option>
+                    <option value="registration">Registration &amp; Membership Promos</option>
                     <option value="payment">Payment</option>
                     <option value="activation">Activation &amp; Renewal</option>
                     <option value="rejection">Rejection</option>
@@ -1230,7 +1965,8 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                     No manual WhatsApp notifications match these filters
                   </div>
                   <p className="text-xs text-slate-500 max-w-md mx-auto">
-                    Use the Customer Recipient List tab to select customers and prepare personalized WhatsApp drafts, or trigger an episode broadcast in Manual / Fallback mode.
+                    Use the Customer Recipient Directory tab to select customers and prepare
+                    personalized WhatsApp drafts for episodes, membership promotions, or reminders.
                   </p>
                 </div>
               ) : (
@@ -1239,6 +1975,8 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                     const meta = manualStatusMeta(item.status);
                     const isEditing = editingId === item.id;
                     const busy = busyNotificationId === item.id;
+                    const displayMessage = item.messageText || (item as any).message || '';
+                    const displayPhone = item.phoneE164 || (item as any).recipientPhone || item.rawPhone;
 
                     return (
                       <div
@@ -1264,12 +2002,11 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                               <span>
                                 Phone:{' '}
                                 {item.phoneValid ? (
-                                  <strong className="font-mono text-[#0F172A]">
-                                    {item.phoneE164}
-                                  </strong>
+                                  <strong className="font-mono text-[#0F172A]">{displayPhone}</strong>
                                 ) : (
                                   <strong className="text-red-700">
-                                    {item.rawPhone || 'Missing'} ({item.phoneError || 'Invalid'})
+                                    {item.rawPhone || 'Phone number missing'} (
+                                    {item.phoneError || 'Invalid'})
                                   </strong>
                                 )}
                               </span>
@@ -1292,24 +2029,22 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2">
-                            {item.phoneValid &&
-                              item.waUrl &&
-                              item.status !== 'cancelled' && (
-                                <a
-                                  href={item.waUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => handleQueueOpenClick(item)}
-                                  className="px-3.5 py-2 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs"
-                                >
-                                  <ExternalLink className="w-3.5 h-3.5" />
-                                  <span>
-                                    {item.status === 'opened'
-                                      ? 'Re-open in WhatsApp'
-                                      : 'SEND ON WHATSAPP'}
-                                  </span>
-                                </a>
-                              )}
+                            {item.phoneValid && item.waUrl && item.status !== 'cancelled' && (
+                              <a
+                                href={item.waUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => handleQueueOpenClick(item)}
+                                className="px-3.5 py-2 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-xs"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>
+                                  {item.status === 'opened'
+                                    ? 'Re-open in WhatsApp'
+                                    : 'SEND ON WHATSAPP'}
+                                </span>
+                              </a>
+                            )}
 
                             {item.status !== 'confirmed_sent' &&
                               item.status !== 'cancelled' &&
@@ -1341,7 +2076,7 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
 
                             <button
                               type="button"
-                              onClick={() => handleCopyText(item.id, item.messageText)}
+                              onClick={() => handleCopyText(item.id, displayMessage)}
                               className="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer transition"
                             >
                               {copiedId === item.id ? (
@@ -1416,7 +2151,7 @@ export const AdminWhatsAppCenterPage: React.FC<AdminWhatsAppCenterPageProps> = (
                           </div>
                         ) : (
                           <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-3.5 text-xs text-slate-800 whitespace-pre-wrap font-mono leading-relaxed">
-                            {item.messageText}
+                            {displayMessage}
                           </div>
                         )}
                       </div>

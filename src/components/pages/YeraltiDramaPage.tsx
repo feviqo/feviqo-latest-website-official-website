@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
+import { DramaMemberBar } from '../membership/DramaMemberBar';
 import { Footer } from '../Footer';
 import {
   YERALTI_SERIES_DATA,
@@ -242,6 +243,8 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
         onNavigateFlow={onNavigateFlow}
         onNavigatePage={onNavigatePage}
       />
+
+      <DramaMemberBar dramaId="yeralti" onNavigatePage={onNavigatePage} />
 
       {/* TOP SPONSORSHIP BAR */}
       <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">

@@ -100,6 +100,8 @@ import {
   deleteOrderInFirestore,
   deleteMemberCascadeInFirestore,
   deleteMembershipInFirestore,
+  deleteBlockedUserOrdersInFirestore,
+  purgeTombstonesFromFirestore,
   syncBlockedUserToFirestore,
   deleteBlockedUserInFirestore,
 } from '../../services/firestoreMembershipSync';
@@ -391,7 +393,27 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         if ('recovery' in mergeRes && mergeRes.recovery && mergeRes.recovery.recoveredCount > 0) {
           setRecoveryReport(mergeRes.recovery);
         }
+        if ('tombstones' in mergeRes && mergeRes.tombstones) {
+          await purgeTombstonesFromFirestore({
+            orderIds: mergeRes.tombstones.deletedOrderIds,
+            memberIds: mergeRes.tombstones.deletedMemberIds,
+            membershipIds: mergeRes.tombstones.deletedMembershipIds,
+            notificationIds: mergeRes.tombstones.deletedNotificationIds,
+          }).catch(() => {});
+        }
         if (latestOverview) {
+          // Ensure any orders in Firestore belonging to blocked users (including permanent blocks like 03335455723) are purged permanently
+          for (const blocked of latestOverview.blockedUsers || []) {
+            await deleteBlockedUserOrdersInFirestore({
+              memberIds: blocked.memberId ? [blocked.memberId] : [],
+              email: blocked.email,
+              phones: [
+                blocked.phone || '',
+                blocked.phoneNormalized || '',
+                ...(blocked.additionalPhones || []),
+              ].filter(Boolean),
+            }).catch(() => {});
+          }
           saveAdminMembershipsVault(latestOverview);
           const vault = getStoredReferralCampaignsVault();
           const pushReport = await pushAdminSnapshotToFirestore({
@@ -889,14 +911,18 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setFeedbackBanner({ type: 'error', text: res.error });
       } else {
         setOverview(res.overview);
+        saveAdminMembershipsVault(res.overview);
         setDeletingRequestId(null);
         if (selectedRequestId === orderId) {
           setSelectedRequestId(null);
         }
         if (isFirebaseAdminUser()) {
-          deleteOrderInFirestore(res.deletedOrderId, res.deletedNotificationIds || [])
-            .then(() => setCloudSyncedAt(new Date().toISOString()))
-            .catch(() => {});
+          try {
+            await deleteOrderInFirestore(res.deletedOrderId, res.deletedNotificationIds || []);
+            setCloudSyncedAt(new Date().toISOString());
+          } catch {
+            // Tombstone guarantees it will not resurrect on next sync
+          }
         }
         setFeedbackBanner({
           type: 'success',
@@ -919,11 +945,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setFeedbackBanner({ type: 'error', text: res.error });
       } else {
         setOverview(res.overview);
+        saveAdminMembershipsVault(res.overview);
         setDeletingMembershipId(null);
         if (isFirebaseAdminUser()) {
-          deleteMembershipInFirestore(res.deletedMembershipId, res.deletedNotificationIds || [])
-            .then(() => setCloudSyncedAt(new Date().toISOString()))
-            .catch(() => {});
+          try {
+            await deleteMembershipInFirestore(res.deletedMembershipId, res.deletedNotificationIds || []);
+            setCloudSyncedAt(new Date().toISOString());
+          } catch {
+            // Tombstone guarantees it will not resurrect on next sync
+          }
         }
         setFeedbackBanner({
           type: 'success',
@@ -946,15 +976,19 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setFeedbackBanner({ type: 'error', text: res.error });
       } else {
         setOverview(res.overview);
+        saveAdminMembershipsVault(res.overview);
         setDeletingAccountId(null);
         if (isFirebaseAdminUser()) {
-          deleteMemberCascadeInFirestore(res.deletedIds)
-            .then(() => setCloudSyncedAt(new Date().toISOString()))
-            .catch(() => {});
+          try {
+            await deleteMemberCascadeInFirestore(res.deletedIds);
+            setCloudSyncedAt(new Date().toISOString());
+          } catch {
+            // Tombstone guarantees it will not resurrect on next sync
+          }
         }
         setFeedbackBanner({
           type: 'success',
-          text: `Account ${label} and its associated unpaid/inactive records were deleted.`,
+          text: `Account ${label} and its associated unpaid/inactive records were deleted permanently.`,
         });
       }
     } catch {
@@ -978,20 +1012,38 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         setFeedbackBanner({ type: 'error', text: res.error });
       } else {
         setOverview(res.overview);
+        saveAdminMembershipsVault(res.overview);
         setBlockingMemberId(null);
         setBlockReasonInput('');
         setDirectBlockEmailInput('');
         setDirectBlockPhoneInput('');
         setDirectBlockReasonInput('');
         if (isFirebaseAdminUser()) {
-          syncBlockedUserToFirestore(res.blockedUser)
-            .then(() => setCloudSyncedAt(new Date().toISOString()))
-            .catch(() => {});
+          try {
+            await syncBlockedUserToFirestore(res.blockedUser);
+            await deleteBlockedUserOrdersInFirestore({
+              orderIds: res.cleanup?.deletedOrderIds || [],
+              memberIds: res.cleanup?.affectedMemberIds || [],
+              email: res.blockedUser.email,
+              phones: [
+                res.blockedUser.phone || '',
+                res.blockedUser.phoneNormalized || '',
+                ...(res.blockedUser.additionalPhones || []),
+                ...(res.cleanup?.blockedPhones || []),
+              ].filter(Boolean),
+            });
+            setCloudSyncedAt(new Date().toISOString());
+          } catch {
+            // Non-blocking cloud sync fallback; tombstones enforce deletion on next sync
+          }
         }
+        mirrorToCloudQuietly(res.overview);
         const cleanupParts: string[] = [];
         if (res.blockedUser.phone) cleanupParts.push(`phone ${res.blockedUser.phone} blocked`);
-        if (res.cleanup?.deletedPendingOrdersCount) {
-          cleanupParts.push(`${res.cleanup.deletedPendingOrdersCount} pending verification(s) deleted`);
+        const deletedOrdersTotal =
+          res.cleanup?.deletedOrdersCount ?? res.cleanup?.deletedPendingOrdersCount ?? 0;
+        if (deletedOrdersTotal > 0) {
+          cleanupParts.push(`${deletedOrdersTotal} order(s) deleted`);
         }
         if (res.cleanup?.revokedMembershipsCount) {
           cleanupParts.push(`${res.cleanup.revokedMembershipsCount} membership(s) revoked`);
@@ -1843,42 +1895,53 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
         ) : (
           <>
             {/* Admin Workspace Top Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white rounded-2xl border border-slate-200 p-6 sm:p-7">
-              <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.06em] text-[#16A34A] flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 shrink-0" />
-                  <span>FEVIQO Admin · Membership &amp; Payment Operations</span>
-                </div>
-                <h1 className="text-2xl sm:text-[28px] font-bold text-[#0F172A] tracking-normal leading-snug">
-                  Payment Verification &amp; Subscriptions
-                </h1>
-                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-slate-600 leading-relaxed">
-                  <span>
-                    Signed in as <strong className="font-semibold text-[#0F172A]">{authenticatedAdmin.name}</strong> ({authenticatedAdmin.email})
-                  </span>
-                  <span aria-hidden="true" className="text-slate-300">·</span>
-                  {firebaseAdminConnected || overview?.serverCloudConnected ? (
-                    <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
-                      <Cloud className="w-3.5 h-3.5 shrink-0" />
-                      <span>
-                        Cloud Sync Connected{overview?.serverCloudConnected && !firebaseAdminConnected ? ' (Server)' : ''}
-                        {cloudSyncedAt ? ` · Updated ${new Date(cloudSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+            <div className="flex flex-col gap-5 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="space-y-1.5 min-w-0">
+                  <div className="text-xs font-semibold uppercase tracking-[0.06em] text-[#16A34A] flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 shrink-0" />
+                    <span>FEVIQO Admin · Membership &amp; Payment Operations</span>
+                  </div>
+                  <h1 className="text-2xl sm:text-[26px] font-bold text-[#0F172A] tracking-normal leading-snug">
+                    Payment Verification &amp; Subscriptions
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px] text-slate-600 leading-relaxed">
+                    <span className="break-all">
+                      Signed in as <strong className="font-semibold text-[#0F172A]">{authenticatedAdmin.name}</strong> ({authenticatedAdmin.email})
+                    </span>
+                    <span aria-hidden="true" className="text-slate-300">·</span>
+                    {firebaseAdminConnected || overview?.serverCloudConnected ? (
+                      <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+                        <Cloud className="w-3.5 h-3.5 shrink-0" />
+                        <span>
+                          Cloud Sync Connected{overview?.serverCloudConnected && !firebaseAdminConnected ? ' (Server)' : ''}
+                          {cloudSyncedAt ? ` · Updated ${new Date(cloudSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                        </span>
                       </span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 font-medium text-amber-700">
-                      <Cloud className="w-3.5 h-3.5 shrink-0" />
-                      <span>Connect Cloud Sync for permanent persistence</span>
-                    </span>
-                  )}
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 font-medium text-amber-700">
+                        <Cloud className="w-3.5 h-3.5 shrink-0" />
+                        <span>Connect Cloud Sync for permanent persistence</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="self-start px-4 py-2.5 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                >
+                  <LogOut className="w-3.5 h-3.5 shrink-0" />
+                  <span>Sign Out</span>
+                </button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => onNavigatePage('admin-automation')}
-                  className="px-4 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                  className="px-3.5 py-2 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap"
                   title="Manage WhatsApp Cloud API, membership automation, episode broadcasts & AI assistant"
                 >
                   <Bot className="w-3.5 h-3.5 shrink-0 text-emerald-700" />
@@ -1887,7 +1950,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigatePage('admin-automation-whatsapp')}
-                  className="px-4 py-2.5 rounded-xl border border-slate-900 bg-[#0B0B0D] hover:bg-[#22C55E] hover:border-[#22C55E] hover:text-[#0B0B0D] text-white text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                  className="px-3.5 py-2 rounded-xl border border-slate-900 bg-[#0B0B0D] hover:bg-[#22C55E] hover:border-[#22C55E] hover:text-[#0B0B0D] text-white text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap"
                   title="Open Manual One-Click WhatsApp Recipient Directory & Queue"
                 >
                   <MessageSquare className="w-3.5 h-3.5 shrink-0" />
@@ -1896,7 +1959,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                 <button
                   type="button"
                   onClick={() => onNavigatePage('admin-automation-leads')}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap"
                   title="Open Video Editing Leads CRM & Unified WhatsApp Inbox"
                 >
                   <MessageSquare className="w-3.5 h-3.5 shrink-0 text-slate-600" />
@@ -1906,7 +1969,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   type="button"
                   onClick={handleRecoverMissingMemberships}
                   disabled={recoveringMemberships || cloudSyncing}
-                  className="px-4 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                  className="px-3.5 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap"
                   title="Scan Cloud Firestore orders, history, notifications & local backup to restore any missing active or big-plan memberships"
                 >
                   <RotateCcw className={`w-3.5 h-3.5 shrink-0 ${recoveringMemberships ? 'animate-spin' : ''}`} />
@@ -1916,7 +1979,7 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   type="button"
                   onClick={handleManualCloudSync}
                   disabled={cloudSyncing || recoveringMemberships}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0 ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap ${
                     firebaseAdminConnected || overview?.serverCloudConnected
                       ? 'border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
                       : 'bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white'
@@ -1935,18 +1998,10 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                   type="button"
                   onClick={() => loadOverview(true)}
                   disabled={loadingOverview}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${loadingOverview ? 'animate-spin' : ''}`} />
                   <span>Refresh</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="px-4 py-2.5 rounded-xl bg-[#0F172A] hover:bg-slate-800 text-white text-xs font-semibold inline-flex items-center gap-2 cursor-pointer transition whitespace-nowrap shrink-0"
-                >
-                  <LogOut className="w-3.5 h-3.5 shrink-0" />
-                  <span>Sign Out</span>
                 </button>
               </div>
             </div>

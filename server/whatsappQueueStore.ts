@@ -241,7 +241,7 @@ export function cancelPendingOneClickNotifications(
       item.actionLog = [
         {
           id: makeId('waact'),
-          action: 'cancelled',
+          action: 'cancelled' as const,
           actor,
           details: reason,
           createdAt: now,
@@ -369,7 +369,8 @@ export function enqueueOneClickWhatsAppNotification(params: {
       });
 
   if (!msgResult.ok) {
-    return { ok: false, skipped: true, reason: msgResult.error };
+    const errMsg = 'error' in msgResult ? msgResult.error : 'Unable to generate WhatsApp message.';
+    return { ok: false, skipped: true, reason: errMsg };
   }
 
   const rawPhone = String(params.rawPhone || '').trim();
@@ -483,7 +484,7 @@ export function editOneClickNotification(params: {
   target.actionLog = [
     {
       id: makeId('waact'),
-      action: phoneChanged ? 'phone_updated' : 'edited',
+      action: (phoneChanged ? 'phone_updated' : 'edited') as 'phone_updated' | 'edited',
       actor: params.admin.email,
       details: detailsParts.join('; ') || 'Notification reviewed',
       createdAt: now,
@@ -551,7 +552,7 @@ export function markOneClickNotificationOpened(params: {
   target.actionLog = [
     {
       id: makeId('waact'),
-      action: 'opened_in_whatsapp',
+      action: 'opened_in_whatsapp' as const,
       actor: params.admin.email,
       details: `Opened wa.me/${waRes.waDigits} in WhatsApp (open #${target.openCount}; awaiting manual confirmation of send).`,
       createdAt: now,
@@ -599,7 +600,7 @@ export function markOneClickNotificationConfirmedSent(params: {
   target.actionLog = [
     {
       id: makeId('waact'),
-      action: 'confirmed_sent',
+      action: 'confirmed_sent' as const,
       actor: params.admin.email,
       details: `Admin manually confirmed WhatsApp message was sent to ${target.recipientPhone}.`,
       createdAt: now,
@@ -643,7 +644,7 @@ export function cancelOneClickNotification(params: {
   target.actionLog = [
     {
       id: makeId('waact'),
-      action: 'cancelled',
+      action: 'cancelled' as const,
       actor: params.admin.email,
       details: cleanReason,
       createdAt: now,

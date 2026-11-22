@@ -1780,7 +1780,17 @@ export async function syncAdminCloudState(snapshot: {
   commissionPayments?: any[];
   monthlyCommissionReports?: any[];
 }): Promise<
-  | { success: true; overview: AdminMembershipsOverview; recovery?: MembershipRecoveryReport }
+  | {
+      success: true;
+      overview: AdminMembershipsOverview;
+      recovery?: MembershipRecoveryReport;
+      tombstones?: {
+        deletedOrderIds: string[];
+        deletedMemberIds: string[];
+        deletedMembershipIds: string[];
+        deletedNotificationIds: string[];
+      };
+    }
   | { success: false; error: string }
 > {
   const vault = getStoredReferralCampaignsVault();
@@ -1960,6 +1970,8 @@ export async function deleteMemberAccountByAdmin(
       success: true;
       deletedIds: {
         memberId: string;
+        memberEmail?: string;
+        memberPhone?: string;
         orderIds: string[];
         membershipIds: string[];
         historyIds: string[];
@@ -1974,6 +1986,29 @@ export async function deleteMemberAccountByAdmin(
     credentials: 'include',
     headers: adminHeaders(),
   });
+  return parseJsonSafe(res);
+}
+
+export async function updateMemberPhoneAdmin(
+  memberId: string,
+  phone: string
+): Promise<
+  | {
+      success: true;
+      member: SafeMember;
+      overview: AdminMembershipsOverview;
+    }
+  | { success: false; error: string }
+> {
+  const res = await fetch(
+    `/api/admin/memberships/accounts/${encodeURIComponent(memberId)}/phone`,
+    {
+      method: 'PATCH',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+      body: JSON.stringify({ phone }),
+    }
+  );
   return parseJsonSafe(res);
 }
 
@@ -2007,7 +2042,10 @@ export async function blockUserEmailByAdmin(payload: {
       blockedUser: BlockedUserRecord;
       cleanup?: {
         deletedPendingOrdersCount: number;
+        deletedOrdersCount?: number;
+        deletedOrderIds?: string[];
         revokedMembershipsCount: number;
+        revokedMembershipIds?: string[];
         affectedMemberIds: string[];
         blockedPhones: string[];
         cancelledJobsCount?: number;

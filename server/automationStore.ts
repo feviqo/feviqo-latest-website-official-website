@@ -1254,10 +1254,11 @@ export async function dispatchTemplateWhatsAppNotification(params: {
         saveWhatsAppMessageLog(baseLog);
         return baseLog;
       } else {
-        baseLog.status = qRes.reason.toLowerCase().includes('opted out')
+        const skipReason = 'reason' in qRes ? qRes.reason : 'Skipped by WhatsApp queue.';
+        baseLog.status = skipReason.toLowerCase().includes('opted out')
           ? 'skipped_opted_out'
           : 'skipped_no_consent';
-        baseLog.errorMessage = qRes.reason;
+        baseLog.errorMessage = skipReason;
         saveWhatsAppMessageLog(baseLog);
         return baseLog;
       }
@@ -1587,20 +1588,24 @@ export async function emitAutomationEvent(
 
     switch (eventType) {
       case 'user.registered': {
-        const { memberId, fullName, email, phone, whatsappOptIn, consentSource } = payload;
+        const { memberId, fullName, email, phone, consentSource } = payload;
         const phoneE164 = normalizePhoneE164(phone);
-        if (phoneE164 && whatsappOptIn === true) {
-          upsertMemberNotificationPreferences({
-            memberId,
-            email,
-            fullName,
-            phone: phoneE164,
-            membershipUpdates: true,
-            renewalReminders: true,
-            newEpisodeAlerts: true,
-            promotionalMessages: Boolean(payload.promotionalOptIn),
-            source: consentSource || 'registration_form',
-          });
+        if (phoneE164) {
+          const existingPref = getMemberNotificationPreferences({ memberId, phone: phoneE164 });
+          if (!existingPref?.optedOut) {
+            upsertMemberNotificationPreferences({
+              memberId,
+              email,
+              fullName,
+              phone: phoneE164,
+              membershipUpdates: true,
+              renewalReminders: true,
+              newEpisodeAlerts: true,
+              promotionalMessages: true,
+              optedOut: false,
+              source: consentSource || 'registration_form',
+            });
+          }
         }
 
         const regMode = getEffectiveSendingMode('registration');
@@ -2578,6 +2583,7 @@ export async function triggerEpisodePublishedBroadcast(params: {
           error: qRes.notification.failureReason,
         });
       } else {
+        const skipReason = 'reason' in qRes ? qRes.reason : 'Skipped by WhatsApp queue.';
         recipients.push({
           memberId: rec.memberId,
           memberName: rec.fullName,
@@ -2586,7 +2592,7 @@ export async function triggerEpisodePublishedBroadcast(params: {
           sendingMethod: inAppNotified ? 'in_app' : 'skipped',
           status: 'skipped_no_consent',
           inAppNotified,
-          error: qRes.reason,
+          error: skipReason,
         });
       }
       continue;

@@ -50,6 +50,7 @@ const PROMO_CODES_FILE = path.join(DATA_DIR, 'promo_codes.json');
 const REFERRALS_FILE = path.join(DATA_DIR, 'referrals.json');
 const CREDIT_LEDGER_FILE = path.join(DATA_DIR, 'referral_credits.json');
 const BLOCKED_USERS_FILE = path.join(DATA_DIR, 'blocked_users.json');
+const DELETED_RECORDS_FILE = path.join(DATA_DIR, 'deleted_records.json');
 const SECRET_FILE = path.join(DATA_DIR, '.member_session_secret');
 
 for (const dir of [DATA_DIR, PRIVATE_PROOFS_DIR, PUBLIC_QR_DIR]) {
@@ -81,6 +82,7 @@ const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
     'episode-87': 'https://stream.mux.com/CNLUrkuH54rxQm44KMrZUcUtKj15j4RcxAyyn2fzTpU.m3u8',
   },
   'gunesin-dogdugu-yer': {
+    'episode-9': 'https://stream.mux.com/neflT01u9Ey4vSvhNwuZQH8LcR9IpeWcDFnHO4hS7N02M.m3u8',
     'episode-8': 'https://stream.mux.com/neflT01u9Ey4vSvhNwuZQH8LcR9IpeWcDFnHO4hS7N02M.m3u8',
     'episode-7': 'https://stream.mux.com/neflT01u9Ey4vSvhNwuZQH8LcR9IpeWcDFnHO4hS7N02M.m3u8',
     'episode-5': 'https://stream.mux.com/i1zZCVwsVnWgYj01cysfhD02801SVUNouReM02jM5QUmvjg.m3u8',
@@ -574,7 +576,16 @@ export interface AdminAuditEntry {
     | 'automation_worker_manual_run'
     | 'episode_notification_sent'
     | 'episode_notification_resent'
-    | 'video_lead_updated';
+    | 'video_lead_updated'
+    | 'member_phone_updated'
+    | 'whatsapp_queue_settings_updated'
+    | 'whatsapp_notification_edited'
+    | 'whatsapp_notification_opened'
+    | 'whatsapp_notification_confirmed_sent'
+    | 'whatsapp_notification_cancelled'
+    | 'automation_bot_started'
+    | 'automation_bot_stopped'
+    | 'historical_campaign_launched';
   targetId?: string;
   details: string;
   createdAt: string;
@@ -4712,6 +4723,11 @@ export function deleteOrderByAdmin(params: {
     writeJson(MEMBER_NOTIFS_FILE, remainingNotifs);
   }
 
+  recordDeletedTombstones({
+    orderIds: [order.id],
+    notificationIds: deletedNotificationIds,
+  });
+
   if (isServerFirestoreEnabled()) {
     void deleteDocFromFirestoreServer('membershipOrders', order.id);
     for (const notifId of deletedNotificationIds) {
@@ -4738,6 +4754,8 @@ export function deleteMemberByAdmin(params: {
       success: true;
       deletedIds: {
         memberId: string;
+        memberEmail?: string;
+        memberPhone?: string;
         orderIds: string[];
         membershipIds: string[];
         historyIds: string[];
@@ -4830,6 +4848,14 @@ export function deleteMemberByAdmin(params: {
     writeJson(REFERRALS_FILE, remainingReferrals);
   }
 
+  recordDeletedTombstones({
+    memberIds: [member.id],
+    orderIds: deletedOrderIds,
+    membershipIds: deletedMembershipIds,
+    historyIds: deletedHistoryIds,
+    notificationIds: deletedNotificationIds,
+  });
+
   if (isServerFirestoreEnabled()) {
     void deleteDocFromFirestoreServer('members', member.id);
     for (const id of deletedOrderIds) void deleteDocFromFirestoreServer('membershipOrders', id);
@@ -4851,6 +4877,8 @@ export function deleteMemberByAdmin(params: {
     success: true,
     deletedIds: {
       memberId: member.id,
+      memberEmail: member.email,
+      memberPhone: member.phone,
       orderIds: deletedOrderIds,
       membershipIds: deletedMembershipIds,
       historyIds: deletedHistoryIds,
@@ -4897,6 +4925,12 @@ export function deleteMembershipRecordByAdmin(params: {
     writeJson(MEMBER_NOTIFS_FILE, remainingNotifs);
   }
 
+  recordDeletedTombstones({
+    membershipIds: [sub.id],
+    orderIds: sub.orderId ? [sub.orderId] : [],
+    notificationIds: deletedNotificationIds,
+  });
+
   if (isServerFirestoreEnabled()) {
     void deleteDocFromFirestoreServer('memberships', sub.id);
     for (const id of deletedNotificationIds) {
@@ -4917,6 +4951,89 @@ export function deleteMembershipRecordByAdmin(params: {
     deletedMembershipId: sub.id,
     deletedNotificationIds,
   };
+}
+
+export interface DeletedRecordsTombstones {
+  memberIds: string[];
+  orderIds: string[];
+  membershipIds: string[];
+  historyIds: string[];
+  notificationIds: string[];
+}
+
+export function readDeletedTombstones(): DeletedRecordsTombstones {
+  const raw = readJson<Partial<DeletedRecordsTombstones>>(DELETED_RECORDS_FILE, {});
+  return {
+    memberIds: Array.isArray(raw.memberIds) ? raw.memberIds : [],
+    orderIds: Array.isArray(raw.orderIds) ? raw.orderIds : [],
+    membershipIds: Array.isArray(raw.membershipIds) ? raw.membershipIds : [],
+    historyIds: Array.isArray(raw.historyIds) ? raw.historyIds : [],
+    notificationIds: Array.isArray(raw.notificationIds) ? raw.notificationIds : [],
+  };
+}
+
+export function recordDeletedTombstones(patch: Partial<DeletedRecordsTombstones>): DeletedRecordsTombstones {
+  const current = readDeletedTombstones();
+  const mergeUnique = (base: string[], add?: string[]) => {
+    const s = new Set(base);
+    for (const item of add || []) {
+      const clean = String(item || '').trim();
+      if (clean) s.add(clean);
+    }
+    return Array.from(s).slice(-5000);
+  };
+  const next: DeletedRecordsTombstones = {
+    memberIds: mergeUnique(current.memberIds, patch.memberIds),
+    orderIds: mergeUnique(current.orderIds, patch.orderIds),
+    membershipIds: mergeUnique(current.membershipIds, patch.membershipIds),
+    historyIds: mergeUnique(current.historyIds, patch.historyIds),
+    notificationIds: mergeUnique(current.notificationIds, patch.notificationIds),
+  };
+  writeJson(DELETED_RECORDS_FILE, next);
+  return next;
+}
+
+export function updateMemberPhoneByAdmin(params: {
+  memberId: string;
+  phone: string;
+  admin: SafeAdmin;
+}): { success: true; member: SafeMember } | { success: false; error: string; statusCode: number } {
+  const cleanPhone = String(params.phone || '').trim();
+  if (!cleanPhone) {
+    return { success: false, error: 'Phone number cannot be empty.', statusCode: 400 };
+  }
+  const normalized = normalizePhoneCanonical(cleanPhone);
+  if (!normalized || normalized.length < 8) {
+    return {
+      success: false,
+      error: 'Please enter a valid Pakistani number (03XXXXXXXXX / +923XXXXXXXXX) or international number with +country code.',
+      statusCode: 400,
+    };
+  }
+  const members = readMembersEnsured();
+  const idx = members.findIndex((m) => m.id === params.memberId);
+  if (idx === -1) {
+    return { success: false, error: 'Customer account not found.', statusCode: 404 };
+  }
+  const nowIso = new Date().toISOString();
+  const e164 = normalized.startsWith('+') ? normalized : `+${normalized}`;
+  members[idx] = {
+    ...members[idx],
+    phone: e164,
+    phoneNormalized: normalized.replace(/^\+/, ''),
+    updatedAt: nowIso,
+  };
+  writeJson(MEMBERS_FILE, members);
+  const safeMember = sanitizeMember(members[idx]);
+  mirrorMemberServer(safeMember);
+  appendAdminAudit({
+    adminId: params.admin.id,
+    adminEmail: params.admin.email,
+    action: 'member_phone_updated',
+    targetId: members[idx].id,
+    details: `Updated WhatsApp phone for ${members[idx].email} to ${e164}.`,
+  });
+  return { success: true, member: safeMember };
 }
 
 // --- PERMANENT USER EMAIL BLOCKING & UNBLOCKING ---
@@ -4975,14 +5092,184 @@ function mirrorBlockedUserServer(record: BlockedUserRecord) {
   });
 }
 
+const PERMANENT_BLOCKED_PHONES: Array<{ raw: string; normalized: string; reason: string }> = [
+  {
+    raw: '+923335455723',
+    normalized: '923335455723',
+    reason: 'Permanently blocked by FEVIQO administrator (fake/abusive orders)',
+  },
+];
+
+let permanentBlockEnforcedOnce = false;
+
+export function ensurePermanentBlockedPhoneEnforcement(force = false): {
+  purgedOrderIds: string[];
+  revokedMembershipIds: string[];
+} {
+  if (permanentBlockEnforcedOnce && !force) {
+    return { purgedOrderIds: [], revokedMembershipIds: [] };
+  }
+  permanentBlockEnforcedOnce = true;
+
+  const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
+  const members = readMembersEnsured();
+  const nowIso = new Date().toISOString();
+  let blockedListChanged = false;
+
+  const blockedPhoneSet = new Set<string>();
+  const blockedEmailSet = new Set<string>();
+  const blockedMemberIdSet = new Set<string>();
+
+  for (const seed of PERMANENT_BLOCKED_PHONES) {
+    blockedPhoneSet.add(seed.normalized);
+    const matchedMember = members.find((m) => normalizeBlockedPhone(m.phone) === seed.normalized);
+    if (matchedMember) {
+      blockedMemberIdSet.add(matchedMember.id);
+      if (matchedMember.email) blockedEmailSet.add(normalizeBlockedEmail(matchedMember.email));
+    }
+    const existingIdx = list.findIndex((item) => {
+      const p1 = normalizeBlockedPhone(item.phoneNormalized);
+      const p2 = normalizeBlockedPhone(item.phone);
+      const add = Array.isArray(item.additionalPhones)
+        ? item.additionalPhones.some((p) => normalizeBlockedPhone(p) === seed.normalized)
+        : false;
+      return p1 === seed.normalized || p2 === seed.normalized || add;
+    });
+    if (existingIdx === -1) {
+      const emailForRecord = matchedMember?.email
+        ? normalizeBlockedEmail(matchedMember.email)
+        : `phone-${seed.normalized}@blocked.feviqo.local`;
+      const rec: BlockedUserRecord = {
+        id: buildBlockedUserDocId(emailForRecord),
+        email: emailForRecord,
+        phone: seed.raw,
+        phoneNormalized: seed.normalized,
+        additionalPhones: [seed.normalized],
+        memberId: matchedMember?.id,
+        fullName: matchedMember?.fullName || 'Blocked Phone User',
+        reason: seed.reason,
+        blockedByAdminId: 'system-admin',
+        blockedByAdminEmail: 'rexanmedia01@gmail.com',
+        blockedAt: nowIso,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      list.unshift(rec);
+      blockedListChanged = true;
+      mirrorBlockedUserServer(rec);
+    } else if (matchedMember && !list[existingIdx].memberId) {
+      list[existingIdx] = {
+        ...list[existingIdx],
+        memberId: matchedMember.id,
+        fullName: list[existingIdx].fullName || matchedMember.fullName,
+        email:
+          list[existingIdx].email.endsWith('@blocked.feviqo.local') && matchedMember.email
+            ? normalizeBlockedEmail(matchedMember.email)
+            : list[existingIdx].email,
+        updatedAt: nowIso,
+      };
+      blockedListChanged = true;
+      mirrorBlockedUserServer(list[existingIdx]);
+    }
+  }
+
+  for (const b of list) {
+    const e = normalizeBlockedEmail(b.email);
+    if (e && !e.endsWith('@blocked.feviqo.local')) blockedEmailSet.add(e);
+    if (b.memberId) blockedMemberIdSet.add(b.memberId);
+    const p1 = normalizeBlockedPhone(b.phoneNormalized);
+    const p2 = normalizeBlockedPhone(b.phone);
+    if (p1) blockedPhoneSet.add(p1);
+    if (p2) blockedPhoneSet.add(p2);
+    for (const ap of b.additionalPhones || []) {
+      const np = normalizeBlockedPhone(ap);
+      if (np) blockedPhoneSet.add(np);
+    }
+  }
+
+  if (blockedListChanged) {
+    writeJson(BLOCKED_USERS_FILE, list);
+  }
+
+  // Sweep members matching any permanently blocked phone/email
+  for (const m of members) {
+    const mEmail = normalizeBlockedEmail(m.email);
+    const mPhone = normalizeBlockedPhone(m.phone);
+    if ((mEmail && blockedEmailSet.has(mEmail)) || (mPhone && blockedPhoneSet.has(mPhone))) {
+      blockedMemberIdSet.add(m.id);
+    }
+  }
+
+  // Purge ALL orders belonging to any permanently blocked phone/email/member
+  const allOrders = readAllOrders();
+  const purgedOrderIds: string[] = [];
+  const keptOrders: MembershipOrder[] = [];
+  for (const o of allOrders) {
+    const oEmail = normalizeBlockedEmail(o.customerEmail);
+    const oPhone = normalizeBlockedPhone(o.customerPhone);
+    const isBlockedOrder =
+      (oEmail && blockedEmailSet.has(oEmail)) ||
+      (oPhone && blockedPhoneSet.has(oPhone)) ||
+      (o.memberId && blockedMemberIdSet.has(o.memberId));
+    if (isBlockedOrder) {
+      purgedOrderIds.push(o.id);
+      unlinkOrderProofFile(o);
+      if (isServerFirestoreEnabled()) {
+        void deleteDocFromFirestoreServer('membershipOrders', o.id);
+      }
+    } else {
+      keptOrders.push(o);
+    }
+  }
+  if (purgedOrderIds.length > 0) {
+    writeJson(ORDERS_FILE, keptOrders);
+    recordDeletedTombstones({ orderIds: purgedOrderIds });
+  }
+
+  // Cancel any active memberships belonging to blocked users/phones
+  const allMemberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const revokedMembershipIds: string[] = [];
+  for (let i = 0; i < allMemberships.length; i++) {
+    const ms = allMemberships[i];
+    const msEmail = normalizeBlockedEmail(ms.customerEmail);
+    const msPhone = normalizeBlockedPhone(ms.customerPhone);
+    const isBlockedSub =
+      (msEmail && blockedEmailSet.has(msEmail)) ||
+      (msPhone && blockedPhoneSet.has(msPhone)) ||
+      (ms.memberId && blockedMemberIdSet.has(ms.memberId));
+    if (isBlockedSub && ms.status === 'active') {
+      allMemberships[i] = {
+        ...ms,
+        status: 'cancelled',
+        cancelledAt: nowIso,
+        revokedByAdminEmail: 'rexanmedia01@gmail.com',
+        revokedReason: 'Account or phone number permanently blocked',
+      };
+      revokedMembershipIds.push(ms.id);
+      mirrorMembershipServer(allMemberships[i]);
+    }
+  }
+  if (revokedMembershipIds.length > 0) {
+    writeJson(MEMBERSHIPS_FILE, allMemberships);
+  }
+
+  for (const mid of blockedMemberIdSet) {
+    revokePlaybackSessionsForMember(mid, 'Account or phone number permanently blocked');
+  }
+
+  return { purgedOrderIds, revokedMembershipIds };
+}
+
 export function listBlockedUsers(): BlockedUserRecord[] {
+  ensurePermanentBlockedPhoneEnforcement(false);
   const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
   return list
-    .filter((item) => item && item.email)
+    .filter((item) => item && (item.email || item.phoneNormalized || item.phone))
     .sort((a, b) => Date.parse(b.blockedAt || b.createdAt || '') - Date.parse(a.blockedAt || a.createdAt || ''));
 }
 
 export function getBlockedUserByEmail(email?: string | null): BlockedUserRecord | null {
+  ensurePermanentBlockedPhoneEnforcement(false);
   const normalized = normalizeBlockedEmail(email);
   if (!normalized || !normalized.includes('@')) return null;
   const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
@@ -4990,6 +5277,7 @@ export function getBlockedUserByEmail(email?: string | null): BlockedUserRecord 
 }
 
 export function getBlockedUserByPhone(phone?: string | null): BlockedUserRecord | null {
+  ensurePermanentBlockedPhoneEnforcement(false);
   const normalized = normalizeBlockedPhone(phone);
   if (!normalized) return null;
   const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
@@ -5006,6 +5294,7 @@ export function getBlockedUserByPhone(phone?: string | null): BlockedUserRecord 
 }
 
 export function getBlockedUserByMemberId(memberId?: string | null): BlockedUserRecord | null {
+  ensurePermanentBlockedPhoneEnforcement(false);
   if (!memberId) return null;
   const list = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
   const direct = list.find((item) => item.memberId === memberId);
@@ -5036,7 +5325,9 @@ export function blockUserEmailByAdmin(params: {
       blockedUser: BlockedUserRecord;
       cleanup: {
         deletedPendingOrdersCount: number;
+        deletedOrderIds: string[];
         revokedMembershipsCount: number;
+        revokedMembershipIds: string[];
         affectedMemberIds: string[];
         blockedPhones: string[];
       };
@@ -5052,12 +5343,15 @@ export function blockUserEmailByAdmin(params: {
     targetMember = members.find((m) => normalizeBlockedPhone(m.phone) === explicitPhoneNorm);
   }
 
-  const normalizedEmail = normalizeBlockedEmail(params.email || targetMember?.email);
+  let normalizedEmail = normalizeBlockedEmail(params.email || targetMember?.email);
+  if (!normalizedEmail && explicitPhoneNorm) {
+    normalizedEmail = `phone-${explicitPhoneNorm}@blocked.feviqo.local`;
+  }
   if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
     return {
       success: false,
       statusCode: 400,
-      error: 'Please provide a valid email address to block.',
+      error: 'Please provide a valid email address or phone number to block.',
     };
   }
 
@@ -5135,7 +5429,7 @@ export function blockUserEmailByAdmin(params: {
     }
   }
 
-  const allMemberships = readAllMemberships();
+  const allMemberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
   for (const ms of allMemberships) {
     const msEmail = normalizeBlockedEmail(ms.customerEmail);
     const msPhone = normalizeBlockedPhone(ms.customerPhone);
@@ -5185,9 +5479,9 @@ export function blockUserEmailByAdmin(params: {
   writeJson(BLOCKED_USERS_FILE, list);
   mirrorBlockedUserServer(record);
 
-  // IMMEDIATELY DELETE all pending payment verifications & awaiting_payment orders for this blocked user/phone
-  const ordersToKeep: OrderRecord[] = [];
-  const deletedPendingOrderIds: string[] = [];
+  // IMMEDIATELY DELETE ALL orders (pending verification, awaiting payment, rejected, etc.) for this blocked user/phone
+  const ordersToKeep: MembershipOrder[] = [];
+  const deletedOrderIds: string[] = [];
   for (const order of allOrders) {
     const oEmail = normalizeBlockedEmail(order.customerEmail);
     const oPhone = normalizeBlockedPhone(order.customerPhone);
@@ -5195,10 +5489,9 @@ export function blockUserEmailByAdmin(params: {
       oEmail === normalizedEmail ||
       matchingMemberIds.has(order.memberId) ||
       (oPhone && phoneSet.has(oPhone));
-    const isPendingOrder =
-      order.status === 'awaiting_payment' || order.status === 'pending_verification';
-    if (belongsToBlocked && isPendingOrder) {
-      deletedPendingOrderIds.push(order.id);
+    if (belongsToBlocked) {
+      deletedOrderIds.push(order.id);
+      unlinkOrderProofFile(order);
       if (isServerFirestoreEnabled()) {
         void deleteDocFromFirestoreServer('membershipOrders', order.id);
       }
@@ -5206,12 +5499,14 @@ export function blockUserEmailByAdmin(params: {
       ordersToKeep.push(order);
     }
   }
-  if (deletedPendingOrderIds.length > 0) {
+  if (deletedOrderIds.length > 0) {
     writeJson(ORDERS_FILE, ordersToKeep);
+    recordDeletedTombstones({ orderIds: deletedOrderIds });
   }
 
   // IMMEDIATELY REVOKE/CANCEL any active memberships for the blocked user/phone so they cannot interfere with access or episode broadcasts
   let revokedMembershipsCount = 0;
+  const revokedMembershipIds: string[] = [];
   for (let i = 0; i < allMemberships.length; i++) {
     const ms = allMemberships[i];
     const msEmail = normalizeBlockedEmail(ms.customerEmail);
@@ -5229,6 +5524,7 @@ export function blockUserEmailByAdmin(params: {
         revokedReason: `Account permanently blocked: ${cleanReason}`,
       };
       revokedMembershipsCount++;
+      revokedMembershipIds.push(ms.id);
       mirrorMembershipServer(allMemberships[i]);
     }
   }
@@ -5246,15 +5542,17 @@ export function blockUserEmailByAdmin(params: {
     adminEmail: params.admin.email,
     action: 'user_blocked',
     targetId: record.id,
-    details: `Permanently blocked email ${normalizedEmail}${primaryRawPhone ? ` and phone ${primaryRawPhone}` : ''}${targetMember ? ` (${targetMember.fullName})` : ''}. Deleted ${deletedPendingOrderIds.length} pending order(s), revoked ${revokedMembershipsCount} active membership(s). Reason: ${cleanReason}`,
+    details: `Permanently blocked email ${normalizedEmail}${primaryRawPhone ? ` and phone ${primaryRawPhone}` : ''}${targetMember ? ` (${targetMember.fullName})` : ''}. Deleted ${deletedOrderIds.length} order(s), revoked ${revokedMembershipsCount} active membership(s). Reason: ${cleanReason}`,
   });
 
   return {
     success: true,
     blockedUser: record,
     cleanup: {
-      deletedPendingOrdersCount: deletedPendingOrderIds.length,
+      deletedPendingOrdersCount: deletedOrderIds.length,
+      deletedOrderIds,
       revokedMembershipsCount,
+      revokedMembershipIds,
       affectedMemberIds: Array.from(matchingMemberIds),
       blockedPhones,
     },
@@ -5868,7 +6166,80 @@ export function mergeCloudSyncSnapshot(payload: {
   blockedUsers?: Array<Partial<BlockedUserRecord>>;
   config?: Partial<MembershipConfig> | null;
 }) {
-  const members = readMembersEnsured();
+  const tombstones = readDeletedTombstones();
+  const deletedMemberIds = new Set(tombstones.memberIds);
+  const deletedOrderIds = new Set(tombstones.orderIds);
+  const deletedMembershipIds = new Set(tombstones.membershipIds);
+  const deletedHistoryIds = new Set(tombstones.historyIds);
+  const deletedNotificationIds = new Set(tombstones.notificationIds);
+
+  // Merge blockedUsers FIRST so blocked emails/phones are known before merging orders
+  if (Array.isArray(payload.blockedUsers) && payload.blockedUsers.length > 0) {
+    const existingBlocked = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
+    const byEmail = new Map(existingBlocked.map((b) => [normalizeBlockedEmail(b.email), b]));
+    let changed = false;
+    for (const inc of payload.blockedUsers) {
+      const email = normalizeBlockedEmail(inc?.email);
+      const phoneNorm = normalizeBlockedPhone(inc?.phoneNormalized || inc?.phone);
+      const effectiveEmail = email && email.includes('@')
+        ? email
+        : phoneNorm
+        ? `phone-${phoneNorm}@blocked.feviqo.local`
+        : '';
+      if (!effectiveEmail) continue;
+      if (!byEmail.has(effectiveEmail)) {
+        const nowIso = new Date().toISOString();
+        const rec: BlockedUserRecord = {
+          id: inc.id || buildBlockedUserDocId(effectiveEmail),
+          email: effectiveEmail,
+          phone: inc.phone || (phoneNorm ? `+${phoneNorm}` : undefined),
+          phoneNormalized: phoneNorm || undefined,
+          additionalPhones: Array.isArray(inc.additionalPhones)
+            ? inc.additionalPhones.map((p) => normalizeBlockedPhone(p)).filter(Boolean)
+            : phoneNorm
+            ? [phoneNorm]
+            : [],
+          memberId: inc.memberId || undefined,
+          fullName: inc.fullName || undefined,
+          reason: String(inc.reason || 'Blocked by FEVIQO administrator').slice(0, 500),
+          blockedByAdminId: inc.blockedByAdminId || 'admin',
+          blockedByAdminEmail: inc.blockedByAdminEmail || 'rexanmedia01@gmail.com',
+          blockedAt: inc.blockedAt || inc.createdAt || nowIso,
+          createdAt: inc.createdAt || inc.blockedAt || nowIso,
+          updatedAt: inc.updatedAt || inc.blockedAt || nowIso,
+        };
+        existingBlocked.push(rec);
+        byEmail.set(effectiveEmail, rec);
+        changed = true;
+      }
+    }
+    if (changed) {
+      writeJson(BLOCKED_USERS_FILE, existingBlocked);
+    }
+  }
+  ensurePermanentBlockedPhoneEnforcement(true);
+
+  const blockedList = listBlockedUsers();
+  const blockedEmailsSet = new Set(
+    blockedList
+      .map((b) => normalizeBlockedEmail(b.email))
+      .filter((e) => e && !e.endsWith('@blocked.feviqo.local'))
+  );
+  const blockedPhonesSet = new Set<string>();
+  const blockedMemberIdsSet = new Set<string>();
+  for (const b of blockedList) {
+    if (b.memberId) blockedMemberIdsSet.add(b.memberId);
+    const p1 = normalizeBlockedPhone(b.phoneNormalized);
+    const p2 = normalizeBlockedPhone(b.phone);
+    if (p1) blockedPhonesSet.add(p1);
+    if (p2) blockedPhonesSet.add(p2);
+    for (const ap of b.additionalPhones || []) {
+      const np = normalizeBlockedPhone(ap);
+      if (np) blockedPhonesSet.add(np);
+    }
+  }
+
+  const members = readMembersEnsured().filter((m) => !deletedMemberIds.has(m.id));
   const memberById = new Map(members.map((m) => [m.id, m]));
   const memberByEmail = new Map(members.map((m) => [m.email.toLowerCase(), m]));
   const takenCodes = new Set<string>(
@@ -5877,6 +6248,7 @@ export function mergeCloudSyncSnapshot(payload: {
 
   for (const incoming of payload.members || []) {
     if (!incoming?.id || !incoming?.email) continue;
+    if (deletedMemberIds.has(incoming.id)) continue;
     const emailLower = incoming.email.trim().toLowerCase();
     const existing = memberById.get(incoming.id) || memberByEmail.get(emailLower);
     if (!existing) {
@@ -5910,14 +6282,46 @@ export function mergeCloudSyncSnapshot(payload: {
       if (!existing.referralCode && incoming.referralCode) {
         existing.referralCode = normalizePromoCodeInput(incoming.referralCode);
       }
+      // Never overwrite a valid saved phone with empty/invalid value, but fill missing phone if cloud has a valid one
+      if ((!existing.phone || !normalizePhoneCanonical(existing.phone)) && incoming.phone && normalizePhoneCanonical(incoming.phone)) {
+        existing.phone = incoming.phone.trim();
+        existing.phoneNormalized = normalizePhoneCanonical(incoming.phone) || undefined;
+      }
+    }
+  }
+  for (const m of members) {
+    if (blockedEmailsSet.has(m.email.toLowerCase()) || (m.phone && blockedPhonesSet.has(normalizeBlockedPhone(m.phone)))) {
+      blockedMemberIdsSet.add(m.id);
     }
   }
   writeJson(MEMBERS_FILE, members);
 
-  const orders = readAllOrders();
+  const orders = readAllOrders().filter((o) => {
+    if (deletedOrderIds.has(o.id) || deletedMemberIds.has(o.memberId)) return false;
+    const oEmail = normalizeBlockedEmail(o.customerEmail);
+    const oPhone = normalizeBlockedPhone(o.customerPhone);
+    if (
+      (oEmail && blockedEmailsSet.has(oEmail)) ||
+      (oPhone && blockedPhonesSet.has(oPhone)) ||
+      blockedMemberIdsSet.has(o.memberId)
+    ) {
+      return false;
+    }
+    return true;
+  });
   const orderById = new Map(orders.map((o) => [o.id, o]));
   for (const inc of payload.orders || []) {
     if (!inc?.id || !inc?.memberId || !inc?.planId) continue;
+    if (deletedOrderIds.has(inc.id) || deletedMemberIds.has(inc.memberId)) continue;
+    const incEmail = normalizeBlockedEmail(inc.customerEmail);
+    const incPhone = normalizeBlockedPhone(inc.customerPhone);
+    if (
+      (incEmail && blockedEmailsSet.has(incEmail)) ||
+      (incPhone && blockedPhonesSet.has(incPhone)) ||
+      blockedMemberIdsSet.has(inc.memberId)
+    ) {
+      continue;
+    }
     const existing = orderById.get(inc.id);
     if (!existing) {
       const region: PaymentRegion = inc.paymentRegion === 'international' ? 'international' : 'pakistan';
@@ -5982,10 +6386,13 @@ export function mergeCloudSyncSnapshot(payload: {
     Array.from(orderById.values()).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
   );
 
-  const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []);
+  const memberships = readJson<MembershipRecord[]>(MEMBERSHIPS_FILE, []).filter(
+    (s) => !deletedMembershipIds.has(s.id) && !deletedMemberIds.has(s.memberId)
+  );
   const subById = new Map(memberships.map((s) => [s.id, s]));
   for (const inc of payload.memberships || []) {
     if (!inc?.id || !inc?.memberId || !inc?.planId) continue;
+    if (deletedMembershipIds.has(inc.id) || deletedMemberIds.has(inc.memberId)) continue;
     const existing = subById.get(inc.id);
     if (!existing) {
       const created: MembershipRecord = {
@@ -6033,10 +6440,13 @@ export function mergeCloudSyncSnapshot(payload: {
     Array.from(subById.values()).sort((a, b) => Date.parse(b.activatedAt) - Date.parse(a.activatedAt))
   );
 
-  const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []);
+  const history = readJson<MembershipHistoryEntry[]>(HISTORY_FILE, []).filter(
+    (h) => !deletedHistoryIds.has(h.id) && !deletedMemberIds.has(h.memberId)
+  );
   const histById = new Map(history.map((h) => [h.id, h]));
   for (const inc of payload.history || []) {
     if (!inc?.id || !inc?.memberId || !inc?.details) continue;
+    if (deletedHistoryIds.has(inc.id) || deletedMemberIds.has(inc.memberId)) continue;
     if (!histById.has(inc.id)) {
       histById.set(inc.id, {
         id: inc.id,
@@ -6061,10 +6471,13 @@ export function mergeCloudSyncSnapshot(payload: {
   );
 
   if (payload.notifications) {
-    const notifs = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []);
+    const notifs = readJson<CustomerNotification[]>(MEMBER_NOTIFS_FILE, []).filter(
+      (n) => !deletedNotificationIds.has(n.id) && !deletedMemberIds.has(n.memberId)
+    );
     const notifById = new Map(notifs.map((n) => [n.id, n]));
     for (const inc of payload.notifications) {
       if (!inc?.id || !inc?.memberId || !inc?.dedupeKey) continue;
+      if (deletedNotificationIds.has(inc.id) || deletedMemberIds.has(inc.memberId)) continue;
       if (!notifById.has(inc.id)) {
         notifById.set(inc.id, inc as CustomerNotification);
       }
@@ -6133,46 +6546,12 @@ export function mergeCloudSyncSnapshot(payload: {
     monthlyCommissionReports: payload.monthlyCommissionReports,
   });
 
-  if (Array.isArray(payload.blockedUsers) && payload.blockedUsers.length > 0) {
-    const existingBlocked = readJson<BlockedUserRecord[]>(BLOCKED_USERS_FILE, []);
-    const byEmail = new Map(existingBlocked.map((b) => [normalizeBlockedEmail(b.email), b]));
-    let changed = false;
-    for (const inc of payload.blockedUsers) {
-      const email = normalizeBlockedEmail(inc?.email);
-      if (!email || !email.includes('@')) continue;
-      if (!byEmail.has(email)) {
-        const nowIso = new Date().toISOString();
-        const rec: BlockedUserRecord = {
-          id: inc.id || buildBlockedUserDocId(email),
-          email,
-          phone: inc.phone || undefined,
-          phoneNormalized: inc.phoneNormalized || normalizeBlockedPhone(inc.phone) || undefined,
-          additionalPhones: Array.isArray(inc.additionalPhones)
-            ? inc.additionalPhones.map((p) => normalizeBlockedPhone(p)).filter(Boolean)
-            : [],
-          memberId: inc.memberId || undefined,
-          fullName: inc.fullName || undefined,
-          reason: String(inc.reason || 'Blocked by FEVIQO administrator').slice(0, 500),
-          blockedByAdminId: inc.blockedByAdminId || 'admin',
-          blockedByAdminEmail: inc.blockedByAdminEmail || 'rexanmedia01@gmail.com',
-          blockedAt: inc.blockedAt || inc.createdAt || nowIso,
-          createdAt: inc.createdAt || inc.blockedAt || nowIso,
-          updatedAt: inc.updatedAt || inc.blockedAt || nowIso,
-        };
-        existingBlocked.push(rec);
-        byEmail.set(email, rec);
-        changed = true;
-      }
-    }
-    if (changed) {
-      writeJson(BLOCKED_USERS_FILE, existingBlocked);
-    }
-  }
-
   const recovery = reconcileAndRecoverMissingMemberships();
+  ensurePermanentBlockedPhoneEnforcement(true);
   return {
     ...getAdminMembershipsOverview(),
     lastRecovery: recovery,
+    tombstones: readDeletedTombstones(),
   };
 }
 
@@ -6333,9 +6712,11 @@ export function reconcileAndRecoverMissingMemberships(): MembershipRecoveryRepor
     }
   }
 
-  // Track explicitly deleted or revoked membershipIds/orderIds so we never resurrect intentional revocations
-  const intentionallyRemovedMembershipIds = new Set<string>();
-  const intentionallyRemovedOrderIds = new Set<string>();
+  // Track explicitly deleted or revoked membershipIds/orderIds/memberIds so we never resurrect intentional deletions
+  const tombstones = readDeletedTombstones();
+  const intentionallyRemovedMembershipIds = new Set<string>(tombstones.membershipIds);
+  const intentionallyRemovedOrderIds = new Set<string>(tombstones.orderIds);
+  const intentionallyRemovedMemberIds = new Set<string>(tombstones.memberIds);
   const originalMembershipIdByOrderId = new Map<string, string>();
 
   for (const h of history) {
@@ -6351,6 +6732,22 @@ export function reconcileAndRecoverMissingMemberships(): MembershipRecoveryRepor
   for (const n of notifications) {
     if (n.orderId && n.membershipId && !originalMembershipIdByOrderId.has(n.orderId)) {
       originalMembershipIdByOrderId.set(n.orderId, n.membershipId);
+    }
+  }
+
+  // Also ensure we never reconstruct memberships for blocked users or deleted members
+  for (const sub of memberships) {
+    if (sub.status === 'cancelled' && sub.orderId) {
+      intentionallyRemovedOrderIds.add(sub.orderId);
+    }
+  }
+  for (const ord of orders) {
+    if (
+      intentionallyRemovedMemberIds.has(ord.memberId) ||
+      isEmailBlocked(ord.customerEmail) ||
+      isPhoneBlocked(ord.customerPhone)
+    ) {
+      intentionallyRemovedOrderIds.add(ord.id);
     }
   }
 

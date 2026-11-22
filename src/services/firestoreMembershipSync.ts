@@ -620,6 +620,23 @@ async function deleteFirestoreDocSafely(collectionName: string, docId: string): 
   } catch (err) {
     handleFirestoreError(err, OperationType.DELETE, path);
   }
+  // If raw docId differed from sanitizeId, attempt raw path too
+  if (docId !== cleanId && !docId.includes('/')) {
+    try {
+      await deleteDoc(doc(db, collectionName, docId));
+    } catch {
+      // ignore if non-existent
+    }
+  }
+}
+
+function normalizePhoneDigitsForMatch(phone?: string | null): string {
+  const digits = String(phone || '').replace(/[^\d]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('00')) return digits.slice(2);
+  if (/^03\d{9}$/.test(digits)) return `92${digits.slice(1)}`;
+  if (/^3\d{9}$/.test(digits)) return `92${digits}`;
+  return digits;
 }
 
 export async function deleteOrderInFirestore(
@@ -635,6 +652,8 @@ export async function deleteOrderInFirestore(
 
 export async function deleteMemberCascadeInFirestore(deletedIds: {
   memberId: string;
+  memberEmail?: string;
+  memberPhone?: string;
   orderIds?: string[];
   membershipIds?: string[];
   historyIds?: string[];
@@ -654,6 +673,38 @@ export async function deleteMemberCascadeInFirestore(deletedIds: {
   for (const id of deletedIds.notificationIds || []) {
     await deleteFirestoreDocSafely('memberNotifications', id);
   }
+
+  // Sweep Firestore for any straggler docs matching memberId or email so deleted accounts never resurrect
+  const emailLower = String(deletedIds.memberEmail || '').trim().toLowerCase();
+  const sweepCol = async (colName: string) => {
+    try {
+      const snap = await getDocs(collection(db, colName));
+      const deletes: Promise<void>[] = [];
+      snap.forEach((d) => {
+        const data = d.data() || {};
+        const docEmail = String(data.email || data.customerEmail || '').trim().toLowerCase();
+        const matches =
+          d.id === deletedIds.memberId ||
+          data.id === deletedIds.memberId ||
+          data.memberId === deletedIds.memberId ||
+          (emailLower && docEmail === emailLower);
+        if (matches) {
+          deletes.push(deleteDoc(d.ref).catch(() => {}));
+        }
+      });
+      await Promise.all(deletes);
+    } catch {
+      // Non-fatal
+    }
+  };
+
+  await Promise.all([
+    sweepCol('members'),
+    sweepCol('membershipOrders'),
+    sweepCol('memberships'),
+    sweepCol('membershipHistory'),
+    sweepCol('memberNotifications'),
+  ]);
 }
 
 export async function deleteMembershipInFirestore(
@@ -665,6 +716,87 @@ export async function deleteMembershipInFirestore(
   for (const id of notificationIds) {
     await deleteFirestoreDocSafely('memberNotifications', id);
   }
+  // Sweep by id field in case Firestore document key differed
+  try {
+    const snap = await getDocs(collection(db, 'memberships'));
+    const deletes: Promise<void>[] = [];
+    snap.forEach((d) => {
+      const data = d.data() || {};
+      if (d.id === membershipId || data.id === membershipId) {
+        deletes.push(deleteDoc(d.ref).catch(() => {}));
+      }
+    });
+    await Promise.all(deletes);
+  } catch {
+    // Non-fatal
+  }
+}
+
+export async function deleteBlockedUserOrdersInFirestore(params: {
+  orderIds?: string[];
+  memberIds?: string[];
+  email?: string;
+  phones?: string[];
+}): Promise<number> {
+  if (!isFirebaseAdminUser()) return 0;
+  let removed = 0;
+  const orderIdSet = new Set((params.orderIds || []).filter(Boolean));
+  const memberIdSet = new Set((params.memberIds || []).filter(Boolean));
+  const emailLower = String(params.email || '').trim().toLowerCase();
+  const phoneSet = new Set(
+    (params.phones || []).map((p) => normalizePhoneDigitsForMatch(p)).filter(Boolean)
+  );
+
+  for (const id of orderIdSet) {
+    await deleteFirestoreDocSafely('membershipOrders', id);
+    removed += 1;
+  }
+
+  try {
+    const snap = await getDocs(collection(db, 'membershipOrders'));
+    const deletes: Promise<void>[] = [];
+    snap.forEach((d) => {
+      const data = d.data() || {};
+      const docEmail = String(data.customerEmail || '').trim().toLowerCase();
+      const docPhone = normalizePhoneDigitsForMatch(data.customerPhone);
+      const matches =
+        orderIdSet.has(d.id) ||
+        orderIdSet.has(String(data.id || '')) ||
+        (data.memberId && memberIdSet.has(String(data.memberId))) ||
+        (emailLower && !emailLower.endsWith('@blocked.feviqo.local') && docEmail === emailLower) ||
+        (docPhone && phoneSet.has(docPhone));
+      if (matches) {
+        deletes.push(
+          deleteDoc(d.ref)
+            .then(() => {
+              removed += 1;
+            })
+            .catch(() => {})
+        );
+      }
+    });
+    await Promise.all(deletes);
+  } catch {
+    // Non-fatal
+  }
+  return removed;
+}
+
+export async function purgeTombstonesFromFirestore(tombstones?: {
+  memberIds?: string[];
+  orderIds?: string[];
+  membershipIds?: string[];
+  historyIds?: string[];
+  notificationIds?: string[];
+}): Promise<void> {
+  if (!isFirebaseAdminUser() || !tombstones) return;
+  const tasks: Promise<void>[] = [];
+  for (const id of tombstones.memberIds || []) tasks.push(deleteFirestoreDocSafely('members', id));
+  for (const id of tombstones.orderIds || []) tasks.push(deleteFirestoreDocSafely('membershipOrders', id));
+  for (const id of tombstones.membershipIds || []) tasks.push(deleteFirestoreDocSafely('memberships', id));
+  for (const id of tombstones.historyIds || []) tasks.push(deleteFirestoreDocSafely('membershipHistory', id));
+  for (const id of tombstones.notificationIds || []) tasks.push(deleteFirestoreDocSafely('memberNotifications', id));
+  await Promise.all(tasks);
 }
 
 export async function syncBlockedUserToFirestore(record: BlockedUserRecord): Promise<void> {
@@ -672,21 +804,45 @@ export async function syncBlockedUserToFirestore(record: BlockedUserRecord): Pro
   if (!user || !user.emailVerified || !isFirebaseAdminUser()) return;
   const blockId = sanitizeId(record.id);
   const path = `blockedUsers/${blockId}`;
+  const ref = doc(db, 'blockedUsers', blockId);
   try {
-    await setDoc(doc(db, 'blockedUsers', blockId), {
-      id: blockId,
-      email: clampStr(record.email.trim().toLowerCase(), 200),
-      memberId: clampStr(record.memberId || '', 128),
-      fullName: clampStr(record.fullName || '', 120),
-      reason: clampStr(record.reason || 'Blocked by FEVIQO administrator', 500),
-      blockedByAdminId: clampStr(record.blockedByAdminId || user.uid, 128),
-      blockedByAdminEmail: clampStr(record.blockedByAdminEmail || user.email || '', 200),
-      blockedAt: clampStr(record.blockedAt || new Date().toISOString(), 64),
-      createdAtIso: clampStr(record.createdAt || new Date().toISOString(), 64),
-      updatedAtIso: clampStr(record.updatedAt || new Date().toISOString(), 64),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    const existing = await getDoc(ref);
+    const additionalPhones = Array.isArray(record.additionalPhones)
+      ? record.additionalPhones.map((p) => clampStr(String(p || ''), 32)).filter(Boolean).slice(0, 20)
+      : [];
+    if (!existing.exists()) {
+      await setDoc(ref, {
+        id: blockId,
+        email: clampStr(record.email.trim().toLowerCase(), 200),
+        phone: clampStr(record.phone || '', 32),
+        phoneNormalized: clampStr(record.phoneNormalized || '', 32),
+        additionalPhones,
+        memberId: clampStr(record.memberId || '', 128),
+        fullName: clampStr(record.fullName || '', 120),
+        reason: clampStr(record.reason || 'Blocked by FEVIQO administrator', 500),
+        blockedByAdminId: clampStr(record.blockedByAdminId || user.uid, 128),
+        blockedByAdminEmail: clampStr(record.blockedByAdminEmail || user.email || '', 200),
+        blockedAt: clampStr(record.blockedAt || new Date().toISOString(), 64),
+        createdAtIso: clampStr(record.createdAt || new Date().toISOString(), 64),
+        updatedAtIso: clampStr(record.updatedAt || new Date().toISOString(), 64),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } else {
+      await updateDoc(ref, {
+        phone: clampStr(record.phone || '', 32),
+        phoneNormalized: clampStr(record.phoneNormalized || '', 32),
+        additionalPhones,
+        memberId: clampStr(record.memberId || '', 128),
+        fullName: clampStr(record.fullName || '', 120),
+        reason: clampStr(record.reason || 'Blocked by FEVIQO administrator', 500),
+        blockedByAdminId: clampStr(record.blockedByAdminId || user.uid, 128),
+        blockedByAdminEmail: clampStr(record.blockedByAdminEmail || user.email || '', 200),
+        blockedAt: clampStr(record.blockedAt || new Date().toISOString(), 64),
+        updatedAtIso: clampStr(record.updatedAt || new Date().toISOString(), 64),
+        updatedAt: serverTimestamp(),
+      });
+    }
   } catch (err) {
     handleFirestoreError(err, OperationType.WRITE, path);
   }
@@ -1010,6 +1166,9 @@ export async function pullAllCloudDataFromFirestore(): Promise<CloudMembershipSn
       blockedUsers.push({
         id: data.id || d.id,
         email,
+        phone: data.phone || undefined,
+        phoneNormalized: data.phoneNormalized || undefined,
+        additionalPhones: Array.isArray(data.additionalPhones) ? data.additionalPhones : undefined,
         memberId: data.memberId || undefined,
         fullName: data.fullName || undefined,
         reason: data.reason || 'Blocked by FEVIQO administrator',
