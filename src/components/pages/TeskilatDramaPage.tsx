@@ -329,7 +329,25 @@ const EPISODE_193: TeskilatEpisode = {
   isLockedPremium: true,
 };
 
-const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_193, EPISODE_192, EPISODE_189, EPISODE_188, EPISODE_187, FEATURED_SEASON7_EPISODE];
+const EPISODE_194: TeskilatEpisode = {
+  id: 'ep-194-s7',
+  episodeNumber: 194,
+  seasonNumber: 7,
+  titleUrdu: 'تشکیلات سیزن 7 قسط 194 اردو ڈبنگ — صرف پریمیم ممبرز کے لیے',
+  titleEnglish: 'Teskilat Season 7 Episode 194 (Bolum 194) — Premium Subscriptions Only',
+  releaseDate: 'November 2026',
+  duration: '2h 25m',
+  thumbnailUrl: 'https://lh3.googleusercontent.com/d/1pD9jhie8NMZRQzxPCb3LyDGkhEE5xFdY',
+  directoryThumbnailUrl: 'https://lh3.googleusercontent.com/d/1pD9jhie8NMZRQzxPCb3LyDGkhEE5xFdY',
+  videoUrl: '',
+  storyRecapUrdu: `تشکیلات سیزن 7 قسط 194 مکمل اردو ڈبنگ میں صرف FEVIQO پریمیم ممبرشپ کے ساتھ دستیاب ہے۔ مکمل قسط دیکھنے کے لیے پریمیم سبسکرپشن حاصل کریں یا اپنے ممبر اکاؤنٹ میں سائن ان کریں۔`,
+  storyRecapEnglish: `Teskilat Season 7 Episode 194 (Bolum 194) in Urdu Dubbed HD is exclusively unlocked for active FEVIQO Premium Membership subscribers. Subscribe to a Starter, Standard, Plus, or VIP plan to watch Episode 194 inside your My Account library.`,
+  views: 'Premium Members',
+  isLatest: true,
+  isLockedPremium: true,
+};
+
+const ALL_EPISODES: TeskilatEpisode[] = [EPISODE_194, EPISODE_193, EPISODE_192, EPISODE_189, EPISODE_188, EPISODE_187, FEATURED_SEASON7_EPISODE];
 
 interface TeskilatDramaPageProps {
   onBackToHome: () => void;
@@ -351,7 +369,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192') || path.includes('193') || hash.includes('193')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192') || path.includes('193') || hash.includes('193') || path.includes('194') || hash.includes('194')) {
         return 'episode-detail';
       }
     }
@@ -360,6 +378,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   const [selectedEpisode, setSelectedEpisode] = useState<TeskilatEpisode>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
+      if (path.includes('194')) return EPISODE_194;
       if (path.includes('193')) return EPISODE_193;
       if (path.includes('192')) return EPISODE_192;
       if (path.includes('186')) return FEATURED_SEASON7_EPISODE;
@@ -427,9 +446,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192') || path.includes('193') || hash.includes('193') || path.includes('/episode')) {
+      if (path.includes('186') || hash.includes('186') || path.includes('187') || hash.includes('187') || path.includes('188') || hash.includes('188') || path.includes('189') || hash.includes('189') || path.includes('192') || hash.includes('192') || path.includes('193') || hash.includes('193') || path.includes('194') || hash.includes('194') || path.includes('/episode')) {
         setActiveView('episode-detail');
-        if (path.includes('193') || hash.includes('193')) {
+        if (path.includes('194') || hash.includes('194')) {
+          setSelectedEpisode(EPISODE_194);
+        } else if (path.includes('193') || hash.includes('193')) {
           setSelectedEpisode(EPISODE_193);
         } else if (path.includes('192') || hash.includes('192')) {
           setSelectedEpisode(EPISODE_192);
@@ -929,98 +950,140 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
             {/* 5 & 6. LATEST EPISODE FEATURE & KEY EPISODE INFORMATION */}
             <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-200/80">
-              <div className="space-y-6 text-left">
-                
-                <div className="space-y-1">
-                  <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                    SEASON 7 &bull; EPISODE 189 (SEASON 7 EPISODE 5)
-                  </div>
-                  <h2 className="text-2xl sm:text-4xl font-black text-[#0B0B0D]">
-                    Latest Episode
-                  </h2>
-                </div>
+              {(() => {
+                const latestEp = EPISODE_194;
+                const latestSlug = `episode-${latestEp.episodeNumber}`;
+                const isLatestPremium = Boolean(
+                  latestEp.isLockedPremium || isEpisodePremium('teskilat', latestSlug)
+                );
+                const isLatestUnlocked = !isLatestPremium || hasDramaAccess('teskilat');
+                const isLatestLocked = isLatestPremium && !isLatestUnlocked;
+                const isCheckingLatest = checkingEpisodeKey === `teskilat:${latestSlug}`;
+                const latestHref = isLatestLocked
+                  ? `/membership?drama=teskilat&episode=${latestSlug}`
+                  : `/teskilat/${latestSlug}`;
+                const handleOpenLatest = () => {
+                  if (isLatestPremium) {
+                    attemptWatchEpisode('teskilat', latestSlug, latestEp.titleEnglish, () => {
+                      handleOpenEpisode(latestEp);
+                    });
+                  } else {
+                    handleOpenEpisode(latestEp);
+                  }
+                };
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-2">
-                  
-                  {/* Thumbnail */}
-                  <a 
-                    href="/teskilat/episode-189"
-                    onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_189); }}
-                    className="lg:col-span-6 relative rounded-2xl overflow-hidden bg-slate-100 shadow-xl border border-slate-200 block group aspect-video"
-                  >
-                    {EPISODE_189.thumbnailUrl ? (
-                      <img 
-                        src={EPISODE_189.directoryThumbnailUrl || EPISODE_189.thumbnailUrl} 
-                        alt="Teskilat Episode 189, Teskilat 189, teskilat urdu, teskilat episode 189 urdu" 
-                        title="Teskilat Episode 189, Teskilat 189, teskilat urdu, teskilat episode 189 urdu"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-[#09090c] via-[#111116] to-[#021d12] flex flex-col items-center justify-center p-4 border border-white/5">
-                        <span className="text-xs font-mono font-bold tracking-widest text-[#22C55E] uppercase bg-emerald-950/40 border border-emerald-500/20 px-2.5 py-1 rounded-full mb-1 animate-pulse">EPISODE 189 TEASER</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">COVER ART UPLOADING SOON</span>
+                return (
+                  <div className="space-y-6 text-left">
+                    <div className="space-y-1">
+                      <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
+                        SEASON 7 &bull; EPISODE 194 (BOLUM 194) &bull; URDU DUBBED
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-slate-950/10 transition-colors flex items-center justify-center">
-                      <div className="w-14 h-14 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
-                        <Play className="w-6 h-6 fill-current text-slate-950 ml-0.5" />
-                      </div>
-                    </div>
-                  </a>
-
-                  {/* Content & Description */}
-                  <div className="lg:col-span-6 space-y-4">
-                    <div className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-black uppercase tracking-wider">
-                      LATEST RELEASES
+                      <h2 className="text-2xl sm:text-4xl font-black text-[#0B0B0D]">
+                        Latest Episode
+                      </h2>
                     </div>
 
-                    <h3 className="text-2xl sm:text-3xl font-black text-[#0B0B0D]">
-                      Teskilat Season 7 Episode 5 (Bolum 189) Urdu
-                    </h3>
-
-                    <div className="text-lg font-urdu-slim text-slate-800 dir-rtl text-right font-normal leading-relaxed">
-                      ڈرامہ تشکیلات قسط 189 اردو سب ٹائٹلز – التائے پر غداری کا الزام اور ازرا کا غیر متوقع وار
-                    </div>
-
-                    <p className="text-slate-600 text-sm leading-relaxed">
-                      Stream Teskilat Season 7 Episode 5 (Bolum 189) Turkish drama with premium Urdu subtitles on FEVIQO. Stream official story recaps, full HD 1080p video player, and complete espionage missions.
-                    </p>
-
-                    {/* Minimal Information Strip */}
-                    <div className="text-xs font-bold text-slate-500 flex items-center gap-3 pt-2">
-                      <span className="text-[#0B0B0D]">Season 7</span>
-                      <span>&bull;</span>
-                      <span>Espionage Drama</span>
-                      <span>&bull;</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">1080p HD</span>
-                      <span>&bull;</span>
-                      <span>Urdu Subtitles</span>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-4 pt-3">
-                      <button
-                        onClick={() => handleOpenEpisode(EPISODE_189)}
-                        className="px-6 py-3 rounded-full bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs transition cursor-pointer inline-flex items-center gap-2"
-                      >
-                        <Play className="w-4 h-4 fill-current text-slate-950" />
-                        <span>Watch Episode 189</span>
-                      </button>
-
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center pt-2">
+                      {/* Thumbnail */}
                       <a
-                        href="/teskilat/episode-189"
-                        onClick={(e) => { e.preventDefault(); handleOpenEpisode(EPISODE_189); }}
-                        className="text-xs font-bold text-slate-700 hover:text-[#0B0B0D] transition cursor-pointer"
+                        href={latestHref}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleOpenLatest();
+                        }}
+                        className="lg:col-span-6 relative rounded-2xl overflow-hidden bg-slate-950 shadow-xl border border-slate-200 block group aspect-video"
                       >
-                        Read Story &rarr;
+                        <img
+                          src={latestEp.directoryThumbnailUrl || latestEp.thumbnailUrl}
+                          alt="Teskilat Episode 194 Urdu Dubbed - Bolum 194 FEVIQO"
+                          title="Teskilat Episode 194 Urdu Dubbed - Bolum 194 FEVIQO"
+                          referrerPolicy="no-referrer"
+                          className={`w-full h-full object-cover transition-transform duration-500 ${
+                            isLatestLocked
+                              ? 'brightness-90 group-hover:scale-105'
+                              : 'group-hover:scale-105'
+                          }`}
+                        />
+                        <div className="absolute top-3 left-3 px-2.5 py-1 rounded bg-[#0B0B0D]/90 border border-[#22C55E]/40 text-[#22C55E] text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 shadow-lg">
+                          {isLatestLocked ? <Lock className="w-3 h-3" /> : <Play className="w-3 h-3 fill-current" />}
+                          <span>{isLatestLocked ? 'URDU DUBBED · PREMIUM' : 'LATEST · UNLOCKED'}</span>
+                        </div>
+                        <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-slate-950/10 transition-colors flex items-center justify-center">
+                          <div className="w-14 h-14 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                            {isLatestLocked ? (
+                              <Lock className="w-6 h-6 text-slate-950" />
+                            ) : (
+                              <Play className="w-6 h-6 fill-current text-slate-950 ml-0.5" />
+                            )}
+                          </div>
+                        </div>
                       </a>
+
+                      {/* Content & Description */}
+                      <div className="lg:col-span-6 space-y-4">
+                        <div className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-black uppercase tracking-wider">
+                          {isLatestUnlocked ? 'LATEST RELEASE · UNLOCKED' : 'LATEST RELEASE · FEVIQO PREMIUM'}
+                        </div>
+
+                        <h3 className="text-2xl sm:text-3xl font-black text-[#0B0B0D]">
+                          Teskilat Season 7 Episode 194 (Bolum 194) Urdu Dubbed
+                        </h3>
+
+                        <div className="text-lg font-urdu-slim text-slate-800 dir-rtl text-right font-normal leading-relaxed">
+                          {latestEp.titleUrdu}
+                        </div>
+
+                        <p className="text-slate-600 text-sm leading-relaxed">
+                          {latestEp.storyRecapEnglish}
+                        </p>
+
+                        {/* Minimal Information Strip */}
+                        <div className="text-xs font-bold text-slate-500 flex flex-wrap items-center gap-3 pt-2">
+                          <span className="text-[#0B0B0D]">Season 7</span>
+                          <span>&bull;</span>
+                          <span>Espionage Drama</span>
+                          <span>&bull;</span>
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">1080p HD</span>
+                          <span>&bull;</span>
+                          <span>Urdu Dubbed</span>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap items-center gap-4 pt-3">
+                          <button
+                            onClick={handleOpenLatest}
+                            className="px-6 py-3 rounded-full bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs transition cursor-pointer inline-flex items-center gap-2"
+                          >
+                            {isLatestLocked ? (
+                              <Lock className="w-4 h-4 text-slate-950" />
+                            ) : (
+                              <Play className="w-4 h-4 fill-current text-slate-950" />
+                            )}
+                            <span>
+                              {isCheckingLatest
+                                ? 'Checking Access...'
+                                : isLatestLocked
+                                ? 'Unlock Episode 194 (Premium)'
+                                : 'Watch Episode 194'}
+                            </span>
+                          </button>
+
+                          <a
+                            href={latestHref}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleOpenLatest();
+                            }}
+                            className="text-xs font-bold text-slate-700 hover:text-[#0B0B0D] transition cursor-pointer"
+                          >
+                            Open Episode &rarr;
+                          </a>
+                        </div>
+                      </div>
                     </div>
-
                   </div>
-
-                </div>
-
-              </div>
+                );
+              })()}
             </section>
 
             {/* 7. SHORT SEASON INTRODUCTION (EDITORIAL) */}
@@ -1606,7 +1669,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 <div className="grid grid-cols-3 items-center text-xs font-bold">
                   <button 
                     onClick={() => {
-                      if (selectedEpisode.episodeNumber === 193) {
+                      if (selectedEpisode.episodeNumber === 194) {
+                        attemptWatchEpisode('teskilat', 'episode-193', EPISODE_193.titleEnglish, () => {
+                          handleOpenEpisode(EPISODE_193);
+                        });
+                      } else if (selectedEpisode.episodeNumber === 193) {
                         attemptWatchEpisode('teskilat', 'episode-192', EPISODE_192.titleEnglish, () => {
                           handleOpenEpisode(EPISODE_192);
                         });
@@ -1626,7 +1693,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   >
                     <div className="text-slate-400 text-[10px] uppercase font-bold">&larr; Previous</div>
                     <div className="text-[#0B0B0D] font-extrabold text-sm mt-0.5 group-hover:text-[#22C55E] transition">
-                      Episode {selectedEpisode.episodeNumber === 193 ? 192 : selectedEpisode.episodeNumber === 192 ? 189 : selectedEpisode.episodeNumber === 189 ? 188 : selectedEpisode.episodeNumber === 188 ? 187 : selectedEpisode.episodeNumber === 187 ? 186 : 185}
+                      Episode {selectedEpisode.episodeNumber === 194 ? 193 : selectedEpisode.episodeNumber === 193 ? 192 : selectedEpisode.episodeNumber === 192 ? 189 : selectedEpisode.episodeNumber === 189 ? 188 : selectedEpisode.episodeNumber === 188 ? 187 : selectedEpisode.episodeNumber === 187 ? 186 : 185}
                     </div>
                   </button>
 
@@ -1649,9 +1716,13 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                         attemptWatchEpisode('teskilat', 'episode-192', EPISODE_192.titleEnglish, () => {
                           handleOpenEpisode(EPISODE_192);
                         });
-                      } else {
+                      } else if (selectedEpisode.episodeNumber === 192) {
                         attemptWatchEpisode('teskilat', 'episode-193', EPISODE_193.titleEnglish, () => {
                           handleOpenEpisode(EPISODE_193);
+                        });
+                      } else {
+                        attemptWatchEpisode('teskilat', 'episode-194', EPISODE_194.titleEnglish, () => {
+                          handleOpenEpisode(EPISODE_194);
                         });
                       }
                     }}
@@ -1679,9 +1750,13 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           ? hasDramaAccess('teskilat')
                             ? 'Episode 192 (Watch Now)'
                             : 'Episode 192 (Premium)'
+                          : selectedEpisode.episodeNumber === 192
+                          ? hasDramaAccess('teskilat')
+                            ? 'Episode 193 (Watch Now)'
+                            : 'Episode 193 (Premium)'
                           : hasDramaAccess('teskilat')
-                          ? 'Episode 193 (Watch Now)'
-                          : 'Episode 193 (Premium)'}
+                          ? 'Episode 194 (Watch Now)'
+                          : 'Episode 194 (Premium)'}
                       </span>
                     </div>
                   </button>

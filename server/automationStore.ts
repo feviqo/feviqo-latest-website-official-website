@@ -14,11 +14,23 @@ import {
   sendWhatsAppTextMessage,
   markWhatsAppMessageRead,
   fetchMetaWabaTemplates,
+  validateWhatsAppTemplateParameters,
+  classifyWhatsAppSendError,
+  SyncedMetaTemplateInfo,
+  ClassifiedWhatsAppError,
 } from './whatsappClient';
 import {
   mirrorDocToFirestoreServer,
   pullAutomationSnapshotFromFirestoreServer,
+  listFirebaseAuthUsersPhoneMap,
 } from './firestoreAdmin';
+import {
+  resolveCustomerWhatsAppContact,
+  buildCustomerContactAuditReport,
+  normalizeCustomerPhoneE164Strict,
+  FirebaseAuthPhoneLookup,
+  CustomerContactAuditReport,
+} from './customerContactResolver';
 import {
   getAutomationMembershipSnapshot,
   getEntitledActiveMembersForDrama,
@@ -240,6 +252,8 @@ export interface WhatsAppAutomationSettings {
   rules: AutomationRulesConfig;
   ai: AiAssistantSettings;
   templateStatuses: Record<string, WhatsAppTemplateApprovalStatus>;
+  metaTemplateDetails?: Record<string, SyncedMetaTemplateInfo>;
+  lastMetaTemplateSyncAt?: string;
   estimatedUtilityCostUsd: number;
   estimatedMarketingCostUsd: number;
   lastWebhookReceivedAt?: string;
@@ -264,6 +278,8 @@ export interface CustomerNotificationPreference {
   email?: string;
   fullName?: string;
   phoneE164: string;
+  phoneVerified?: boolean;
+  whatsappVerified?: boolean;
   // Separate consent toggles — NEVER pre-checked!
   membershipUpdates: boolean;
   renewalReminders: boolean;
@@ -283,6 +299,7 @@ export interface CustomerNotificationPreference {
 export interface WhatsAppMessageLog {
   id: string;
   direction: 'outbound' | 'inbound';
+  isTest?: boolean;
   sendingMethod?: 'cloud_api' | 'manual_whatsapp' | 'in_app' | 'email';
   wamid?: string;
   broadcastId?: string;
@@ -293,6 +310,7 @@ export interface WhatsAppMessageLog {
   memberId?: string;
   leadId?: string;
   templateName?: string;
+  templateLanguage?: string;
   templateCategory?: WhatsAppTemplateCategory;
   bodyParameters?: string[];
   bodyPreview: string;
@@ -302,6 +320,15 @@ export interface WhatsAppMessageLog {
   manualFallbackNotificationId?: string;
   attempts: number;
   maxAttempts: number;
+  retryable?: boolean;
+  errorCategory?: ClassifiedWhatsAppError['category'];
+  errorExplanation?: {
+    humanTitle: string;
+    whatWentWrong: string;
+    component: string;
+    needsAdminAction: boolean;
+    systemAction: string;
+  };
   nextRetryAt?: string;
   errorMessage?: string;
   errorCode?: string | number;
@@ -661,6 +688,8 @@ export function saveAutomationSettings(
     templateStatuses: Record<string, WhatsAppTemplateApprovalStatus>;
     estimatedUtilityCostUsd: number;
     estimatedMarketingCostUsd: number;
+    metaTemplateDetails: Record<string, SyncedMetaTemplateInfo>;
+    lastMetaTemplateSyncAt: string;
     lastWebhookReceivedAt: string;
     lastWebhookVerifiedAt: string;
     lastWorkerRunAt: string;
@@ -703,6 +732,10 @@ export function saveAutomationSettings(
     templateStatuses: updates.templateStatuses
       ? { ...current.templateStatuses, ...updates.templateStatuses }
       : current.templateStatuses,
+    metaTemplateDetails: updates.metaTemplateDetails
+      ? { ...(current.metaTemplateDetails || {}), ...updates.metaTemplateDetails }
+      : current.metaTemplateDetails,
+    lastMetaTemplateSyncAt: updates.lastMetaTemplateSyncAt ?? current.lastMetaTemplateSyncAt,
     estimatedUtilityCostUsd:
       typeof updates.estimatedUtilityCostUsd === 'number' && updates.estimatedUtilityCostUsd >= 0
         ? updates.estimatedUtilityCostUsd
@@ -787,6 +820,8 @@ export async function syncMetaTemplateStatuses(admin?: { id: string; email: stri
   syncedCount: number;
   metaTemplatesFound: number;
   updatedStatuses: Record<string, WhatsAppTemplateApprovalStatus>;
+  syncedDetails?: Record<string, SyncedMetaTemplateInfo>;
+  syncedAt?: string;
   error?: string;
 }> {
   const res = await fetchMetaWabaTemplates();
@@ -801,29 +836,70 @@ export async function syncMetaTemplateStatuses(admin?: { id: string; email: stri
   }
   const current = getAutomationSettings();
   const updates: Record<string, WhatsAppTemplateApprovalStatus> = {};
-  let syncedCount = 0;
+  const details: Record<string, SyncedMetaTemplateInfo> = { ...(current.metaTemplateDetails || {}) };
+  const syncedAt = new Date().toISOString();
 
+  const statusRank = (rawStatus: string): number => {
+    const s = String(rawStatus || '').toUpperCase();
+    if (s === 'APPROVED' || s === 'ACTIVE') return 4;
+    if (s === 'PENDING' || s === 'IN_APPEAL') return 3;
+    if (s === 'PAUSED') return 2;
+    if (s === 'REJECTED' || s === 'DISABLED') return 1;
+    return 0;
+  };
+
+  // Group by template name and pick best matching variant (prefer APPROVED/ACTIVE, then en/en_US)
+  const bestByName = new Map<string, SyncedMetaTemplateInfo>();
   for (const mt of res.templates) {
     if (!mt.name) continue;
-    let mapped: WhatsAppTemplateApprovalStatus = 'draft';
-    if (mt.status === 'APPROVED') mapped = 'approved';
-    else if (mt.status === 'PENDING' || mt.status === 'IN_APPEAL') mapped = 'pending_meta_review';
-    else if (mt.status === 'REJECTED' || mt.status === 'PAUSED' || mt.status === 'DISABLED') mapped = 'rejected';
+    const prev = bestByName.get(mt.name);
+    if (!prev) {
+      bestByName.set(mt.name, mt);
+      continue;
+    }
+    const prevRank = statusRank(prev.status);
+    const currRank = statusRank(mt.status);
+    const currIsEn = mt.language === 'en' || mt.language === 'en_US';
+    const prevIsEn = prev.language === 'en' || prev.language === 'en_US';
+    if (currRank > prevRank || (currRank === prevRank && currIsEn && !prevIsEn)) {
+      bestByName.set(mt.name, mt);
+    }
+  }
 
-    if (mt.name in current.templateStatuses || WHATSAPP_TEMPLATES_CATALOG.some((t) => t.name === mt.name)) {
-      updates[mt.name] = mapped;
+  let syncedCount = 0;
+  for (const [name, mt] of bestByName.entries()) {
+    const rawUpper = String(mt.status || '').toUpperCase();
+    let mapped: WhatsAppTemplateApprovalStatus = 'draft';
+    if (rawUpper === 'APPROVED' || rawUpper === 'ACTIVE') mapped = 'approved';
+    else if (rawUpper === 'PENDING' || rawUpper === 'IN_APPEAL') mapped = 'pending_meta_review';
+    else if (rawUpper === 'REJECTED' || rawUpper === 'PAUSED' || rawUpper === 'DISABLED') {
+      mapped = 'rejected';
+    }
+
+    details[name] = { ...mt, status: rawUpper, syncedAt };
+
+    if (name in current.templateStatuses || WHATSAPP_TEMPLATES_CATALOG.some((t) => t.name === name)) {
+      updates[name] = mapped;
       syncedCount += 1;
     }
   }
 
-  if (syncedCount > 0) {
-    saveAutomationSettings({ templateStatuses: updates }, admin);
-  }
+  saveAutomationSettings(
+    {
+      ...(syncedCount > 0 ? { templateStatuses: updates } : {}),
+      metaTemplateDetails: details,
+      lastMetaTemplateSyncAt: syncedAt,
+    },
+    admin
+  );
+
   return {
     ok: true,
     syncedCount,
     metaTemplatesFound: res.templates.length,
     updatedStatuses: updates,
+    syncedDetails: details,
+    syncedAt,
   };
 }
 
@@ -1143,6 +1219,7 @@ export async function dispatchTemplateWhatsAppNotification(params: {
   explicitLeadConsent?: boolean;
   bypassConsentForAdminTest?: boolean;
   bypassTemplateApprovalCheck?: boolean;
+  isTest?: boolean;
 }): Promise<WhatsAppMessageLog | null> {
   if (!params.bypassConsentForAdminTest && hasDuplicateMessageByIdempotencyKey(params.idempotencyKey)) {
     return null;
@@ -1150,12 +1227,18 @@ export async function dispatchTemplateWhatsAppNotification(params: {
 
   const settings = getAutomationSettings();
   const tpl = getTemplateDraftByName(params.templateName);
+  const syncedMetaTemplate = settings.metaTemplateDetails?.[params.templateName] || null;
+  const resolvedLanguage = syncedMetaTemplate?.language || tpl?.language || 'en';
   const category: WhatsAppTemplateCategory = tpl?.category || 'UTILITY';
   const costEstimate =
     category === 'MARKETING'
       ? settings.estimatedMarketingCostUsd
       : settings.estimatedUtilityCostUsd;
-  const phoneE164 = normalizePhoneE164(params.recipientPhone) || String(params.recipientPhone || '');
+
+  const strictPhone = normalizeCustomerPhoneE164Strict(params.recipientPhone);
+  const phoneE164 = strictPhone.valid
+    ? strictPhone.phoneE164
+    : normalizePhoneE164(params.recipientPhone) || String(params.recipientPhone || '');
   const now = new Date().toISOString();
   const preview = renderTemplatePreview(params.templateName, params.bodyParameters);
 
@@ -1166,6 +1249,7 @@ export async function dispatchTemplateWhatsAppNotification(params: {
   const baseLog: WhatsAppMessageLog = {
     id: makeId('wamsg'),
     direction: 'outbound',
+    isTest: Boolean(params.isTest || params.bypassConsentForAdminTest),
     sendingMethod: effectiveMode === 'manual' ? 'manual_whatsapp' : 'cloud_api',
     broadcastId: params.broadcastId,
     idempotencyKey: params.idempotencyKey,
@@ -1175,9 +1259,10 @@ export async function dispatchTemplateWhatsAppNotification(params: {
     memberId: params.memberId,
     leadId: params.leadId,
     templateName: params.templateName,
+    templateLanguage: resolvedLanguage,
     templateCategory: category,
     bodyParameters: params.bodyParameters,
-    bodyPreview: preview,
+    bodyPreview: params.isTest ? `[TEST] ${preview}` : preview,
     status: 'queued',
     attempts: 0,
     maxAttempts: RETRY_BACKOFF_MINUTES.length,
@@ -1332,22 +1417,69 @@ export async function dispatchTemplateWhatsAppNotification(params: {
   };
 
   const tplApproval = settings.templateStatuses[params.templateName] || 'draft';
-  if (!params.bypassTemplateApprovalCheck && tplApproval !== 'approved') {
+  const rawMetaStatus = syncedMetaTemplate?.status?.toUpperCase();
+  const isMetaBlockedStatus =
+    rawMetaStatus === 'REJECTED' || rawMetaStatus === 'PAUSED' || rawMetaStatus === 'DISABLED';
+  if ((!params.bypassTemplateApprovalCheck && tplApproval !== 'approved') || isMetaBlockedStatus) {
     baseLog.status = 'skipped_template_unapproved';
-    baseLog.errorMessage = `Template "${params.templateName}" is currently "${tplApproval}". Sync approved templates from Meta or mark as Approved in Meta Templates tab.`;
+    baseLog.retryable = false;
+    baseLog.errorCode = 'TEMPLATE_UNAPPROVED';
+    baseLog.errorMessage = `Template "${params.templateName}" is currently "${rawMetaStatus || tplApproval}". Sync approved templates from Meta WhatsApp Manager before automated sending.`;
     baseLog.manualFallbackNotificationId = enqueueManualFallbackIfAllowed(
-      `Template ${params.templateName} is ${tplApproval}.`
+      `Template ${params.templateName} is ${rawMetaStatus || tplApproval}.`
     );
     saveWhatsAppMessageLog(baseLog);
     return baseLog;
   }
 
+  // Strict pre-send template parameter validation to eliminate Meta #132000 errors
+  const paramValidation = validateWhatsAppTemplateParameters({
+    templateName: params.templateName,
+    bodyParameters: params.bodyParameters,
+    languageCode: resolvedLanguage,
+    syncedMetaTemplate,
+  });
+  if (!paramValidation.valid) {
+    const classified = classifyWhatsAppSendError(
+      paramValidation.errorCode || 'TEMPLATE_PARAM_MISMATCH',
+      paramValidation.error,
+      400
+    );
+    const failedAt = new Date().toISOString();
+    baseLog.status = 'failed';
+    baseLog.httpStatus = 400;
+    baseLog.errorCode = paramValidation.errorCode || 'TEMPLATE_PARAM_MISMATCH';
+    baseLog.errorMessage = paramValidation.error || 'Template parameter validation failed.';
+    baseLog.retryable = false;
+    baseLog.errorCategory = classified.category;
+    baseLog.errorExplanation = {
+      humanTitle: classified.humanTitle,
+      whatWentWrong: classified.whatWentWrong,
+      component: classified.component,
+      needsAdminAction: classified.needsAdminAction,
+      systemAction: classified.systemAction,
+    };
+    baseLog.nextRetryAt = undefined;
+    baseLog.apiResponseSummary = `Blocked locally before Meta API (${baseLog.errorCode}): ${baseLog.errorMessage.slice(0, 180)}`;
+    baseLog.failedAt = failedAt;
+    baseLog.updatedAt = failedAt;
+    saveWhatsAppMessageLog(baseLog);
+    return baseLog;
+  }
+
+  baseLog.bodyParameters = paramValidation.normalizedParams;
+  baseLog.templateLanguage = paramValidation.languageCode;
+  baseLog.bodyPreview = params.isTest
+    ? `[TEST] ${paramValidation.renderedPreview || preview}`
+    : paramValidation.renderedPreview || preview;
+
   baseLog.attempts = 1;
   const sendRes = await sendWhatsAppTemplateMessage({
     toPhone: phoneE164,
     templateName: params.templateName,
-    languageCode: tpl?.language || 'en',
-    bodyParameters: params.bodyParameters,
+    languageCode: paramValidation.languageCode,
+    bodyParameters: paramValidation.normalizedParams,
+    syncedMetaTemplate,
   });
 
   const finishedAt = new Date().toISOString();
@@ -1357,22 +1489,41 @@ export async function dispatchTemplateWhatsAppNotification(params: {
     baseLog.status = 'api_accepted';
     baseLog.wamid = sendRes.messageId;
     baseLog.sentAt = finishedAt;
+    baseLog.retryable = false;
+    baseLog.nextRetryAt = undefined;
     baseLog.estimatedCostUsd = costEstimate;
-    baseLog.apiResponseSummary = `Meta Cloud API HTTP ${sendRes.httpStatus || 200} accepted (wamid: ${sendRes.messageId || 'pending'}). Awaiting delivery webhook.`;
+    baseLog.apiResponseSummary = `Meta Cloud API HTTP ${sendRes.httpStatus || 200} accepted (wamid: ${sendRes.messageId || 'pending'}, lang: ${paramValidation.languageCode}). Awaiting delivery webhook.`;
     baseLog.updatedAt = finishedAt;
   } else if (sendRes.notConfigured) {
     baseLog.status = 'not_configured';
+    baseLog.retryable = false;
+    baseLog.nextRetryAt = undefined;
     baseLog.errorMessage = sendRes.error;
     baseLog.failedAt = finishedAt;
     baseLog.manualFallbackNotificationId = enqueueManualFallbackIfAllowed('Meta Cloud API not configured.');
     baseLog.updatedAt = finishedAt;
   } else {
+    const classified = classifyWhatsAppSendError(
+      sendRes.errorCode,
+      sendRes.error,
+      sendRes.httpStatus
+    );
     baseLog.status = 'failed';
     baseLog.errorMessage = sendRes.error || 'Meta API delivery error.';
     baseLog.errorCode = sendRes.errorCode;
+    baseLog.retryable = classified.retryable;
+    baseLog.errorCategory = classified.category;
+    baseLog.errorExplanation = {
+      humanTitle: classified.humanTitle,
+      whatWentWrong: classified.whatWentWrong,
+      component: classified.component,
+      needsAdminAction: classified.needsAdminAction,
+      systemAction: classified.systemAction,
+    };
     baseLog.apiResponseSummary = `Meta API HTTP ${sendRes.httpStatus || 500} error (${sendRes.errorCode || 'unknown'}): ${String(sendRes.error || '').slice(0, 180)}`;
     baseLog.failedAt = finishedAt;
-    baseLog.nextRetryAt = computeNextRetryIso(baseLog.attempts);
+    // ONLY schedule automatic retry for transient errors (never auto-retry permanent errors like #132000!)
+    baseLog.nextRetryAt = classified.retryable ? computeNextRetryIso(baseLog.attempts) : undefined;
     baseLog.manualFallbackNotificationId = enqueueManualFallbackIfAllowed('Meta Cloud API error.');
     baseLog.updatedAt = finishedAt;
   }
@@ -1381,7 +1532,10 @@ export async function dispatchTemplateWhatsAppNotification(params: {
   return baseLog;
 }
 
-export async function retryFailedWhatsAppMessage(messageId: string): Promise<{
+export async function retryFailedWhatsAppMessage(
+  messageId: string,
+  options?: { overrideBodyParameters?: string[]; manualAdminRetry?: boolean }
+): Promise<{
   ok: boolean;
   message?: WhatsAppMessageLog;
   error?: string;
@@ -1392,6 +1546,71 @@ export async function retryFailedWhatsAppMessage(messageId: string): Promise<{
   if (target.direction !== 'outbound') {
     return { ok: false, error: 'Only outbound messages can be retried.' };
   }
+  if (
+    target.status === 'api_accepted' ||
+    target.status === 'sent' ||
+    target.status === 'delivered' ||
+    target.status === 'read'
+  ) {
+    return {
+      ok: false,
+      message: target,
+      error: `Message is already "${target.status}" — duplicate retry prevented.`,
+    };
+  }
+
+  const settings = getAutomationSettings();
+  const syncedMetaTemplate = target.templateName
+    ? settings.metaTemplateDetails?.[target.templateName] || null
+    : null;
+  const tpl = target.templateName ? getTemplateDraftByName(target.templateName) : undefined;
+  const resolvedLanguage =
+    syncedMetaTemplate?.language || target.templateLanguage || tpl?.language || 'en';
+
+  const bodyParamsToUse =
+    Array.isArray(options?.overrideBodyParameters) && options.overrideBodyParameters.length > 0
+      ? options.overrideBodyParameters
+      : target.bodyParameters || [];
+
+  if (target.templateName) {
+    const paramValidation = validateWhatsAppTemplateParameters({
+      templateName: target.templateName,
+      bodyParameters: bodyParamsToUse,
+      languageCode: resolvedLanguage,
+      syncedMetaTemplate,
+    });
+    if (!paramValidation.valid) {
+      const classified = classifyWhatsAppSendError(
+        paramValidation.errorCode || 'TEMPLATE_PARAM_MISMATCH',
+        paramValidation.error,
+        400
+      );
+      target.status = 'failed';
+      target.httpStatus = 400;
+      target.errorCode = paramValidation.errorCode || 'TEMPLATE_PARAM_MISMATCH';
+      target.errorMessage = paramValidation.error;
+      target.retryable = false;
+      target.errorCategory = classified.category;
+      target.errorExplanation = {
+        humanTitle: classified.humanTitle,
+        whatWentWrong: classified.whatWentWrong,
+        component: classified.component,
+        needsAdminAction: classified.needsAdminAction,
+        systemAction: classified.systemAction,
+      };
+      target.nextRetryAt = undefined;
+      target.updatedAt = new Date().toISOString();
+      saveWhatsAppMessageLog(target);
+      return { ok: false, message: target, error: paramValidation.error };
+    }
+    target.bodyParameters = paramValidation.normalizedParams;
+    target.templateLanguage = paramValidation.languageCode;
+    if (paramValidation.renderedPreview) {
+      target.bodyPreview = target.isTest
+        ? `[TEST] ${paramValidation.renderedPreview}`
+        : paramValidation.renderedPreview;
+    }
+  }
 
   const now = new Date().toISOString();
   target.attempts = (target.attempts || 0) + 1;
@@ -1401,20 +1620,25 @@ export async function retryFailedWhatsAppMessage(messageId: string): Promise<{
     ? await sendWhatsAppTemplateMessage({
         toPhone: target.recipientPhone,
         templateName: target.templateName,
+        languageCode: target.templateLanguage || resolvedLanguage,
         bodyParameters: target.bodyParameters || [],
+        syncedMetaTemplate,
       })
     : await sendWhatsAppTextMessage({
         toPhone: target.recipientPhone,
         body: target.bodyPreview,
       });
 
-  const settings = getAutomationSettings();
   target.httpStatus = sendRes.httpStatus;
   if (sendRes.ok) {
     target.status = 'api_accepted';
     target.wamid = sendRes.messageId;
     target.sentAt = new Date().toISOString();
     target.errorMessage = undefined;
+    target.errorCode = undefined;
+    target.errorCategory = undefined;
+    target.errorExplanation = undefined;
+    target.retryable = false;
     target.nextRetryAt = undefined;
     target.apiResponseSummary = `Retry accepted by Meta Cloud API HTTP ${sendRes.httpStatus || 200} (wamid: ${sendRes.messageId || 'pending'}).`;
     target.estimatedCostUsd =
@@ -1423,15 +1647,30 @@ export async function retryFailedWhatsAppMessage(messageId: string): Promise<{
         : settings.estimatedUtilityCostUsd;
   } else if (sendRes.notConfigured) {
     target.status = 'not_configured';
+    target.retryable = false;
     target.errorMessage = sendRes.error;
     target.nextRetryAt = undefined;
   } else {
+    const classified = classifyWhatsAppSendError(
+      sendRes.errorCode,
+      sendRes.error,
+      sendRes.httpStatus
+    );
     target.status = 'failed';
     target.errorMessage = sendRes.error || 'Retry failed.';
     target.errorCode = sendRes.errorCode;
-    target.apiResponseSummary = `Retry failed HTTP ${sendRes.httpStatus || 500}: ${String(sendRes.error || '').slice(0, 180)}`;
+    target.retryable = classified.retryable;
+    target.errorCategory = classified.category;
+    target.errorExplanation = {
+      humanTitle: classified.humanTitle,
+      whatWentWrong: classified.whatWentWrong,
+      component: classified.component,
+      needsAdminAction: classified.needsAdminAction,
+      systemAction: classified.systemAction,
+    };
+    target.apiResponseSummary = `Retry failed HTTP ${sendRes.httpStatus || 500} (${sendRes.errorCode || 'unknown'}): ${String(sendRes.error || '').slice(0, 180)}`;
     target.failedAt = new Date().toISOString();
-    target.nextRetryAt = computeNextRetryIso(target.attempts);
+    target.nextRetryAt = classified.retryable ? computeNextRetryIso(target.attempts) : undefined;
   }
 
   saveWhatsAppMessageLog(target);
@@ -2118,31 +2357,56 @@ function maskPhoneForDisplay(phone?: string): string {
 
 export interface EpisodeAudienceRecipientPreview {
   memberId: string;
+  ownerUid?: string;
+  memberName: string;
   fullName: string;
   email: string;
+  rawPhone: string;
   phone: string;
+  phoneE164?: string;
   maskedPhone: string;
   phoneValid: boolean;
+  phoneSource: string;
+  phoneSourceLabel: string;
+  phoneVerified: boolean;
   phoneError?: string;
   planId: string;
+  planName: string;
   membershipStatus: string;
+  entitledForDrama: boolean;
   hasConsent: boolean;
+  whatsappOptedIn: boolean;
   optedOut: boolean;
+  whatsappOptedOut: boolean;
   alreadyNotified: boolean;
   eligibleForWhatsapp: boolean;
+  eligibleForAutomatic: boolean;
+  eligibleForManual: boolean;
+  skipReason?: string;
   exclusionReason?: string;
 }
 
 export interface EpisodeAudiencePreviewResult {
+  dramaId: string;
   dramaTitle: string;
   accessType: 'free' | 'premium';
+  episodeSlug?: string;
+  totalRegistered: number;
   totalRegisteredNonBlocked: number;
+  blockedCount: number;
+  activePaidMembersCount: number;
   totalMatchingCustomers: number;
+  audiencePoolCount: number;
   entitledActiveCount: number;
   consentedCount: number;
   eligibleWhatsappCount: number;
+  eligibleAutomaticCount: number;
+  eligibleManualCount: number;
+  inAppEligibleCount: number;
   noPermissionCount: number;
+  missingConsentCount: number;
   optedOutCount: number;
+  missingPhoneCount: number;
   invalidPhoneCount: number;
   unentitledCount: number;
   inactiveOrExpiredCount: number;
@@ -2154,22 +2418,52 @@ export interface EpisodeAudiencePreviewResult {
 
 export function previewEpisodeNotificationAudience(
   dramaId: string,
-  options?: { accessType?: 'free' | 'premium'; episodeSlug?: string }
+  options?: {
+    accessType?: 'free' | 'premium';
+    episodeSlug?: string;
+    firebaseAuthLookup?: FirebaseAuthPhoneLookup | null;
+  }
 ): EpisodeAudiencePreviewResult {
   const drama = getDramaById(dramaId);
   const accessType: 'free' | 'premium' = options?.accessType === 'free' ? 'free' : 'premium';
-  const { members, memberships } = getAutomationMembershipSnapshot();
+  const { members, memberships, orders } = getAutomationMembershipSnapshot();
+  const preferences = listAllNotificationPreferences();
   const blockedSets = getBlockedLookupSets();
+
+  const resolveForMember = (m: (typeof members)[number]) => {
+    const emailLower = String(m.email || '').trim().toLowerCase();
+    const pref =
+      preferences.find(
+        (p) =>
+          (p.memberId && p.memberId === m.id) ||
+          (m.ownerUid && p.ownerUid && p.ownerUid === m.ownerUid) ||
+          (emailLower && p.email && p.email.trim().toLowerCase() === emailLower)
+      ) || null;
+    return resolveCustomerWhatsAppContact({
+      member: m,
+      preference: pref,
+      memberships,
+      orders,
+      firebaseAuthLookup: options?.firebaseAuthLookup || null,
+    });
+  };
+
   const isBlocked = (email?: string, phone?: string) => {
     const e = String(email || '').trim().toLowerCase();
     const p = normalizeBlockedPhone(phone);
     return (Boolean(e) && blockedSets.emails.has(e)) || (Boolean(p) && blockedSets.phones.has(p));
   };
 
-  const nonBlockedMembers = members.filter((m) => !isBlocked(m.email, m.phone));
-  const entitledPairs = getEntitledActiveMembersForDrama(dramaId).filter(
-    ({ member }) => !isBlocked(member.email, member.phone)
-  );
+  const nonBlockedMembers = members.filter((m) => {
+    const contact = resolveForMember(m);
+    return !isBlocked(m.email, contact.phoneE164 || m.phone);
+  });
+  const blockedCount = Math.max(0, members.length - nonBlockedMembers.length);
+
+  const entitledPairs = getEntitledActiveMembersForDrama(dramaId).filter(({ member }) => {
+    const contact = resolveForMember(member);
+    return !isBlocked(member.email, contact.phoneE164 || member.phone);
+  });
   const entitledByMemberId = new Map(entitledPairs.map((pair) => [pair.member.id, pair]));
 
   const priorBroadcasts = listEpisodeBroadcasts(200).filter((b) => b.dramaId === dramaId);
@@ -2192,15 +2486,22 @@ export function previewEpisodeNotificationAudience(
   }
 
   const nowMs = Date.now();
+  const activePaidMemberIds = new Set(
+    memberships
+      .filter((s) => s.status === 'active' && Date.parse(s.expiresAt) > nowMs)
+      .map((s) => s.memberId)
+  );
+  const activePaidMembersCount = nonBlockedMembers.filter((m) =>
+    activePaidMemberIds.has(m.id)
+  ).length;
+
   let inactiveOrExpiredCount = 0;
   let unentitledCount = 0;
 
   if (accessType === 'premium') {
     for (const m of nonBlockedMembers) {
       if (entitledByMemberId.has(m.id)) continue;
-      const mSubs = memberships.filter((s) => s.memberId === m.id);
-      const hasAnyActiveSub = mSubs.some((s) => s.status === 'active' && Date.parse(s.expiresAt) > nowMs);
-      if (hasAnyActiveSub) {
+      if (activePaidMemberIds.has(m.id)) {
         unentitledCount += 1;
       } else {
         inactiveOrExpiredCount += 1;
@@ -2208,7 +2509,13 @@ export function previewEpisodeNotificationAudience(
     }
   }
 
-  const candidateList: Array<{ member: (typeof nonBlockedMembers)[number]; planId: string; membershipStatus: string }> =
+  const candidateList: Array<{
+    member: (typeof nonBlockedMembers)[number];
+    planId: string;
+    planName: string;
+    membershipStatus: string;
+    entitledForDrama: boolean;
+  }> =
     accessType === 'free'
       ? nonBlockedMembers.map((m) => {
           const activeSub = memberships.find(
@@ -2217,78 +2524,120 @@ export function previewEpisodeNotificationAudience(
           return {
             member: m,
             planId: activeSub?.planId || 'free_registered',
-            membershipStatus: activeSub ? `Active (${activeSub.planName})` : 'Registered (Free)',
+            planName: activeSub?.planName || 'Registered (Free)',
+            membershipStatus: activeSub ? 'active' : 'free_registered',
+            entitledForDrama: true,
           };
         })
       : entitledPairs.map(({ member, membership }) => ({
           member,
           planId: membership.planId,
-          membershipStatus: `Active (${membership.planName})`,
+          planName: membership.planName,
+          membershipStatus: 'active',
+          entitledForDrama: true,
         }));
 
   let eligibleWhatsappCount = 0;
+  let eligibleManualCount = 0;
   let noPermissionCount = 0;
   let optedOutCount = 0;
+  let missingPhoneCount = 0;
   let invalidPhoneCount = 0;
   let alreadyNotifiedCount = 0;
   const recipients: EpisodeAudienceRecipientPreview[] = [];
 
   for (const item of candidateList) {
-    const formatted = formatWhatsAppRecipient(item.member.phone);
+    const contact = resolveForMember(item.member);
     const consent = checkConsentForCategory({
       memberId: item.member.id,
-      phone: formatted.valid ? formatted.e164 : item.member.phone,
+      phone: contact.phoneValid ? contact.phoneE164 : item.member.phone,
       category: 'newEpisodeAlerts',
     });
     const alreadyNotified = alreadyNotifiedMemberIds.has(item.member.id);
     if (alreadyNotified) alreadyNotifiedCount += 1;
 
     let exclusionReason: string | undefined;
-    let eligibleForWhatsapp = false;
+    let eligibleForAutomatic = false;
+    let eligibleForManual = false;
 
-    if (!formatted.valid) {
-      invalidPhoneCount += 1;
-      exclusionReason = formatted.reason || 'Invalid or missing WhatsApp number';
-    } else if (consent.reason === 'opted_out') {
+    if (!contact.phoneValid) {
+      if (contact.rawPhone) {
+        invalidPhoneCount += 1;
+        exclusionReason = contact.phoneError || 'Invalid WhatsApp phone number';
+      } else {
+        missingPhoneCount += 1;
+        exclusionReason = 'Phone number required';
+      }
+    } else if (consent.reason === 'opted_out' || contact.optedOut) {
       optedOutCount += 1;
       exclusionReason = 'Customer opted out (STOP)';
     } else if (!consent.allowed) {
       noPermissionCount += 1;
-      exclusionReason = 'No WhatsApp episode-alert opt-in recorded';
+      eligibleForManual = true;
+      eligibleManualCount += 1;
+      exclusionReason = 'No WhatsApp episode-alert opt-in recorded (In-App / Manual fallback available)';
     } else {
-      eligibleForWhatsapp = true;
+      eligibleForAutomatic = true;
+      eligibleForManual = true;
       eligibleWhatsappCount += 1;
+      eligibleManualCount += 1;
     }
 
+    const displayName = item.member.fullName || 'FEVIQO Member';
     recipients.push({
       memberId: item.member.id,
-      fullName: item.member.fullName || 'FEVIQO Member',
+      ownerUid: item.member.ownerUid,
+      memberName: displayName,
+      fullName: displayName,
       email: item.member.email,
-      phone: formatted.valid ? formatted.e164 : item.member.phone || '',
-      maskedPhone: maskPhoneForDisplay(formatted.valid ? formatted.e164 : item.member.phone),
-      phoneValid: formatted.valid,
-      phoneError: formatted.valid ? undefined : formatted.reason,
+      rawPhone: contact.rawPhone || '',
+      phone: contact.phoneValid ? contact.phoneE164 : contact.rawPhone || '',
+      phoneE164: contact.phoneValid ? contact.phoneE164 : undefined,
+      maskedPhone: maskPhoneForDisplay(contact.phoneValid ? contact.phoneE164 : contact.rawPhone),
+      phoneValid: contact.phoneValid,
+      phoneSource: contact.phoneSource,
+      phoneSourceLabel: contact.phoneSourceLabel,
+      phoneVerified: contact.phoneVerified,
+      phoneError: contact.phoneValid ? undefined : contact.phoneError,
       planId: item.planId,
+      planName: item.planName,
       membershipStatus: item.membershipStatus,
+      entitledForDrama: item.entitledForDrama,
       hasConsent: consent.allowed,
-      optedOut: consent.reason === 'opted_out',
+      whatsappOptedIn: consent.allowed,
+      optedOut: consent.reason === 'opted_out' || contact.optedOut,
+      whatsappOptedOut: consent.reason === 'opted_out' || contact.optedOut,
       alreadyNotified,
-      eligibleForWhatsapp,
+      eligibleForWhatsapp: eligibleForAutomatic,
+      eligibleForAutomatic,
+      eligibleForManual,
+      skipReason: exclusionReason,
       exclusionReason,
     });
   }
 
   return {
+    dramaId,
     dramaTitle: drama?.title || dramaId,
     accessType,
+    episodeSlug: options?.episodeSlug,
+    totalRegistered: members.length,
     totalRegisteredNonBlocked: nonBlockedMembers.length,
+    blockedCount,
+    activePaidMembersCount,
     totalMatchingCustomers: candidateList.length,
+    audiencePoolCount: candidateList.length,
     entitledActiveCount: entitledPairs.length,
     consentedCount: eligibleWhatsappCount,
     eligibleWhatsappCount,
+    eligibleAutomaticCount: eligibleWhatsappCount,
+    eligibleManualCount,
+    inAppEligibleCount: candidateList.length,
     noPermissionCount,
+    missingConsentCount: noPermissionCount,
     optedOutCount,
-    invalidPhoneCount,
+    missingPhoneCount,
+    invalidPhoneCount: missingPhoneCount + invalidPhoneCount,
     unentitledCount,
     inactiveOrExpiredCount,
     alreadyNotifiedCount,
@@ -4021,12 +4370,29 @@ export async function runAutomationWorkerCycle(options?: {
       }
     }
 
-    // 3. Process due failed-message retries with exponential backoff (only on general worker runs)
+    // 3. Process due failed-message retries with exponential backoff (TRANSIENT errors only!)
     if (!options?.targetBroadcastId) {
       const allMsgs = readJson<WhatsAppMessageLog[]>(WA_MESSAGES_FILE, []);
       for (const msg of allMsgs) {
         if (msg.direction !== 'outbound' || msg.status !== 'failed') continue;
         if (!msg.nextRetryAt || msg.attempts >= (msg.maxAttempts || 4)) continue;
+        const classified = classifyWhatsAppSendError(msg.errorCode, msg.errorMessage, msg.httpStatus);
+        if (msg.retryable === false || !classified.retryable) {
+          // Permanently failed (e.g. #132000, #132001, invalid phone) — clear nextRetryAt so it stops looping!
+          msg.retryable = false;
+          msg.errorCategory = classified.category;
+          msg.errorExplanation = {
+            humanTitle: classified.humanTitle,
+            whatWentWrong: classified.whatWentWrong,
+            component: classified.component,
+            needsAdminAction: classified.needsAdminAction,
+            systemAction: classified.systemAction,
+          };
+          msg.nextRetryAt = undefined;
+          msg.updatedAt = new Date().toISOString();
+          saveWhatsAppMessageLog(msg);
+          continue;
+        }
         if (Date.parse(msg.nextRetryAt) <= nowMs) {
           await retryFailedWhatsAppMessage(msg.id);
           retriesAttempted += 1;
@@ -4103,15 +4469,29 @@ export function computeCustomerAudienceSegments(): CustomerAudienceSegments {
   let rejectedPaymentCustomers = 0;
   let pendingRenewals = 0;
 
-  for (const m of nonBlocked) {
-    const formatted = formatWhatsAppRecipient(m.phone);
-    const pref = getMemberNotificationPreferences({ memberId: m.id, phone: m.phone });
+  const preferences = listAllNotificationPreferences();
 
-    if (!formatted.valid) {
+  for (const m of nonBlocked) {
+    const emailLower = String(m.email || '').trim().toLowerCase();
+    const pref =
+      preferences.find(
+        (p) =>
+          (p.memberId && p.memberId === m.id) ||
+          (m.ownerUid && p.ownerUid && p.ownerUid === m.ownerUid) ||
+          (emailLower && p.email && p.email.trim().toLowerCase() === emailLower)
+      ) || null;
+    const contact = resolveCustomerWhatsAppContact({
+      member: m,
+      preference: pref,
+      memberships,
+      orders,
+    });
+
+    if (!contact.phoneValid) {
       invalidPhones += 1;
-    } else if (pref?.optedOut) {
+    } else if (contact.optedOut) {
       optedOut += 1;
-    } else if (pref && (pref.membershipUpdates || pref.renewalReminders || pref.newEpisodeAlerts)) {
+    } else if (contact.hasExplicitConsent) {
       whatsappEligible += 1;
     } else {
       withoutWhatsappPermission += 1;
@@ -4371,11 +4751,25 @@ export async function hydrateAutomationStoreFromFirestore(): Promise<void> {
   }
 }
 
+// --- ADMIN CUSTOMER CONTACT AUDIT & SAFE BACKFILL ---
+export async function runAdminCustomerContactAudit(): Promise<CustomerContactAuditReport> {
+  const { members, memberships, orders } = getAutomationMembershipSnapshot();
+  const preferences = listAllNotificationPreferences();
+  const firebaseAuthLookup = await listFirebaseAuthUsersPhoneMap();
+  return buildCustomerContactAuditReport({
+    members,
+    preferences,
+    memberships,
+    orders,
+    firebaseAuthLookup,
+  });
+}
+
 // --- ADMIN OVERVIEW AGGREGATOR ---
 export function getAdminAutomationOverview() {
   const settings = getAutomationSettings();
   const envStatus = getWhatsAppEnvConfigStatus();
-  const messages = listWhatsAppMessages(400);
+  const rawMessages = listWhatsAppMessages(400);
   const jobs = listAutomationJobs(300);
   const preferences = listAllNotificationPreferences();
   const episodeBroadcasts = listEpisodeBroadcasts(100);
@@ -4387,6 +4781,26 @@ export function getAdminAutomationOverview() {
   );
   const audienceSegments = computeCustomerAudienceSegments();
   const manualDashboard = getOneClickNotificationsDashboard({ limit: 50 });
+
+  // Attach plain-language error explanation & retryable classification to all failed outbound logs
+  const messages = rawMessages.map((m) => {
+    if (m.direction === 'outbound' && (m.status === 'failed' || m.status === 'not_configured')) {
+      const classified = classifyWhatsAppSendError(m.errorCode, m.errorMessage, m.httpStatus);
+      return {
+        ...m,
+        retryable: m.status === 'not_configured' ? false : m.retryable ?? classified.retryable,
+        errorCategory: m.errorCategory || classified.category,
+        errorExplanation: m.errorExplanation || {
+          humanTitle: classified.humanTitle,
+          whatWentWrong: classified.whatWentWrong,
+          component: classified.component,
+          needsAdminAction: classified.needsAdminAction,
+          systemAction: classified.systemAction,
+        },
+      };
+    }
+    return m;
+  });
 
   const outbound = messages.filter((m) => m.direction === 'outbound');
   const apiAcceptedCount = outbound.filter((m) => m.status === 'api_accepted').length;
@@ -4413,12 +4827,27 @@ export function getAdminAutomationOverview() {
   );
 
   const retryQueue = outbound.filter((m) => m.status === 'failed' || m.status === 'not_configured');
+  const pendingAutoRetriesCount = retryQueue.filter(
+    (m) => m.status === 'failed' && m.retryable !== false && Boolean(m.nextRetryAt)
+  ).length;
+  const permanentFailedCount = retryQueue.filter(
+    (m) => m.status === 'failed' && m.retryable === false
+  ).length;
   const pendingJobs = jobs.filter((j) => j.status === 'pending' || j.status === 'processing');
 
-  const templates = WHATSAPP_TEMPLATES_CATALOG.map((tpl) => ({
-    ...tpl,
-    approvalStatus: settings.templateStatuses[tpl.name] || 'draft',
-  }));
+  const templates = WHATSAPP_TEMPLATES_CATALOG.map((tpl) => {
+    const synced = settings.metaTemplateDetails?.[tpl.name];
+    return {
+      ...tpl,
+      language: synced?.language || tpl.language,
+      approvalStatus: settings.templateStatuses[tpl.name] || 'draft',
+      rawMetaStatus: synced?.status,
+      syncedBodyParamCount: synced?.bodyParamCount,
+      qualityScore: synced?.qualityScore,
+      rejectedReason: synced?.rejectedReason,
+      lastSyncedAt: synced?.syncedAt,
+    };
+  });
 
   const dramasCatalog = MEMBERSHIP_DRAMAS.map((d) => ({
     id: d.id,
@@ -4436,10 +4865,44 @@ export function getAdminAutomationOverview() {
     freeAudience: previewEpisodeNotificationAudience(d.id, { accessType: 'free' }),
   }));
 
+  const { members, memberships, orders } = getAutomationMembershipSnapshot();
+  const quickAudit = buildCustomerContactAuditReport({
+    members,
+    preferences,
+    memberships,
+    orders,
+  });
+
+  const lastDeliveredMsg = outbound.find(
+    (m) => m.status === 'delivered' || m.status === 'read' || m.status === 'sent' || m.status === 'api_accepted'
+  );
+  const approvedTemplatesCount = templates.filter((t) => t.approvalStatus === 'approved').length;
+
+  const healthSummary = {
+    apiConnected: envStatus.canSendMessages,
+    apiStatusLabel: envStatus.canSendMessages ? 'Configured on Server' : 'Missing Meta Credentials',
+    approvedTemplatesCount,
+    totalTemplatesCount: templates.length,
+    lastMetaTemplateSyncAt: settings.lastMetaTemplateSyncAt,
+    phoneCoverageValid: quickAudit.totals.validPhones,
+    phoneCoverageTotal: quickAudit.totals.totalAccounts,
+    phoneMissingCount: quickAudit.totals.missingPhones + quickAudit.totals.invalidPhones,
+    phoneBackfillableCount: quickAudit.totals.backfillableFromExistingRecords,
+    consentCoverageCount: quickAudit.totals.consentedAccounts,
+    eligibleWhatsappCount: quickAudit.totals.usableForWhatsApp,
+    failedMessagesCount: failedCount,
+    permanentFailedCount,
+    pendingAutoRetriesCount,
+    lastSuccessfulDeliveryAt:
+      lastDeliveredMsg?.deliveredAt || lastDeliveredMsg?.sentAt || lastDeliveredMsg?.createdAt,
+  };
+
   return {
     envStatus,
     aiConfigured: isAiAssistantConfigured(),
     settings,
+    healthSummary,
+    contactAuditSummary: quickAudit.totals,
     audienceSegments,
     manualQueueStats: manualDashboard.stats,
     stats: {
@@ -4453,6 +4916,8 @@ export function getAdminAutomationOverview() {
       manuallyConfirmedSent: manualDashboard.stats.confirmedSent,
       manualPending: manualDashboard.stats.pending,
       failed: failedCount,
+      permanentFailed: permanentFailedCount,
+      pendingAutoRetries: pendingAutoRetriesCount,
       notConfigured: notConfiguredCount,
       skipped: skippedCount,
       pendingJobs: pendingJobs.length,

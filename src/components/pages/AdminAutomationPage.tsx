@@ -8,11 +8,13 @@ import {
   Clock,
   Copy,
   Check,
+  Database,
   DollarSign,
   ExternalLink,
   FileText,
   Megaphone,
   MessageSquare,
+  Phone,
   Play,
   Power,
   Radio,
@@ -35,6 +37,7 @@ import {
   AdminAutomationOverview,
   AutomationCategoryKey,
   AutomationRulesConfig,
+  CustomerContactAuditReport,
   EpisodeAudiencePreviewResult,
   HistoricalCampaignSegment,
   TemplateApprovalStatus,
@@ -54,6 +57,8 @@ import {
   fetchAdminEpisodeAudiencePreview,
   previewAdminHistoricalCampaign,
   launchAdminHistoricalCampaign,
+  fetchAdminCustomerContactAudit,
+  runAdminCustomerPhoneBackfill,
 } from '../../services/automationService';
 
 interface AdminAutomationPageProps {
@@ -157,14 +162,27 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
 
   // Admin test message sender
   const [testPhone, setTestPhone] = useState('');
-  const [testMode, setTestMode] = useState<'text' | 'template'>('text');
-  const [testTemplateName, setTestTemplateName] = useState('feviqo_welcome');
+  const [testMode, setTestMode] = useState<'text' | 'template'>('template');
+  const [testTemplateName, setTestTemplateName] = useState('feviqo_new_episode');
   const [testTextBody, setTestTextBody] = useState(
     'Hello from FEVIQO! This is a test WhatsApp Cloud API message.'
   );
-  const [testParamsInput, setTestParamsInput] = useState('Test User | https://feviqo.com/membership');
-  const [testBypassApproval, setTestBypassApproval] = useState(false);
+  const [testParamValues, setTestParamValues] = useState<string[]>([
+    'Mehmed: Fetihler Sultani',
+    '92',
+    'Premium',
+    'https://feviqo.com/mehmed-fetihler-sultani/episode-92',
+  ]);
   const [sendingTest, setSendingTest] = useState(false);
+
+  // Customer Contact Audit & Safe Phone Backfill
+  const [contactAudit, setContactAudit] = useState<CustomerContactAuditReport | null>(null);
+  const [contactAuditLoading, setContactAuditLoading] = useState(false);
+  const [backfillingPhones, setBackfillingPhones] = useState(false);
+  const [contactAuditFilter, setContactAuditFilter] = useState<
+    'all' | 'missing' | 'backfillable' | 'usable' | 'no_consent' | 'opted_out'
+  >('all');
+  const [contactAuditSearch, setContactAuditSearch] = useState('');
 
   // Editable rules & AI state
   const [draftRules, setDraftRules] = useState<AutomationRulesConfig | null>(null);
@@ -389,31 +407,113 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
     }
   };
 
+  const selectedTestTemplate = useMemo(
+    () => overview?.templates.find((t) => t.name === testTemplateName) || null,
+    [overview, testTemplateName]
+  );
+
+  useEffect(() => {
+    if (!selectedTestTemplate) return;
+    const expectedCount =
+      typeof selectedTestTemplate.syncedBodyParamCount === 'number'
+        ? selectedTestTemplate.syncedBodyParamCount
+        : selectedTestTemplate.variables.length;
+    setTestParamValues((prev) => {
+      if (prev.length === expectedCount) return prev;
+      return Array.from({ length: expectedCount }, (_, idx) => {
+        const varMeta = selectedTestTemplate.variables[idx];
+        return prev[idx] || varMeta?.example || '';
+      });
+    });
+  }, [selectedTestTemplate]);
+
+  const handleSelectTestTemplateName = (nextName: string) => {
+    setTestTemplateName(nextName);
+    const tpl = overview?.templates.find((t) => t.name === nextName);
+    if (tpl) {
+      const count =
+        typeof tpl.syncedBodyParamCount === 'number'
+          ? tpl.syncedBodyParamCount
+          : tpl.variables.length;
+      setTestParamValues(
+        Array.from({ length: count }, (_, idx) => tpl.variables[idx]?.example || '')
+      );
+    }
+  };
+
+  const handleLoadContactAudit = useCallback(async () => {
+    setContactAuditLoading(true);
+    try {
+      const res = await fetchAdminCustomerContactAudit();
+      if (res.success && res.audit) {
+        setContactAudit(res.audit);
+      } else {
+        setBanner({ type: 'error', text: res.error || 'Failed to run customer contact audit.' });
+      }
+    } catch {
+      setBanner({ type: 'error', text: 'Network error while running customer contact audit.' });
+    } finally {
+      setContactAuditLoading(false);
+    }
+  }, []);
+
+  const handleBackfillPhones = async () => {
+    setBackfillingPhones(true);
+    setBanner(null);
+    try {
+      const res = await runAdminCustomerPhoneBackfill();
+      if (res.audit) setContactAudit(res.audit);
+      if (res.overview) setOverview(res.overview);
+      if (res.success && res.backfill) {
+        setBanner({
+          type: 'success',
+          text: `Safe phone backfill complete: ${res.backfill.updatedCount} customer profile(s) updated from existing verified records (${res.backfill.skippedCount} untouched).`,
+        });
+      } else {
+        setBanner({ type: 'error', text: res.error || 'Phone backfill failed.' });
+      }
+    } catch {
+      setBanner({ type: 'error', text: 'Network error while running phone backfill.' });
+    } finally {
+      setBackfillingPhones(false);
+    }
+  };
+
+  useEffect(() => {
+    if (overview && activeTab === 'consent' && !contactAudit && !contactAuditLoading) {
+      void handleLoadContactAudit();
+    }
+  }, [overview, activeTab, contactAudit, contactAuditLoading, handleLoadContactAudit]);
+
   const handleSendTestMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!testPhone.trim()) return;
     setSendingTest(true);
     setBanner(null);
     try {
+      const trimmedParams =
+        testMode === 'template' ? testParamValues.map((s) => s.trim()) : undefined;
+      if (testMode === 'template' && trimmedParams?.some((p) => !p)) {
+        setBanner({
+          type: 'error',
+          text: 'Every template variable ({{1}}, {{2}}, ...) must be filled before sending a test message.',
+        });
+        setSendingTest(false);
+        return;
+      }
       const res = await sendAdminWhatsAppTestMessage({
         toPhone: testPhone.trim(),
         mode: testMode,
         templateName: testMode === 'template' ? testTemplateName : undefined,
-        bodyParameters:
-          testMode === 'template'
-            ? testParamsInput
-                .split('|')
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : undefined,
+        bodyParameters: trimmedParams,
         textBody: testMode === 'text' ? testTextBody.trim() : undefined,
-        bypassApprovalCheck: testBypassApproval,
+        bypassApprovalCheck: false,
       });
       if (res.overview) setOverview(res.overview);
       if (res.success) {
         setBanner({
           type: 'success',
-          text: `Test WhatsApp message dispatched to ${testPhone.trim()} (status: ${res.messageLog?.status || 'sent'}).`,
+          text: `Test WhatsApp message accepted by Meta for ${testPhone.trim()} (status: ${res.messageLog?.status || 'api_accepted'}${res.messageLog?.wamid ? ` · wamid: ${res.messageLog.wamid}` : ''}).`,
         });
       } else {
         setBanner({
@@ -819,15 +919,23 @@ export const AdminAutomationPage: React.FC<AdminAutomationPageProps> = ({
             testMode={testMode}
             setTestMode={setTestMode}
             testTemplateName={testTemplateName}
-            setTestTemplateName={setTestTemplateName}
+            setTestTemplateName={handleSelectTestTemplateName}
+            selectedTestTemplate={selectedTestTemplate}
             testTextBody={testTextBody}
             setTestTextBody={setTestTextBody}
-            testParamsInput={testParamsInput}
-            setTestParamsInput={setTestParamsInput}
-            testBypassApproval={testBypassApproval}
-            setTestBypassApproval={setTestBypassApproval}
+            testParamValues={testParamValues}
+            setTestParamValues={setTestParamValues}
             sendingTest={sendingTest}
             onSendTestMessage={handleSendTestMessage}
+            contactAudit={contactAudit}
+            contactAuditLoading={contactAuditLoading}
+            backfillingPhones={backfillingPhones}
+            contactAuditFilter={contactAuditFilter}
+            setContactAuditFilter={setContactAuditFilter}
+            contactAuditSearch={contactAuditSearch}
+            setContactAuditSearch={setContactAuditSearch}
+            onLoadContactAudit={handleLoadContactAudit}
+            onBackfillPhones={handleBackfillPhones}
             draftRules={draftRules}
             setDraftRules={setDraftRules}
             draftAiEnabled={draftAiEnabled}
@@ -949,14 +1057,24 @@ interface InnerProps {
   setTestMode: (v: 'text' | 'template') => void;
   testTemplateName: string;
   setTestTemplateName: (v: string) => void;
+  selectedTestTemplate: AdminAutomationOverview['templates'][number] | null;
   testTextBody: string;
   setTestTextBody: (v: string) => void;
-  testParamsInput: string;
-  setTestParamsInput: (v: string) => void;
-  testBypassApproval: boolean;
-  setTestBypassApproval: (v: boolean) => void;
+  testParamValues: string[];
+  setTestParamValues: React.Dispatch<React.SetStateAction<string[]>>;
   sendingTest: boolean;
   onSendTestMessage: (e: React.FormEvent) => void;
+  contactAudit: CustomerContactAuditReport | null;
+  contactAuditLoading: boolean;
+  backfillingPhones: boolean;
+  contactAuditFilter: 'all' | 'missing' | 'backfillable' | 'usable' | 'no_consent' | 'opted_out';
+  setContactAuditFilter: (
+    v: 'all' | 'missing' | 'backfillable' | 'usable' | 'no_consent' | 'opted_out'
+  ) => void;
+  contactAuditSearch: string;
+  setContactAuditSearch: (v: string) => void;
+  onLoadContactAudit: () => Promise<void>;
+  onBackfillPhones: () => Promise<void>;
   draftRules: AutomationRulesConfig | null;
   setDraftRules: React.Dispatch<React.SetStateAction<AutomationRulesConfig | null>>;
   draftAiEnabled: boolean;
@@ -1081,9 +1199,9 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
     { id: 'ai', label: 'AI Assistant', icon: <Bot className="w-3.5 h-3.5" /> },
     {
       id: 'consent',
-      label: 'Consent & Opt-Outs',
+      label: 'Contacts & Consent',
       icon: <Users className="w-3.5 h-3.5" />,
-      badge: overview?.preferences.length,
+      badge: overview?.healthSummary?.phoneCoverageTotal ?? overview?.preferences.length,
     },
     {
       id: 'logs',
@@ -1279,6 +1397,108 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                   </button>
                 </div>
               </div>
+
+              {/* OPERATIONAL HEALTH SUMMARY STRIP */}
+              {overview.healthSummary && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Meta Cloud API
+                    </div>
+                    <div
+                      className={`text-sm font-bold ${
+                        overview.healthSummary.apiConnected ? 'text-[#16A34A]' : 'text-amber-700'
+                      }`}
+                    >
+                      {overview.healthSummary.apiConnected ? 'Configured' : 'Missing Vars'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      {overview.healthSummary.apiStatusLabel}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Approved Templates
+                    </div>
+                    <div className="text-lg font-bold text-[#0F172A] tabular-nums">
+                      {overview.healthSummary.approvedTemplatesCount} /{' '}
+                      {overview.healthSummary.totalTemplatesCount}
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      Synced: {formatDt(overview.healthSummary.lastMetaTemplateSyncAt)}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('consent')}
+                    className="text-left bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-1 transition cursor-pointer"
+                  >
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Phone Coverage
+                    </div>
+                    <div className="text-lg font-bold text-[#0F172A] tabular-nums">
+                      {overview.healthSummary.phoneCoverageValid} /{' '}
+                      {overview.healthSummary.phoneCoverageTotal}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {overview.healthSummary.phoneMissingCount} missing
+                      {overview.healthSummary.phoneBackfillableCount > 0 ? (
+                        <span className="text-[#16A34A] font-semibold">
+                          {' '}
+                          · {overview.healthSummary.phoneBackfillableCount} backfillable
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      WhatsApp Usable
+                    </div>
+                    <div className="text-lg font-bold text-[#16A34A] tabular-nums">
+                      {overview.healthSummary.eligibleWhatsappCount}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {overview.healthSummary.consentCoverageCount} explicitly consented
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('logs')}
+                    className="text-left bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-1 transition cursor-pointer"
+                  >
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Failed Messages
+                    </div>
+                    <div
+                      className={`text-lg font-bold tabular-nums ${
+                        overview.healthSummary.failedMessagesCount > 0
+                          ? 'text-red-600'
+                          : 'text-[#0F172A]'
+                      }`}
+                    >
+                      {overview.healthSummary.failedMessagesCount}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {overview.healthSummary.permanentFailedCount} permanent ·{' '}
+                      {overview.healthSummary.pendingAutoRetriesCount} auto-retry
+                    </div>
+                  </button>
+
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Last Delivery
+                    </div>
+                    <div className="text-sm font-bold text-[#0F172A] tabular-nums">
+                      {formatDt(overview.healthSummary.lastSuccessfulDeliveryAt)}
+                    </div>
+                    <div className="text-[11px] text-slate-500">Most recent accepted/delivered</div>
+                  </div>
+                </div>
+              )}
 
               {/* Connection & Webhook Status Strip */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -1837,38 +2057,81 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                       />
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        <label className="block text-xs font-semibold text-slate-700">
-                          Template Variables (pipe-separated: e.g. Ali | VIP | https://feviqo.com/account)
-                        </label>
-                        <input
-                          type="text"
-                          value={props.testParamsInput}
-                          onChange={(e) => props.setTestParamsInput(e.target.value)}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-mono focus:outline-none focus:border-[#0F172A]"
-                        />
-                      </div>
-                      <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={props.testBypassApproval}
-                          onChange={(e) => props.setTestBypassApproval(e.target.checked)}
-                          className="rounded border-slate-300"
-                        />
-                        <span>Bypass local template approval gate (only if already approved in Meta Manager)</span>
-                      </label>
+                    <div className="space-y-3">
+                      {props.selectedTestTemplate && (
+                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-xs">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="font-mono font-bold text-[#0F172A]">
+                              {props.selectedTestTemplate.name}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className={`px-2 py-0.5 rounded border text-[10px] font-bold uppercase ${statusBadgeClass(
+                                  props.selectedTestTemplate.approvalStatus
+                                )}`}
+                              >
+                                {props.selectedTestTemplate.rawMetaStatus ||
+                                  props.selectedTestTemplate.approvalStatus}
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-[10px] font-semibold text-slate-600 tabular-nums">
+                                {props.testParamValues.length} required param
+                                {props.testParamValues.length === 1 ? '' : 's'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed">
+                            {props.selectedTestTemplate.bodyText}
+                          </div>
+                          {props.selectedTestTemplate.approvalStatus !== 'approved' && (
+                            <div className="text-[11px] text-amber-800 font-semibold">
+                              Template must be APPROVED in Meta before sending live test messages. Click &quot;Sync from Meta&quot; in the Meta Templates tab after Meta approves it.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {props.testParamValues.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {props.testParamValues.map((val, idx) => {
+                            const varMeta = props.selectedTestTemplate?.variables[idx];
+                            return (
+                              <div key={idx} className="space-y-1">
+                                <label className="block text-[11px] font-semibold text-slate-700">
+                                  <span className="font-mono text-[#16A34A]">{`{{${idx + 1}}}`}</span>{' '}
+                                  {varMeta?.key || `Parameter ${idx + 1}`}
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={val}
+                                  onChange={(e) => {
+                                    const next = [...props.testParamValues];
+                                    next[idx] = e.target.value;
+                                    props.setTestParamValues(next);
+                                  }}
+                                  placeholder={varMeta?.example || `Value for {{${idx + 1}}}`}
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono focus:outline-none focus:border-[#0F172A]"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
 
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-500">
-                      Never mocks sends: if Meta env vars are unset, logs honest <span className="font-mono">not_configured</span>.
+                      Validates exact Meta parameter count before calling Cloud API (prevents #132000). Test sends are tagged <span className="font-mono">TEST</span>.
                     </span>
                     <button
                       type="submit"
-                      disabled={props.sendingTest}
-                      className="px-4 py-2.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white text-xs font-bold inline-flex items-center gap-1.5 transition cursor-pointer disabled:opacity-60 shrink-0"
+                      disabled={
+                        props.sendingTest ||
+                        (props.testMode === 'template' &&
+                          props.selectedTestTemplate?.approvalStatus !== 'approved')
+                      }
+                      className="px-4 py-2.5 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white text-xs font-bold inline-flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shrink-0"
                     >
                       <Send className="w-3.5 h-3.5" />
                       <span>{props.sendingTest ? 'Dispatching...' : 'Send Test Message'}</span>
@@ -2601,6 +2864,29 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                         </div>
                       </div>
 
+                      {(props.episodeAudiencePreview.invalidPhoneCount > 0 ||
+                        (overview.healthSummary?.phoneBackfillableCount || 0) > 0) && (
+                        <div className="p-3 rounded-xl bg-sky-50 border border-sky-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-sky-950">
+                          <div>
+                            <strong>Phone Diagnostics:</strong>{' '}
+                            {props.episodeAudiencePreview.invalidPhoneCount} customer(s) in this pool have missing/invalid numbers
+                            {(overview.healthSummary?.phoneBackfillableCount || 0) > 0
+                              ? ` (${overview.healthSummary?.phoneBackfillableCount} account(s) can be safely backfilled from existing records).`
+                              : '.'}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveTab('consent');
+                              void props.onLoadContactAudit();
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-[#0F172A] text-white text-[11px] font-bold shrink-0 cursor-pointer"
+                          >
+                            Open Contact Audit
+                          </button>
+                        </div>
+                      )}
+
                       {props.episodeAudiencePreview.eligibleAutomaticCount === 0 &&
                         props.episodeAudiencePreview.audiencePoolCount > 0 && (
                           <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 leading-relaxed">
@@ -2697,8 +2983,26 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                                 <div className="font-semibold text-[#0F172A]">{r.memberName}</div>
                                 <div className="text-[11px] text-slate-500">{r.email}</div>
                               </td>
-                              <td className="py-2.5 px-4 font-mono">
-                                {r.phoneE164 || r.rawPhone || 'Missing'}
+                              <td className="py-2.5 px-4">
+                                <div className="font-mono font-semibold text-[#0F172A]">
+                                  {r.phoneValid ? r.phoneE164 : r.rawPhone || 'Missing'}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                      r.phoneValid
+                                        ? 'bg-slate-100 text-slate-700'
+                                        : 'bg-red-50 text-red-700'
+                                    }`}
+                                  >
+                                    {r.phoneSourceLabel || r.phoneSource || 'Missing'}
+                                  </span>
+                                  {r.phoneVerified && (
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold">
+                                      Verified
+                                    </span>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-2.5 px-4">
                                 <div className="font-semibold text-slate-700">{r.planName || r.planId}</div>
@@ -2711,11 +3015,11 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                                   </span>
                                 ) : r.eligibleForManual ? (
                                   <span className="px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold">
-                                    Manual / In-App Only ({r.skipReason || 'No WhatsApp Opt-In'})
+                                    Manual / In-App Only ({r.skipReason || r.usabilityReason || 'No WhatsApp Opt-In'})
                                   </span>
                                 ) : (
                                   <span className="px-2 py-0.5 rounded bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold">
-                                    Excluded: {r.skipReason || 'Ineligible'}
+                                    Excluded: {r.skipReason || r.usabilityReason || 'Ineligible'}
                                   </span>
                                 )}
                               </td>
@@ -2901,8 +3205,45 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                       </div>
                       <div className="text-[11px] text-slate-500">
                         <strong>Trigger:</strong> <span className="font-mono">{tpl.eventTrigger}</span> ·{' '}
-                        <strong>Consent Gate:</strong> <span className="font-mono">{tpl.consentCategory}</span>
+                        <strong>Consent Gate:</strong> <span className="font-mono">{tpl.consentCategory}</span> ·{' '}
+                        <strong>Variables:</strong>{' '}
+                        <span className="font-mono font-semibold text-slate-700">
+                          {tpl.variables.length} local
+                          {typeof tpl.syncedBodyParamCount === 'number'
+                            ? ` / ${tpl.syncedBodyParamCount} Meta`
+                            : ''}
+                        </span>
                       </div>
+                      {typeof tpl.syncedBodyParamCount === 'number' &&
+                        tpl.syncedBodyParamCount !== tpl.variables.length && (
+                          <div className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-[11px] text-red-800 font-semibold">
+                            Parameter Count Mismatch Detected: Local expects {tpl.variables.length} var(s), Meta WABA has {tpl.syncedBodyParamCount}. Outbound sends will validate against Meta&apos;s exact count to prevent #132000.
+                          </div>
+                        )}
+                      {(tpl.rawMetaStatus || tpl.qualityScore || tpl.rejectedReason) && (
+                        <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                          {tpl.rawMetaStatus && (
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono font-bold">
+                              Meta: {tpl.rawMetaStatus}
+                            </span>
+                          )}
+                          {tpl.qualityScore && (
+                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-semibold">
+                              Quality: {tpl.qualityScore}
+                            </span>
+                          )}
+                          {tpl.lastSyncedAt && (
+                            <span className="text-slate-400">
+                              Synced {formatDt(tpl.lastSyncedAt)}
+                            </span>
+                          )}
+                          {tpl.rejectedReason && (
+                            <span className="text-red-700 font-semibold">
+                              Reason: {tpl.rejectedReason}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
@@ -3120,18 +3461,275 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
             </div>
           )}
 
-          {/* TAB 6: CUSTOMER CONSENT & OPT-OUT MANAGEMENT */}
+          {/* TAB 6: CUSTOMER CONTACT AUDIT, PHONE BACKFILL & CONSENT REGISTRY */}
           {activeTab === 'consent' && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-bold text-[#0F172A]">
-                    Customer WhatsApp Consent &amp; Opt-Out Registry
-                  </h2>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Tracks explicit opt-in categories, consent timestamps, sources, and STOP opt-outs.
-                  </p>
+            <div className="space-y-6">
+              {/* Customer Contact Audit & Safe Backfill Panel */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#16A34A]">
+                      <Database className="w-3.5 h-3.5" />
+                      <span>Centralized Customer Phone Resolver &amp; Backfill Audit</span>
+                    </div>
+                    <h2 className="text-lg font-bold text-[#0F172A]">
+                      Customer Contact Audit (Firebase Auth, Profiles, Memberships &amp; Orders)
+                    </h2>
+                    <p className="text-xs text-slate-600 max-w-2xl">
+                      Inspects every registered account across Firebase Auth, Firestore profiles, WhatsApp preferences, memberships, and payment orders. Backfill ONLY populates missing profile phones from existing verified records and never overwrites valid numbers.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      disabled={props.contactAuditLoading}
+                      onClick={() => void props.onLoadContactAudit()}
+                      className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-xs font-bold text-[#0F172A] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${props.contactAuditLoading ? 'animate-spin' : ''}`}
+                      />
+                      <span>{props.contactAuditLoading ? 'Auditing...' : 'Run Full Contact Audit'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={
+                        props.backfillingPhones ||
+                        !props.contactAudit ||
+                        props.contactAudit.totals.backfillableFromExistingRecords === 0
+                      }
+                      onClick={() => void props.onBackfillPhones()}
+                      className="px-4 py-2 rounded-xl bg-[#22C55E] hover:bg-[#16A34A] text-[#0F172A] hover:text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition disabled:opacity-50"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>
+                        {props.backfillingPhones
+                          ? 'Backfilling...'
+                          : `Backfill Missing Phones (${
+                              props.contactAudit?.totals.backfillableFromExistingRecords ?? 0
+                            })`}
+                      </span>
+                    </button>
+                  </div>
                 </div>
+
+                {props.contactAudit ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 text-center">
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="text-[10px] uppercase text-slate-500">Accounts</div>
+                        <div className="text-lg font-bold text-[#0F172A] tabular-nums">
+                          {props.contactAudit.totals.totalAccounts}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200">
+                        <div className="text-[10px] uppercase text-emerald-800">Valid E.164</div>
+                        <div className="text-lg font-bold text-[#16A34A] tabular-nums">
+                          {props.contactAudit.totals.validPhones}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-sky-50/70 border border-sky-200">
+                        <div className="text-[10px] uppercase text-sky-800">Verified</div>
+                        <div className="text-lg font-bold text-sky-700 tabular-nums">
+                          {props.contactAudit.totals.verifiedPhones}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-red-50/60 border border-red-200">
+                        <div className="text-[10px] uppercase text-red-700">Missing / Bad</div>
+                        <div className="text-lg font-bold text-red-600 tabular-nums">
+                          {props.contactAudit.totals.missingPhones +
+                            props.contactAudit.totals.invalidPhones}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200">
+                        <div className="text-[10px] uppercase text-amber-800">Backfillable</div>
+                        <div className="text-lg font-bold text-amber-700 tabular-nums">
+                          {props.contactAudit.totals.backfillableFromExistingRecords}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                        <div className="text-[10px] uppercase text-slate-500">Consented</div>
+                        <div className="text-lg font-bold text-[#0F172A] tabular-nums">
+                          {props.contactAudit.totals.consentedAccounts}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300">
+                        <div className="text-[10px] uppercase text-emerald-900">Usable WA</div>
+                        <div className="text-lg font-bold text-[#16A34A] tabular-nums">
+                          {props.contactAudit.totals.usableForWhatsApp}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                      <span>
+                        <strong>Firebase Auth Lookup:</strong> {props.contactAudit.firebaseAuthNote}
+                      </span>
+                      <span className="text-slate-400">
+                        Audited {formatDt(props.contactAudit.generatedAt)}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex flex-wrap gap-1.5 text-xs">
+                        {(
+                          [
+                            ['all', 'All'],
+                            ['usable', 'Usable for WA'],
+                            ['missing', 'Missing / Invalid'],
+                            ['backfillable', 'Backfillable'],
+                            ['no_consent', 'No Consent'],
+                            ['opted_out', 'Opted Out'],
+                          ] as const
+                        ).map(([val, label]) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => props.setContactAuditFilter(val)}
+                            className={`px-3 py-1.5 rounded-lg font-semibold cursor-pointer ${
+                              props.contactAuditFilter === val
+                                ? 'bg-[#0F172A] text-white'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="search"
+                        value={props.contactAuditSearch}
+                        onChange={(e) => props.setContactAuditSearch(e.target.value)}
+                        placeholder="Filter email, UID, phone..."
+                        className="px-3.5 py-2 rounded-xl border border-slate-300 text-xs w-full sm:w-64"
+                      />
+                    </div>
+
+                    <div className="overflow-x-auto max-h-96 overflow-y-auto border border-slate-200 rounded-xl">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 sticky top-0">
+                          <tr>
+                            <th className="py-2.5 px-3">Customer &amp; Email</th>
+                            <th className="py-2.5 px-3">Firebase UID</th>
+                            <th className="py-2.5 px-3">Resolved Phone</th>
+                            <th className="py-2.5 px-3">Source</th>
+                            <th className="py-2.5 px-3">Verified</th>
+                            <th className="py-2.5 px-3">Consent</th>
+                            <th className="py-2.5 px-3">Usability</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {props.contactAudit.records
+                            .filter((rec) => {
+                              if (props.contactAuditFilter === 'missing' && rec.phoneValid) return false;
+                              if (
+                                props.contactAuditFilter === 'backfillable' &&
+                                !rec.needsBackfillToMember
+                              )
+                                return false;
+                              if (props.contactAuditFilter === 'usable' && !rec.usableForWhatsApp)
+                                return false;
+                              if (
+                                props.contactAuditFilter === 'no_consent' &&
+                                (!rec.phoneValid || rec.hasExplicitConsent || rec.optedOut)
+                              )
+                                return false;
+                              if (props.contactAuditFilter === 'opted_out' && !rec.optedOut)
+                                return false;
+                              if (props.contactAuditSearch.trim()) {
+                                const q = props.contactAuditSearch.trim().toLowerCase();
+                                const hay = `${rec.fullName} ${rec.email} ${rec.ownerUid || ''} ${rec.memberId} ${rec.phoneE164} ${rec.rawPhone} ${rec.phoneSourceLabel}`.toLowerCase();
+                                if (!hay.includes(q)) return false;
+                              }
+                              return true;
+                            })
+                            .map((rec) => (
+                              <tr key={rec.memberId} className="hover:bg-slate-50/60">
+                                <td className="py-2.5 px-3">
+                                  <div className="font-semibold text-[#0F172A]">{rec.fullName}</div>
+                                  <div className="text-[11px] text-slate-500">{rec.email}</div>
+                                </td>
+                                <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">
+                                  {rec.ownerUid ? (
+                                    <span title={rec.ownerUid}>{rec.ownerUid.slice(0, 14)}…</span>
+                                  ) : (
+                                    <span className="text-slate-400">Local ({rec.memberId.slice(0, 10)})</span>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-3 font-mono">
+                                  {rec.phoneValid ? (
+                                    <span className="font-semibold text-[#0F172A]">{rec.phoneE164}</span>
+                                  ) : (
+                                    <span className="text-red-600 font-semibold">
+                                      {rec.rawPhone ? `Invalid (${rec.rawPhone})` : 'Missing'}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                                    {rec.phoneSourceLabel}
+                                  </span>
+                                  {rec.needsBackfillToMember && (
+                                    <span className="ml-1 px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold">
+                                      Backfill
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  {rec.phoneVerified ? (
+                                    <span className="text-emerald-700 font-bold text-[11px]">Verified</span>
+                                  ) : (
+                                    <span className="text-slate-400 text-[11px]">Unverified</span>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  {rec.optedOut ? (
+                                    <span className="px-2 py-0.5 rounded bg-red-50 text-red-700 text-[10px] font-bold">
+                                      Opted Out
+                                    </span>
+                                  ) : rec.hasExplicitConsent ? (
+                                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[10px] font-bold">
+                                      Opted In
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-bold">
+                                      No Consent
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  {rec.usableForWhatsApp ? (
+                                    <span className="text-[#16A34A] font-bold text-[11px]">Usable</span>
+                                  ) : (
+                                    <span className="text-slate-600 text-[11px]">{rec.usabilityReason}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    {props.contactAuditLoading
+                      ? 'Scanning all customer records...'
+                      : 'Click "Run Full Contact Audit" to inspect all accounts.'}
+                  </p>
+                )}
+              </div>
+
+              {/* Existing Consent Registry */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-bold text-[#0F172A]">
+                      Customer WhatsApp Consent &amp; Opt-Out Registry
+                    </h2>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      Tracks explicit opt-in categories, consent timestamps, sources, and STOP opt-outs.
+                    </p>
+                  </div>
                 <input
                   type="search"
                   value={props.consentSearch}
@@ -3212,6 +3810,7 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                   </table>
                 </div>
               )}
+              </div>
             </div>
           )}
 
@@ -3246,41 +3845,120 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                 </div>
               )}
 
-              {/* Failed Message Retry Queue */}
+              {/* Failed Message Retry Queue & Permanent Error Diagnostics */}
               {overview.retryQueue.length > 0 && (
                 <div className="bg-white rounded-2xl border border-red-200 p-6 space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-bold text-red-800">
-                    <RotateCcw className="w-4 h-4" />
-                    <span>Failed Message Retry Queue ({overview.retryQueue.length})</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm font-bold text-red-800">
+                      <RotateCcw className="w-4 h-4" />
+                      <span>Failed Messages &amp; Retry Diagnostics ({overview.retryQueue.length})</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      <span className="px-2 py-0.5 rounded bg-red-100 text-red-900 font-bold">
+                        Permanent (Auto-Retry Stopped):{' '}
+                        {overview.retryQueue.filter((m) => m.retryable === false).length}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">
+                        Transient (Auto-Retryable):{' '}
+                        {overview.retryQueue.filter((m) => m.retryable !== false).length}
+                      </span>
+                    </div>
                   </div>
-                  <div className="space-y-2.5">
-                    {overview.retryQueue.map((m) => (
-                      <div
-                        key={m.id}
-                        className="p-3.5 rounded-xl bg-red-50/50 border border-red-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                      >
-                        <div className="space-y-1 min-w-0">
-                          <div className="font-mono font-bold text-[#0F172A]">
-                            {m.recipientPhone} · {m.eventType}{' '}
-                            {m.templateName ? `(${m.templateName})` : ''}
+                  <div className="space-y-3">
+                    {overview.retryQueue.map((m) => {
+                      const isPermanent = m.retryable === false;
+                      return (
+                        <div
+                          key={m.id}
+                          className={`p-4 rounded-xl border flex flex-col lg:flex-row lg:items-start justify-between gap-3 text-xs ${
+                            isPermanent
+                              ? 'bg-red-50/70 border-red-300'
+                              : 'bg-amber-50/50 border-amber-200'
+                          }`}
+                        >
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono font-bold text-[#0F172A]">
+                                {m.recipientPhone} · {m.eventType}{' '}
+                                {m.templateName ? `(${m.templateName})` : ''}
+                              </span>
+                              {m.isTest && (
+                                <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[10px] font-bold">
+                                  TEST
+                                </span>
+                              )}
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                  isPermanent
+                                    ? 'bg-red-700 text-white'
+                                    : 'bg-amber-200 text-amber-950'
+                                }`}
+                              >
+                                {isPermanent ? 'Permanent Error · No Auto-Retry' : 'Transient · Retryable'}
+                              </span>
+                              {m.errorCode && (
+                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-white border border-red-200 text-red-800">
+                                  Code #{m.errorCode}
+                                </span>
+                              )}
+                            </div>
+
+                            {m.errorExplanation ? (
+                              <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1 text-[11px]">
+                                <div className="font-bold text-[#0F172A]">
+                                  {m.errorExplanation.humanTitle}{' '}
+                                  <span className="font-normal text-slate-500">
+                                    (Component: {m.errorExplanation.component.replace(/_/g, ' ')})
+                                  </span>
+                                </div>
+                                <div className="text-slate-700">
+                                  <strong>What went wrong:</strong> {m.errorExplanation.whatWentWrong}
+                                </div>
+                                <div className="text-slate-700">
+                                  <strong>Admin action:</strong> {m.errorExplanation.needsAdminAction}
+                                </div>
+                                <div className="text-slate-500">
+                                  <strong>System action:</strong> {m.errorExplanation.systemAction}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-red-700">{m.errorMessage || 'Delivery failed'}</div>
+                            )}
+
+                            {Array.isArray(m.bodyParameters) && m.bodyParameters.length > 0 && (
+                              <div className="text-[11px] text-slate-600 font-mono break-all">
+                                Params ({m.bodyParameters.length}): {JSON.stringify(m.bodyParameters)}
+                              </div>
+                            )}
+
+                            <div className="text-[11px] text-slate-500">
+                              Attempts: {m.attempts}/{m.maxAttempts} ·{' '}
+                              {isPermanent
+                                ? 'Automatic retry disabled until root cause is fixed'
+                                : `Next auto-retry: ${formatDt(m.nextRetryAt)}`}
+                            </div>
                           </div>
-                          <div className="text-red-700">{m.errorMessage || 'Delivery failed'}</div>
-                          <div className="text-[11px] text-slate-500">
-                            Attempts: {m.attempts}/{m.maxAttempts} · Next auto-retry:{' '}
-                            {formatDt(m.nextRetryAt)}
+
+                          <div className="shrink-0">
+                            {isPermanent ? (
+                              <span className="inline-block px-3 py-2 rounded-xl bg-white border border-red-300 text-red-800 text-[11px] font-bold">
+                                Fix Issue First
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={props.retryingId === m.id}
+                                onClick={() => props.onRetryMessage(m.id)}
+                                className="px-3.5 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                <span>{props.retryingId === m.id ? 'Retrying...' : 'Retry Now'}</span>
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          disabled={props.retryingId === m.id}
-                          onClick={() => props.onRetryMessage(m.id)}
-                          className="px-3.5 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-60"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          <span>{props.retryingId === m.id ? 'Retrying...' : 'Retry Now'}</span>
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -3357,8 +4035,15 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                               {m.recipientPhone}
                             </td>
                             <td className="py-2.5 pr-3">
-                              <div className="font-mono font-semibold text-[#0F172A]">
-                                {m.eventType}
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-semibold text-[#0F172A]">
+                                  {m.eventType}
+                                </span>
+                                {m.isTest && (
+                                  <span className="px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 text-[9px] font-bold">
+                                    TEST
+                                  </span>
+                                )}
                               </div>
                               {m.templateName && (
                                 <div className="text-[11px] text-slate-500">{m.templateName}</div>
@@ -3390,16 +4075,28 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                                   {m.apiResponseSummary}
                                 </div>
                               )}
-                              {m.errorMessage && (
+                              {m.errorExplanation ? (
+                                <div
+                                  className="text-[11px] text-red-700 font-medium truncate"
+                                  title={`${m.errorExplanation.humanTitle}: ${m.errorExplanation.whatWentWrong}`}
+                                >
+                                  {m.errorExplanation.humanTitle} — {m.errorExplanation.whatWentWrong}
+                                </div>
+                              ) : m.errorMessage ? (
                                 <div className="text-[11px] text-red-600 truncate">
                                   {m.errorMessage}
                                 </div>
-                              )}
+                              ) : null}
                             </td>
                             <td className="py-2.5 whitespace-nowrap">
                               <div className="flex items-center gap-1.5">
                                 {(m.status === 'failed' || m.status === 'not_configured') &&
-                                  m.direction === 'outbound' && (
+                                  m.direction === 'outbound' &&
+                                  (m.retryable === false ? (
+                                    <span className="px-2 py-0.5 rounded bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold">
+                                      Permanent
+                                    </span>
+                                  ) : (
                                     <button
                                       type="button"
                                       disabled={props.retryingId === m.id}
@@ -3408,7 +4105,7 @@ const AutomationDashboardInner: React.FC<InnerProps> = (props) => {
                                     >
                                       Retry
                                     </button>
-                                  )}
+                                  ))}
                                 {m.manualFallbackNotificationId && (
                                   <button
                                     type="button"

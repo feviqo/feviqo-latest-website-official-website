@@ -141,7 +141,7 @@ export default function App() {
       if (path.includes('/unlimited-editing') || hash.includes('#unlimited-editing')) return 'unlimited-editing';
       if (path.includes('/platform') || hash.includes('#platform')) return 'platform';
       if (path.includes('/turkish-drama') || hash.includes('#turkish-drama')) return 'turkish-drama';
-      if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/episode-189') || path.includes('/episode-192') || path.includes('/episode-193') || path.includes('/teskilat-188') || path.includes('/teskilat-189') || path.includes('/teskilat-192') || path.includes('/teskilat-193')) return 'teskilat-urdu';
+      if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/episode-189') || path.includes('/episode-192') || path.includes('/episode-193') || path.includes('/episode-194') || path.includes('/teskilat-188') || path.includes('/teskilat-189') || path.includes('/teskilat-192') || path.includes('/teskilat-193') || path.includes('/teskilat-194')) return 'teskilat-urdu';
       if (path.includes('/gunesin-dogdugu-yer')) return 'gunesin-dogdugu-yer';
       if (path.includes('/mehmed') || path.includes('/mehmed-fetihler-sultani')) return 'mehmed-fetihler-sultani';
       if (path.includes('/yeralti')) return 'yeralti';
@@ -276,7 +276,7 @@ export default function App() {
         setCurrentRoute('unlimited-editing');
       } else if (path.includes('/platform') || hash.includes('#platform')) {
         setCurrentRoute('platform');
-      } else if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/episode-189') || path.includes('/episode-192') || path.includes('/episode-193') || path.includes('/teskilat-186') || path.includes('/teskilat-187') || path.includes('/teskilat-188') || path.includes('/teskilat-189') || path.includes('/teskilat-192') || path.includes('/teskilat-193') || hash.includes('#teskilat')) {
+      } else if (path.includes('/teskilat') || path.includes('/episode-186') || path.includes('/episode-187') || path.includes('/episode-188') || path.includes('/episode-189') || path.includes('/episode-192') || path.includes('/episode-193') || path.includes('/episode-194') || path.includes('/teskilat-186') || path.includes('/teskilat-187') || path.includes('/teskilat-188') || path.includes('/teskilat-189') || path.includes('/teskilat-192') || path.includes('/teskilat-193') || path.includes('/teskilat-194') || hash.includes('#teskilat')) {
         setCurrentRoute('teskilat-urdu');
       } else if (path.includes('/gunesin-dogdugu-yer')) {
         setCurrentRoute('gunesin-dogdugu-yer');
@@ -1032,6 +1032,9 @@ export default function App() {
       case 'terms': return '/terms';
       case 'teskilat-urdu':
         if (typeof window !== 'undefined') {
+          if (window.location.pathname.includes('/episode-194') || window.location.pathname.includes('194')) {
+            return '/teskilat/episode-194';
+          }
           if (window.location.pathname.includes('/episode-193') || window.location.pathname.includes('193')) {
             return '/teskilat/episode-193';
           }

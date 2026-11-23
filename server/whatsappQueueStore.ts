@@ -23,6 +23,10 @@ import {
   listBlockedUsers,
   normalizeBlockedPhone,
 } from './membershipStore';
+import {
+  ResolvedPhoneSource,
+  resolveCustomerWhatsAppContact,
+} from './customerContactResolver';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const WA_NOTIFICATIONS_FILE = path.join(DATA_DIR, 'whatsapp_notifications.json');
@@ -950,20 +954,18 @@ export function queueEpisodePublishedOneClickNotifications(params: {
   };
 }
 
-export type ReconciledPhoneSource =
-  | 'account_profile'
-  | 'whatsapp_pref'
-  | 'membership_record'
-  | 'order_record'
-  | 'missing';
+export type ReconciledPhoneSource = ResolvedPhoneSource;
 
 function resolveReconciledCustomerPhone(params: {
   memberId: string;
+  ownerUid?: string;
   email: string;
   memberPhone?: string;
+  memberRecord?: any;
+  prefRecord?: any;
   prefPhone?: string;
-  memberSubs: Array<{ customerPhone?: string; createdAt?: string; activatedAt?: string }>;
-  memberOrders: Array<{ customerPhone?: string; createdAt?: string }>;
+  memberSubs: Array<{ customerPhone?: string; createdAt?: string; activatedAt?: string; memberId?: string; customerEmail?: string }>;
+  memberOrders: Array<{ customerPhone?: string; createdAt?: string; memberId?: string; customerEmail?: string }>;
 }): {
   rawPhone: string;
   formattedPhone: string;
@@ -972,96 +974,35 @@ function resolveReconciledCustomerPhone(params: {
   phoneSource: ReconciledPhoneSource;
   phoneError?: string;
 } {
-  const tryCandidate = (raw?: string | null) => {
-    const trimmed = String(raw || '').trim();
-    if (!trimmed) return null;
-    const fmt = formatWhatsAppRecipient(trimmed);
-    return { trimmed, fmt };
-  };
+  const resolved = resolveCustomerWhatsAppContact({
+    member: params.memberRecord || {
+      id: params.memberId,
+      ownerUid: params.ownerUid,
+      email: params.email,
+      phone: params.memberPhone,
+    },
+    preference: params.prefRecord || (params.prefPhone ? { memberId: params.memberId, phoneE164: params.prefPhone } : null),
+    memberships: params.memberSubs,
+    orders: params.memberOrders,
+  });
 
-  // Priority 1: Account profile phone
-  const profileCand = tryCandidate(params.memberPhone);
-  if (profileCand && profileCand.fmt.valid) {
+  if (resolved.phoneValid) {
     return {
-      rawPhone: profileCand.trimmed,
-      formattedPhone: profileCand.fmt.e164,
-      waDigits: profileCand.fmt.waDigits,
+      rawPhone: resolved.rawPhone,
+      formattedPhone: resolved.phoneE164,
+      waDigits: resolved.waDigits,
       phoneValid: true,
-      phoneSource: 'account_profile',
-    };
-  }
-
-  // Priority 2: Verified WhatsApp preferences record linked to this member
-  const prefCand = tryCandidate(params.prefPhone);
-  if (prefCand && prefCand.fmt.valid) {
-    return {
-      rawPhone: prefCand.trimmed,
-      formattedPhone: prefCand.fmt.e164,
-      waDigits: prefCand.fmt.waDigits,
-      phoneValid: true,
-      phoneSource: 'whatsapp_pref',
-    };
-  }
-
-  // Priority 3: Most recent membership record for this member
-  const sortedSubs = [...params.memberSubs].sort(
-    (a, b) => Date.parse(b.activatedAt || b.createdAt || '') - Date.parse(a.activatedAt || a.createdAt || '')
-  );
-  for (const sub of sortedSubs) {
-    const subCand = tryCandidate(sub.customerPhone);
-    if (subCand && subCand.fmt.valid) {
-      return {
-        rawPhone: subCand.trimmed,
-        formattedPhone: subCand.fmt.e164,
-        waDigits: subCand.fmt.waDigits,
-        phoneValid: true,
-        phoneSource: 'membership_record',
-      };
-    }
-  }
-
-  // Priority 4: Most recent checkout/order record for this member
-  const sortedOrders = [...params.memberOrders].sort(
-    (a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || '')
-  );
-  for (const order of sortedOrders) {
-    const orderCand = tryCandidate(order.customerPhone);
-    if (orderCand && orderCand.fmt.valid) {
-      return {
-        rawPhone: orderCand.trimmed,
-        formattedPhone: orderCand.fmt.e164,
-        waDigits: orderCand.fmt.waDigits,
-        phoneValid: true,
-        phoneSource: 'order_record',
-      };
-    }
-  }
-
-  // Fall back to first non-empty invalid candidate if any existed, otherwise missing
-  const invalidFallback =
-    profileCand ||
-    prefCand ||
-    sortedSubs.map((s) => tryCandidate(s.customerPhone)).find(Boolean) ||
-    sortedOrders.map((o) => tryCandidate(o.customerPhone)).find(Boolean);
-
-  if (invalidFallback) {
-    return {
-      rawPhone: invalidFallback.trimmed,
-      formattedPhone: invalidFallback.trimmed,
-      waDigits: '',
-      phoneValid: false,
-      phoneSource: 'account_profile',
-      phoneError: !invalidFallback.fmt.valid ? invalidFallback.fmt.reason : 'Invalid phone number',
+      phoneSource: resolved.phoneSource,
     };
   }
 
   return {
-    rawPhone: '',
-    formattedPhone: 'Phone number missing',
+    rawPhone: resolved.rawPhone,
+    formattedPhone: resolved.rawPhone || 'Phone number missing',
     waDigits: '',
     phoneValid: false,
-    phoneSource: 'missing',
-    phoneError: 'Phone number missing',
+    phoneSource: resolved.phoneSource,
+    phoneError: resolved.phoneError || 'Phone number missing',
   };
 }
 
@@ -1142,8 +1083,11 @@ export function getManualWhatsAppRecipientsDirectory(filters?: {
     const pref = findPreferenceForMember(member.id, member.phone);
     const phoneInfo = resolveReconciledCustomerPhone({
       memberId: member.id,
+      ownerUid: member.ownerUid,
       email: emailNorm,
       memberPhone: member.phone,
+      memberRecord: member,
+      prefRecord: pref,
       prefPhone: pref?.phoneE164,
       memberSubs,
       memberOrders,

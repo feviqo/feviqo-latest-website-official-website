@@ -163,6 +163,8 @@ const MEMBERSHIP_STATUS_LABELS: Record<
 };
 
 const PHONE_SOURCE_LABELS: Record<string, string> = {
+  verified_profile: 'Verified profile',
+  firebase_auth: 'Firebase Auth',
   account_profile: 'Account profile',
   whatsapp_pref: 'WhatsApp profile',
   membership_record: 'Membership record',

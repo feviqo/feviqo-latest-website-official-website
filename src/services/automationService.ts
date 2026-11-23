@@ -130,6 +130,81 @@ export type TemplateApprovalStatus =
   | 'approved'
   | 'rejected';
 
+export type ResolvedPhoneSource =
+  | 'verified_profile'
+  | 'firebase_auth'
+  | 'account_profile'
+  | 'whatsapp_pref'
+  | 'membership_record'
+  | 'order_record'
+  | 'missing';
+
+export interface ResolvedCustomerWhatsAppContact {
+  memberId: string;
+  ownerUid?: string;
+  email: string;
+  fullName: string;
+  rawPhone: string;
+  phoneE164: string;
+  waDigits: string;
+  phoneValid: boolean;
+  phoneSource: ResolvedPhoneSource;
+  phoneSourceLabel: string;
+  phoneVerified: boolean;
+  phoneError?: string;
+  hasExplicitConsent: boolean;
+  hasEpisodeConsent: boolean;
+  optedOut: boolean;
+  usableForWhatsApp: boolean;
+  usabilityReason: string;
+  needsBackfillToMember: boolean;
+}
+
+export interface CustomerContactAuditReport {
+  generatedAt: string;
+  firebaseAuthAvailable: boolean;
+  firebaseAuthNote: string;
+  totals: {
+    totalAccounts: number;
+    validPhones: number;
+    verifiedPhones: number;
+    missingPhones: number;
+    invalidPhones: number;
+    backfillableFromExistingRecords: number;
+    consentedAccounts: number;
+    optedOutAccounts: number;
+    usableForWhatsApp: number;
+  };
+  bySource: Record<ResolvedPhoneSource, number>;
+  records: ResolvedCustomerWhatsAppContact[];
+}
+
+export interface WhatsAppErrorExplanation {
+  humanTitle: string;
+  whatWentWrong: string;
+  component: 'phone_number' | 'template_parameters' | 'template_status' | 'consent' | 'meta_api' | 'configuration';
+  needsAdminAction: string;
+  systemAction: string;
+}
+
+export interface AutomationHealthSummary {
+  apiConnected: boolean;
+  apiStatusLabel: string;
+  approvedTemplatesCount: number;
+  totalTemplatesCount: number;
+  lastMetaTemplateSyncAt?: string;
+  phoneCoverageValid: number;
+  phoneCoverageTotal: number;
+  phoneMissingCount: number;
+  phoneBackfillableCount: number;
+  consentCoverageCount: number;
+  eligibleWhatsappCount: number;
+  failedMessagesCount: number;
+  permanentFailedCount: number;
+  pendingAutoRetriesCount: number;
+  lastSuccessfulDeliveryAt?: string;
+}
+
 export interface WhatsAppTemplateView {
   name: string;
   displayName: string;
@@ -142,6 +217,11 @@ export interface WhatsAppTemplateView {
   variables: Array<{ index: number; key: string; example: string }>;
   footerText?: string;
   approvalStatus: TemplateApprovalStatus;
+  rawMetaStatus?: string;
+  syncedBodyParamCount?: number;
+  qualityScore?: string;
+  rejectedReason?: string;
+  lastSyncedAt?: string;
 }
 
 export interface WhatsAppMessageLogView {
@@ -167,6 +247,10 @@ export interface WhatsAppMessageLogView {
   attempts: number;
   maxAttempts: number;
   nextRetryAt?: string;
+  retryable?: boolean;
+  errorCategory?: 'permanent_validation' | 'permanent_template' | 'permanent_recipient' | 'transient_network' | 'transient_rate_limit' | 'auth_config';
+  errorExplanation?: WhatsAppErrorExplanation;
+  isTest?: boolean;
   errorMessage?: string;
   errorCode?: string | number;
   estimatedCostUsd: number;
@@ -197,11 +281,15 @@ export interface AutomationJobView {
 
 export interface EpisodeAudienceRecipientPreview {
   memberId: string;
+  ownerUid?: string;
   memberName: string;
   email: string;
   rawPhone: string;
   phoneE164?: string;
   phoneValid: boolean;
+  phoneSource?: ResolvedPhoneSource;
+  phoneSourceLabel?: string;
+  phoneVerified?: boolean;
   phoneError?: string;
   planId: string;
   planName?: string;
@@ -212,6 +300,8 @@ export interface EpisodeAudienceRecipientPreview {
   alreadyNotified: boolean;
   eligibleForAutomatic: boolean;
   eligibleForManual: boolean;
+  usabilityReason?: string;
+  needsBackfillToMember?: boolean;
   skipReason?: string;
 }
 
@@ -344,12 +434,7 @@ export interface ManualWhatsAppCustomerRecipientView {
   formattedPhone: string;
   waDigits: string;
   phoneValid: boolean;
-  phoneSource?:
-    | 'account_profile'
-    | 'whatsapp_pref'
-    | 'membership_record'
-    | 'order_record'
-    | 'missing';
+  phoneSource?: ResolvedPhoneSource;
   phoneError?: string;
   membershipStatus:
     | 'active'
@@ -453,8 +538,11 @@ export interface AdminAutomationOverview {
     lastWebhookReceivedAt?: string;
     lastWebhookVerifiedAt?: string;
     lastWorkerRunAt?: string;
+    lastMetaTemplateSyncAt?: string;
     updatedAt: string;
   };
+  healthSummary?: AutomationHealthSummary;
+  contactAuditSummary?: CustomerContactAuditReport['totals'];
   stats: {
     totalOutbound: number;
     totalInbound: number;
@@ -463,6 +551,8 @@ export interface AdminAutomationOverview {
     delivered: number;
     read: number;
     failed: number;
+    permanentFailed?: number;
+    pendingAutoRetries?: number;
     notConfigured: number;
     skipped: number;
     pendingJobs: number;
@@ -677,12 +767,43 @@ export async function sendAdminWhatsAppTestMessage(payload: {
   return parseJsonSafe(res);
 }
 
-export async function retryAdminWhatsAppMessage(messageId: string): Promise<{
+export async function retryAdminWhatsAppMessage(
+  messageId: string,
+  bodyParameters?: string[]
+): Promise<{
   success: boolean;
   error?: string;
   overview?: AdminAutomationOverview;
 }> {
   const res = await fetch(`/api/admin/automation/messages/${encodeURIComponent(messageId)}/retry`, {
+    method: 'POST',
+    headers: adminHeaders({ 'Content-Type': 'application/json' }),
+    credentials: 'include',
+    body: JSON.stringify(bodyParameters ? { bodyParameters } : {}),
+  });
+  return parseJsonSafe(res);
+}
+
+export async function fetchAdminCustomerContactAudit(): Promise<{
+  success: boolean;
+  audit?: CustomerContactAuditReport;
+  error?: string;
+}> {
+  const res = await fetch('/api/admin/automation/contact-audit', {
+    headers: adminHeaders(),
+    credentials: 'include',
+  });
+  return parseJsonSafe(res);
+}
+
+export async function runAdminCustomerPhoneBackfill(): Promise<{
+  success: boolean;
+  backfill?: { updatedCount: number; skippedCount: number; updatedMemberIds: string[] };
+  audit?: CustomerContactAuditReport;
+  overview?: AdminAutomationOverview;
+  error?: string;
+}> {
+  const res = await fetch('/api/admin/automation/contact-audit/backfill', {
     method: 'POST',
     headers: adminHeaders(),
     credentials: 'include',

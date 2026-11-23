@@ -47,6 +47,10 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { MEMBERSHIP_COPY } from '../../i18n/membershipTranslations';
 import { BankQrPaymentSection } from './BankQrPaymentSection';
 import { notifyMembershipAuthChanged } from './useDramaEntitlement';
+import {
+  fetchMemberNotificationPreferences,
+  saveMemberNotificationPreferences,
+} from '../../services/automationService';
 
 interface MembershipAccountPanelProps {
   account: MemberAccountState;
@@ -76,6 +80,111 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
   const [missingPhoneInput, setMissingPhoneInput] = useState('');
   const [savingMissingPhone, setSavingMissingPhone] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Customer WhatsApp phone & explicit notification consent settings
+  const [waPhoneInput, setWaPhoneInput] = useState(account.member.phone || '');
+  const [waMembershipUpdates, setWaMembershipUpdates] = useState(false);
+  const [waRenewalReminders, setWaRenewalReminders] = useState(false);
+  const [waNewEpisodeAlerts, setWaNewEpisodeAlerts] = useState(false);
+  const [waPromotionalMessages, setWaPromotionalMessages] = useState(false);
+  const [waOptedOut, setWaOptedOut] = useState(false);
+  const [waPrefsLoaded, setWaPrefsLoaded] = useState(false);
+  const [savingWaPrefs, setSavingWaPrefs] = useState(false);
+  const [waPrefsFeedback, setWaPrefsFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setWaPhoneInput((prev) => prev || account.member.phone || '');
+    fetchMemberNotificationPreferences()
+      .then((res) => {
+        if (!active) return;
+        if (res.success && res.preferences) {
+          setWaPhoneInput(res.preferences.phoneE164 || account.member.phone || '');
+          setWaMembershipUpdates(Boolean(res.preferences.membershipUpdates));
+          setWaRenewalReminders(Boolean(res.preferences.renewalReminders));
+          setWaNewEpisodeAlerts(Boolean(res.preferences.newEpisodeAlerts));
+          setWaPromotionalMessages(Boolean(res.preferences.promotionalMessages));
+          setWaOptedOut(Boolean(res.preferences.optedOut));
+        }
+        setWaPrefsLoaded(true);
+      })
+      .catch(() => {
+        if (active) setWaPrefsLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [account.member.id, account.member.phone]);
+
+  const handleSaveWhatsAppSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWaPrefsFeedback(null);
+    const trimmedPhone = waPhoneInput.trim();
+    const digits = trimmedPhone.replace(/[^\d]/g, '');
+    if (digits.length < 10 || digits.length > 15) {
+      setWaPrefsFeedback({
+        type: 'error',
+        text: isUrdu
+          ? 'براہ کرم درست WhatsApp نمبر درج کریں (مثال: +923001234567 یا 03001234567)۔'
+          : 'Please enter a valid WhatsApp number (e.g. +923001234567 or 03001234567).',
+      });
+      return;
+    }
+
+    setSavingWaPrefs(true);
+    try {
+      // 1. Update member profile phone so Firebase UID & account profile stay in sync without touching memberships
+      const phoneRes = await updateMemberPhone(trimmedPhone, undefined, {
+        whatsappOptIn: !waOptedOut && (waMembershipUpdates || waRenewalReminders || waNewEpisodeAlerts),
+      });
+      if ('error' in phoneRes) {
+        setWaPrefsFeedback({ type: 'error', text: phoneRes.error || 'Could not update phone number.' });
+        setSavingWaPrefs(false);
+        return;
+      }
+      if (isFirebaseSignedInVerified()) {
+        await syncMemberAccountToFirestore(phoneRes.member).catch(() => {});
+      }
+      onAccountUpdated(phoneRes);
+
+      // 2. Save explicit WhatsApp notification preferences
+      const prefRes = await saveMemberNotificationPreferences({
+        phone: trimmedPhone,
+        membershipUpdates: waOptedOut ? false : waMembershipUpdates,
+        renewalReminders: waOptedOut ? false : waRenewalReminders,
+        newEpisodeAlerts: waOptedOut ? false : waNewEpisodeAlerts,
+        promotionalMessages: waOptedOut ? false : waPromotionalMessages,
+        optedOut: waOptedOut,
+      });
+
+      if (!prefRes.success) {
+        setWaPrefsFeedback({
+          type: 'error',
+          text: prefRes.error || 'Phone saved, but could not update WhatsApp preferences.',
+        });
+      } else {
+        if (prefRes.preferences?.phoneE164) {
+          setWaPhoneInput(prefRes.preferences.phoneE164);
+        }
+        setWaPrefsFeedback({
+          type: 'success',
+          text: isUrdu
+            ? 'آپ کا WhatsApp نمبر اور الرٹ کی ترجیحات محفوظ ہو گئی ہیں۔'
+            : 'Your WhatsApp number and episode alert preferences have been saved.',
+        });
+        notifyMembershipAuthChanged();
+      }
+    } catch {
+      setWaPrefsFeedback({
+        type: 'error',
+        text: isUrdu
+          ? 'سرور سے رابطہ نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔'
+          : 'Unable to reach server while saving WhatsApp preferences.',
+      });
+    } finally {
+      setSavingWaPrefs(false);
+    }
+  };
 
   const handleCopyValue = async (text: string, key: string) => {
     try {
@@ -743,6 +852,197 @@ export const MembershipAccountPanel: React.FC<MembershipAccountPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* WhatsApp Number & Explicit Episode / Membership Alert Preferences */}
+      <form
+        onSubmit={handleSaveWhatsAppSettings}
+        className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-6 space-y-4"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-100">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <Phone className="w-4 h-4 text-[#16A34A]" />
+              <h3 className="text-base font-bold text-[#0B0B0D]">
+                {isUrdu ? 'WhatsApp نمبر اور نئی اقساط کے الرٹس' : 'WhatsApp Number & Episode Alert Preferences'}
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-500">
+              {isUrdu
+                ? 'اپنا WhatsApp نمبر اپڈیٹ کریں اور منتخب کریں کہ آپ کون سی اطلاعات وصول کرنا چاہتے ہیں۔ آپ کی ممبرشپ اور اکاؤنٹ ہسٹری محفوظ رہے گی۔'
+                : 'Add or update your WhatsApp number on this account and choose which alerts you want to receive. Reply STOP anytime to opt out.'}
+            </p>
+          </div>
+          {waPrefsLoaded && (
+            <span
+              className={`self-start sm:self-auto px-2.5 py-1 rounded-md border text-[11px] font-bold ${
+                waOptedOut
+                  ? 'bg-red-50 border-red-200 text-red-700'
+                  : waNewEpisodeAlerts || waMembershipUpdates
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-zinc-100 border-zinc-200 text-zinc-700'
+              }`}
+            >
+              {waOptedOut
+                ? isUrdu
+                  ? 'WhatsApp بند ہے'
+                  : 'Opted Out'
+                : waNewEpisodeAlerts || waMembershipUpdates
+                ? isUrdu
+                  ? 'WhatsApp الرٹس فعال'
+                  : 'WhatsApp Alerts Enabled'
+                : isUrdu
+                ? 'رضامندی منتخب نہیں'
+                : 'Not Opted In Yet'}
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          <div className="lg:col-span-5 space-y-1.5">
+            <label htmlFor="account-whatsapp-phone" className="block text-xs font-semibold text-zinc-700">
+              {isUrdu ? 'WhatsApp فون نمبر (بین الاقوامی یا پاکستانی)' : 'WhatsApp Phone Number'}
+            </label>
+            <input
+              id="account-whatsapp-phone"
+              type="tel"
+              dir="ltr"
+              required
+              value={waPhoneInput}
+              onChange={(e) => setWaPhoneInput(e.target.value)}
+              placeholder="+923001234567 or 03001234567"
+              className="w-full px-3.5 py-2.5 text-sm font-mono bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D]"
+            />
+            <p className="text-[11px] text-zinc-500">
+              {isUrdu
+                ? 'پاکستانی نمبر خودکار طور پر +92 فارمیٹ میں محفوظ ہوں گے۔'
+                : 'Pakistani numbers (03XX...) are automatically normalized to +92 format.'}
+            </p>
+          </div>
+
+          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-zinc-50 border border-zinc-200 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!waOptedOut && waNewEpisodeAlerts}
+                onChange={(e) => {
+                  if (e.target.checked) setWaOptedOut(false);
+                  setWaNewEpisodeAlerts(e.target.checked);
+                }}
+                className="mt-0.5 h-4 w-4 accent-[#16A34A]"
+              />
+              <span>
+                <strong className="block text-[#0B0B0D]">
+                  {isUrdu ? 'نئی اقساط کے الرٹس' : 'New Episode Alerts'}
+                </strong>
+                <span className="text-[11px] text-zinc-500">
+                  {isUrdu ? 'نئی اردو قسط ریلیز ہوتے ہی اطلاع' : 'Instant alert when a new Urdu episode drops'}
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-zinc-50 border border-zinc-200 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!waOptedOut && waMembershipUpdates}
+                onChange={(e) => {
+                  if (e.target.checked) setWaOptedOut(false);
+                  setWaMembershipUpdates(e.target.checked);
+                }}
+                className="mt-0.5 h-4 w-4 accent-[#16A34A]"
+              />
+              <span>
+                <strong className="block text-[#0B0B0D]">
+                  {isUrdu ? 'ممبرشپ اور ادائیگی اپڈیٹس' : 'Membership & Payment Updates'}
+                </strong>
+                <span className="text-[11px] text-zinc-500">
+                  {isUrdu ? 'ادائیگی کی تصدیق اور ایکٹیویشن' : 'Payment confirmation & plan activation'}
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-zinc-50 border border-zinc-200 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!waOptedOut && waRenewalReminders}
+                onChange={(e) => {
+                  if (e.target.checked) setWaOptedOut(false);
+                  setWaRenewalReminders(e.target.checked);
+                }}
+                className="mt-0.5 h-4 w-4 accent-[#16A34A]"
+              />
+              <span>
+                <strong className="block text-[#0B0B0D]">
+                  {isUrdu ? 'تجدید کی یاد دہانیاں' : 'Renewal Reminders'}
+                </strong>
+                <span className="text-[11px] text-zinc-500">
+                  {isUrdu ? 'میعاد ختم ہونے سے پہلے یاد دہانی' : 'Before your active plan expires'}
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-zinc-50 border border-zinc-200 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!waOptedOut && waPromotionalMessages}
+                onChange={(e) => {
+                  if (e.target.checked) setWaOptedOut(false);
+                  setWaPromotionalMessages(e.target.checked);
+                }}
+                className="mt-0.5 h-4 w-4 accent-[#16A34A]"
+              />
+              <span>
+                <strong className="block text-[#0B0B0D]">
+                  {isUrdu ? 'خصوصی آفرز' : 'Special Offers'}
+                </strong>
+                <span className="text-[11px] text-zinc-500">
+                  {isUrdu ? 'اختیاری ڈسکاؤنٹ اور پرومو' : 'Optional package offers & promos'}
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        {waPrefsFeedback && (
+          <div
+            className={`p-3 rounded-xl border text-xs ${
+              waPrefsFeedback.type === 'success'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : 'bg-red-50 border-red-200 text-red-700'
+            }`}
+          >
+            {waPrefsFeedback.text}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <label className="flex items-center gap-2 text-xs text-zinc-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={waOptedOut}
+              onChange={(e) => setWaOptedOut(e.target.checked)}
+              className="h-4 w-4 accent-red-600"
+            />
+            <span>
+              {isUrdu
+                ? 'تمام WhatsApp اطلاعات بند کریں (Opt Out)'
+                : 'Pause all automated WhatsApp messages (Opt Out)'}
+            </span>
+          </label>
+          <button
+            type="submit"
+            disabled={savingWaPrefs}
+            className="px-4 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] hover:text-[#0B0B0D] disabled:opacity-60 text-white text-xs font-bold transition cursor-pointer"
+          >
+            {savingWaPrefs
+              ? isUrdu
+                ? 'محفوظ ہو رہا ہے...'
+                : 'Saving...'
+              : isUrdu
+              ? 'WhatsApp سیٹنگز محفوظ کریں'
+              : 'Save WhatsApp Settings'}
+          </button>
+        </div>
+      </form>
 
       {/* Membership Summary & Multi-Drama Memberships Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

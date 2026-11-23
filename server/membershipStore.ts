@@ -76,6 +76,8 @@ const PROTECTED_EPISODE_STREAMS: Record<string, Record<string, string>> = {
     'episode-23': '',
   },
   teskilat: {
+    // Temporarily using Episode 193 stream until Episode 194 video is uploaded
+    'episode-194': 'https://stream.mux.com/019jnoxNSoObArxNDjk8h5HRQDh4ahOYzCruDLCD00zgQ.m3u8',
     'episode-193': 'https://stream.mux.com/019jnoxNSoObArxNDjk8h5HRQDh4ahOYzCruDLCD00zgQ.m3u8',
     'episode-192': 'https://stream.mux.com/9KzAsaCfqKFh5hi4k5o5NCUuYWa3TbQsbCrVgsih8WU.m3u8',
     'episode-189': 'https://stream.mux.com/toXOVmLVaJSsRkVRJUxYiColdHPoHLSI8qBM00KBHyuA.m3u8',
@@ -617,7 +619,8 @@ export interface AdminAuditEntry {
     | 'supporter_entry_created'
     | 'supporter_entry_updated'
     | 'supporter_entry_deleted'
-    | 'supporter_settings_updated';
+    | 'supporter_settings_updated'
+    | 'customer_phones_backfilled';
   targetId?: string;
   details: string;
   createdAt: string;
@@ -2595,6 +2598,68 @@ export function updateMemberPhone(params: {
   return { success: true, member: safe };
 }
 
+export function backfillResolvedMemberPhones(params: {
+  entries: Array<{ memberId: string; phoneE164: string; source: string }>;
+  admin: { id: string; email: string };
+}): {
+  updatedCount: number;
+  skippedExistingValidCount: number;
+  skippedInvalidCount: number;
+  updatedMemberIds: string[];
+} {
+  const members = readMembersEnsured();
+  const now = new Date().toISOString();
+  let updatedCount = 0;
+  let skippedExistingValidCount = 0;
+  let skippedInvalidCount = 0;
+  const updatedMemberIds: string[] = [];
+
+  for (const entry of params.entries) {
+    const idx = members.findIndex((m) => m.id === entry.memberId);
+    if (idx === -1) continue;
+
+    // Never overwrite an already valid saved phone number
+    if (isMemberPhoneValid(members[idx].phone)) {
+      skippedExistingValidCount += 1;
+      continue;
+    }
+
+    const phoneCheck = normalizeAndValidatePhone(entry.phoneE164);
+    if (!('phone' in phoneCheck)) {
+      skippedInvalidCount += 1;
+      continue;
+    }
+
+    members[idx].phone = phoneCheck.phone.slice(0, 32);
+    members[idx].phoneNormalized = normalizePhoneCanonical(members[idx].phone) || undefined;
+    members[idx].updatedAt = now;
+    updatedCount += 1;
+    updatedMemberIds.push(members[idx].id);
+  }
+
+  if (updatedCount > 0) {
+    writeJson(MEMBERS_FILE, members);
+    for (const id of updatedMemberIds) {
+      const safe = getMemberById(id);
+      if (safe) mirrorMemberServer(safe);
+    }
+    appendAdminAudit({
+      adminId: params.admin.id,
+      adminEmail: params.admin.email,
+      action: 'customer_phones_backfilled',
+      targetId: `members(${updatedCount})`,
+      details: `Safely backfilled ${updatedCount} missing customer phone number(s) from verified-ownership records (skipped ${skippedExistingValidCount} already valid, ${skippedInvalidCount} invalid).`,
+    });
+  }
+
+  return {
+    updatedCount,
+    skippedExistingValidCount,
+    skippedInvalidCount,
+    updatedMemberIds,
+  };
+}
+
 // --- ORDERS & MEMBERSHIPS LIFECYCLE ---
 function normalizeOrderStatus(raw: string): OrderStatus {
   if (raw === 'pending_payment') return 'awaiting_payment';
@@ -3351,6 +3416,10 @@ export function calculateCheckoutPricingQuote(params: {
 
   const cleanPromo = normalizePromoCodeInput(params.promoCode);
   if (cleanPromo) {
+    const retiredCompact = cleanPromo.replace(/[^A-Z0-9]/g, '');
+    if (retiredCompact === 'KAMEERPLAY') {
+      promoError = 'Invalid promo code. Please double-check the code and try again.';
+    } else {
     const promos = readAllPromoCodes();
     const promo = promos.find((p) => p.code === cleanPromo);
     const nowMs = Date.now();
@@ -3421,6 +3490,7 @@ export function calculateCheckoutPricingQuote(params: {
           discountAmountUsd: promo.discountAmountUsd,
         };
       }
+    }
     }
   }
 

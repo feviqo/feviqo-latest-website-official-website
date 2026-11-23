@@ -294,6 +294,20 @@ export const DEFAULT_PAGE_SEO: Record<string, PageSEOConfig> = {
     robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     schemaType: 'TVEpisode'
   },
+  '/teskilat/episode-194': {
+    path: '/teskilat/episode-194',
+    pageName: 'Teskilat Episode 194 Urdu Dubbed',
+    seoTitle: 'Teşkilat Season 7 Episode 194 Urdu Dubbed (Bolum 194) | FEVIQO',
+    metaDescription: 'Watch Teşkilat Season 7 Episode 194 (Bolum 194) in 1080p HD Urdu Dubbed exclusively on FEVIQO Premium.',
+    focusKeyword: 'Teskilat Episode 194 Urdu Dubbed',
+    secondaryKeywords: ['Teskilat 194 Urdu', 'Teskilat Bolum 194', 'Teskilat Season 7 Episode 194'],
+    canonicalUrl: 'https://feviqo.com/teskilat/episode-194',
+    ogTitle: 'Teşkilat Season 7 Episode 194 Urdu Dubbed (Bolum 194) | FEVIQO',
+    ogDescription: 'Watch Teşkilat Season 7 Episode 194 (Bolum 194) in 1080p HD Urdu Dubbed exclusively on FEVIQO Premium.',
+    ogImage: 'https://lh3.googleusercontent.com/d/1pD9jhie8NMZRQzxPCb3LyDGkhEE5xFdY',
+    robots: 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
+    schemaType: 'TVEpisode'
+  },
   '/teskilat/episode-193': {
     path: '/teskilat/episode-193',
     pageName: 'Teskilat Episode 193 Urdu Subtitles',

@@ -171,6 +171,7 @@ import {
   sendWhatsAppTextMessage,
   normalizePhoneE164,
   getWhatsAppEnvConfigStatus,
+  validateWhatsAppTemplateParameters,
 } from './server/whatsappClient';
 import {
   emitAutomationEvent,
@@ -198,6 +199,7 @@ import {
   runAutomationWorkerCycle,
   hydrateAutomationStoreFromFirestore,
   getAdminAutomationOverview,
+  runAdminCustomerContactAudit,
   listWhatsAppConversations,
   recordWebhookEvent,
   updateWebhookEvent,
@@ -219,7 +221,11 @@ import {
   hydrateOneClickQueueFromFirestore,
 } from './server/whatsappQueueStore';
 import { generateFeviqoAiReply } from './server/aiSupportAgent';
-import { findMemberContextByPhoneDigits } from './server/membershipStore';
+import {
+  findMemberContextByPhoneDigits,
+  backfillResolvedMemberPhones,
+} from './server/membershipStore';
+import { listFirebaseAuthUsersPhoneMap } from './server/firestoreAdmin';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -3553,16 +3559,18 @@ function autoEnableMemberWhatsAppPreferences(
       phone: phoneE164,
     });
     if (existing?.optedOut) return;
+    // Never silently opt customers into WhatsApp marketing or episode alerts on sign-in/sign-up.
+    // Preserve any existing explicit consent choices while syncing their phone number to preferences.
     upsertMemberNotificationPreferences({
       memberId: member.id,
       ownerUid: member.googleUid,
       email: member.email,
       fullName: member.fullName,
       phone: phoneE164,
-      membershipUpdates: true,
-      renewalReminders: true,
-      newEpisodeAlerts: true,
-      promotionalMessages: true,
+      membershipUpdates: existing?.membershipUpdates ?? false,
+      renewalReminders: existing?.renewalReminders ?? false,
+      newEpisodeAlerts: existing?.newEpisodeAlerts ?? false,
+      promotionalMessages: existing?.promotionalMessages ?? false,
       leadEnquiryConsent: existing?.leadEnquiryConsent ?? false,
       optedOut: false,
       source,
@@ -6795,23 +6803,63 @@ app.post('/api/admin/automation/test-message', requireAdmin, async (req: any, re
       });
       return res.status(result.ok ? 200 : 400).json({
         success: result.ok,
+        wamid: result.messageId,
         result,
+        error: result.ok ? undefined : result.error,
         overview: getAdminAutomationOverview(),
       });
     }
 
+    const cleanTemplateName = String(templateName || 'feviqo_new_episode').trim();
+    const settings = getAutomationSettings();
+    const syncedMetaTemplate = settings.metaTemplateDetails?.[cleanTemplateName] || null;
+    const rawParams = Array.isArray(bodyParameters)
+      ? bodyParameters.map((v: any) => String(v ?? ''))
+      : [];
+
+    // Strict pre-send template parameter validation (prevents #132000 before calling Meta!)
+    const paramCheck = validateWhatsAppTemplateParameters({
+      templateName: cleanTemplateName,
+      bodyParameters: rawParams,
+      syncedMetaTemplate,
+    });
+    if (!paramCheck.valid) {
+      return res.status(400).json({
+        success: false,
+        errorCode: paramCheck.errorCode,
+        expectedCount: paramCheck.expectedCount,
+        receivedCount: paramCheck.receivedCount,
+        error: paramCheck.error,
+      });
+    }
+
+    // Respect genuine Meta template approval status (never bypass rejected/paused/disabled/draft templates)
+    const approvalStatus = settings.templateStatuses[cleanTemplateName] || 'draft';
+    const rawMetaStatus = syncedMetaTemplate?.status?.toUpperCase();
+    if (
+      approvalStatus !== 'approved' ||
+      rawMetaStatus === 'REJECTED' ||
+      rawMetaStatus === 'PAUSED' ||
+      rawMetaStatus === 'DISABLED'
+    ) {
+      return res.status(400).json({
+        success: false,
+        errorCode: 'TEMPLATE_UNAPPROVED',
+        error: `Template "${cleanTemplateName}" is currently "${rawMetaStatus || approvalStatus}". Click "Sync Approval Status from Meta" after Meta approves it before sending live test messages.`,
+      });
+    }
+
     const log = await dispatchTemplateWhatsAppNotification({
-      idempotencyKey: `admin_test:${phoneE164}:${Date.now()}`,
+      idempotencyKey: `admin_test:${cleanTemplateName}:${phoneE164}:${Date.now()}`,
       eventType: 'admin.test_message',
-      templateName: String(templateName || 'feviqo_welcome'),
-      bodyParameters: Array.isArray(bodyParameters)
-        ? bodyParameters.map((v: any) => String(v))
-        : ['FEVIQO Admin Test', 'https://feviqo.com/membership'],
+      templateName: cleanTemplateName,
+      bodyParameters: paramCheck.normalizedParams,
       recipientPhone: phoneE164,
       recipientName: 'Admin Test',
       ruleEnabled: true,
       bypassConsentForAdminTest: true,
-      bypassTemplateApprovalCheck: Boolean(req.body?.bypassApprovalCheck),
+      bypassTemplateApprovalCheck: false,
+      isTest: true,
     });
 
     const accepted =
@@ -6819,8 +6867,9 @@ app.post('/api/admin/automation/test-message', requireAdmin, async (req: any, re
       log?.status === 'sent' ||
       log?.status === 'delivered' ||
       log?.status === 'read';
-    return res.json({
+    return res.status(accepted ? 200 : 400).json({
       success: accepted,
+      wamid: log?.wamid,
       messageLog: log,
       error: accepted ? undefined : log?.errorMessage,
       overview: getAdminAutomationOverview(),
@@ -6873,7 +6922,13 @@ app.post('/api/admin/automation/templates/sync-meta', requireAdmin, async (req: 
 
 app.post('/api/admin/automation/messages/:messageId/retry', requireAdmin, async (req: any, res) => {
   try {
-    const result = await retryFailedWhatsAppMessage(req.params.messageId);
+    const overrideBodyParameters = Array.isArray(req.body?.bodyParameters)
+      ? req.body.bodyParameters.map((v: any) => String(v ?? ''))
+      : undefined;
+    const result = await retryFailedWhatsAppMessage(req.params.messageId, {
+      overrideBodyParameters,
+      manualAdminRetry: true,
+    });
     return res.status(result.ok ? 200 : 400).json({
       success: result.ok,
       message: result.message,
@@ -6882,6 +6937,42 @@ app.post('/api/admin/automation/messages/:messageId/retry', requireAdmin, async 
     });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to retry WhatsApp message.' });
+  }
+});
+
+// Admin Customer Contact Audit & Safe Phone Backfill
+app.get('/api/admin/automation/contact-audit', requireAdmin, async (_req: any, res) => {
+  try {
+    const audit = await runAdminCustomerContactAudit();
+    return res.json({ success: true, audit });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to run customer contact audit.' });
+  }
+});
+
+app.post('/api/admin/automation/contact-audit/backfill', requireAdmin, async (req: any, res) => {
+  try {
+    const auditBefore = await runAdminCustomerContactAudit();
+    const candidates = auditBefore.records
+      .filter((r) => r.needsBackfillToMember && r.phoneValid && r.phoneE164)
+      .map((r) => ({
+        memberId: r.memberId,
+        phoneE164: r.phoneE164,
+        source: r.phoneSource,
+      }));
+    const backfillResult = backfillResolvedMemberPhones({
+      entries: candidates,
+      admin: req.admin,
+    });
+    const auditAfter = await runAdminCustomerContactAudit();
+    return res.json({
+      success: true,
+      backfill: backfillResult,
+      audit: auditAfter,
+      overview: getAdminAutomationOverview(),
+    });
+  } catch {
+    return res.status(500).json({ success: false, error: 'Failed to backfill resolved phone numbers.' });
   }
 });
 
@@ -6940,7 +7031,7 @@ app.put('/api/admin/automation/preferences/:prefId', requireAdmin, (req: any, re
 });
 
 // 6. Episode Publishing Notification Endpoint (Free & Premium, anti-duplicate, honest breakdown, worker execution)
-app.get('/api/admin/automation/episodes/audience-preview', requireAdmin, (req: any, res) => {
+app.get('/api/admin/automation/episodes/audience-preview', requireAdmin, async (req: any, res) => {
   try {
     const dramaId = String(req.query?.dramaId || '').trim();
     if (!dramaId) {
@@ -6948,7 +7039,12 @@ app.get('/api/admin/automation/episodes/audience-preview', requireAdmin, (req: a
     }
     const accessType = req.query?.accessType === 'free' ? 'free' : 'premium';
     const episodeSlug = req.query?.episodeSlug ? String(req.query.episodeSlug) : undefined;
-    const preview = previewEpisodeNotificationAudience(dramaId, { accessType, episodeSlug });
+    const firebaseAuthLookup = await listFirebaseAuthUsersPhoneMap();
+    const preview = previewEpisodeNotificationAudience(dramaId, {
+      accessType,
+      episodeSlug,
+      firebaseAuthLookup,
+    });
     return res.json({ success: true, preview });
   } catch {
     return res.status(500).json({ success: false, error: 'Failed to compute episode audience preview.' });

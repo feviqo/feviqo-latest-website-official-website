@@ -573,25 +573,477 @@ async function callWhatsAppGraphMessagesApi(payload: Record<string, any>): Promi
   }
 }
 
+export interface SyncedMetaTemplateInfo {
+  name: string;
+  status: string;
+  category: string;
+  language: string;
+  bodyText?: string;
+  bodyParamCount?: number;
+  qualityScore?: string;
+  rejectedReason?: string;
+  syncedAt?: string;
+}
+
+export interface TemplateParameterValidationResult {
+  valid: boolean;
+  errorCode?: string;
+  error?: string;
+  expectedCount: number;
+  receivedCount: number;
+  normalizedParams: string[];
+  languageCode: string;
+  renderedPreview?: string;
+  expectedVariables: Array<{ index: number; key: string; example: string }>;
+}
+
+export function countTemplateBodyPlaceholders(bodyText?: string): number {
+  if (!bodyText) return 0;
+  const matches = bodyText.match(/\{\{\s*\d+\s*\}\}/g);
+  if (!matches) return 0;
+  const nums = new Set(matches.map((m) => Number(m.replace(/[^\d]/g, ''))).filter((n) => n > 0));
+  return nums.size;
+}
+
+export function renderTemplateBodyWithParams(bodyText: string, params: string[]): string {
+  return bodyText.replace(/\{\{\s*(\d+)\s*\}\}/g, (_match, numStr) => {
+    const idx = Number(numStr) - 1;
+    const val = params[idx];
+    return typeof val === 'string' && val.trim() ? val.trim() : `{{${numStr}}}`;
+  });
+}
+
+/**
+ * Reusable pre-send validator for Meta WhatsApp template parameters.
+ * Prevents Meta error #132000 (Number of parameters does not match expected number of params)
+ * before any outbound API call is made.
+ */
+export function validateWhatsAppTemplateParameters(params: {
+  templateName: string;
+  bodyParameters?: string[];
+  languageCode?: string;
+  syncedMetaTemplate?: SyncedMetaTemplateInfo | null;
+}): TemplateParameterValidationResult {
+  const tplName = String(params.templateName || '').trim();
+  const catalogTpl = WHATSAPP_TEMPLATES_CATALOG.find((t) => t.name === tplName);
+  const synced = params.syncedMetaTemplate || null;
+
+  const catalogCount = catalogTpl
+    ? Math.max(catalogTpl.variables.length, countTemplateBodyPlaceholders(catalogTpl.bodyText))
+    : 0;
+  const syncedCount =
+    synced && typeof synced.bodyParamCount === 'number' && synced.bodyParamCount >= 0
+      ? synced.bodyParamCount
+      : synced?.bodyText
+      ? countTemplateBodyPlaceholders(synced.bodyText)
+      : undefined;
+
+  const expectedCount =
+    typeof syncedCount === 'number'
+      ? syncedCount
+      : tplName === 'feviqo_new_episode'
+      ? 4
+      : catalogCount;
+
+  const expectedVariables = catalogTpl?.variables || [];
+  const languageCode = String(
+    params.languageCode || synced?.language || catalogTpl?.language || 'en'
+  ).trim() || 'en';
+
+  const rawParams = Array.isArray(params.bodyParameters) ? params.bodyParameters : [];
+  const normalizedParams = rawParams.map((v) =>
+    String(v ?? '')
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+      .slice(0, 1024)
+  );
+
+  if (!tplName) {
+    return {
+      valid: false,
+      errorCode: 'TEMPLATE_NAME_MISSING',
+      error: 'Template name is required before dispatching a WhatsApp template message.',
+      expectedCount,
+      receivedCount: normalizedParams.length,
+      normalizedParams,
+      languageCode,
+      expectedVariables,
+    };
+  }
+
+  if (expectedCount > 0 && normalizedParams.length !== expectedCount) {
+    const varLabels =
+      expectedVariables.length === expectedCount
+        ? expectedVariables.map((v) => `{{${v.index}}} ${v.key}`).join(', ')
+        : Array.from({ length: expectedCount }, (_, i) => `{{${i + 1}}}`).join(', ');
+    return {
+      valid: false,
+      errorCode: 'TEMPLATE_PARAM_MISMATCH',
+      error: `Template "${tplName}" expects exactly ${expectedCount} body parameter(s) (${varLabels}), but received ${normalizedParams.length}. Blocked locally before calling Meta to prevent #132000.`,
+      expectedCount,
+      receivedCount: normalizedParams.length,
+      normalizedParams,
+      languageCode,
+      expectedVariables,
+    };
+  }
+
+  for (let i = 0; i < normalizedParams.length; i++) {
+    const val = normalizedParams[i];
+    const slotLabel = expectedVariables[i]?.key || `param_${i + 1}`;
+    if (!val) {
+      return {
+        valid: false,
+        errorCode: 'TEMPLATE_PARAM_EMPTY',
+        error: `Template "${tplName}" parameter {{${i + 1}}} (${slotLabel}) is empty. Every template variable must have a non-empty value.`,
+        expectedCount,
+        receivedCount: normalizedParams.length,
+        normalizedParams,
+        languageCode,
+        expectedVariables,
+      };
+    }
+    if (/\{\{\s*\d+\s*\}\}/.test(val)) {
+      return {
+        valid: false,
+        errorCode: 'TEMPLATE_PLACEHOLDER_UNRESOLVED',
+        error: `Template "${tplName}" parameter {{${i + 1}}} (${slotLabel}) still contains an unresolved placeholder ("${val}").`,
+        expectedCount,
+        receivedCount: normalizedParams.length,
+        normalizedParams,
+        languageCode,
+        expectedVariables,
+      };
+    }
+  }
+
+  // Strict semantic guard for feviqo_new_episode (Drama, Episode, Access, Watch URL)
+  if (tplName === 'feviqo_new_episode' && normalizedParams.length === 4) {
+    const [, epVal, , urlVal] = normalizedParams;
+    if (/^https?:\/\//i.test(epVal)) {
+      return {
+        valid: false,
+        errorCode: 'TEMPLATE_PARAM_ORDER_INVALID',
+        error:
+          'Template "feviqo_new_episode" parameter {{2}} (Episode) looks like a URL. Expected order: {{1}} Drama, {{2}} Episode, {{3}} Access, {{4}} Watch URL.',
+        expectedCount,
+        receivedCount: normalizedParams.length,
+        normalizedParams,
+        languageCode,
+        expectedVariables,
+      };
+    }
+    if (!/^https?:\/\/\S+/i.test(urlVal)) {
+      return {
+        valid: false,
+        errorCode: 'TEMPLATE_PARAM_URL_INVALID',
+        error:
+          'Template "feviqo_new_episode" parameter {{4}} (Watch URL) must be a valid https:// link (e.g. https://feviqo.com/membership).',
+        expectedCount,
+        receivedCount: normalizedParams.length,
+        normalizedParams,
+        languageCode,
+        expectedVariables,
+      };
+    }
+  }
+
+  const bodySource = synced?.bodyText || catalogTpl?.bodyText || '';
+  const renderedPreview = bodySource
+    ? renderTemplateBodyWithParams(bodySource, normalizedParams)
+    : normalizedParams.join(' | ');
+
+  return {
+    valid: true,
+    expectedCount,
+    receivedCount: normalizedParams.length,
+    normalizedParams,
+    languageCode,
+    renderedPreview,
+    expectedVariables,
+  };
+}
+
+export interface ClassifiedWhatsAppError {
+  retryable: boolean;
+  category:
+    | 'permanent_config'
+    | 'permanent_recipient'
+    | 'permanent_policy'
+    | 'transient_network'
+    | 'transient_rate_limit'
+    | 'unknown';
+  humanTitle: string;
+  whatWentWrong: string;
+  component: string;
+  needsAdminAction: boolean;
+  systemAction: string;
+}
+
+/**
+ * Classifies Meta Cloud API and local validation errors into permanent (never auto-retry)
+ * vs transient (safe controlled backoff retry), with plain-English admin explanations.
+ */
+export function classifyWhatsAppSendError(
+  errorCode?: string | number,
+  errorMessage?: string,
+  httpStatus?: number
+): ClassifiedWhatsAppError {
+  const codeNum = Number(errorCode);
+  const codeStr = String(errorCode || '').toUpperCase();
+  const msg = String(errorMessage || '');
+  const msgLower = msg.toLowerCase();
+
+  // Permanent template / configuration errors (NEVER auto-retry)
+  if (
+    codeNum === 132000 ||
+    codeStr === 'TEMPLATE_PARAM_MISMATCH' ||
+    codeStr === 'TEMPLATE_PARAM_EMPTY' ||
+    codeStr === 'TEMPLATE_PLACEHOLDER_UNRESOLVED' ||
+    codeStr === 'TEMPLATE_PARAM_ORDER_INVALID' ||
+    codeStr === 'TEMPLATE_PARAM_URL_INVALID' ||
+    msgLower.includes('#132000') ||
+    msgLower.includes('number of parameters does not match')
+  ) {
+    return {
+      retryable: false,
+      category: 'permanent_config',
+      humanTitle: 'Template Parameter Mismatch (#132000)',
+      whatWentWrong:
+        'The number or format of template variables did not match what Meta expects for this template.',
+      component: 'Meta Template Parameter Mapping',
+      needsAdminAction: true,
+      systemAction:
+        'Stopped automatic retries to prevent repeated failures. Sync templates from Meta and verify all required template variables before retrying manually.',
+    };
+  }
+
+  if (
+    codeNum === 132001 ||
+    msgLower.includes('#132001') ||
+    msgLower.includes('template name does not exist')
+  ) {
+    return {
+      retryable: false,
+      category: 'permanent_config',
+      humanTitle: 'Template Missing or Language Mismatch (#132001)',
+      whatWentWrong:
+        'Meta could not find this template name under the requested language code (e.g. en vs en_US), or the template is not yet approved.',
+      component: 'Meta Template Registry / Language Sync',
+      needsAdminAction: true,
+      systemAction:
+        'Stopped automatic retries. Click "Sync Approval Status from Meta" so FEVIQO uses the exact approved template language code.',
+    };
+  }
+
+  if (
+    codeNum === 132005 ||
+    codeNum === 132007 ||
+    codeNum === 132012 ||
+    codeNum === 132015 ||
+    codeNum === 132016 ||
+    codeStr === 'TEMPLATE_UNAPPROVED'
+  ) {
+    return {
+      retryable: false,
+      category: 'permanent_config',
+      humanTitle: `Meta Template Format or Status Error (#${codeNum || codeStr})`,
+      whatWentWrong:
+        msg || 'This Meta template is paused, disabled, rejected, or has invalid parameter formatting.',
+      component: 'Meta WhatsApp Template',
+      needsAdminAction: true,
+      systemAction:
+        'Stopped automatic retries. Check template status in Meta WhatsApp Manager and re-sync templates.',
+    };
+  }
+
+  if (
+    codeNum === 131026 ||
+    codeNum === 131030 ||
+    codeNum === 131051 ||
+    codeNum === 131052 ||
+    codeStr === 'INVALID_PHONE' ||
+    msgLower.includes('not in allowed list') ||
+    msgLower.includes('not valid e.164') ||
+    msgLower.includes('phone number required')
+  ) {
+    return {
+      retryable: false,
+      category: 'permanent_recipient',
+      humanTitle:
+        codeNum === 131030
+          ? 'Recipient Not in Meta Test Allowlist (#131030)'
+          : 'Invalid or Unreachable Recipient Phone',
+      whatWentWrong:
+        codeNum === 131030
+          ? 'Your Meta WhatsApp app is in test/sandbox mode or this recipient number is not allowlisted.'
+          : msg || 'The customer phone number is missing, invalid, or cannot receive WhatsApp messages.',
+      component: 'Customer Contact / Recipient Phone',
+      needsAdminAction: true,
+      systemAction:
+        'Stopped automatic retries. Update the customer phone in Customer Contact Audit or verify Meta production phone status.',
+    };
+  }
+
+  if (
+    codeNum === 131047 ||
+    codeNum === 131049 ||
+    codeStr === 'OPTED_OUT' ||
+    codeStr === 'NO_CONSENT' ||
+    msgLower.includes('re-engagement') ||
+    msgLower.includes('24 hour') ||
+    msgLower.includes('opted out')
+  ) {
+    return {
+      retryable: false,
+      category: 'permanent_policy',
+      humanTitle:
+        codeNum === 131047
+          ? '24-Hour Freeform Window Expired (#131047)'
+          : 'WhatsApp Messaging Policy / Consent Gate',
+      whatWentWrong:
+        codeNum === 131047
+          ? 'Freeform text messages can only be sent within 24 hours of a customer reply. Use an approved Meta template instead.'
+          : msg || 'Message blocked by customer consent/opt-out or Meta ecosystem engagement policy.',
+      component: 'Meta Messaging Policy / Consent Gate',
+      needsAdminAction: codeNum === 131047,
+      systemAction:
+        'Stopped automatic retries. No duplicate sends will be attempted.',
+    };
+  }
+
+  if (
+    codeNum === 190 ||
+    httpStatus === 401 ||
+    httpStatus === 403 ||
+    msgLower.includes('access token') ||
+    msgLower.includes('oauth')
+  ) {
+    return {
+      retryable: false,
+      category: 'permanent_config',
+      humanTitle: 'Meta Access Token Expired or Invalid (#190)',
+      whatWentWrong:
+        'Meta rejected the WHATSAPP_ACCESS_TOKEN configured on the Render backend.',
+      component: 'Render Backend Environment / Meta Auth',
+      needsAdminAction: true,
+      systemAction:
+        'Stopped automatic retries. Rotate WHATSAPP_ACCESS_TOKEN in Render environment variables and click "Test Live Connection".',
+    };
+  }
+
+  // Transient rate limit / server / network errors (SAFE to auto-retry with backoff)
+  if (
+    codeNum === 130429 ||
+    codeNum === 131048 ||
+    codeNum === 131056 ||
+    codeNum === 4 ||
+    httpStatus === 429 ||
+    msgLower.includes('rate limit') ||
+    msgLower.includes('too many')
+  ) {
+    return {
+      retryable: true,
+      category: 'transient_rate_limit',
+      humanTitle: 'Meta Rate Limit — Temporary Throttling',
+      whatWentWrong:
+        msg || 'Meta temporarily throttled outbound throughput for this business phone number.',
+      component: 'Meta Cloud API Throughput',
+      needsAdminAction: false,
+      systemAction:
+        'Scheduled controlled automatic retry with exponential backoff.',
+    };
+  }
+
+  if (
+    codeNum === 2 ||
+    codeNum === 131016 ||
+    (typeof httpStatus === 'number' && httpStatus >= 500) ||
+    msgLower.includes('timeout') ||
+    msgLower.includes('network') ||
+    msgLower.includes('fetch failed') ||
+    msgLower.includes('econnreset')
+  ) {
+    return {
+      retryable: true,
+      category: 'transient_network',
+      humanTitle: 'Temporary Meta / Network Outage',
+      whatWentWrong:
+        msg || 'Temporary network timeout or Meta server error occurred while dispatching.',
+      component: 'Network / Meta Cloud API',
+      needsAdminAction: false,
+      systemAction:
+        'Scheduled controlled automatic retry with backoff.',
+    };
+  }
+
+  // Default for unrecognized HTTP 4xx errors: permanent (avoid hammering Meta!)
+  if (typeof httpStatus === 'number' && httpStatus >= 400 && httpStatus < 500) {
+    return {
+      retryable: false,
+      category: 'permanent_config',
+      humanTitle: `Meta API Request Rejected (HTTP ${httpStatus})`,
+      whatWentWrong: msg || 'Meta Cloud API rejected the request payload.',
+      component: 'Meta Cloud API Payload',
+      needsAdminAction: true,
+      systemAction:
+        'Stopped automatic retries to prevent repeated 4xx failures. Inspect the error message and retry manually after fixing.',
+    };
+  }
+
+  return {
+    retryable: true,
+    category: 'unknown',
+    humanTitle: 'Transient Dispatch Failure',
+    whatWentWrong: msg || 'An unexpected error occurred while calling Meta WhatsApp Cloud API.',
+    component: 'WhatsApp Cloud API Dispatcher',
+    needsAdminAction: false,
+    systemAction: 'Scheduled controlled automatic retry (up to max attempts).',
+  };
+}
+
 /**
  * Sends a Meta-approved WhatsApp template message (required for business-initiated messages).
+ * Enforces pre-send parameter validation so #132000 cannot be sent blindly to Meta.
  */
 export async function sendWhatsAppTemplateMessage(params: {
   toPhone: string;
   templateName: string;
   languageCode?: string;
   bodyParameters?: string[];
+  syncedMetaTemplate?: SyncedMetaTemplateInfo | null;
 }): Promise<WhatsAppSendResult> {
   const waId = phoneToMetaWaId(params.toPhone);
   if (!waId) {
-    return { ok: false, error: 'Recipient phone number is not valid E.164 format.' };
+    return {
+      ok: false,
+      errorCode: 'INVALID_PHONE',
+      error: 'Recipient phone number is not valid E.164 format.',
+    };
+  }
+
+  const validation = validateWhatsAppTemplateParameters({
+    templateName: params.templateName,
+    bodyParameters: params.bodyParameters,
+    languageCode: params.languageCode,
+    syncedMetaTemplate: params.syncedMetaTemplate,
+  });
+
+  if (!validation.valid) {
+    return {
+      ok: false,
+      httpStatus: 400,
+      errorCode: validation.errorCode || 'TEMPLATE_PARAM_MISMATCH',
+      error: validation.error || 'Template parameter validation failed.',
+    };
   }
 
   const components: any[] = [];
-  if (params.bodyParameters && params.bodyParameters.length > 0) {
+  if (validation.normalizedParams.length > 0) {
     components.push({
       type: 'body',
-      parameters: params.bodyParameters.map((val) => ({
+      parameters: validation.normalizedParams.map((val) => ({
         type: 'text',
         text: String(val ?? '').slice(0, 1024),
       })),
@@ -605,7 +1057,7 @@ export async function sendWhatsAppTemplateMessage(params: {
     type: 'template',
     template: {
       name: params.templateName,
-      language: { code: params.languageCode || 'en' },
+      language: { code: validation.languageCode || 'en' },
       ...(components.length > 0 ? { components } : {}),
     },
   });
@@ -621,11 +1073,15 @@ export async function sendWhatsAppTextMessage(params: {
 }): Promise<WhatsAppSendResult> {
   const waId = phoneToMetaWaId(params.toPhone);
   if (!waId) {
-    return { ok: false, error: 'Recipient phone number is not valid E.164 format.' };
+    return {
+      ok: false,
+      errorCode: 'INVALID_PHONE',
+      error: 'Recipient phone number is not valid E.164 format.',
+    };
   }
   const trimmed = String(params.body || '').trim();
   if (!trimmed) {
-    return { ok: false, error: 'Message body cannot be empty.' };
+    return { ok: false, errorCode: 'EMPTY_BODY', error: 'Message body cannot be empty.' };
   }
 
   return callWhatsAppGraphMessagesApi({
@@ -720,18 +1176,13 @@ export async function testWhatsAppGraphConnectivity(): Promise<{
 }
 
 /**
- * Fetches approved/pending/rejected message templates directly from Meta WABA Graph API
- * using the existing configured WHATSAPP_BUSINESS_ACCOUNT_ID and WHATSAPP_ACCESS_TOKEN.
+ * Fetches approved/pending/rejected/paused/disabled message templates directly from Meta WABA Graph API
+ * including exact language code and BODY component variable count.
  */
 export async function fetchMetaWabaTemplates(): Promise<{
   ok: boolean;
   notConfigured?: boolean;
-  templates: Array<{
-    name: string;
-    status: string;
-    category: string;
-    language: string;
-  }>;
+  templates: SyncedMetaTemplateInfo[];
   error?: string;
 }> {
   const accessToken = (process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
@@ -748,7 +1199,7 @@ export async function fetchMetaWabaTemplates(): Promise<{
   }
 
   try {
-    const url = `https://graph.facebook.com/${encodeURIComponent(apiVersion)}/${encodeURIComponent(wabaId)}/message_templates?fields=name,status,category,language&limit=200`;
+    const url = `https://graph.facebook.com/${encodeURIComponent(apiVersion)}/${encodeURIComponent(wabaId)}/message_templates?fields=name,status,category,language,components,quality_score,rejected_reason&limit=200`;
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(12000),
@@ -761,13 +1212,31 @@ export async function fetchMetaWabaTemplates(): Promise<{
         error: data?.error?.message || `Meta API HTTP ${res.status}`,
       };
     }
+    const nowIso = new Date().toISOString();
     const rawList = Array.isArray(data?.data) ? data.data : [];
-    const templates = rawList.map((item: any) => ({
-      name: String(item?.name || ''),
-      status: String(item?.status || '').toUpperCase(),
-      category: String(item?.category || '').toUpperCase(),
-      language: String(item?.language || 'en'),
-    }));
+    const templates: SyncedMetaTemplateInfo[] = rawList.map((item: any) => {
+      const comps = Array.isArray(item?.components) ? item.components : [];
+      const bodyComp = comps.find((c: any) => String(c?.type || '').toUpperCase() === 'BODY');
+      const bodyText = typeof bodyComp?.text === 'string' ? bodyComp.text : undefined;
+      const bodyParamCount = bodyText !== undefined ? countTemplateBodyPlaceholders(bodyText) : undefined;
+      const qualityScore =
+        typeof item?.quality_score === 'string'
+          ? item.quality_score
+          : typeof item?.quality_score?.score === 'string'
+          ? item.quality_score.score
+          : undefined;
+      return {
+        name: String(item?.name || ''),
+        status: String(item?.status || '').toUpperCase(),
+        category: String(item?.category || '').toUpperCase(),
+        language: String(item?.language || 'en'),
+        bodyText,
+        bodyParamCount,
+        qualityScore,
+        rejectedReason: typeof item?.rejected_reason === 'string' ? item.rejected_reason : undefined,
+        syncedAt: nowIso,
+      };
+    });
     return { ok: true, templates };
   } catch (err: any) {
     return {

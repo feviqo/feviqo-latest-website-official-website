@@ -107,6 +107,67 @@ export function isServerFirestoreEnabled(): boolean {
   return hasExplicitServiceAccount && Boolean(getAdminFirestoreDb());
 }
 
+export interface FirebaseAuthPhoneLookupResult {
+  available: boolean;
+  byUid: Map<string, { uid: string; phoneNumber: string; email?: string; verified: boolean }>;
+  byEmail: Map<string, { uid: string; phoneNumber: string; email?: string; verified: boolean }>;
+  reason?: string;
+}
+
+export async function listFirebaseAuthUsersPhoneMap(): Promise<FirebaseAuthPhoneLookupResult> {
+  const byUid = new Map<string, { uid: string; phoneNumber: string; email?: string; verified: boolean }>();
+  const byEmail = new Map<string, { uid: string; phoneNumber: string; email?: string; verified: boolean }>();
+
+  const ctx = getFirebaseAdminApp();
+  if (!ctx || !hasExplicitServiceAccount) {
+    return {
+      available: false,
+      byUid,
+      byEmail,
+      reason:
+        'Firebase Admin credentials (FIREBASE_SERVICE_ACCOUNT_JSON) are not configured in this environment; using Firestore/customer profile, preference, membership, and order records.',
+    };
+  }
+
+  try {
+    const auth = getAuth(ctx.app);
+    let pageToken: string | undefined;
+    let scannedPages = 0;
+    do {
+      const page = await auth.listUsers(1000, pageToken);
+      for (const u of page.users) {
+        const phone = String(u.phoneNumber || '').trim();
+        if (!phone) continue;
+        const email = u.email ? u.email.trim().toLowerCase() : undefined;
+        const entry = {
+          uid: u.uid,
+          phoneNumber: phone,
+          email,
+          verified: true,
+        };
+        byUid.set(u.uid, entry);
+        if (email) byEmail.set(email, entry);
+      }
+      pageToken = page.pageToken;
+      scannedPages += 1;
+    } while (pageToken && scannedPages < 10);
+
+    return {
+      available: true,
+      byUid,
+      byEmail,
+      reason: `Scanned Firebase Authentication (${byUid.size} account(s) with verified phoneNumber).`,
+    };
+  } catch (err: any) {
+    return {
+      available: false,
+      byUid,
+      byEmail,
+      reason: `Firebase Auth user lookup unavailable (${err?.message || 'insufficient Admin Auth permission'}).`,
+    };
+  }
+}
+
 function toIso(val: unknown): string | undefined {
   if (!val) return undefined;
   if (typeof val === 'string') return val;
