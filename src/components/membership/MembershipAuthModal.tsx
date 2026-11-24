@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, ArrowRight, Phone, CheckCircle2 } from 'lucide-react';
+import { X, Eye, EyeOff, ArrowRight, Phone, CheckCircle2, Link2 } from 'lucide-react';
 import { signInWithPopup, signOut } from 'firebase/auth';
 import {
   loginMemberAccount,
@@ -8,7 +8,9 @@ import {
   updateMemberPhone,
   logoutMemberAccount,
   getStoredReferralCode,
+  getActiveReferralContext,
   normalizeReferralInput,
+  ActiveReferralContext,
   MemberAccountState,
 } from '../../services/membershipService';
 import { auth, googleProvider, checkGoogleDomainAuthorized } from '../../firebase';
@@ -55,7 +57,12 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [referralCodeInput, setReferralCodeInput] = useState(() => getStoredReferralCode());
+  const [activeReferral, setActiveReferral] = useState<ActiveReferralContext | null>(() =>
+    getActiveReferralContext()
+  );
+  const [referralCodeInput, setReferralCodeInput] = useState(
+    () => getActiveReferralContext()?.referralCode || getStoredReferralCode()
+  );
   const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [promotionalOptIn, setPromotionalOptIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -67,6 +74,24 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
   stepRef.current = step;
 
   useEffect(() => {
+    const syncReferralFromLink = () => {
+      const next = getActiveReferralContext(forcePhoneAccount || null);
+      setActiveReferral(next);
+      if (next?.referralCode) {
+        setReferralCodeInput(next.referralCode);
+      }
+    };
+    window.addEventListener('feviqo-referral-partner-updated', syncReferralFromLink);
+    window.addEventListener('popstate', syncReferralFromLink);
+    window.addEventListener('feviqo-navigate-url', syncReferralFromLink);
+    return () => {
+      window.removeEventListener('feviqo-referral-partner-updated', syncReferralFromLink);
+      window.removeEventListener('popstate', syncReferralFromLink);
+      window.removeEventListener('feviqo-navigate-url', syncReferralFromLink);
+    };
+  }, [forcePhoneAccount]);
+
+  useEffect(() => {
     setError(null);
     if (!isOpen) {
       setStep('auth');
@@ -75,7 +100,12 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
       setMode(initialMode);
       return;
     }
-    setReferralCodeInput((prev) => prev || getStoredReferralCode());
+    const currentRef = getActiveReferralContext(forcePhoneAccount || null);
+    setActiveReferral(currentRef);
+    const resolvedCode = currentRef?.referralCode || getStoredReferralCode();
+    if (resolvedCode) {
+      setReferralCodeInput(resolvedCode);
+    }
     if (forcePhoneAccount && !hasValidPhoneNumber(forcePhoneAccount.member.phone)) {
       setStep('phone');
       setPendingGoogleAccount(forcePhoneAccount);
@@ -281,6 +311,7 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
     setSubmitting(true);
 
     try {
+      const resolvedCode = normalizeReferralInput(referralCodeInput) || activeReferral?.referralCode || undefined;
       const result =
         mode === 'signup'
           ? await registerMemberAccount({
@@ -289,11 +320,15 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
               phone: phone.trim(),
               password,
               confirmPassword,
-              referralCode: normalizeReferralInput(referralCodeInput) || undefined,
+              referralCode: resolvedCode,
               whatsappOptIn: whatsappOptIn === true,
               promotionalOptIn: promotionalOptIn === true,
             })
-          : await loginMemberAccount({ email: email.trim(), password });
+          : await loginMemberAccount({
+              email: email.trim(),
+              password,
+              referralCode: resolvedCode,
+            });
 
       if ('error' in result) {
         setError(result.error || 'Authentication failed. Please check your details.');
@@ -376,8 +411,8 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
               />
             </div>
 
-            {!pendingGoogleAccount.member.referredByCode && (
-              <div className="space-y-1">
+            {(!pendingGoogleAccount.member.referredByCode || activeReferral?.referralCode) && (
+              <div className="space-y-1.5">
                 <label htmlFor="google-member-referral" className="block text-xs font-semibold text-zinc-700">
                   {t(MEMBERSHIP_COPY.promo.authReferralLabel)}
                 </label>
@@ -390,7 +425,23 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
                   placeholder={t(MEMBERSHIP_COPY.promo.authReferralPlaceholder)}
                   className="w-full px-3.5 py-2 text-xs font-mono uppercase bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] transition"
                 />
-                {referralCodeInput.length >= 4 && (
+                {activeReferral && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900 space-y-0.5">
+                    <div className="font-semibold flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                      <span>
+                        {isUrdu ? 'ریفرل لنک:' : 'Active Referral Link:'}{' '}
+                        <span className="font-mono font-bold text-[#16A34A]" dir="ltr">
+                          {activeReferral.referralCode}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="text-[10px] font-mono text-emerald-800 truncate" dir="ltr">
+                      {activeReferral.referralUrl}
+                    </div>
+                  </div>
+                )}
+                {!activeReferral && referralCodeInput.length >= 4 && (
                   <p className="text-[11px] text-[#16A34A] leading-relaxed">
                     {t(MEMBERSHIP_COPY.promo.authReferralAppliedNote)}
                   </p>
@@ -490,6 +541,25 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
             <p className="text-sm text-zinc-600 leading-relaxed">
               {t(MEMBERSHIP_COPY.auth.subtitleGeneral)}
             </p>
+          )}
+          {activeReferral && (
+            <div className="mt-2.5 p-3 rounded-xl bg-emerald-50/90 border border-emerald-200 text-xs text-emerald-950 space-y-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-900">
+                  <Link2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                  <span>{isUrdu ? 'فعال ریفرل کوڈ' : 'Referral Code Applied'}</span>
+                </span>
+                <span
+                  dir="ltr"
+                  className="px-2 py-0.5 rounded-md bg-white border border-emerald-300 font-mono text-[11px] font-bold text-[#16A34A]"
+                >
+                  {referralCodeInput || activeReferral.referralCode}
+                </span>
+              </div>
+              <div className="text-[11px] text-emerald-800 font-mono truncate" dir="ltr">
+                {activeReferral.referralUrl}
+              </div>
+            </div>
           )}
         </div>
 
@@ -678,7 +748,7 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <label htmlFor="member-referral-code" className="block text-xs font-semibold text-zinc-700">
                   {t(MEMBERSHIP_COPY.promo.authReferralLabel)}
                 </label>
@@ -691,10 +761,18 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
                   placeholder={t(MEMBERSHIP_COPY.promo.authReferralPlaceholder)}
                   className="w-full px-3.5 py-2 text-xs font-mono uppercase bg-white border border-zinc-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] transition"
                 />
-                {referralCodeInput.length >= 4 && (
+                {activeReferral ? (
                   <p className="text-[11px] text-[#16A34A] leading-relaxed">
-                    {t(MEMBERSHIP_COPY.promo.authReferralAppliedNote)}
+                    {isUrdu
+                      ? `ریفرل لنک (${activeReferral.referralUrl}) سے خودکار طور پر کوڈ ${referralCodeInput || activeReferral.referralCode} شامل کر دیا گیا ہے۔`
+                      : `Auto-applied from referral link (${activeReferral.referralUrl}) with unique code ${referralCodeInput || activeReferral.referralCode}.`}
                   </p>
+                ) : (
+                  referralCodeInput.length >= 4 && (
+                    <p className="text-[11px] text-[#16A34A] leading-relaxed">
+                      {t(MEMBERSHIP_COPY.promo.authReferralAppliedNote)}
+                    </p>
+                  )
                 )}
               </div>
 
@@ -729,6 +807,28 @@ export const MembershipAuthModal: React.FC<MembershipAuthModalProps> = ({
                 </label>
               </div>
             </>
+          )}
+
+          {mode === 'signin' && (activeReferral || referralCodeInput) && (
+            <div className="space-y-1.5">
+              <label htmlFor="signin-referral-code" className="block text-xs font-semibold text-zinc-700">
+                {isUrdu ? 'چیک آؤٹ ریفرل کوڈ (لنک سے خودکار)' : 'Checkout Referral Code (From Active Link)'}
+              </label>
+              <input
+                id="signin-referral-code"
+                type="text"
+                dir="ltr"
+                value={referralCodeInput}
+                onChange={(e) => setReferralCodeInput(normalizeReferralInput(e.target.value))}
+                placeholder={t(MEMBERSHIP_COPY.promo.authReferralPlaceholder)}
+                className="w-full px-3.5 py-2 text-xs font-mono uppercase bg-emerald-50/40 border border-emerald-300 rounded-xl focus:outline-none focus:border-[#0B0B0D] transition"
+              />
+              {activeReferral && (
+                <p className="text-[11px] text-[#16A34A] leading-relaxed" dir="ltr">
+                  Link: {activeReferral.referralUrl}
+                </p>
+              )}
+            </div>
           )}
 
           {error && (

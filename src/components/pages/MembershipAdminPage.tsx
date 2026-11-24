@@ -4990,6 +4990,12 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
             {/* TAB: SUPPORTERS LEADERBOARD MANAGEMENT */}
             {overview && activeTab === 'supporters' && (
               <AdminSupportersLeaderboardTab
+                initialData={overview.supportersLeaderboardOverview || null}
+                onDataChange={(next) =>
+                  setOverview((prev) =>
+                    prev ? { ...prev, supportersLeaderboardOverview: next } : prev
+                  )
+                }
                 onSuccessMessage={(msg) => setFeedbackBanner({ type: 'success', text: msg })}
                 onErrorMessage={(msg) => setFeedbackBanner({ type: 'error', text: msg })}
               />

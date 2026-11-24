@@ -16,6 +16,7 @@ import {
   Lock,
   Heart,
   RotateCcw,
+  Link2,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { AppRoute } from '../../types';
@@ -39,6 +40,8 @@ import {
   createMembershipCheckout,
   validateCheckoutPromoQuote,
   normalizeReferralInput,
+  getActiveReferralContext,
+  ActiveReferralContext,
   CheckoutPricingQuote,
   MemberAccountState,
   MembershipOrder,
@@ -111,6 +114,9 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
   const [pricingQuote, setPricingQuote] = useState<CheckoutPricingQuote | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
+  const [activeReferral, setActiveReferral] = useState<ActiveReferralContext | null>(() =>
+    getActiveReferralContext()
+  );
 
   // Optional Extra Contribution ("Support FEVIQO ❤️") & Leaderboard Display Preferences
   const [optionalContributionPkr, setOptionalContributionPkr] = useState<number>(0);
@@ -188,6 +194,21 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
       setPhoneCompletionAccount(account);
       setAuthModalOpen(true);
     }
+  }, [account]);
+
+  useEffect(() => {
+    const syncReferral = () => {
+      setActiveReferral(getActiveReferralContext(account));
+    };
+    syncReferral();
+    window.addEventListener('feviqo-referral-partner-updated', syncReferral);
+    window.addEventListener('popstate', syncReferral);
+    window.addEventListener('feviqo-navigate-url', syncReferral);
+    return () => {
+      window.removeEventListener('feviqo-referral-partner-updated', syncReferral);
+      window.removeEventListener('popstate', syncReferral);
+      window.removeEventListener('feviqo-navigate-url', syncReferral);
+    };
   }, [account]);
 
   const applyUrlContextFromLocation = React.useCallback((currentAccount?: MemberAccountState | null) => {
@@ -590,6 +611,7 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
         visitorCountryCode: geoInfo?.countryCode,
         indicativeLocalDisplay,
         promoCode: appliedPromoCode || undefined,
+        referralCode: activeReferral?.referralCode || undefined,
         applyCredits,
         optionalContributionPkr: safeContributionPkr,
         leaderboardDisplayName: leaderboardDisplayName.trim() || 'Anonymous Patron',
@@ -853,6 +875,19 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
             >
               {t(MEMBERSHIP_COPY.subbar.myAccountTab)}
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAccountSection(false);
+                const el = document.getElementById('feviqo-top-supporters');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
+              className="cursor-pointer transition-colors text-zinc-600 hover:text-[#16A34A]"
+            >
+              {isUrdu ? 'ٹاپ سپورٹرز' : 'Top Supporters'}
+            </button>
           </div>
 
           <div className="flex items-center gap-3">
@@ -881,6 +916,38 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Active Referral Link Strip (automatically shown for every generated referral link) */}
+      {activeReferral && (
+        <div dir={dir} className="bg-emerald-50/90 border-b border-emerald-200">
+          <div
+            className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs ${
+              isUrdu ? 'font-urdu-slim' : ''
+            }`}
+          >
+            <div className="flex flex-wrap items-center gap-2 text-emerald-950">
+              <Link2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+              <span className="font-semibold">
+                {isUrdu ? 'ریفرل لنک فعال ہے:' : 'Active Referral Link:'}
+              </span>
+              <span className="font-bold text-[#0B0B0D]">{activeReferral.partnerName}</span>
+              <span className="text-emerald-700/70">·</span>
+              <span className="text-emerald-900">
+                {isUrdu ? 'منفرد ریفرل کوڈ:' : 'Referral Code:'}
+              </span>
+              <span
+                dir="ltr"
+                className="px-2 py-0.5 rounded-md bg-white border border-emerald-300 font-mono text-[11px] font-bold text-[#16A34A]"
+              >
+                {activeReferral.referralCode}
+              </span>
+            </div>
+            <div className="text-[11px] font-mono text-emerald-800 truncate" dir="ltr">
+              {activeReferral.referralUrl}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Continue Watching Return Banner when visitor arrived from a gated episode */}
       {returnEpisodeContext && (() => {
@@ -1961,6 +2028,33 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                               </div>
                             )}
 
+                            {activeReferral && (
+                              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 space-y-1.5">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="font-bold text-[#0B0B0D] inline-flex items-center gap-1.5">
+                                    <Link2 className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
+                                    <span>
+                                      {isUrdu ? 'آپ کا ریفرل کوڈ (خودکار)' : 'Active Referral Code (Auto-Applied)'}
+                                    </span>
+                                  </div>
+                                  <span
+                                    dir="ltr"
+                                    className="px-2.5 py-0.5 rounded-lg bg-white border border-emerald-300 font-mono text-[11px] font-bold text-[#16A34A]"
+                                  >
+                                    {activeReferral.referralCode}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-emerald-900 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                  <span>
+                                    {isUrdu ? 'ریفرل لنک:' : 'Relevant Link:'}
+                                  </span>
+                                  <span className="font-mono font-semibold text-[#16A34A] break-all" dir="ltr">
+                                    {activeReferral.referralUrl}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
                             {account && availableCredits > 0 && (
                               <label className="flex items-start gap-3 p-3.5 rounded-xl border border-zinc-200 bg-[#F8FAFC] cursor-pointer hover:border-[#22C55E] transition">
                                 <input
@@ -1995,6 +2089,24 @@ export const MembershipPage: React.FC<MembershipPageProps> = ({
                                 {formatQuoteAmount(origVal)}
                               </span>
                             </div>
+                            {activeReferral && (
+                              <div className="flex items-start justify-between gap-2 text-emerald-800 bg-emerald-50/80 border border-emerald-200/80 rounded-lg px-2.5 py-2">
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-[#0B0B0D]">
+                                    {isUrdu ? 'ریفرل کوڈ' : 'Referral Code'}
+                                  </div>
+                                  <div className="text-[10px] font-mono text-emerald-700 truncate" dir="ltr">
+                                    {activeReferral.referralUrl}
+                                  </div>
+                                </div>
+                                <span
+                                  dir="ltr"
+                                  className="font-mono font-bold text-[#16A34A] shrink-0"
+                                >
+                                  {activeReferral.referralCode}
+                                </span>
+                              </div>
+                            )}
                             {pricingQuote && pricingQuote.promoDiscount > 0 && (
                               <div className="flex items-center justify-between text-[#16A34A] font-semibold">
                                 <span>

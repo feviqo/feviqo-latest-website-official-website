@@ -395,10 +395,12 @@ export function getAdminSupportersLeaderboardOverview() {
     publicPreview,
     stats: {
       totalEntries: entries.length,
+      activeEntries: activeCount,
       activeCount,
       verifiedCustomerCount: verifiedCustomerEntries.length,
       manualFeaturedCount: manualFeaturedEntries.length,
       removedCount: entries.filter((e) => e.removed).length,
+      verifiedContributionTotalPkr: totalVerifiedContributionsPkr,
       totalVerifiedContributionsPkr,
     },
   };
@@ -452,12 +454,25 @@ export function createSupporterEntryByAdmin(params: {
 export function seedInitialFeaturedSupportersByAdmin(adminEmail: string): {
   success: true;
   created: SupporterLeaderboardEntry[];
+  skippedCount: number;
 } {
   const entries = readAllSupporterEntries();
+  const existingFeaturedNames = new Set(
+    entries
+      .filter((e) => !e.removed && e.entryType === 'manual_featured')
+      .map((e) => e.displayName.trim().toLowerCase())
+  );
   const nowMs = Date.now();
-  const created: SupporterLeaderboardEntry[] = INITIAL_FEATURED_PATRON_TEMPLATES.map((tpl, idx) => {
+  let skippedCount = 0;
+  const created: SupporterLeaderboardEntry[] = [];
+
+  INITIAL_FEATURED_PATRON_TEMPLATES.forEach((tpl, idx) => {
+    if (existingFeaturedNames.has(tpl.displayName.trim().toLowerCase())) {
+      skippedCount += 1;
+      return;
+    }
     const iso = new Date(nowMs + idx).toISOString();
-    return {
+    created.push({
       id: `sup-feat-${nowMs}-${idx + 1}-${crypto.randomBytes(2).toString('hex')}`,
       displayName: tpl.displayName,
       contributionAmount: tpl.contributionAmount,
@@ -471,15 +486,17 @@ export function seedInitialFeaturedSupportersByAdmin(adminEmail: string): {
       createdAt: iso,
       updatedAt: iso,
       updatedByAdminEmail: adminEmail,
-    };
+    });
   });
 
-  entries.push(...created);
-  writeJsonSafe(ENTRIES_FILE, entries);
-  for (const e of created) {
-    mirrorSupporterEntryServer(e);
+  if (created.length > 0) {
+    entries.push(...created);
+    writeJsonSafe(ENTRIES_FILE, entries);
+    for (const e of created) {
+      mirrorSupporterEntryServer(e);
+    }
   }
-  return { success: true, created };
+  return { success: true, created, skippedCount };
 }
 
 export function updateSupporterEntryByAdmin(params: {

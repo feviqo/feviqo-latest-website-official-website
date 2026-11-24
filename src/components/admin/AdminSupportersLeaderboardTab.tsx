@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Trophy,
   Crown,
@@ -36,8 +36,134 @@ import {
 } from '../../services/firestoreMembershipSync';
 
 interface AdminSupportersLeaderboardTabProps {
+  initialData?: AdminSupportersLeaderboardOverview | null;
+  onDataChange?: (next: AdminSupportersLeaderboardOverview) => void;
   onSuccessMessage: (msg: string) => void;
   onErrorMessage: (msg: string) => void;
+}
+
+const DEFAULT_SETTINGS: SupporterLeaderboardSettings = {
+  id: 'main',
+  enabled: true,
+  maxDisplayed: 10,
+  showAmountsGlobally: true,
+  allowAutomaticRanking: true,
+  allowManualPriority: true,
+  showBadges: true,
+  showSubtitle: true,
+  includeManualFeatured: true,
+  updatedAt: new Date(0).toISOString(),
+};
+
+function normalizeAdminSupportersOverview(
+  raw: any
+): AdminSupportersLeaderboardOverview {
+  const entries: SupporterLeaderboardEntry[] = Array.isArray(raw?.entries)
+    ? raw.entries.map((entry: any) => ({
+        id: String(entry?.id || ''),
+        displayName: String(entry?.displayName || 'Anonymous Patron'),
+        contributionAmount: Math.max(0, Math.round(Number(entry?.contributionAmount) || 0)),
+        amountVisible: entry?.amountVisible !== false,
+        badge: String(entry?.badge || ''),
+        displayPriority:
+          entry?.displayPriority !== null &&
+          entry?.displayPriority !== undefined &&
+          Number.isFinite(Number(entry.displayPriority))
+            ? Math.round(Number(entry.displayPriority))
+            : null,
+        entryType: entry?.entryType === 'verified_customer' ? 'verified_customer' : 'manual_featured',
+        active: entry?.active !== false,
+        featured: Boolean(entry?.featured),
+        removed: Boolean(entry?.removed),
+        createdAt: String(entry?.createdAt || new Date().toISOString()),
+        updatedAt: String(entry?.updatedAt || entry?.createdAt || new Date().toISOString()),
+        sourceOrderId: entry?.sourceOrderId ? String(entry.sourceOrderId) : undefined,
+        updatedByAdminEmail: entry?.updatedByAdminEmail ? String(entry.updatedByAdminEmail) : undefined,
+      })).filter((e: SupporterLeaderboardEntry) => Boolean(e.id))
+    : [];
+
+  const rawSettings = raw?.settings || {};
+  const settings: SupporterLeaderboardSettings = {
+    id: 'main',
+    enabled: rawSettings.enabled !== undefined ? Boolean(rawSettings.enabled) : DEFAULT_SETTINGS.enabled,
+    maxDisplayed: Math.max(1, Math.min(50, Math.round(Number(rawSettings.maxDisplayed ?? 10) || 10))),
+    showAmountsGlobally:
+      rawSettings.showAmountsGlobally !== undefined
+        ? Boolean(rawSettings.showAmountsGlobally)
+        : DEFAULT_SETTINGS.showAmountsGlobally,
+    allowAutomaticRanking:
+      rawSettings.allowAutomaticRanking !== undefined
+        ? Boolean(rawSettings.allowAutomaticRanking)
+        : DEFAULT_SETTINGS.allowAutomaticRanking,
+    allowManualPriority:
+      rawSettings.allowManualPriority !== undefined
+        ? Boolean(rawSettings.allowManualPriority)
+        : DEFAULT_SETTINGS.allowManualPriority,
+    showBadges:
+      rawSettings.showBadges !== undefined ? Boolean(rawSettings.showBadges) : DEFAULT_SETTINGS.showBadges,
+    showSubtitle:
+      rawSettings.showSubtitle !== undefined
+        ? Boolean(rawSettings.showSubtitle)
+        : DEFAULT_SETTINGS.showSubtitle,
+    includeManualFeatured:
+      rawSettings.includeManualFeatured !== undefined
+        ? Boolean(rawSettings.includeManualFeatured)
+        : DEFAULT_SETTINGS.includeManualFeatured,
+    updatedAt:
+      typeof rawSettings.updatedAt === 'string' && rawSettings.updatedAt
+        ? rawSettings.updatedAt
+        : DEFAULT_SETTINGS.updatedAt,
+  };
+
+  const activeEntries = entries.filter((e) => e.active && !e.removed).length;
+  const verifiedCustomerEntries = entries.filter(
+    (e) => e.entryType === 'verified_customer' && !e.removed
+  );
+  const manualFeaturedEntries = entries.filter(
+    (e) => e.entryType === 'manual_featured' && !e.removed
+  );
+  const computedVerifiedTotal = verifiedCustomerEntries.reduce(
+    (sum, e) => sum + (Number(e.contributionAmount) || 0),
+    0
+  );
+
+  const rawStats = raw?.stats || {};
+  const rawPreview = raw?.publicPreview || {};
+  const previewEntries = Array.isArray(rawPreview.entries) ? rawPreview.entries : [];
+
+  return {
+    entries,
+    settings,
+    publicPreview: {
+      enabled: rawPreview.enabled !== undefined ? Boolean(rawPreview.enabled) : settings.enabled,
+      settings: rawPreview.settings ? { ...settings, ...rawPreview.settings } : settings,
+      entries: previewEntries,
+      updatedAt: String(rawPreview.updatedAt || settings.updatedAt),
+    },
+    stats: {
+      totalEntries: Number(rawStats.totalEntries ?? entries.length) || 0,
+      activeEntries: Number(rawStats.activeEntries ?? rawStats.activeCount ?? activeEntries) || 0,
+      activeCount: Number(rawStats.activeCount ?? rawStats.activeEntries ?? activeEntries) || 0,
+      verifiedCustomerCount:
+        Number(rawStats.verifiedCustomerCount ?? verifiedCustomerEntries.length) || 0,
+      manualFeaturedCount:
+        Number(rawStats.manualFeaturedCount ?? manualFeaturedEntries.length) || 0,
+      removedCount:
+        Number(rawStats.removedCount ?? entries.filter((e) => e.removed).length) || 0,
+      verifiedContributionTotalPkr:
+        Number(
+          rawStats.verifiedContributionTotalPkr ??
+            rawStats.totalVerifiedContributionsPkr ??
+            computedVerifiedTotal
+        ) || 0,
+      totalVerifiedContributionsPkr:
+        Number(
+          rawStats.totalVerifiedContributionsPkr ??
+            rawStats.verifiedContributionTotalPkr ??
+            computedVerifiedTotal
+        ) || 0,
+    },
+  };
 }
 
 const BADGE_PRESETS = [
@@ -49,12 +175,26 @@ const BADGE_PRESETS = [
 ];
 
 export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardTabProps> = ({
+  initialData = null,
+  onDataChange,
   onSuccessMessage,
   onErrorMessage,
 }) => {
-  const [data, setData] = useState<AdminSupportersLeaderboardOverview | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initialNormalized = initialData ? normalizeAdminSupportersOverview(initialData) : null;
+  const [data, setData] = useState<AdminSupportersLeaderboardOverview>(
+    () => initialNormalized || normalizeAdminSupportersOverview(null)
+  );
+  const [loading, setLoading] = useState(!initialNormalized);
   const [busy, setBusy] = useState(false);
+
+  const onSuccessRef = useRef(onSuccessMessage);
+  const onErrorRef = useRef(onErrorMessage);
+  const onDataChangeRef = useRef(onDataChange);
+  useEffect(() => {
+    onSuccessRef.current = onSuccessMessage;
+    onErrorRef.current = onErrorMessage;
+    onDataChangeRef.current = onDataChange;
+  }, [onSuccessMessage, onErrorMessage, onDataChange]);
 
   // Filter
   const [filterMode, setFilterMode] = useState<
@@ -62,7 +202,9 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
   >('all');
 
   // Settings draft
-  const [settingsDraft, setSettingsDraft] = useState<SupporterLeaderboardSettings | null>(null);
+  const [settingsDraft, setSettingsDraft] = useState<SupporterLeaderboardSettings>(
+    () => (initialNormalized ? initialNormalized.settings : { ...DEFAULT_SETTINGS })
+  );
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Add Manual Entry Form
@@ -85,25 +227,43 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
   const [editActive, setEditActive] = useState(true);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const loadOverview = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetchAdminSupportersLeaderboard();
-      if ('error' in res) {
-        onErrorMessage(res.error || 'Could not load Supporters Leaderboard data.');
-      } else {
-        setData(res);
-        setSettingsDraft(res.settings);
+  const applyNormalizedData = useCallback(
+    (rawPayload: any, syncSettingsDraft = true) => {
+      const normalized = normalizeAdminSupportersOverview(rawPayload);
+      setData(normalized);
+      if (syncSettingsDraft) {
+        setSettingsDraft(normalized.settings);
       }
-    } catch {
-      onErrorMessage('Network error loading Supporters Leaderboard.');
-    } finally {
-      setLoading(false);
-    }
-  }, [onErrorMessage]);
+      onDataChangeRef.current?.(normalized);
+      return normalized;
+    },
+    []
+  );
+
+  const loadOverview = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      try {
+        const res = await fetchAdminSupportersLeaderboard();
+        if (!res || !res.success || 'error' in res) {
+          onErrorRef.current(
+            (res && 'error' in res && res.error) || 'Could not load Supporters Leaderboard data.'
+          );
+        } else {
+          applyNormalizedData(res, true);
+        }
+      } catch {
+        onErrorRef.current('Network error loading Supporters Leaderboard.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applyNormalizedData]
+  );
 
   useEffect(() => {
-    void loadOverview();
+    void loadOverview(Boolean(initialNormalized));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadOverview]);
 
   const mirrorEntriesAndSettingsQuietly = async (
@@ -136,16 +296,17 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
         showSubtitle: settingsDraft.showSubtitle,
         includeManualFeatured: settingsDraft.includeManualFeatured,
       });
-      if ('error' in res) {
-        onErrorMessage(res.error || 'Failed to update leaderboard settings.');
+      if (!res || !res.success || 'error' in res) {
+        onErrorRef.current(
+          (res && 'error' in res && res.error) || 'Failed to update leaderboard settings.'
+        );
       } else {
-        setData(res);
-        setSettingsDraft(res.settings);
-        await mirrorEntriesAndSettingsQuietly(undefined, res.settings);
-        onSuccessMessage('Supporters Leaderboard display & ranking settings saved live.');
+        const normalized = applyNormalizedData(res, true);
+        await mirrorEntriesAndSettingsQuietly(undefined, normalized.settings);
+        onSuccessRef.current('Supporters Leaderboard display & ranking settings saved live.');
       }
     } catch {
-      onErrorMessage('Network error saving leaderboard settings.');
+      onErrorRef.current('Network error saving leaderboard settings.');
     } finally {
       setSavingSettings(false);
     }
@@ -155,7 +316,7 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
     e.preventDefault();
     const parsedAmt = Number(newAmount);
     if (!Number.isFinite(parsedAmt) || parsedAmt < 0 || parsedAmt > 5000000) {
-      onErrorMessage('Enter a valid non-negative contribution amount (PKR 0 – 5,000,000).');
+      onErrorRef.current('Enter a valid non-negative contribution amount (PKR 0 – 5,000,000).');
       return;
     }
     const parsedPriority =
@@ -164,7 +325,7 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
       parsedPriority !== null &&
       (!Number.isFinite(parsedPriority) || parsedPriority < 1 || parsedPriority > 999)
     ) {
-      onErrorMessage('Manual display priority must be blank (auto) or a whole number 1–999.');
+      onErrorRef.current('Manual display priority must be blank (auto) or a whole number 1–999.');
       return;
     }
 
@@ -180,18 +341,23 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
         active: newActive,
         featured: newFeatured,
       });
-      if ('error' in res) {
-        onErrorMessage(res.error || 'Failed to add supporter entry.');
+      if (!res || !res.success || 'error' in res) {
+        onErrorRef.current((res && 'error' in res && res.error) || 'Failed to add supporter entry.');
       } else {
-        setData(res);
+        const normalized = applyNormalizedData(res, false);
         setNewName('');
         setNewAmount('1000');
         setNewPriority('');
-        await mirrorEntriesAndSettingsQuietly([res.entry], res.settings);
-        onSuccessMessage(`Added featured supporter "${res.entry.displayName}" to the leaderboard.`);
+        await mirrorEntriesAndSettingsQuietly(
+          res.entry ? [res.entry] : undefined,
+          normalized.settings
+        );
+        onSuccessRef.current(
+          `Added featured supporter "${res.entry?.displayName || 'Supporter'}" to the leaderboard.`
+        );
       }
     } catch {
-      onErrorMessage('Network error creating supporter entry.');
+      onErrorRef.current('Network error creating supporter entry.');
     } finally {
       setBusy(false);
     }
@@ -201,21 +367,24 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
     setBusy(true);
     try {
       const res = await seedInitialFeaturedSupportersAdmin();
-      if ('error' in res) {
-        onErrorMessage(res.error || 'Failed to seed initial featured patrons.');
+      if (!res || !res.success || 'error' in res) {
+        onErrorRef.current(
+          (res && 'error' in res && res.error) || 'Failed to seed initial featured patrons.'
+        );
       } else {
-        setData(res);
-        await mirrorEntriesAndSettingsQuietly(res.created, res.settings);
-        if (res.created.length === 0) {
-          onSuccessMessage('All 5 initial featured patron templates already exist.');
+        const normalized = applyNormalizedData(res, false);
+        const createdList = Array.isArray(res.created) ? res.created : [];
+        await mirrorEntriesAndSettingsQuietly(createdList, normalized.settings);
+        if (createdList.length === 0) {
+          onSuccessRef.current('All 5 initial featured patron templates already exist.');
         } else {
-          onSuccessMessage(
-            `Added ${res.created.length} editable featured patron entries (not financial transactions).`
+          onSuccessRef.current(
+            `Added ${createdList.length} editable featured patron entries (not financial transactions).`
           );
         }
       }
     } catch {
-      onErrorMessage('Network error adding initial featured patrons.');
+      onErrorRef.current('Network error adding initial featured patrons.');
     } finally {
       setBusy(false);
     }
@@ -261,16 +430,21 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
         featured: editFeatured,
         active: editActive,
       });
-      if ('error' in res) {
-        onErrorMessage(res.error || 'Failed to update supporter entry.');
+      if (!res || !res.success || 'error' in res) {
+        onErrorRef.current(
+          (res && 'error' in res && res.error) || 'Failed to update supporter entry.'
+        );
       } else {
-        setData(res);
+        const normalized = applyNormalizedData(res, false);
         setEditingEntry(null);
-        await mirrorEntriesAndSettingsQuietly([res.entry], res.settings);
-        onSuccessMessage(`Updated supporter entry "${res.entry.displayName}".`);
+        await mirrorEntriesAndSettingsQuietly(
+          res.entry ? [res.entry] : undefined,
+          normalized.settings
+        );
+        onSuccessRef.current(`Updated supporter entry "${res.entry?.displayName || 'Supporter'}".`);
       }
     } catch {
-      onErrorMessage('Network error updating supporter entry.');
+      onErrorRef.current('Network error updating supporter entry.');
     } finally {
       setBusy(false);
     }
@@ -289,15 +463,20 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
     setBusy(true);
     try {
       const res = await updateSupporterEntryAdmin(entry.id, patch);
-      if ('error' in res) {
-        onErrorMessage(res.error || 'Could not update supporter entry.');
+      if (!res || !res.success || 'error' in res) {
+        onErrorRef.current(
+          (res && 'error' in res && res.error) || 'Could not update supporter entry.'
+        );
       } else {
-        setData(res);
-        await mirrorEntriesAndSettingsQuietly([res.entry], res.settings);
-        onSuccessMessage(`${label}: "${res.entry.displayName}".`);
+        const normalized = applyNormalizedData(res, false);
+        await mirrorEntriesAndSettingsQuietly(
+          res.entry ? [res.entry] : undefined,
+          normalized.settings
+        );
+        onSuccessRef.current(`${label}: "${res.entry?.displayName || entry.displayName}".`);
       }
     } catch {
-      onErrorMessage('Network error updating supporter entry.');
+      onErrorRef.current('Network error updating supporter entry.');
     } finally {
       setBusy(false);
     }
@@ -307,18 +486,20 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
     setBusy(true);
     try {
       const res = await deleteSupporterEntryAdmin(entryId);
-      if ('error' in res) {
-        onErrorMessage(res.error || 'Could not delete supporter entry.');
+      if (!res || !res.success || 'error' in res) {
+        onErrorRef.current(
+          (res && 'error' in res && res.error) || 'Could not delete supporter entry.'
+        );
       } else {
-        setData(res);
+        applyNormalizedData(res, false);
         setConfirmDeleteId(null);
         if (isFirebaseAdminUser()) {
           await deleteSupporterEntryInFirestore(entryId).catch(() => {});
         }
-        onSuccessMessage(`Permanently deleted "${name}" from the Supporters Leaderboard.`);
+        onSuccessRef.current(`Permanently deleted "${name}" from the Supporters Leaderboard.`);
       }
     } catch {
-      onErrorMessage('Network error deleting supporter entry.');
+      onErrorRef.current('Network error deleting supporter entry.');
     } finally {
       setBusy(false);
     }
@@ -379,23 +560,23 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
             <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
               <div className="text-[11px] font-semibold text-slate-500">Active Public Entries</div>
               <div className="text-2xl font-bold text-[#0F172A] tabular-nums mt-0.5">
-                {data.stats.activeEntries}
+                {Number(data.stats.activeEntries ?? data.stats.activeCount ?? 0)}
               </div>
               <div className="text-[11px] text-slate-500">
-                {data.publicPreview.entries.length} currently displayed
+                {data.publicPreview?.entries?.length ?? 0} currently displayed
               </div>
             </div>
             <div className="rounded-xl bg-emerald-50/70 border border-emerald-200 px-4 py-3">
               <div className="text-[11px] font-semibold text-emerald-800">Verified Customers</div>
               <div className="text-2xl font-bold text-emerald-950 tabular-nums mt-0.5">
-                {data.stats.verifiedCustomerCount}
+                {Number(data.stats.verifiedCustomerCount ?? 0)}
               </div>
               <div className="text-[11px] text-emerald-700">From approved bank payments</div>
             </div>
             <div className="rounded-xl bg-blue-50/70 border border-blue-200 px-4 py-3">
               <div className="text-[11px] font-semibold text-blue-800">Manual Featured</div>
               <div className="text-2xl font-bold text-blue-950 tabular-nums mt-0.5">
-                {data.stats.manualFeaturedCount}
+                {Number(data.stats.manualFeaturedCount ?? 0)}
               </div>
               <div className="text-[11px] text-blue-700">Admin-curated (no fake orders)</div>
             </div>
@@ -404,7 +585,12 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
                 Verified Extra Contributions
               </div>
               <div className="text-xl font-bold text-[#16A34A] tabular-nums mt-0.5">
-                PKR {data.stats.verifiedContributionTotalPkr.toLocaleString()}
+                PKR{' '}
+                {Number(
+                  data.stats.verifiedContributionTotalPkr ??
+                    data.stats.totalVerifiedContributionsPkr ??
+                    0
+                ).toLocaleString()}
               </div>
               <div className="text-[11px] text-slate-500">Real verified customer total</div>
             </div>
@@ -829,7 +1015,7 @@ export const AdminSupportersLeaderboardTab: React.FC<AdminSupportersLeaderboardT
 
                     <td className="py-3.5 px-4 align-top whitespace-nowrap">
                       <div className="font-bold text-[#0F172A] tabular-nums">
-                        PKR {entry.contributionAmount.toLocaleString()}
+                        PKR {Number(entry.contributionAmount ?? 0).toLocaleString()}
                       </div>
                       <div className="text-[11px] text-slate-500 mt-0.5">
                         {entry.amountVisible ? 'Shown publicly' : 'Amount Hidden'}

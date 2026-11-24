@@ -1858,10 +1858,12 @@ export function subscribeToPublicSupportersLeaderboard(
   let currentEntries: SupporterLeaderboardEntry[] = [];
   let currentSettings: SupporterLeaderboardSettings = { ...DEFAULT_CLIENT_LEADERBOARD_SETTINGS };
   let hasEntriesSnap = false;
+  let entriesListenerFailed = false;
   let hasSettingsDoc = false;
 
   const emitIfReady = () => {
-    if (!hasEntriesSnap && !hasSettingsDoc) return;
+    if (entriesListenerFailed) return;
+    if (!hasEntriesSnap) return;
     if (currentEntries.length === 0 && !hasSettingsDoc) return;
     onUpdate(computePublicSupportersLeaderboardClient(currentEntries, currentSettings));
   };
@@ -1875,6 +1877,7 @@ export function subscribeToPublicSupportersLeaderboard(
   const unsubEntries = onSnapshot(
     entriesQuery,
     (snapshot) => {
+      entriesListenerFailed = false;
       hasEntriesSnap = true;
       const list: SupporterLeaderboardEntry[] = [];
       snapshot.forEach((d) => {
@@ -1902,6 +1905,7 @@ export function subscribeToPublicSupportersLeaderboard(
       emitIfReady();
     },
     (err) => {
+      entriesListenerFailed = true;
       console.warn('[Firestore] Public supportersLeaderboard listener unavailable:', err?.message || err);
     }
   );

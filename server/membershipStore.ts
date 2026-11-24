@@ -38,6 +38,7 @@ import {
   recordVerifiedCustomerSupporterFromOrder,
   mergeSupportersCloudSnapshot,
   syncSupportersDocsToFirestore,
+  getAdminSupportersLeaderboardOverview,
   SupporterLeaderboardEntry,
   SupporterLeaderboardSettings,
 } from './supportersLeaderboardStore';
@@ -2049,6 +2050,31 @@ export function getMemberById(memberId: string): SafeMember | null {
   return found ? sanitizeMember(found) : null;
 }
 
+export function findMemberByReferralCode(rawCode?: string | null): SafeMember | null {
+  const cleanCode = normalizePromoCodeInput(rawCode);
+  if (!cleanCode || cleanCode.length < 3) return null;
+  const members = readMembersEnsured();
+  const found = members.find((m) => (m.referralCode || '').toUpperCase() === cleanCode);
+  return found ? sanitizeMember(found) : null;
+}
+
+export function setMemberCampaignReferralCodeIfEmpty(memberId: string, rawCode?: string | null): void {
+  const cleanCode = String(rawCode || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, '')
+    .slice(0, 32);
+  if (!memberId || cleanCode.length < 3) return;
+  const members = readMembersEnsured();
+  const idx = members.findIndex((m) => m.id === memberId);
+  if (idx === -1) return;
+  if (members[idx].referredByCode) return;
+  members[idx].referredByCode = cleanCode;
+  members[idx].updatedAt = new Date().toISOString();
+  writeJson(MEMBERS_FILE, members);
+  mirrorMemberServer(sanitizeMember(members[idx]));
+}
+
 export function reconcileAndRestoreMemberByEmail(
   rawEmail: string,
   cachedSnapshot?: {
@@ -3875,6 +3901,7 @@ export async function createMembershipCheckoutOrder(params: {
   visitorCountryCode?: string;
   indicativeLocalDisplay?: string;
   promoCode?: string;
+  referralCodeUsed?: string;
   applyCredits?: boolean;
   optionalContributionPkr?: number;
   leaderboardDisplayName?: string;
@@ -4078,7 +4105,16 @@ export async function createMembershipCheckoutOrder(params: {
     promoCode: quote.promoApplied?.code,
     promoDiscountPkr: quote.promoDiscountPkr,
     promoDiscountUsd: quote.promoDiscountUsd,
-    referralCodeUsed: quote.referralCodeUsed,
+    referralCodeUsed:
+      quote.referralCodeUsed ||
+      (typeof params.referralCodeUsed === 'string' && params.referralCodeUsed.trim()
+        ? params.referralCodeUsed
+            .trim()
+            .toUpperCase()
+            .replace(/[^A-Z0-9_-]/g, '')
+            .slice(0, 32)
+        : undefined) ||
+      (member.referredByCode ? member.referredByCode.slice(0, 32) : undefined),
     referralDiscountPkr: quote.referralDiscountPkr,
     referralDiscountUsd: quote.referralDiscountUsd,
     creditsUsedPkr: quote.creditsUsedPkr,
@@ -7654,6 +7690,7 @@ export function getAdminMembershipsOverview() {
     plans: getResolvedPlans(),
     admins: listAdmins(),
     serverCloudConnected: isServerFirestoreEnabled(),
+    supportersLeaderboardOverview: getAdminSupportersLeaderboardOverview(),
   };
 }
 

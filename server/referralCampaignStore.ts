@@ -46,6 +46,7 @@ export interface ReferralCampaign {
   partnerEmail?: string;
   description: string;
   slug: string;
+  referralCode: string;
   referralUrl: string;
   commissionRatePercent: number;
   attributionWindowDays: number;
@@ -333,6 +334,47 @@ export function buildCampaignReferralUrl(slug: string, origin?: string): string 
   return `${getPublicSiteOrigin(origin)}/membership/${encodeURIComponent(slug)}`;
 }
 
+export function deriveCampaignReferralCode(slugOrCode?: string | null): string {
+  const clean = String(slugOrCode || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 32);
+  return clean;
+}
+
+function ensureUniqueCampaignReferralCode(
+  desiredRaw: string,
+  campaigns: ReferralCampaign[],
+  excludeCampaignId?: string
+): string {
+  const base = deriveCampaignReferralCode(desiredRaw) || `REF-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  const isTaken = (code: string) =>
+    campaigns.some(
+      (c) =>
+        c.id !== excludeCampaignId &&
+        deriveCampaignReferralCode(c.referralCode || c.slug) === code
+    );
+  if (!isTaken(base)) return base;
+  for (let i = 2; i < 100; i += 1) {
+    const suffix = `-${i}`;
+    const candidate = `${base.slice(0, 32 - suffix.length)}${suffix}`;
+    if (!isTaken(candidate)) return candidate;
+  }
+  const randSuffix = `-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+  return `${base.slice(0, 32 - randSuffix.length)}${randSuffix}`;
+}
+
+function hydrateCampaignRecord(c: ReferralCampaign): ReferralCampaign {
+  return {
+    ...c,
+    referralCode: deriveCampaignReferralCode(c.referralCode || c.slug),
+    referralUrl: buildCampaignReferralUrl(c.slug),
+  };
+}
+
 function toSlugFormat(val?: string): string {
   return String(val || '')
     .trim()
@@ -476,33 +518,167 @@ function formatCampaignDisplayNameFromSlug(slug: string): string {
 }
 
 export function ensureDefaultReferralCampaigns(): ReferralCampaign[] {
-  // Preserve all existing historical campaigns/orders; do not auto-seed retired "Kameer Play" as an active customer-facing promo.
-  return readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
+  const existing = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
+  let mutated = false;
+  const hydrated: ReferralCampaign[] = existing.map((c) => {
+    const expectedCode = deriveCampaignReferralCode(c.referralCode || c.slug);
+    const expectedUrl = buildCampaignReferralUrl(c.slug);
+    if (c.referralCode !== expectedCode || c.referralUrl !== expectedUrl) {
+      mutated = true;
+    }
+    return {
+      ...c,
+      referralCode: expectedCode,
+      referralUrl: expectedUrl,
+    };
+  });
+
+  // Ensure Markhor TV Official partner referral link is present & ready out-of-the-box
+  const hasMarkhor = hydrated.some((c) => c.slug.toLowerCase() === 'markhor-tv-official');
+  if (!hasMarkhor) {
+    const nowIso = new Date().toISOString();
+    const markhorCampaign: ReferralCampaign = {
+      id: 'cmp-markhor-tv-official',
+      name: 'Markhor TV Official',
+      partnerName: 'Markhor TV Official',
+      description: 'Official partner referral link (https://feviqo.com/membership/markhor-tv-official)',
+      slug: 'markhor-tv-official',
+      referralCode: 'MARKHOR-TV-OFFICIAL',
+      referralUrl: buildCampaignReferralUrl('markhor-tv-official'),
+      commissionRatePercent: 2,
+      attributionWindowDays: 30,
+      status: 'active',
+      createdByAdminEmail: 'partner@feviqo.com',
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      activityHistory: [
+        {
+          id: `act-markhor-init`,
+          timestamp: nowIso,
+          action: 'created',
+          actorEmail: 'partner@feviqo.com',
+          details:
+            'Registered partner referral campaign "Markhor TV Official" (slug: markhor-tv-official, code: MARKHOR-TV-OFFICIAL).',
+        },
+      ],
+    };
+    hydrated.unshift(markhorCampaign);
+    mutated = true;
+  }
+
+  if (mutated) {
+    writeJson(CAMPAIGNS_FILE, hydrated);
+  }
+  return hydrated;
 }
 
 // --- CAMPAIGN CRUD ---
 export function getCampaignById(campaignId: string): ReferralCampaign | null {
   const list = ensureDefaultReferralCampaigns();
   const found = list.find((c) => c.id === campaignId) || null;
-  if (found) {
-    found.referralUrl = buildCampaignReferralUrl(found.slug);
-  }
-  return found;
+  return found ? hydrateCampaignRecord(found) : null;
 }
 
 export function getCampaignBySlug(slug: string): ReferralCampaign | null {
   const clean = toSlugFormat(slug);
-  if (!clean) return null;
+  const cleanCode = deriveCampaignReferralCode(slug);
+  if (!clean && !cleanCode) return null;
   const list = ensureDefaultReferralCampaigns();
   const found =
     list.find((c) => c.slug.toLowerCase() === clean) ||
-    list.find((c) => toSlugFormat(c.partnerName) === clean) ||
-    list.find((c) => toSlugFormat(c.name) === clean) ||
+    (cleanCode
+      ? list.find((c) => deriveCampaignReferralCode(c.referralCode || c.slug) === cleanCode)
+      : undefined) ||
+    (clean ? list.find((c) => toSlugFormat(c.partnerName) === clean) : undefined) ||
+    (clean ? list.find((c) => toSlugFormat(c.name) === clean) : undefined) ||
     null;
-  if (found) {
-    found.referralUrl = buildCampaignReferralUrl(found.slug);
+  return found ? hydrateCampaignRecord(found) : null;
+}
+
+export function getUserCampaignAttributionForMember(memberId: string): {
+  campaignId: string;
+  campaignSlug: string;
+  campaignName: string;
+  partnerName: string;
+  referralCode: string;
+  referralUrl: string;
+  attributedAt: string;
+} | null {
+  if (!memberId) return null;
+  const userAttrs = readJson<UserCampaignAttribution[]>(USER_ATTRIBUTIONS_FILE, []);
+  const attr = userAttrs.find((u) => u.memberId === memberId);
+  if (!attr) return null;
+  const camp = getCampaignById(attr.campaignId) || getCampaignBySlug(attr.campaignSlug);
+  const slug = camp?.slug || attr.campaignSlug;
+  const referralCode = camp?.referralCode || deriveCampaignReferralCode(slug);
+  return {
+    campaignId: camp?.id || attr.campaignId,
+    campaignSlug: slug,
+    campaignName: camp?.name || attr.campaignName,
+    partnerName: camp?.partnerName || attr.campaignName || formatCampaignDisplayNameFromSlug(slug),
+    referralCode,
+    referralUrl: camp?.referralUrl || buildCampaignReferralUrl(slug),
+    attributedAt: attr.attributedAt,
+  };
+}
+
+export function resolveActiveCampaignForRequest(params: {
+  attributionToken?: string | null;
+  campaignSlug?: string | null;
+  referralCode?: string | null;
+  memberId?: string | null;
+}): {
+  campaignId: string;
+  campaignSlug: string;
+  campaignName: string;
+  partnerName: string;
+  referralCode: string;
+  referralUrl: string;
+} | null {
+  const parsedToken = verifyCampaignAttributionToken(params.attributionToken);
+  if (parsedToken) {
+    const camp = getCampaignById(parsedToken.campaignId) || getCampaignBySlug(parsedToken.campaignSlug);
+    if (camp && camp.status === 'active') {
+      return {
+        campaignId: camp.id,
+        campaignSlug: camp.slug,
+        campaignName: camp.name,
+        partnerName: camp.partnerName,
+        referralCode: camp.referralCode,
+        referralUrl: camp.referralUrl,
+      };
+    }
   }
-  return found;
+
+  for (const raw of [params.campaignSlug, params.referralCode]) {
+    if (!raw || !raw.trim()) continue;
+    const camp = getCampaignBySlug(raw);
+    if (camp && camp.status === 'active') {
+      return {
+        campaignId: camp.id,
+        campaignSlug: camp.slug,
+        campaignName: camp.name,
+        partnerName: camp.partnerName,
+        referralCode: camp.referralCode,
+        referralUrl: camp.referralUrl,
+      };
+    }
+  }
+
+  if (params.memberId) {
+    const saved = getUserCampaignAttributionForMember(params.memberId);
+    if (saved) {
+      return {
+        campaignId: saved.campaignId,
+        campaignSlug: saved.campaignSlug,
+        campaignName: saved.campaignName,
+        partnerName: saved.partnerName,
+        referralCode: saved.referralCode,
+        referralUrl: saved.referralUrl,
+      };
+    }
+  }
+  return null;
 }
 
 export function createReferralCampaign(params: {
@@ -511,6 +687,7 @@ export function createReferralCampaign(params: {
   partnerEmail?: string;
   description?: string;
   slug: string;
+  referralCode?: string;
   commissionRatePercent?: number;
   attributionWindowDays?: number;
   startDate?: string;
@@ -536,13 +713,40 @@ export function createReferralCampaign(params: {
     return { success: false, error: slugCheck.error, statusCode: 400 };
   }
 
-  const campaigns = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
+  const campaigns = ensureDefaultReferralCampaigns();
   if (campaigns.some((c) => c.slug.toLowerCase() === slugCheck.slug)) {
     return {
       success: false,
       error: `Referral slug "${slugCheck.slug}" is already used by another campaign.`,
       statusCode: 409,
     };
+  }
+
+  const customCodeRaw = String(params.referralCode || '').trim();
+  let referralCode: string;
+  if (customCodeRaw) {
+    const normalizedCustom = deriveCampaignReferralCode(customCodeRaw);
+    if (normalizedCustom.length < 3) {
+      return {
+        success: false,
+        error: 'Custom referral code must contain at least 3 letters or numbers.',
+        statusCode: 400,
+      };
+    }
+    if (
+      campaigns.some(
+        (c) => deriveCampaignReferralCode(c.referralCode || c.slug) === normalizedCustom
+      )
+    ) {
+      return {
+        success: false,
+        error: `Referral code "${normalizedCustom}" is already assigned to another campaign.`,
+        statusCode: 409,
+      };
+    }
+    referralCode = normalizedCustom;
+  } else {
+    referralCode = ensureUniqueCampaignReferralCode(slugCheck.slug, campaigns);
   }
 
   const rateRaw = params.commissionRatePercent !== undefined ? Number(params.commissionRatePercent) : 2;
@@ -569,6 +773,7 @@ export function createReferralCampaign(params: {
     partnerEmail: params.partnerEmail?.trim().toLowerCase() || undefined,
     description: String(params.description || '').trim().slice(0, 600),
     slug: slugCheck.slug,
+    referralCode,
     referralUrl: buildCampaignReferralUrl(slugCheck.slug),
     commissionRatePercent: rate,
     attributionWindowDays: windowDays,
@@ -585,7 +790,7 @@ export function createReferralCampaign(params: {
         timestamp: nowIso,
         action: 'created',
         actorEmail: params.admin.email,
-        details: `Created campaign "${name}" (slug: ${slugCheck.slug}, partner: ${partnerName}, commission: ${rate}%, window: ${windowDays}d).`,
+        details: `Created campaign "${name}" (slug: ${slugCheck.slug}, code: ${referralCode}, partner: ${partnerName}, commission: ${rate}%, window: ${windowDays}d).`,
       },
     ],
   };
@@ -609,6 +814,7 @@ export function updateReferralCampaign(params: {
     partnerEmail: string;
     description: string;
     slug: string;
+    referralCode: string;
     commissionRatePercent: number;
     attributionWindowDays: number;
     startDate: string | null;
@@ -617,13 +823,14 @@ export function updateReferralCampaign(params: {
   }>;
   admin: SafeAdmin;
 }): { success: true; campaign: ReferralCampaign } | { success: false; error: string; statusCode: number } {
-  const campaigns = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
+  const campaigns = ensureDefaultReferralCampaigns();
   const idx = campaigns.findIndex((c) => c.id === params.campaignId);
   if (idx === -1) {
     return { success: false, error: 'Referral campaign not found.', statusCode: 404 };
   }
 
-  const current = { ...campaigns[idx] };
+  const current = hydrateCampaignRecord({ ...campaigns[idx] });
+  const prevDefaultCode = deriveCampaignReferralCode(current.slug);
   const changes: string[] = [];
   const u = params.updates || {};
   const nowIso = new Date().toISOString();
@@ -677,6 +884,39 @@ export function updateReferralCampaign(params: {
       changes.push(`Slug changed from "${current.slug}" to "${slugCheck.slug}"`);
       current.slug = slugCheck.slug;
       current.referralUrl = buildCampaignReferralUrl(slugCheck.slug);
+      if (u.referralCode === undefined && current.referralCode === prevDefaultCode) {
+        current.referralCode = ensureUniqueCampaignReferralCode(slugCheck.slug, campaigns, current.id);
+      }
+    }
+  }
+
+  if (u.referralCode !== undefined) {
+    const rawCode = String(u.referralCode || '').trim();
+    const nextCode = rawCode
+      ? deriveCampaignReferralCode(rawCode)
+      : ensureUniqueCampaignReferralCode(current.slug, campaigns, current.id);
+    if (nextCode.length < 3) {
+      return {
+        success: false,
+        error: 'Referral code must contain at least 3 letters or numbers.',
+        statusCode: 400,
+      };
+    }
+    const codeConflict = campaigns.some(
+      (c) =>
+        c.id !== current.id &&
+        deriveCampaignReferralCode(c.referralCode || c.slug) === nextCode
+    );
+    if (codeConflict) {
+      return {
+        success: false,
+        error: `Referral code "${nextCode}" is already used by another campaign.`,
+        statusCode: 409,
+      };
+    }
+    if (nextCode !== current.referralCode) {
+      changes.push(`Referral code changed from "${current.referralCode}" to "${nextCode}"`);
+      current.referralCode = nextCode;
     }
   }
 
@@ -793,6 +1033,8 @@ export function trackCampaignVisit(params: {
   campaignName?: string;
   partnerName?: string;
   partnerSlug?: string;
+  referralCode?: string;
+  referralUrl?: string;
   referralPath?: string;
   visitorToken?: string;
   attributionToken?: string;
@@ -810,17 +1052,20 @@ export function trackCampaignVisit(params: {
   }
 
   let campaign = getCampaignBySlug(slugCheck.slug);
-  if (!campaign && !slugCheck.slug.startsWith('fev-')) {
+  if (!campaign && !slugCheck.slug.startsWith('fev-') && !/^fev[0-9a-z]{4,}$/i.test(slugCheck.slug)) {
     // Auto-recover partner referral campaign if a visitor clicks a valid partner link before manual creation or after container reset
     const displayName = formatCampaignDisplayNameFromSlug(slugCheck.slug) || slugCheck.slug;
     const partnerName = slugCheck.slug === 'kameer-play' ? 'Hafiz Akash' : displayName;
     const nowIso = new Date().toISOString();
+    const campaigns = ensureDefaultReferralCampaigns();
+    const uniqueCode = ensureUniqueCampaignReferralCode(slugCheck.slug, campaigns);
     const autoCampaign: ReferralCampaign = {
       id: slugCheck.slug === 'kameer-play' ? 'cmp-kameer-play' : `cmp-${slugCheck.slug}`,
       name: displayName,
       partnerName,
       description: `Partner referral campaign (${slugCheck.slug})`,
       slug: slugCheck.slug,
+      referralCode: uniqueCode,
       referralUrl: buildCampaignReferralUrl(slugCheck.slug),
       commissionRatePercent: 2,
       attributionWindowDays: 30,
@@ -834,11 +1079,10 @@ export function trackCampaignVisit(params: {
           timestamp: nowIso,
           action: 'created',
           actorEmail: 'partner@feviqo.com',
-          details: `Registered partner referral campaign "${displayName}" (slug: ${slugCheck.slug}).`,
+          details: `Registered partner referral campaign "${displayName}" (slug: ${slugCheck.slug}, code: ${uniqueCode}).`,
         },
       ],
     };
-    const campaigns = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
     campaigns.unshift(autoCampaign);
     writeJson(CAMPAIGNS_FILE, campaigns);
     mirrorCollectionDoc('referralCampaigns', autoCampaign.id, {
@@ -968,6 +1212,8 @@ export function trackCampaignVisit(params: {
     campaignName: campaign.name,
     partnerName: campaign.partnerName,
     partnerSlug: toSlugFormat(campaign.partnerName) || campaign.slug,
+    referralCode: campaign.referralCode || deriveCampaignReferralCode(campaign.slug),
+    referralUrl: campaign.referralUrl || buildCampaignReferralUrl(campaign.slug),
     referralPath: `/membership/${campaign.slug}`,
     visitorToken: signedVisitorToken,
     attributionToken,
@@ -1838,6 +2084,7 @@ export function mergeCampaignCloudSnapshot(payload: {
       const existing = byId.get(inc.id) || bySlug.get(slugLower);
       const normalizedInc: ReferralCampaign = {
         ...inc,
+        referralCode: deriveCampaignReferralCode(inc.referralCode || inc.slug),
         referralUrl: buildCampaignReferralUrl(inc.slug),
         description: inc.description || '',
         commissionRatePercent: Number(inc.commissionRatePercent) || 2,
@@ -1859,6 +2106,7 @@ export function mergeCampaignCloudSnapshot(payload: {
             ...existing,
             ...normalizedInc,
             id: existing.id,
+            referralCode: deriveCampaignReferralCode(normalizedInc.referralCode || normalizedInc.slug),
             referralUrl: buildCampaignReferralUrl(normalizedInc.slug),
             activityHistory:
               normalizedInc.activityHistory.length >= (existing.activityHistory?.length || 0)
@@ -1975,15 +2223,18 @@ export function syncClientReferralVisits(
     if (!('slug' in slugCheck)) continue;
 
     let campaign = getCampaignBySlug(slugCheck.slug);
-    if (!campaign && !slugCheck.slug.startsWith('fev-')) {
+    if (!campaign && !slugCheck.slug.startsWith('fev-') && !/^fev[0-9a-z]{4,}$/i.test(slugCheck.slug)) {
       const displayName = formatCampaignDisplayNameFromSlug(slugCheck.slug) || slugCheck.slug;
       const nowIso = new Date().toISOString();
+      const allCamps = ensureDefaultReferralCampaigns();
+      const uniqueCode = ensureUniqueCampaignReferralCode(slugCheck.slug, allCamps);
       const autoCampaign: ReferralCampaign = {
         id: slugCheck.slug === 'kameer-play' ? 'cmp-kameer-play' : `cmp-${slugCheck.slug}`,
         name: displayName,
         partnerName: slugCheck.slug === 'kameer-play' ? 'Hafiz Akash' : displayName,
         description: `Partner referral campaign (${slugCheck.slug})`,
         slug: slugCheck.slug,
+        referralCode: uniqueCode,
         referralUrl: buildCampaignReferralUrl(slugCheck.slug),
         commissionRatePercent: 2,
         attributionWindowDays: 30,
@@ -1993,7 +2244,6 @@ export function syncClientReferralVisits(
         updatedAt: nowIso,
         activityHistory: [],
       };
-      const allCamps = readJson<ReferralCampaign[]>(CAMPAIGNS_FILE, []);
       allCamps.unshift(autoCampaign);
       writeJson(CAMPAIGNS_FILE, allCamps);
       campaign = autoCampaign;

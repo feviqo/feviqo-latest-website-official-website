@@ -41,7 +41,18 @@ export const SupportersLeaderboardSection: React.FC<SupportersLeaderboardSection
 
     const unsubscribe = subscribeToPublicSupportersLeaderboard((liveData) => {
       if (!mounted) return;
-      setData(liveData);
+      setData((prev) => {
+        if (!liveData) return prev;
+        if (
+          prev &&
+          prev.entries.length > 0 &&
+          liveData.enabled !== false &&
+          (!Array.isArray(liveData.entries) || liveData.entries.length === 0)
+        ) {
+          return prev;
+        }
+        return liveData;
+      });
       setLoading(false);
     });
 
@@ -52,13 +63,13 @@ export const SupportersLeaderboardSection: React.FC<SupportersLeaderboardSection
   }, []);
 
   // If explicitly disabled by admin, hide cleanly
-  if (!loading && data && !data.enabled) {
+  if (!loading && data && data.enabled === false) {
     return null;
   }
 
-  const entries = data?.entries || [];
-  const showSubtitle = data ? data.settings.showSubtitle : true;
-  const showBadges = data ? data.settings.showBadges : true;
+  const entries = Array.isArray(data?.entries) ? data.entries : [];
+  const showSubtitle = data?.settings?.showSubtitle ?? true;
+  const showBadges = data?.settings?.showBadges ?? true;
 
   const topOne = entries.find((e) => e.rank === 1);
   const topTwoThree = entries.filter((e) => e.rank === 2 || e.rank === 3);

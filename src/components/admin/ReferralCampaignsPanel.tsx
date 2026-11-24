@@ -80,6 +80,7 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
   const [createPartnerName, setCreatePartnerName] = useState('');
   const [createPartnerEmail, setCreatePartnerEmail] = useState('');
   const [createSlug, setCreateSlug] = useState('');
+  const [createReferralCode, setCreateReferralCode] = useState('');
   const [createDescription, setCreateDescription] = useState('');
   const [createRate, setCreateRate] = useState('2');
   const [createWindowDays, setCreateWindowDays] = useState('30');
@@ -93,6 +94,7 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
   const [editPartnerName, setEditPartnerName] = useState('');
   const [editPartnerEmail, setEditPartnerEmail] = useState('');
   const [editSlug, setEditSlug] = useState('');
+  const [editReferralCode, setEditReferralCode] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editRate, setEditRate] = useState('2');
   const [editWindowDays, setEditWindowDays] = useState('30');
@@ -174,6 +176,9 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
           setEditPartnerName(res.campaign.partnerName);
           setEditPartnerEmail(res.campaign.partnerEmail || '');
           setEditSlug(res.campaign.slug);
+          setEditReferralCode(
+            res.campaign.referralCode || res.campaign.slug.toUpperCase().replace(/[^A-Z0-9_-]/g, '-').slice(0, 32)
+          );
           setEditDescription(res.campaign.description || '');
           setEditRate(String(res.campaign.commissionRatePercent));
           setEditWindowDays(String(res.campaign.attributionWindowDays));
@@ -286,6 +291,7 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
         partnerEmail: createPartnerEmail.trim() || undefined,
         description: createDescription.trim(),
         slug: createSlug.trim().toLowerCase(),
+        referralCode: createReferralCode.trim() || undefined,
         commissionRatePercent: Number(createRate),
         attributionWindowDays: Number(createWindowDays),
         startDate: createStartDate || undefined,
@@ -299,12 +305,17 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
         setCreatePartnerName('');
         setCreatePartnerEmail('');
         setCreateSlug('');
+        setCreateReferralCode('');
         setCreateDescription('');
         setCreateRate('2');
         setCreateWindowDays('30');
         setCreateStartDate('');
         setCreateEndDate('');
-        onSuccessMessage?.(`Campaign "${res.campaign.name}" created (${res.campaign.referralUrl}).`);
+        onSuccessMessage?.(
+          `Campaign "${res.campaign.name}" created (${res.campaign.referralUrl} · Code: ${
+            res.campaign.referralCode || res.campaign.slug.toUpperCase()
+          }).`
+        );
       } else {
         onErrorMessage?.(('error' in res ? res.error : undefined) || 'Unable to create campaign.');
       }
@@ -323,6 +334,7 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
         partnerName: editPartnerName.trim(),
         partnerEmail: editPartnerEmail.trim(),
         slug: editSlug.trim().toLowerCase(),
+        referralCode: editReferralCode.trim() || undefined,
         description: editDescription.trim(),
         commissionRatePercent: Number(editRate),
         attributionWindowDays: Number(editWindowDays),
@@ -484,6 +496,12 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/^-+|-+$/g, '');
+
+  const previewReferralCode = (createReferralCode.trim() || previewSlug || 'YOUR-CODE')
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32);
 
   const statusTextClass = (status: ReferralCampaignStatus) => {
     if (status === 'active') return 'text-emerald-700 font-semibold';
@@ -715,7 +733,7 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
                 required
                 value={createSlug}
                 onChange={(e) => setCreateSlug(e.target.value)}
-                placeholder="kameer-play"
+                placeholder="markhor-tv-official"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-mono focus:outline-none focus:border-[#0F172A]"
               />
               <div className="text-[11px] text-slate-500 mt-1 truncate">
@@ -723,6 +741,27 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
                 <span className="font-mono text-[#0F172A]">
                   https://feviqo.com/membership/{previewSlug || 'your-slug'}
                 </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1.5">
+                Unique Referral Code (Auto-Applied at Sign-In &amp; Checkout)
+              </label>
+              <input
+                type="text"
+                value={createReferralCode}
+                onChange={(e) =>
+                  setCreateReferralCode(
+                    e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 32)
+                  )
+                }
+                placeholder={previewReferralCode}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-mono uppercase focus:outline-none focus:border-[#0F172A]"
+              />
+              <div className="text-[11px] text-slate-500 mt-1 truncate">
+                Checkout Code:{' '}
+                <span className="font-mono font-bold text-[#16A34A]">{previewReferralCode}</span>
               </div>
             </div>
 
@@ -860,32 +899,59 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <code className="px-2 py-1 rounded bg-slate-100 text-[11px] font-mono text-[#0F172A] max-w-[240px] truncate">
-                            {campaign.referralUrl}
-                          </code>
-                          <button
-                            type="button"
-                            onClick={() => handleCopyUrl(campaign.referralUrl, campaign.id)}
-                            className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer"
-                            title="Copy referral URL"
-                          >
-                            {copiedSlug === campaign.id ? (
-                              <Check className="w-3.5 h-3.5 text-[#16A34A]" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={busyAction === `test-click-${campaign.id}`}
-                            onClick={() => handleTestReferralClick(campaign.slug, campaign.id)}
-                            className="px-2 py-1 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition disabled:opacity-50"
-                            title="Simulate / verify referral link click on this campaign"
-                          >
-                            <MousePointerClick className="w-3 h-3" />
-                            <span>Test Click</span>
-                          </button>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <code className="px-2 py-1 rounded bg-slate-100 text-[11px] font-mono text-[#0F172A] max-w-[240px] truncate">
+                              {campaign.referralUrl}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyUrl(campaign.referralUrl, campaign.id)}
+                              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 cursor-pointer"
+                              title="Copy referral URL"
+                            >
+                              {copiedSlug === campaign.id ? (
+                                <Check className="w-3.5 h-3.5 text-[#16A34A]" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyAction === `test-click-${campaign.id}`}
+                              onClick={() => handleTestReferralClick(campaign.slug, campaign.id)}
+                              className="px-2 py-1 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer transition disabled:opacity-50"
+                              title="Simulate / verify referral link click on this campaign"
+                            >
+                              <MousePointerClick className="w-3 h-3" />
+                              <span>Test Click</span>
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                            <span>Code:</span>
+                            <code className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 font-mono font-bold text-[#16A34A]">
+                              {campaign.referralCode ||
+                                campaign.slug.toUpperCase().replace(/[^A-Z0-9_-]/g, '-').slice(0, 32)}
+                            </code>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleCopyUrl(
+                                  campaign.referralCode ||
+                                    campaign.slug.toUpperCase().replace(/[^A-Z0-9_-]/g, '-').slice(0, 32),
+                                  `code-${campaign.id}`
+                                )
+                              }
+                              className="p-1 rounded hover:bg-slate-100 text-slate-500 hover:text-[#0F172A] cursor-pointer"
+                              title="Copy unique referral code"
+                            >
+                              {copiedSlug === `code-${campaign.id}` ? (
+                                <Check className="w-3 h-3 text-[#16A34A]" />
+                              ) : (
+                                <Copy className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-right tabular-nums">
@@ -1033,6 +1099,31 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
                       </button>
                     </div>
 
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                      <span className="text-[11px] font-semibold text-emerald-900">Code:</span>
+                      <code className="text-xs font-mono font-bold text-[#16A34A]">
+                        {detail.campaign.referralCode ||
+                          detail.campaign.slug.toUpperCase().replace(/[^A-Z0-9_-]/g, '-').slice(0, 32)}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopyUrl(
+                            detail.campaign.referralCode ||
+                              detail.campaign.slug.toUpperCase().replace(/[^A-Z0-9_-]/g, '-').slice(0, 32),
+                            `detail-code-${detail.campaign.id}`
+                          )
+                        }
+                        className="p-1 rounded hover:bg-emerald-100 text-emerald-800 cursor-pointer"
+                      >
+                        {copiedSlug === `detail-code-${detail.campaign.id}` ? (
+                          <Check className="w-3.5 h-3.5 text-[#16A34A]" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
+
                     <button
                       type="button"
                       disabled={busyAction === `test-click-${detail.campaign.id}`}
@@ -1131,6 +1222,21 @@ export const ReferralCampaignsPanel: React.FC<ReferralCampaignsPanelProps> = ({
                           value={editSlug}
                           onChange={(e) => setEditSlug(e.target.value)}
                           className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Unique Referral Code
+                        </label>
+                        <input
+                          type="text"
+                          value={editReferralCode}
+                          onChange={(e) =>
+                            setEditReferralCode(
+                              e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 32)
+                            )
+                          }
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white font-mono uppercase"
                         />
                       </div>
                       <div>

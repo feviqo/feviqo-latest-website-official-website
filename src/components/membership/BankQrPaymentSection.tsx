@@ -17,6 +17,8 @@ import {
   MemberAccountState,
   submitOrderPaymentProofFile,
   confirmZeroBalanceOrder,
+  getActiveReferralContext,
+  buildPublicReferralLinkFromSlug,
 } from '../../services/membershipService';
 import {
   compressProofImageToDataUrl,
@@ -114,6 +116,14 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
     ? Number(order.creditsUsedUsd ?? 0)
     : Number(order.creditsUsedPkr ?? 0);
   const hasSavings = promoDiscount > 0 || referralDiscount > 0 || creditsUsed > 0;
+  const activeReferralCtx = getActiveReferralContext();
+  const displayReferralCode =
+    order.referralCodeUsed || activeReferralCtx?.referralCode || member.referredByCode || '';
+  const displayReferralUrl = displayReferralCode
+    ? activeReferralCtx && activeReferralCtx.referralCode === displayReferralCode
+      ? activeReferralCtx.referralUrl
+      : buildPublicReferralLinkFromSlug(displayReferralCode)
+    : '';
   const formatCurrencyAmt = (val: number) =>
     isInternational ? `$${val.toFixed(2)} USD` : `PKR ${Math.round(val).toLocaleString()}`;
   const exactAmountLabel = formatCurrencyAmt(payableAmount);
@@ -293,6 +303,7 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
       : '',
     hasSavings ? `Original Price: ${formatCurrencyAmt(originalAmount)}` : '',
     order.promoCode ? `Promo Applied: ${order.promoCode} (-${formatCurrencyAmt(promoDiscount)})` : '',
+    displayReferralCode ? `Referral Code: ${displayReferralCode} (${displayReferralUrl})` : '',
     referralDiscount > 0 ? `Referral Discount: -${formatCurrencyAmt(referralDiscount)}` : '',
     creditsUsed > 0 ? `Wallet Credits Used: -${formatCurrencyAmt(creditsUsed)}` : '',
     `Expected Total: ${exactAmountLabel}`,
@@ -546,6 +557,24 @@ export const BankQrPaymentSection: React.FC<BankQrPaymentSectionProps> = ({
                   {exactAmountLabel}
                 </div>
               </div>
+              {displayReferralCode && (
+                <div className="sm:col-span-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="font-semibold text-emerald-950">
+                      {isUrdu ? 'منفرد ریفرل کوڈ (آرڈر سے منسلک)' : 'Referral Code Attached to Order'}
+                    </div>
+                    <div className="text-[11px] font-mono text-emerald-800 truncate" dir="ltr">
+                      {displayReferralUrl}
+                    </div>
+                  </div>
+                  <span
+                    dir="ltr"
+                    className="px-2.5 py-1 rounded-lg bg-white border border-emerald-300 font-mono text-xs font-bold text-[#16A34A] self-start sm:self-center shrink-0"
+                  >
+                    {displayReferralCode}
+                  </span>
+                </div>
+              )}
               {!isInternational && (optionalContributionPkr > 0 || typeof order.customerDeclaredAmountPkr === 'number') && (
                 <div className="sm:col-span-2 rounded-xl bg-zinc-50 border border-zinc-200 p-3.5 space-y-1.5 text-xs">
                   <div className="flex justify-between text-zinc-600">

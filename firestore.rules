@@ -1154,8 +1154,8 @@ service cloud.firestore {
     // Public PII-free FEVIQO Top Supporters Leaderboard (live updates for Membership Page)
     match /supportersLeaderboard/{entryId} {
       allow get: if isValidId(entryId)
-        && ((existing().active == true && existing().removed != true) || isAdmin());
-      allow list: if (resource.data.active == true && resource.data.removed != true) || isAdmin();
+        && ((existing().active == true && existing().removed == false) || isAdmin());
+      allow list: if (resource.data.active == true && resource.data.removed == false) || isAdmin();
       allow create: if isValidId(entryId) && isAdmin()
         && isValidSupporterLeaderboardEntry(incoming())
         && incoming().id == entryId

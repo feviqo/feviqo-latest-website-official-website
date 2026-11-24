@@ -285,10 +285,12 @@ export interface AdminSupportersLeaderboardOverview {
   stats: {
     totalEntries: number;
     activeEntries: number;
+    activeCount?: number;
     verifiedCustomerCount: number;
     manualFeaturedCount: number;
     removedCount: number;
     verifiedContributionTotalPkr: number;
+    totalVerifiedContributionsPkr?: number;
   };
 }
 
@@ -552,6 +554,14 @@ export interface MemberAccountState {
   notifications?: CustomerNotification[];
   unreadNotificationCount?: number;
   referralSummary?: MemberReferralSummary;
+  campaignAttribution?: {
+    campaignId: string;
+    campaignSlug: string;
+    campaignName: string;
+    partnerName: string;
+    referralCode: string;
+    referralUrl: string;
+  } | null;
   plans?: MembershipPlan[];
   publicConfig?: PublicMembershipConfig;
   gatewayStatus: PaymentGatewayStatus;
@@ -665,6 +675,7 @@ export interface AdminMembershipsOverview {
   plans?: MembershipPlan[];
   admins: SafeAdmin[];
   serverCloudConnected?: boolean;
+  supportersLeaderboardOverview?: AdminSupportersLeaderboardOverview;
 }
 
 const MEMBER_TOKEN_KEY = 'feviqo_member_token';
@@ -676,10 +687,33 @@ const REFERRAL_PARTNER_META_KEY = 'feviqo_referral_partner_meta_v1';
 
 export interface ReferralPartnerMeta {
   slug: string;
+  referralCode: string;
   campaignName?: string;
   partnerName?: string;
   referralPath: string;
+  referralUrl: string;
   updatedAt: string;
+}
+
+export interface ActiveReferralContext {
+  slug: string;
+  referralCode: string;
+  campaignName: string;
+  partnerName: string;
+  referralPath: string;
+  referralUrl: string;
+  source: 'url' | 'storage' | 'account';
+}
+
+export function buildPublicReferralLinkFromSlug(rawSlugOrCode?: string | null): string {
+  const clean = String(rawSlugOrCode || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 64);
+  return clean ? `https://feviqo.com/membership/${encodeURIComponent(clean)}` : 'https://feviqo.com/membership';
 }
 
 export function formatReferralPartnerDisplayName(rawSlug?: string | null): string {
@@ -723,9 +757,25 @@ export function getStoredReferralPartnerMeta(): ReferralPartnerMeta | null {
     if (typeof window === 'undefined') return null;
     const raw = window.localStorage.getItem(REFERRAL_PARTNER_META_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as ReferralPartnerMeta;
+    const parsed = JSON.parse(raw) as Partial<ReferralPartnerMeta>;
     if (!parsed || typeof parsed.slug !== 'string' || !parsed.slug) return null;
-    return parsed;
+    const cleanSlug = parsed.slug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    if (!cleanSlug) return null;
+    const referralCode = normalizeReferralInput(parsed.referralCode || cleanSlug);
+    return {
+      slug: cleanSlug,
+      referralCode,
+      campaignName: parsed.campaignName || formatReferralPartnerDisplayName(cleanSlug),
+      partnerName: parsed.partnerName || formatReferralPartnerDisplayName(cleanSlug),
+      referralPath: parsed.referralPath || `/membership/${cleanSlug}`,
+      referralUrl: parsed.referralUrl || buildPublicReferralLinkFromSlug(cleanSlug),
+      updatedAt: parsed.updatedAt || new Date().toISOString(),
+    };
   } catch {
     return null;
   }
@@ -742,8 +792,14 @@ export function setStoredReferralPartnerMeta(meta: Partial<ReferralPartnerMeta> 
       .replace(/^-|-$/g, '');
     if (!cleanSlug) return;
     const existing = getStoredReferralPartnerMeta();
+    const resolvedCode = normalizeReferralInput(
+      meta.referralCode ||
+        (existing?.slug === cleanSlug ? existing.referralCode : undefined) ||
+        cleanSlug
+    );
     const merged: ReferralPartnerMeta = {
       slug: cleanSlug,
+      referralCode: resolvedCode,
       campaignName:
         meta.campaignName ||
         (existing?.slug === cleanSlug ? existing.campaignName : undefined) ||
@@ -753,11 +809,99 @@ export function setStoredReferralPartnerMeta(meta: Partial<ReferralPartnerMeta> 
         (existing?.slug === cleanSlug ? existing.partnerName : undefined) ||
         formatReferralPartnerDisplayName(cleanSlug),
       referralPath: meta.referralPath || `/membership/${cleanSlug}`,
+      referralUrl: meta.referralUrl || buildPublicReferralLinkFromSlug(cleanSlug),
       updatedAt: new Date().toISOString(),
     };
     window.localStorage.setItem(REFERRAL_PARTNER_META_KEY, JSON.stringify(merged));
+    if (resolvedCode && resolvedCode.length >= 3) {
+      window.localStorage.setItem(REFERRAL_CODE_KEY, resolvedCode);
+    }
     window.dispatchEvent(new CustomEvent('feviqo-referral-partner-updated', { detail: merged }));
   } catch {}
+}
+
+export function getActiveReferralContext(account?: MemberAccountState | null): ActiveReferralContext | null {
+  try {
+    const urlSlugRaw = extractReferralSlugFromLocation();
+    const storedMeta = getStoredReferralPartnerMeta();
+    if (urlSlugRaw) {
+      const cleanUrlSlug = urlSlugRaw
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      if (cleanUrlSlug) {
+        const sameMeta = storedMeta && storedMeta.slug === cleanUrlSlug ? storedMeta : null;
+        const referralCode = normalizeReferralInput(sameMeta?.referralCode || urlSlugRaw);
+        return {
+          slug: cleanUrlSlug,
+          referralCode,
+          campaignName: sameMeta?.campaignName || formatReferralPartnerDisplayName(cleanUrlSlug),
+          partnerName: sameMeta?.partnerName || formatReferralPartnerDisplayName(cleanUrlSlug),
+          referralPath: `/membership/${cleanUrlSlug}`,
+          referralUrl: sameMeta?.referralUrl || buildPublicReferralLinkFromSlug(cleanUrlSlug),
+          source: 'url',
+        };
+      }
+    }
+
+    if (storedMeta && storedMeta.referralCode) {
+      return {
+        slug: storedMeta.slug,
+        referralCode: storedMeta.referralCode,
+        campaignName: storedMeta.campaignName || formatReferralPartnerDisplayName(storedMeta.slug),
+        partnerName: storedMeta.partnerName || formatReferralPartnerDisplayName(storedMeta.slug),
+        referralPath: storedMeta.referralPath || `/membership/${storedMeta.slug}`,
+        referralUrl: storedMeta.referralUrl || buildPublicReferralLinkFromSlug(storedMeta.slug),
+        source: 'storage',
+      };
+    }
+
+    const storedCode = getStoredReferralCode();
+    if (storedCode && storedCode.length >= 3) {
+      const slugFromCode = storedCode.toLowerCase();
+      return {
+        slug: slugFromCode,
+        referralCode: storedCode,
+        campaignName: formatReferralPartnerDisplayName(slugFromCode),
+        partnerName: formatReferralPartnerDisplayName(slugFromCode),
+        referralPath: `/membership/${slugFromCode}`,
+        referralUrl: buildPublicReferralLinkFromSlug(slugFromCode),
+        source: 'storage',
+      };
+    }
+
+    if (account?.campaignAttribution?.referralCode) {
+      const ca = account.campaignAttribution;
+      return {
+        slug: ca.campaignSlug,
+        referralCode: normalizeReferralInput(ca.referralCode || ca.campaignSlug),
+        campaignName: ca.campaignName || formatReferralPartnerDisplayName(ca.campaignSlug),
+        partnerName: ca.partnerName || ca.campaignName || formatReferralPartnerDisplayName(ca.campaignSlug),
+        referralPath: `/membership/${ca.campaignSlug}`,
+        referralUrl: ca.referralUrl || buildPublicReferralLinkFromSlug(ca.campaignSlug),
+        source: 'account',
+      };
+    }
+
+    if (account?.member?.referredByCode) {
+      const code = normalizeReferralInput(account.member.referredByCode);
+      if (code.length >= 3) {
+        const slugFromCode = code.toLowerCase();
+        return {
+          slug: slugFromCode,
+          referralCode: code,
+          campaignName: formatReferralPartnerDisplayName(slugFromCode),
+          partnerName: formatReferralPartnerDisplayName(slugFromCode),
+          referralPath: `/membership/${slugFromCode}`,
+          referralUrl: buildPublicReferralLinkFromSlug(slugFromCode),
+          source: 'account',
+        };
+      }
+    }
+  } catch {}
+  return null;
 }
 
 export function getStoredCampaignVisitorToken(): string {
@@ -865,6 +1009,8 @@ function memberHeaders(extra?: Record<string, string>): Record<string, string> {
   if (visitorToken) headers['X-Feviqo-Visitor-Token'] = visitorToken;
   const attrToken = getStoredCampaignAttrToken();
   if (attrToken) headers['X-Feviqo-Campaign-Attr'] = attrToken;
+  const activeRef = getActiveReferralContext();
+  if (activeRef?.slug) headers['X-Feviqo-Referral-Slug'] = activeRef.slug;
   return headers;
 }
 
@@ -1099,7 +1245,9 @@ export async function registerMemberAccount(payload: {
 }): Promise<
   ({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; email?: string; reason?: string; error: string }
 > {
-  const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
+  const activeRef = getActiveReferralContext();
+  const ref = normalizeReferralInput(payload.referralCode) || activeRef?.referralCode || getStoredReferralCode();
+  const attrToken = getStoredCampaignAttrToken() || undefined;
   const cachedSnapshot = getCachedMemberSnapshotForEmail(payload.email);
   const res = await fetch('/api/membership/register', {
     method: 'POST',
@@ -1108,8 +1256,10 @@ export async function registerMemberAccount(payload: {
     body: JSON.stringify({
       ...payload,
       referralCode: ref || undefined,
+      campaignSlug: activeRef?.slug || undefined,
       campaignVisitorToken: getStoredCampaignVisitorToken() || undefined,
-      campaignAttrToken: getStoredCampaignAttrToken() || undefined,
+      campaignAttributionToken: attrToken,
+      campaignAttrToken: attrToken,
       cachedSnapshot,
     }),
   });
@@ -1120,7 +1270,16 @@ export async function registerMemberAccount(payload: {
   if (data?.success && data?.token) {
     writeStoredToken(MEMBER_TOKEN_KEY, data.token);
     saveCachedMemberAccountState(data);
-    if (ref) clearStoredReferralCode();
+    if (data?.campaignAttribution?.campaignSlug) {
+      setStoredReferralPartnerMeta({
+        slug: data.campaignAttribution.campaignSlug,
+        referralCode: data.campaignAttribution.referralCode,
+        campaignName: data.campaignAttribution.campaignName,
+        partnerName: data.campaignAttribution.partnerName,
+        referralPath: `/membership/${data.campaignAttribution.campaignSlug}`,
+        referralUrl: data.campaignAttribution.referralUrl,
+      });
+    }
   }
   return data;
 }
@@ -1128,9 +1287,13 @@ export async function registerMemberAccount(payload: {
 export async function loginMemberAccount(payload: {
   email: string;
   password: string;
+  referralCode?: string;
 }): Promise<
   ({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; email?: string; reason?: string; error: string }
 > {
+  const activeRef = getActiveReferralContext();
+  const ref = normalizeReferralInput(payload.referralCode) || activeRef?.referralCode || getStoredReferralCode();
+  const attrToken = getStoredCampaignAttrToken() || undefined;
   const cachedSnapshot = getCachedMemberSnapshotForEmail(payload.email);
   const res = await fetch('/api/membership/login', {
     method: 'POST',
@@ -1138,6 +1301,11 @@ export async function loginMemberAccount(payload: {
     credentials: 'include',
     body: JSON.stringify({
       ...payload,
+      referralCode: ref || undefined,
+      campaignSlug: activeRef?.slug || undefined,
+      campaignVisitorToken: getStoredCampaignVisitorToken() || undefined,
+      campaignAttributionToken: attrToken,
+      campaignAttrToken: attrToken,
       cachedSnapshot,
     }),
   });
@@ -1163,7 +1331,9 @@ export async function authenticateMemberWithGoogle(payload: {
 }): Promise<
   ({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; email?: string; reason?: string; error: string }
 > {
-  const ref = normalizeReferralInput(payload.referralCode) || getStoredReferralCode();
+  const activeRef = getActiveReferralContext();
+  const ref = normalizeReferralInput(payload.referralCode) || activeRef?.referralCode || getStoredReferralCode();
+  const attrToken = getStoredCampaignAttrToken() || undefined;
   const cachedSnapshot = getCachedMemberSnapshotForEmail(payload.email);
   const res = await fetch('/api/membership/google-auth', {
     method: 'POST',
@@ -1172,8 +1342,10 @@ export async function authenticateMemberWithGoogle(payload: {
     body: JSON.stringify({
       ...payload,
       referralCode: ref || undefined,
+      campaignSlug: activeRef?.slug || undefined,
       campaignVisitorToken: getStoredCampaignVisitorToken() || undefined,
-      campaignAttrToken: getStoredCampaignAttrToken() || undefined,
+      campaignAttributionToken: attrToken,
+      campaignAttrToken: attrToken,
       cachedSnapshot,
     }),
   });
@@ -1184,6 +1356,16 @@ export async function authenticateMemberWithGoogle(payload: {
   if (data?.success && data?.token) {
     writeStoredToken(MEMBER_TOKEN_KEY, data.token);
     saveCachedMemberAccountState(data);
+    if (data?.campaignAttribution?.campaignSlug) {
+      setStoredReferralPartnerMeta({
+        slug: data.campaignAttribution.campaignSlug,
+        referralCode: data.campaignAttribution.referralCode,
+        campaignName: data.campaignAttribution.campaignName,
+        partnerName: data.campaignAttribution.partnerName,
+        referralPath: `/membership/${data.campaignAttribution.campaignSlug}`,
+        referralUrl: data.campaignAttribution.referralUrl,
+      });
+    }
   }
   return data;
 }
@@ -1193,7 +1375,9 @@ export async function updateMemberPhone(
   referralCode?: string,
   options?: { whatsappOptIn?: boolean; promotionalOptIn?: boolean }
 ): Promise<({ success: true } & MemberAccountState) | { success: false; code?: string; blocked?: boolean; error: string }> {
-  const ref = normalizeReferralInput(referralCode) || getStoredReferralCode();
+  const activeRef = getActiveReferralContext();
+  const ref = normalizeReferralInput(referralCode) || activeRef?.referralCode || getStoredReferralCode();
+  const attrToken = getStoredCampaignAttrToken() || undefined;
   const res = await fetch('/api/membership/profile/phone', {
     method: 'POST',
     headers: memberHeaders({ 'Content-Type': 'application/json' }),
@@ -1201,6 +1385,9 @@ export async function updateMemberPhone(
     body: JSON.stringify({
       phone,
       referralCode: ref || undefined,
+      campaignSlug: activeRef?.slug || undefined,
+      campaignAttributionToken: attrToken,
+      campaignAttrToken: attrToken,
       whatsappOptIn: options?.whatsappOptIn === true,
       promotionalOptIn: options?.promotionalOptIn === true,
     }),
@@ -1211,9 +1398,6 @@ export async function updateMemberPhone(
   }
   if (data?.success) {
     saveCachedMemberAccountState(data);
-    if (ref) {
-      clearStoredReferralCode();
-    }
   }
   return data;
 }
@@ -1255,6 +1439,7 @@ export async function createMembershipCheckout(payload: {
   visitorCountryCode?: string;
   indicativeLocalDisplay?: string;
   promoCode?: string;
+  referralCode?: string;
   applyCredits?: boolean;
   optionalContributionPkr?: number;
   leaderboardDisplayName?: string;
@@ -1272,14 +1457,20 @@ export async function createMembershipCheckout(payload: {
   gatewayStatus?: PaymentGatewayStatus;
   account?: MemberAccountState;
 }> {
+  const activeRef = getActiveReferralContext();
+  const attrToken = getStoredCampaignAttrToken() || undefined;
+  const resolvedCode = normalizeReferralInput(payload.referralCode) || activeRef?.referralCode || getStoredReferralCode();
   const res = await fetch('/api/membership/checkout', {
     method: 'POST',
     headers: memberHeaders({ 'Content-Type': 'application/json' }),
     credentials: 'include',
     body: JSON.stringify({
       ...payload,
+      referralCode: resolvedCode || undefined,
+      campaignSlug: activeRef?.slug || undefined,
       campaignVisitorToken: getStoredCampaignVisitorToken() || undefined,
-      campaignAttrToken: getStoredCampaignAttrToken() || undefined,
+      campaignAttributionToken: attrToken,
+      campaignAttrToken: attrToken,
     }),
   });
   const data = await parseJsonSafe(res);
@@ -1580,6 +1771,8 @@ export async function trackReferralCampaignVisit(
   campaignName?: string;
   partnerName?: string;
   partnerSlug?: string;
+  referralCode?: string;
+  referralUrl?: string;
   referralPath?: string;
   isNewUniqueVisitor?: boolean;
   ignoredReason?: string;
@@ -1598,7 +1791,9 @@ export async function trackReferralCampaignVisit(
     if (cleanInputSlug) {
       setStoredReferralPartnerMeta({
         slug: cleanInputSlug,
+        referralCode: normalizeReferralInput(slug || cleanInputSlug),
         referralPath: `/membership/${cleanInputSlug}`,
+        referralUrl: buildPublicReferralLinkFromSlug(cleanInputSlug),
       });
       appendLocalReferralVisit(cleanInputSlug, resolvedLandingPage);
     }
@@ -1642,12 +1837,15 @@ export async function trackReferralCampaignVisit(
     if (data?.attributionToken) {
       setStoredCampaignAttrToken(data.attributionToken);
     }
-    if (data?.campaignSlug || data?.campaignName || data?.partnerName) {
+    if (data?.campaignSlug || data?.campaignName || data?.partnerName || data?.referralCode) {
+      const resolvedSlug = cleanInputSlug || data.campaignSlug || slug;
       setStoredReferralPartnerMeta({
-        slug: cleanInputSlug || data.campaignSlug,
+        slug: resolvedSlug,
+        referralCode: data.referralCode || normalizeReferralInput(resolvedSlug),
         campaignName: data.campaignName,
         partnerName: data.partnerName,
-        referralPath: `/membership/${cleanInputSlug || data.campaignSlug}`,
+        referralPath: `/membership/${resolvedSlug}`,
+        referralUrl: data.referralUrl || buildPublicReferralLinkFromSlug(resolvedSlug),
       });
     }
     return data;
@@ -2471,6 +2669,7 @@ export interface ReferralCampaign {
   partnerEmail?: string;
   description: string;
   slug: string;
+  referralCode?: string;
   referralUrl: string;
   commissionRatePercent: number;
   attributionWindowDays: number;
@@ -2488,6 +2687,7 @@ export interface ReferralCampaignAnalytics {
   campaignName: string;
   partnerName: string;
   slug: string;
+  referralCode?: string;
   referralUrl: string;
   status: ReferralCampaignStatus;
   commissionRatePercent: number;
@@ -2774,6 +2974,7 @@ export async function createAdminReferralCampaign(payload: {
   partnerEmail?: string;
   description?: string;
   slug: string;
+  referralCode?: string;
   commissionRatePercent?: number;
   attributionWindowDays?: number;
   startDate?: string;
@@ -2835,6 +3036,7 @@ export async function updateAdminReferralCampaign(
     partnerEmail: string;
     description: string;
     slug: string;
+    referralCode: string;
     commissionRatePercent: number;
     attributionWindowDays: number;
     startDate: string;

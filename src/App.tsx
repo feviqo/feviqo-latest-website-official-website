@@ -190,7 +190,9 @@ export default function App() {
           setStoredReferralCode(refSlugRaw);
           setStoredReferralPartnerMeta({
             slug: cleanSlug,
+            referralCode: refSlugRaw.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 32),
             referralPath: `/membership/${cleanSlug}`,
+            referralUrl: `https://feviqo.com/membership/${encodeURIComponent(cleanSlug)}`,
           });
 
           // Preserve referral partner name in the browser URL bar: /membership/<partner-slug>

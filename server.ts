@@ -126,6 +126,8 @@ import {
   updateMemberPhoneByAdmin,
   ensurePermanentBlockedPhoneEnforcement,
   readDeletedTombstones,
+  findMemberByReferralCode,
+  setMemberCampaignReferralCodeIfEmpty,
   LifecycleEmailDispatcher,
   SafeAdmin,
 } from './server/membershipStore';
@@ -149,6 +151,9 @@ import {
 import {
   trackCampaignVisit,
   getCampaignBySlug,
+  deriveCampaignReferralCode,
+  getUserCampaignAttributionForMember,
+  resolveActiveCampaignForRequest,
   attachCampaignAttributionToUser,
   recordCheckoutAttemptForMember,
   createReferralCampaign,
@@ -3235,11 +3240,23 @@ function extractCampaignAttributionFromRequest(req: express.Request): {
   visitorToken?: string;
   attributionToken?: string;
   campaignSlug?: string;
+  referralCode?: string;
 } {
   const cookies = parseCookiesMap(req);
   const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, any>;
   const visitorHeader = req.headers['x-feviqo-visitor-token'];
   const attrHeader = req.headers['x-feviqo-campaign-attr'];
+  const slugHeader = req.headers['x-feviqo-referral-slug'];
+  const rawReferralCode =
+    (typeof body.referralCode === 'string' && body.referralCode.trim()) ||
+    (typeof body.referralCodeUsed === 'string' && body.referralCodeUsed.trim()) ||
+    undefined;
+  const rawSlug =
+    (typeof body.campaignSlug === 'string' && body.campaignSlug.trim()) ||
+    (typeof slugHeader === 'string' && slugHeader.trim()) ||
+    (typeof req.query.ref === 'string' && req.query.ref.trim()) ||
+    undefined;
+  const matchedFromCode = !rawSlug && rawReferralCode ? getCampaignBySlug(rawReferralCode) : null;
   return {
     visitorToken:
       (typeof visitorHeader === 'string' && visitorHeader.trim()) ||
@@ -3249,13 +3266,41 @@ function extractCampaignAttributionFromRequest(req: express.Request): {
     attributionToken:
       (typeof attrHeader === 'string' && attrHeader.trim()) ||
       (typeof body.campaignAttributionToken === 'string' && body.campaignAttributionToken.trim()) ||
+      (typeof body.campaignAttrToken === 'string' && body.campaignAttrToken.trim()) ||
       cookies[CAMPAIGN_ATTR_COOKIE] ||
       undefined,
-    campaignSlug:
-      (typeof body.campaignSlug === 'string' && body.campaignSlug.trim()) ||
-      (typeof req.query.ref === 'string' && req.query.ref.trim()) ||
-      undefined,
+    campaignSlug: rawSlug || matchedFromCode?.slug || undefined,
+    referralCode: rawReferralCode || undefined,
   };
+}
+
+function attachActiveReferralToAccountState<T extends Record<string, any> | null>(
+  account: T,
+  req: express.Request
+): T {
+  if (!account || !account.member?.id) return account;
+  const campCtx = extractCampaignAttributionFromRequest(req);
+  const activeCamp =
+    resolveActiveCampaignForRequest({
+      attributionToken: campCtx.attributionToken,
+      campaignSlug: campCtx.campaignSlug,
+      referralCode: campCtx.referralCode,
+      memberId: account.member.id,
+    }) || getUserCampaignAttributionForMember(account.member.id);
+  if (activeCamp) {
+    return {
+      ...account,
+      campaignAttribution: {
+        campaignId: activeCamp.campaignId,
+        campaignSlug: activeCamp.campaignSlug,
+        campaignName: activeCamp.campaignName,
+        partnerName: activeCamp.partnerName,
+        referralCode: activeCamp.referralCode,
+        referralUrl: activeCamp.referralUrl,
+      },
+    };
+  }
+  return account;
 }
 
 const memoryImageUpload = multer({
@@ -3598,14 +3643,23 @@ app.post('/api/membership/register', (req, res) => {
       });
     }
     const campCtx = extractCampaignAttributionFromRequest(req);
-    attachCampaignAttributionToUser({
+    const campAttrResult = attachCampaignAttributionToUser({
       member: result.member,
       attributionToken: campCtx.attributionToken,
       campaignSlug: campCtx.campaignSlug,
     });
+    const activeCamp = resolveActiveCampaignForRequest({
+      attributionToken: campCtx.attributionToken,
+      campaignSlug: campCtx.campaignSlug || campAttrResult.attribution?.campaignSlug,
+      referralCode: campCtx.referralCode,
+      memberId: result.member.id,
+    });
+    if (activeCamp?.referralCode) {
+      setMemberCampaignReferralCodeIfEmpty(result.member.id, activeCamp.referralCode);
+    }
     autoEnableMemberWhatsAppPreferences(result.member, 'account_registration');
     setMemberSessionCookie(req, res, result.token);
-    const account = getMemberAccountState(result.member.id);
+    const account = attachActiveReferralToAccountState(getMemberAccountState(result.member.id), req);
     // Fire-and-forget WhatsApp registration automation (never blocks signup)
     void emitAutomationEvent('user.registered', {
       memberId: result.member.id,
@@ -3643,9 +3697,17 @@ app.post('/api/membership/login', (req, res) => {
         error: result.error,
       });
     }
+    const campCtx = extractCampaignAttributionFromRequest(req);
+    if (campCtx.attributionToken || campCtx.campaignSlug) {
+      attachCampaignAttributionToUser({
+        member: result.member,
+        attributionToken: campCtx.attributionToken,
+        campaignSlug: campCtx.campaignSlug,
+      });
+    }
     autoEnableMemberWhatsAppPreferences(result.member, 'account_signin');
     setMemberSessionCookie(req, res, result.token);
-    const account = getMemberAccountState(result.member.id);
+    const account = attachActiveReferralToAccountState(getMemberAccountState(result.member.id), req);
     return res.json({
       success: true,
       token: result.token,
@@ -3688,13 +3750,24 @@ app.post('/api/membership/google-auth', async (req, res) => {
       });
     }
     autoEnableMemberWhatsAppPreferences(result.member, 'google_signin');
-    if (Date.now() - Date.parse(result.member.createdAt) < 10 * 60 * 1000) {
-      const campCtx = extractCampaignAttributionFromRequest(req);
-      attachCampaignAttributionToUser({
+    const campCtx = extractCampaignAttributionFromRequest(req);
+    if (campCtx.attributionToken || campCtx.campaignSlug) {
+      const campAttrResult = attachCampaignAttributionToUser({
         member: result.member,
         attributionToken: campCtx.attributionToken,
         campaignSlug: campCtx.campaignSlug,
       });
+      const activeCamp = resolveActiveCampaignForRequest({
+        attributionToken: campCtx.attributionToken,
+        campaignSlug: campCtx.campaignSlug || campAttrResult.attribution?.campaignSlug,
+        referralCode: campCtx.referralCode,
+        memberId: result.member.id,
+      });
+      if (activeCamp?.referralCode) {
+        setMemberCampaignReferralCodeIfEmpty(result.member.id, activeCamp.referralCode);
+      }
+    }
+    if (Date.now() - Date.parse(result.member.createdAt) < 10 * 60 * 1000) {
       void emitAutomationEvent('user.registered', {
         memberId: result.member.id,
         fullName: result.member.fullName,
@@ -3706,7 +3779,7 @@ app.post('/api/membership/google-auth', async (req, res) => {
       });
     }
     setMemberSessionCookie(req, res, result.token);
-    const account = getMemberAccountState(result.member.id);
+    const account = attachActiveReferralToAccountState(getMemberAccountState(result.member.id), req);
     return res.json({
       success: true,
       token: result.token,
@@ -3757,7 +3830,7 @@ app.get('/api/membership/account', (req, res) => {
   if (!memberId) {
     return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Not signed in.' });
   }
-  const account = getMemberAccountState(memberId);
+  const account = attachActiveReferralToAccountState(getMemberAccountState(memberId), req);
   if (!account) {
     return res.status(401).json({ success: false, code: 'UNAUTHENTICATED', error: 'Account not found.' });
   }
@@ -3823,7 +3896,28 @@ app.post('/api/membership/profile/phone', (req, res) => {
         error: result.error,
       });
     }
-    const account = getMemberAccountState(memberId);
+    const campCtx = extractCampaignAttributionFromRequest(req);
+    const accountBase = getMemberAccountState(memberId);
+    if (!accountBase) {
+      return res.status(404).json({ success: false, error: 'Account not found.' });
+    }
+    if (campCtx.attributionToken || campCtx.campaignSlug) {
+      attachCampaignAttributionToUser({
+        member: accountBase.member,
+        attributionToken: campCtx.attributionToken,
+        campaignSlug: campCtx.campaignSlug,
+      });
+      const activeCamp = resolveActiveCampaignForRequest({
+        attributionToken: campCtx.attributionToken,
+        campaignSlug: campCtx.campaignSlug,
+        referralCode: campCtx.referralCode,
+        memberId,
+      });
+      if (activeCamp?.referralCode) {
+        setMemberCampaignReferralCodeIfEmpty(memberId, activeCamp.referralCode);
+      }
+    }
+    const account = attachActiveReferralToAccountState(getMemberAccountState(memberId), req);
     if (!account) {
       return res.status(404).json({ success: false, error: 'Account not found.' });
     }
@@ -3879,6 +3973,7 @@ app.post('/api/membership/checkout', async (req, res) => {
       visitorCountryCode,
       indicativeLocalDisplay,
       promoCode,
+      referralCode,
       applyCredits,
       optionalContributionPkr,
       leaderboardDisplayName,
@@ -3887,6 +3982,18 @@ app.post('/api/membership/checkout', async (req, res) => {
     const proto = (req.headers['x-forwarded-proto'] as string) || req.protocol || 'http';
     const host = req.headers.host || 'localhost:3000';
     const originUrl = `${proto}://${host}`;
+    const campCtx = extractCampaignAttributionFromRequest(req);
+    const activeCamp = resolveActiveCampaignForRequest({
+      attributionToken: campCtx.attributionToken,
+      campaignSlug: campCtx.campaignSlug,
+      referralCode: campCtx.referralCode || (typeof referralCode === 'string' ? referralCode : undefined),
+      memberId,
+    });
+    const resolvedCheckoutReferralCode =
+      activeCamp?.referralCode ||
+      (typeof referralCode === 'string' && referralCode.trim()
+        ? deriveCampaignReferralCode(referralCode)
+        : undefined);
 
     const result = await createMembershipCheckoutOrder({
       memberId,
@@ -3899,6 +4006,7 @@ app.post('/api/membership/checkout', async (req, res) => {
       visitorCountryCode,
       indicativeLocalDisplay,
       promoCode: typeof promoCode === 'string' ? promoCode : undefined,
+      referralCodeUsed: resolvedCheckoutReferralCode,
       applyCredits: Boolean(applyCredits),
       optionalContributionPkr,
       leaderboardDisplayName: typeof leaderboardDisplayName === 'string' ? leaderboardDisplayName : undefined,
@@ -3913,14 +4021,13 @@ app.post('/api/membership/checkout', async (req, res) => {
       });
     }
 
-    const account = getMemberAccountState(memberId);
+    const account = attachActiveReferralToAccountState(getMemberAccountState(memberId), req);
     if (account?.member) {
-      const campCtx = extractCampaignAttributionFromRequest(req);
       recordCheckoutAttemptForMember({
         member: account.member,
         order: result.order,
         attributionToken: campCtx.attributionToken,
-        campaignSlug: campCtx.campaignSlug,
+        campaignSlug: campCtx.campaignSlug || activeCamp?.campaignSlug,
       });
       const amountDisplay =
         result.order.currency === 'USD'
@@ -4664,6 +4771,8 @@ app.post(['/api/referral-campaigns/track', '/api/membership/partner-session'], (
     }
 
     const matchedCampaign = !tracked.campaignName ? getCampaignBySlug(String(slug || '')) : null;
+    const matchedMember =
+      !tracked.tracked && !matchedCampaign ? findMemberByReferralCode(String(slug || '')) : null;
     return res.json({
       success: true,
       ...(matchedCampaign
@@ -4672,7 +4781,18 @@ app.post(['/api/referral-campaigns/track', '/api/membership/partner-session'], (
             campaignSlug: matchedCampaign.slug,
             campaignName: matchedCampaign.name,
             partnerName: matchedCampaign.partnerName,
+            referralCode: matchedCampaign.referralCode || deriveCampaignReferralCode(matchedCampaign.slug),
+            referralUrl: matchedCampaign.referralUrl,
             referralPath: `/membership/${matchedCampaign.slug}`,
+          }
+        : matchedMember
+        ? {
+            campaignSlug: matchedMember.referralCode,
+            campaignName: `${matchedMember.fullName} Referral`,
+            partnerName: matchedMember.fullName,
+            referralCode: matchedMember.referralCode,
+            referralUrl: `https://feviqo.com/membership/${encodeURIComponent(matchedMember.referralCode)}`,
+            referralPath: `/membership/${matchedMember.referralCode}`,
           }
         : {}),
       ...tracked,
@@ -5049,6 +5169,7 @@ app.post('/api/admin/memberships/supporters-leaderboard/seed-featured', requireA
     return res.status(201).json({
       success: true,
       created: result.created,
+      skippedCount: result.skippedCount,
       ...getAdminSupportersLeaderboardOverview(),
     });
   } catch {
@@ -5727,6 +5848,7 @@ function mapCampaignForClient(c: any) {
     partnerEmail: c.partnerEmail,
     description: c.description || '',
     slug: c.slug,
+    referralCode: c.referralCode || deriveCampaignReferralCode(c.slug),
     referralUrl: c.referralUrl,
     commissionRatePercent: c.commissionRatePercent,
     attributionWindowDays: c.attributionWindowDays,
@@ -5746,6 +5868,7 @@ function mapAnalyticsForClient(c: any, stats: any) {
     campaignName: c.name,
     partnerName: c.partnerName,
     slug: c.slug,
+    referralCode: c.referralCode || deriveCampaignReferralCode(c.slug),
     referralUrl: c.referralUrl,
     status: c.status,
     commissionRatePercent: c.commissionRatePercent,
@@ -5907,6 +6030,7 @@ app.post('/api/admin/referral-campaigns', requireAdmin, (req: any, res) => {
       partnerEmail: body.partnerEmail,
       description: body.description,
       slug: body.slug,
+      referralCode: typeof body.referralCode === 'string' ? body.referralCode : undefined,
       commissionRatePercent:
         body.commissionRatePercent !== undefined ? Number(body.commissionRatePercent) : 2,
       attributionWindowDays:
