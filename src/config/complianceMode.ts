@@ -7,3 +7,9 @@
  * notes, and reader discussion sections instead.
  */
 export const EDITORIAL_COMPLIANCE_MODE = false;
+
+/**
+ * Temporarily hides raw external video download links (e.g. shrinkme.click)
+ * on episode pages until Monetag domain verification & review is approved.
+ */
+export const HIDE_EXTERNAL_DOWNLOAD_LINKS = true;

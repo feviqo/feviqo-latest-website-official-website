@@ -208,6 +208,7 @@ export type AppRoute =
   | 'privacy'
   | 'terms'
   | 'dmca'
+  | 'disclaimer'
   | 'contact';
 
 export interface PreselectedPlan {

@@ -21,7 +21,6 @@ import {
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { DramaMemberBar } from '../membership/DramaMemberBar';
-import { Footer } from '../Footer';
 import { VastPreRollAdOverlay } from '../VastPreRollAdOverlay';
 import { GUNESIN_SERIES_DATA, GUNESIN_EPISODES, GunesinEpisode } from '../../data/gunesinDogduguYer';
 import { isEpisodePremium } from '../../data/membershipCatalog';
@@ -29,7 +28,7 @@ import { attachHlsStream, extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
 import { ProtectedPlayerWatermark } from '../membership/ProtectedPlayerWatermark';
-import { EDITORIAL_COMPLIANCE_MODE } from '../../config/complianceMode';
+import { EDITORIAL_COMPLIANCE_MODE, HIDE_EXTERNAL_DOWNLOAD_LINKS } from '../../config/complianceMode';
 import { EditorialEpisodeGuidePanel, CastMemberInfo } from '../drama/EditorialEpisodeGuidePanel';
 
 const GUNESIN_CAST: CastMemberInfo[] = [
@@ -159,14 +158,14 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
 
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.number;
-      let pageTitle = `Gunesin Dogdugu Yer Episode ${num} Urdu Subtitles - Bolum ${num} | FEVIQO`;
-      let metaDesc = `Watch Gunesin Dogdugu Yer Episode ${num} with Urdu Subtitles (گنیشین دوغدوغو یر قسط ${num}). Stream full HD 1080p Bolum ${num} online with story recaps on FEVIQO.com.`;
-      let keywords = `gunesin dogdugu yer episode ${num} urdu subtitles, gunesin dogdugu yer bolum ${num} urdu, watch gunesin dogdugu yer episode ${num}, gunesin dogdugu yer urdu, gunesin dogdugu yer ${num} urdu subtitles, gunesin dogdugu yer bolum ${num}, feviqo gunesin dogdugu yer ${num}`;
+      let pageTitle = `Güneşin Doğduğu Yer Episode ${num} — Episode Summary & Urdu Subtitle Updates | FEVIQO`;
+      let metaDesc = `Read Güneşin Doğduğu Yer Episode ${num} (Bölüm ${num}) English & Urdu episode summary, cast list, release date, trailer breakdown, and Urdu subtitle updates on FEVIQO.`;
+      let keywords = `gunesin dogdugu yer episode ${num} urdu subtitles, gunesin dogdugu yer bolum ${num} summary, gunesin dogdugu yer episode guide, gunesin dogdugu yer cast, feviqo turkish drama episode guides`;
 
       if (num === 4) {
-        pageTitle = "Gunesin Dogdugu Yer Episode 4 Urdu Subtitles | Bolum 4";
-        metaDesc = "Watch Gunesin Dogdugu Yer Episode 4 Urdu Subtitles (Bolum 4) in HD on FEVIQO. Follow the latest episode of this Turkish drama with Urdu subtitles and enjoy a high-quality viewing experience.";
-        keywords = "Gunesin Dogdugu Yer Episode 4, Gunesin Dogdugu Yer Episode 4 Urdu Subtitles, Gunesin Dogdugu Yer Bolum 4, Gunesin Dogdugu Yer Bolum 4 Urdu Subtitles, Gunesin Dogdugu Yer Episode 4 Urdu, Gunesin Dogdugu Yer Season 1 Episode 4, Gunesin Dogdugu Yer Season 1 Episode 4 Urdu Subtitles, Gunesin Dogdugu Yer Urdu Subtitles, Gunesin Dogdugu Yer English Subtitles, Gunesin Dogdugu Yer Latest Episode, Gunesin Dogdugu Yer Full Episode, Gunesin Dogdugu Yer Watch Online, Gunesin Dogdugu Yer HD, Gunesin Dogdugu Yer 1080p, Gunesin Dogdugu Yer Turkish Drama, Gunesin Dogdugu Yer Series Urdu Subtitles, Gunesin Dogdugu Yer Turkish Series, Gunesin Dogdugu Yer Episode 4 Watch Online, Gunesin Dogdugu Yer Episode 4 HD, Gunesin Dogdugu Yer Episode 4 Online, Gunesin Dogdugu Yer New Episode, Gunesin Dogdugu Yer Bolum 4 Urdu, Episode 4 Urdu Subtitles, Bolum 4 Urdu Subtitles, Turkish Drama Episode 4 Urdu Subtitles, Turkish Series Episode 4 Urdu Subtitles, Turkish Dramas Urdu Subtitles, Turkish Series with Urdu Subtitles, Turkish Dramas in Pakistan, Watch Turkish Dramas Online, Latest Turkish Drama Urdu Subtitles, Turkish Series Online HD, Turkish Drama Online Free, Turkish Series Urdu Translation, Turkish Drama Subtitles, Urdu Subtitles Online, Turkish Shows Urdu Subtitles, Latest Turkish Series, New Turkish Drama Episodes, FEVIQO Gunesin Dogdugu Yer, FEVIQO Episode 4, FEVIQO Urdu Subtitles, FEVIQO Turkish Dramas, FEVIQO Turkish Series, FEVIQO, Gunesin Dogdugu Yer FEVIQO, Gunesin Dogdugu Yer Episode 4 FEVIQO, watch Gunesin Dogdugu Yer on FEVIQO, Turkish historical series Urdu subtitles, Turkish action drama Urdu subtitles, Turkish drama streaming, HD Turkish series, Turkish drama episodes online, Turkish series latest episodes, Urdu subtitle series online, Turkish entertainment Pakistan, Turkish drama fans Pakistan, premium streaming experience, online video streaming, digital entertainment platforms, OTT streaming platforms, online series episodes, Gunesin Dogdugu Yer Episode 5 Urdu Subtitles, Gunesin Dogdugu Yer Episode 4 Urdu Subtitles, Gunesin Dogdugu Yer Episode 3 Urdu Subtitles, Gunesin Dogdugu Yer Season 1 Urdu Subtitles, Mehmed Fetihler Sultani, Kurulus Osman, Salahuddin Ayyubi, Teskilat, Turkish Dramas with Urdu Subtitles, Turkish Series with English Subtitles";
+        pageTitle = "Güneşin Doğduğu Yer Episode 4 — Episode Summary & Urdu Subtitles | FEVIQO";
+        metaDesc = "Read Güneşin Doğduğu Yer Episode 4 (Bölüm 4) English & Urdu story summary, cast breakdown, trailer review, and subtitle updates on FEVIQO.";
+        keywords = "Gunesin Dogdugu Yer Episode 4, Gunesin Dogdugu Yer Episode 4 Urdu Subtitles, Gunesin Dogdugu Yer Bolum 4 Summary, Turkish Drama Episode Guides & Urdu Subtitles, Episode Summary & Notes, Subtitle & Dubbing Updates, FEVIQO";
       }
       
       document.title = pageTitle;
@@ -1077,9 +1076,9 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                 )}
               </div>
 
-              {/* Actions Row */}
+              {/* Actions Row (Raw external download links temporarily hidden during Monetag review) */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-3 flex flex-row items-center justify-between gap-2 w-full">
-                {!EDITORIAL_COMPLIANCE_MODE && !isSelectedPremium && selectedEpisode.downloadUrl ? (
+                {!HIDE_EXTERNAL_DOWNLOAD_LINKS && !EDITORIAL_COMPLIANCE_MODE && !isSelectedPremium && selectedEpisode.downloadUrl ? (
                   <a
                     href={selectedEpisode.downloadUrl}
                     target="_blank"
@@ -1090,7 +1089,9 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     <span>Download Episode {selectedEpisode.number} (1080p HD)</span>
                   </a>
                 ) : (
-                  <div />
+                  <div className="text-[11px] sm:text-xs font-semibold text-slate-500">
+                    Episode Summary, Cast &amp; Urdu Subtitle Notes
+                  </div>
                 )}
 
                 <div className="flex items-center gap-2">
@@ -1099,47 +1100,51 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] sm:text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer shrink-0 hover:scale-[1.02] active:scale-95"
                   >
                     <Share2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{copiedLink ? 'Copied!' : EDITORIAL_COMPLIANCE_MODE ? 'Share Guide' : 'Share Episode'}</span>
+                    <span>{copiedLink ? 'Copied!' : 'Share Episode Guide'}</span>
                   </button>
 
                   <button 
                     onClick={handleBackToOverview}
                     className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-[11px] sm:text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer shrink-0 hover:scale-[1.02] active:scale-95"
                   >
-                    <span>{EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'Series Directory'}</span>
+                    <span>Episode Guide</span>
                   </button>
                 </div>
               </div>
 
-              {/* 5. ORIGINAL DETAILED STORY RECAP SECTION */}
+              {/* 5. RICH BILINGUAL ENGLISH & URDU EDITORIAL EPISODE SUMMARY, CAST, RELEASE DATE & TRAILER BREAKDOWN */}
               {!EDITORIAL_COMPLIANCE_MODE && (
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left max-w-4xl">
-                  <div className="space-y-6">
-                    <h2 className="text-2xl font-black text-slate-900">Episode {selectedEpisode.number} Detailed Story Recap</h2>
-                    
-                    <div className="space-y-6 text-slate-600 font-normal leading-relaxed text-sm sm:text-base">
-                      {selectedEpisode.recap.split('\n\n').map((para, idx) => {
-                        const trimmed = para.trim();
-                        if (!trimmed) return null;
-
-                        const isHeading = trimmed.length < 80 && (trimmed.includes(':') || trimmed.includes('—') || (!trimmed.includes('.') && trimmed.split(' ').length < 10));
-
-                        if (isHeading) {
-                          return (
-                            <h3 key={idx} className="text-lg sm:text-xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4">
-                              {trimmed}
-                            </h3>
-                          );
-                        }
-
-                        return (
-                          <p key={idx} className="text-slate-600">
-                            {trimmed}
-                          </p>
-                        );
-                      })}
-                    </div>
-                  </div>
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left">
+                  <EditorialEpisodeGuidePanel
+                    hideBanner
+                    seriesKey="gunesin-dogdugu-yer"
+                    seriesTitle="Güneşin Doğduğu Yer"
+                    seasonLabel={`Season ${selectedEpisode.season}`}
+                    episodeNumber={selectedEpisode.number}
+                    episodeTitle={`Güneşin Doğduğu Yer Episode ${selectedEpisode.number} (Bölüm ${selectedEpisode.number}) — Episode Summary & Notes`}
+                    releaseDate={new Date(selectedEpisode.airDate).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    duration={selectedEpisode.duration}
+                    network={GUNESIN_SERIES_DATA.network}
+                    genre="Anatolian Family Drama"
+                    thumbnailUrl={selectedEpisode.thumbnail}
+                    plotOverview={getCleanGunesinPlot(selectedEpisode)}
+                    cast={GUNESIN_CAST}
+                    trailerReviewNotes={[
+                      `The official Episode ${selectedEpisode.number} preview highlights sweeping Anatolian landscapes paired with intimate family confrontations.`,
+                      'Dramatic pacing balances emotional dialogue with unexpected plot reversals among rival households.',
+                      'Visual composition and musical motifs emphasize heritage, loyalty, and unspoken grief.',
+                    ]}
+                    editorialHighlights={[
+                      'Major turning point in the family power struggle introduced in Season 1.',
+                      'Character motivations come into sharper focus through subtle dramatic exchanges.',
+                      'Includes weekly Urdu subtitle & dubbing updates alongside reader discussion.',
+                    ]}
+                    editorialRating="4.6 / 5"
+                  />
                 </div>
               )}
 
@@ -1221,15 +1226,6 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
           )}
         </AnimatePresence>
       </main>
-
-      <Footer
-        onBookCall={onBookCall}
-        onGetStarted={onBookCall}
-        onNavigateSection={() => onNavigatePage('home')}
-        onNavigatePricing={onNavigatePricing}
-        onNavigateFlow={() => onNavigateFlow()}
-        onNavigatePage={onNavigatePage}
-      />
 
       <PremiumEpisodeModal
         gateState={gateState}

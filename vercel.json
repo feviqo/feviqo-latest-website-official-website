@@ -26,6 +26,7 @@
     { "source": "/privacy-policy", "destination": "/index.html" },
     { "source": "/terms", "destination": "/terms/index.html" },
     { "source": "/dmca", "destination": "/index.html" },
+    { "source": "/disclaimer", "destination": "/index.html" },
     { "source": "/contact", "destination": "/index.html" },
     { "source": "/account", "destination": "/account/index.html" },
     {

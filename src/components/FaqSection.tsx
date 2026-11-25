@@ -78,10 +78,10 @@ export const FaqSection: React.FC = () => {
         <div className="mt-12 rounded-2xl bg-white border border-slate-200/80 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
           <div>
             <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
-              FEVIQO Turkish Drama Streaming &amp; Membership
+              Turkish Drama Episode Guides &amp; Urdu Subtitles
             </p>
             <p className="text-sm text-slate-600 mt-1">
-              Watch Urdu-dubbed &amp; Urdu-subtitled episodes of Teşkilat, Mehmed: Fetihler Sultanı, and Güneşin Doğduğu Yer.
+              Read episode summaries, cast notes, and Urdu subtitle &amp; dubbing updates for Teşkilat, Mehmed: Fetihler Sultanı, Güneşin Doğduğu Yer, and Yeraltı.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 text-xs font-bold shrink-0">
@@ -95,7 +95,7 @@ export const FaqSection: React.FC = () => {
               }}
               className="px-4 py-2 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] transition"
             >
-              Premium Membership
+              VIP Membership
             </a>
             <a
               href="/dramas"
@@ -107,7 +107,7 @@ export const FaqSection: React.FC = () => {
               }}
               className="px-3.5 py-2 rounded-xl border border-slate-200 hover:border-slate-400 text-slate-800 transition"
             >
-              All Dramas
+              Episode Guides
             </a>
             <a
               href="/teskilat"

@@ -1124,15 +1124,41 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
               </div>
 
               {!EDITORIAL_COMPLIANCE_MODE && (
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-left space-y-4">
-                  <h2 className="text-2xl font-black text-slate-900">
-                    Episode {selectedEpisode.number} Overview
-                  </h2>
-                  <div className="space-y-4 text-slate-600 leading-relaxed text-sm sm:text-base">
-                    {selectedEpisode.recap.split('\n\n').map((para, idx) => (
-                      <p key={idx}>{para.trim()}</p>
-                    ))}
-                  </div>
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-left">
+                  <EditorialEpisodeGuidePanel
+                    hideBanner
+                    seriesKey="yeralti"
+                    seriesTitle="Yeraltı (جرائم کی دنیا)"
+                    seasonLabel="Season 1"
+                    episodeNumber={selectedEpisode.number}
+                    episodeTitle={`Yeraltı Episode ${selectedEpisode.number} — Episode Summary & Urdu Dubbing Notes`}
+                    releaseDate={
+                      selectedEpisode.airDate
+                        ? new Date(selectedEpisode.airDate).toLocaleDateString('en-US', {
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })
+                        : 'November 2026'
+                    }
+                    duration={selectedEpisode.duration}
+                    network="Turkish Crime Thriller"
+                    genre="Crime · Action · Thriller"
+                    thumbnailUrl={selectedEpisode.thumbnail}
+                    plotOverview={getCleanYeraltiPlot(selectedEpisode)}
+                    cast={YERALTI_CAST}
+                    trailerReviewNotes={[
+                      `Episode ${selectedEpisode.number} raises the stakes with tightly framed urban suspense sequences and moody nighttime cinematography.`,
+                      'The official promotional teaser highlights fractured loyalties within the syndicate while keeping key character motives ambiguous.',
+                      'Atmospheric sound design and restrained dialogue build tension steadily toward the closing confrontation.',
+                    ]}
+                    editorialHighlights={[
+                      'High-stakes confrontation between rival power factions in the city underworld.',
+                      'Deeper insight into character loyalties, personal risks, and covert strategy.',
+                      'Cliffhanger final beat paired with weekly Urdu dubbing updates.',
+                    ]}
+                    editorialRating="4.7 / 5"
+                  />
                 </div>
               )}
             </motion.div>

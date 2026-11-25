@@ -42,6 +42,7 @@ import { AboutUsPage } from './components/pages/AboutUsPage';
 import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
 import { TermsPage } from './components/pages/TermsPage';
 import { DmcaPolicyPage } from './components/pages/DmcaPolicyPage';
+import { DisclaimerPage } from './components/pages/DisclaimerPage';
 import { ContactPage } from './components/pages/ContactPage';
 import { MembershipPage } from './components/pages/MembershipPage';
 import { GlobalPhoneCompletionGuard } from './components/membership/GlobalPhoneCompletionGuard';
@@ -154,6 +155,7 @@ export default function App() {
       if (path.includes('/privacy') || hash.includes('#privacy')) return 'privacy';
       if (path.includes('/terms') || hash.includes('#terms')) return 'terms';
       if (path.includes('/dmca') || hash.includes('#dmca')) return 'dmca';
+      if (path.includes('/disclaimer') || hash.includes('#disclaimer')) return 'disclaimer';
       if (path.includes('/contact') || hash.includes('#contact')) return 'contact';
     }
     return 'home';
@@ -306,6 +308,8 @@ export default function App() {
         setCurrentRoute('terms');
       } else if (path.includes('/dmca') || hash.includes('#dmca')) {
         setCurrentRoute('dmca');
+      } else if (path.includes('/disclaimer') || hash.includes('#disclaimer')) {
+        setCurrentRoute('disclaimer');
       } else if (path.includes('/contact') || hash.includes('#contact')) {
         setCurrentRoute('contact');
       } else {
@@ -361,20 +365,21 @@ export default function App() {
       'platform': 'FEVIQO Flow Portal - Manage Video Edits & Assets',
       'admin': 'FEVIQO Admin Portal - Dashboard & Client Management',
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
-      'teskilat-urdu': 'Teskilat Season 7 Urdu Subtitles - Watch Online | FEVIQO',
-      'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles - Watch Online HD | FEVIQO',
-      'mehmed-fetihler-sultani': 'Mehmed: Fetihler Sultani Urdu Subtitles - Watch Online HD | FEVIQO',
-      'yeralti': 'Yeralti (جرائم کی دنیا) Urdu Dubbed - Watch Online | FEVIQO',
-      'dramas': 'Turkish Dramas in Urdu Subtitles & Urdu Dubbed - Watch Online HD | FEVIQO',
-      'membership': 'FEVIQO Premium Membership – Watch Turkish Dramas in Urdu Dubbed HD',
+      'teskilat-urdu': 'Teşkilat Season 7 — Turkish Drama Episode Guides & Urdu Subtitles | FEVIQO',
+      'gunesin-dogdugu-yer': 'Güneşin Doğduğu Yer — Episode Summary & Urdu Subtitle Updates | FEVIQO',
+      'mehmed-fetihler-sultani': 'Mehmed: Fetihler Sultanı — Episode Summary & Urdu Subtitle Updates | FEVIQO',
+      'yeralti': 'Yeraltı (جرائم کی دنیا) — Episode Summary & Urdu Dubbing Updates | FEVIQO',
+      'dramas': 'Turkish Drama Episode Guides & Urdu Subtitles | FEVIQO',
+      'membership': 'FEVIQO VIP Membership – Subtitle & Dubbing Updates | FEVIQO',
       'account': 'My Account | FEVIQO',
       'admin-memberships': 'FEVIQO Membership & Payment Verification Admin',
       'admin-automation': 'FEVIQO WhatsApp Cloud API & Automation Admin',
       'admin-automation-whatsapp': 'FEVIQO Manual WhatsApp Center & Customer Queue',
       'admin-automation-leads': 'FEVIQO Video Editing Leads & WhatsApp Inbox',
       'privacy': 'Privacy Policy & Advertising Cookie Disclosure | FEVIQO',
-      'terms': 'Terms of Use | FEVIQO',
+      'terms': 'Terms of Service | FEVIQO',
       'dmca': 'DMCA & Copyright Policy | FEVIQO',
+      'disclaimer': 'Disclaimer | FEVIQO',
       'contact': 'Contact Us | FEVIQO'
     };
 
@@ -796,6 +801,17 @@ export default function App() {
           />
         );
 
+      case 'disclaimer':
+        return (
+          <DisclaimerPage
+            onBackToHome={() => navigateTo('home')}
+            onBookCall={handleOpenBookCall}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
+            onNavigatePage={(route) => navigateTo(route)}
+          />
+        );
+
       case 'contact':
         return (
           <ContactPage
@@ -1066,8 +1082,11 @@ export default function App() {
       case 'admin-automation': return '/admin/automation';
       case 'admin-automation-whatsapp': return '/admin/automation/whatsapp';
       case 'admin-automation-leads': return '/admin/automation/leads';
-      case 'privacy': return '/privacy';
+      case 'privacy': return '/privacy-policy';
       case 'terms': return '/terms';
+      case 'dmca': return '/dmca';
+      case 'disclaimer': return '/disclaimer';
+      case 'contact': return '/contact';
       case 'teskilat-urdu':
         if (typeof window !== 'undefined') {
           if (window.location.pathname.includes('/episode-194') || window.location.pathname.includes('194')) {

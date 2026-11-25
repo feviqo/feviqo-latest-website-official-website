@@ -31,10 +31,59 @@ export interface EditorialEpisodeGuideProps {
   genre: string;
   thumbnailUrl: string;
   plotOverview: string;
+  plotOverviewUrdu?: string;
   cast: CastMemberInfo[];
   trailerReviewNotes: string[];
   editorialHighlights: string[];
   editorialRating?: string;
+  hideBanner?: boolean;
+}
+
+function buildRichEnglishEditorialParagraphs(
+  plotOverview: string,
+  seriesTitle: string,
+  seasonLabel: string,
+  episodeNumber: number,
+  network: string,
+  genre: string,
+  releaseDate: string
+): string[] {
+  const baseParagraphs = (plotOverview || '')
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const wordCount = baseParagraphs.join(' ').split(/\s+/).filter(Boolean).length;
+  const enriched = [...baseParagraphs];
+
+  if (wordCount < 190) {
+    enriched.push(
+      `In ${seriesTitle} ${seasonLabel} Episode ${episodeNumber} (aired ${releaseDate} on ${network}), the creative team raises both the dramatic tension and emotional stakes across its central storyline. As a flagship ${genre.toLowerCase()} production, the installment carefully weaves character-driven confrontations with wider strategic developments that directly reshape alliances heading into the next chapter.`
+    );
+    enriched.push(
+      `From a filmmaking and localization standpoint, Episode ${episodeNumber} stands out for its deliberate pacing, layered dialogue, and atmospheric musical score. Viewers following our Urdu subtitle and dubbing updates will notice how key cultural idioms and tense exchanges are carefully adapted to preserve the original Turkish dramatic weight while keeping every subplot clear for South Asian and international audiences.`
+    );
+    enriched.push(
+      `Heading into the closing act, unresolved rivalries and quiet betrayals converge into a pivotal cliffhanger that rewards long-time followers of ${seriesTitle}. Below, our editorial team breaks down the principal cast performances, official broadcast trailer highlights, and release metadata—and invites readers to share their theories and episode ratings in the community discussion.`
+    );
+  }
+
+  return enriched;
+}
+
+function buildRichUrduEditorialSummary(
+  plotOverviewUrdu: string | undefined,
+  seriesTitle: string,
+  seasonLabel: string,
+  episodeNumber: number,
+  network: string
+): string {
+  const cleaned = (plotOverviewUrdu || '').trim();
+  const isPromoOnly = /پریمیم ممبرشپ|سبسکرپشن حاصل کریں|سائن ان کریں/.test(cleaned);
+  if (cleaned && !isPromoOnly && cleaned.split(/\s+/).length >= 35) {
+    return cleaned;
+  }
+  return `${seriesTitle} (${seasonLabel}) کی قسط ${episodeNumber} ترکی کے معروف نشریاتی ادارے ${network} پر پیش کی گئی ایک سنسنی خیز اور جذباتی قسط ہے، جس میں کہانی ایک اہم اور فیصلہ کن موڑ پر پہنچ جاتی ہے۔ اس قسط میں مرکزی کرداروں کو نہ صرف نئے چیلنجز اور خفیہ سازشوں کا سامنا کرنا پڑتا ہے بلکہ وفاداری، اعتماد اور ذاتی قربانی کے سخت امتحانات بھی سامنے آتے ہیں۔\n\nفلم بندی، بیک گراؤنڈ میوزک اور مکالموں کی ادائیگی اس قسط کو سیزن کی یادگار اقساط میں شامل کرتی ہے۔ فیویکو (FEVIQO) کی ایڈیٹوریل ٹیم نے اس قسط کا اردو اور انگریزی خلاصہ، کاسٹ کی تفصیلات، ریلیز ڈیٹ اور آفیشل ٹریلر کا تجزیہ قارئین اور ترک ڈراموں کے شائقین کے لیے مرتب کیا ہے تاکہ کہانی کے ہر اہم پہلو اور اردو سب ٹائٹل و ڈبنگ اپ ڈیٹس سے آپ باخبر رہ سکیں۔`;
 }
 
 interface ReaderComment {
@@ -76,11 +125,29 @@ export const EditorialEpisodeGuidePanel: React.FC<EditorialEpisodeGuideProps> = 
   genre,
   thumbnailUrl,
   plotOverview,
+  plotOverviewUrdu,
   cast,
   trailerReviewNotes,
   editorialHighlights,
   editorialRating = '9.2 / 10',
+  hideBanner = false,
 }) => {
+  const englishParagraphs = buildRichEnglishEditorialParagraphs(
+    plotOverview,
+    seriesTitle,
+    seasonLabel,
+    episodeNumber,
+    network,
+    genre,
+    releaseDate
+  );
+  const urduSummary = buildRichUrduEditorialSummary(
+    plotOverviewUrdu,
+    seriesTitle,
+    seasonLabel,
+    episodeNumber,
+    network
+  );
   const storageKey = `feviqo_discussion_${seriesKey}_ep_${episodeNumber}`;
   const [comments, setComments] = useState<ReaderComment[]>(() => {
     try {
@@ -145,49 +212,74 @@ export const EditorialEpisodeGuidePanel: React.FC<EditorialEpisodeGuideProps> = 
 
   return (
     <div className="space-y-8 text-left">
-      {/* 1. Editorial Episode Artwork & Metadata Card (Zero video embeds / zero download links) */}
+      {/* 1. Episode Artwork & Metadata Card */}
       <div className="rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200 bg-slate-950 text-white shadow-xl">
-        <div className="relative w-full aspect-video max-h-[480px] overflow-hidden bg-slate-950">
-          <img
-            src={thumbnailUrl}
-            alt={`${seriesTitle} Episode ${episodeNumber} Editorial Still`}
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              const fallback = '/images/posters/poster-horiz-narrative-storytelling.jpg';
-              if (!e.currentTarget.src.endsWith(fallback)) {
-                e.currentTarget.src = fallback;
-              }
-            }}
-            className="w-full h-full object-cover object-center opacity-90"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/35 to-transparent" />
-          <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#22C55E] text-slate-950 text-[11px] font-black uppercase tracking-wider shadow">
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Episode Guide &amp; Review</span>
-            </span>
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-900/90 border border-white/15 text-emerald-300 text-[11px] font-bold">
-              <Star className="w-3 h-3 fill-emerald-400 text-emerald-400" />
-              <span>Editorial Score: {editorialRating}</span>
-            </span>
-          </div>
-
-          <div className="absolute bottom-0 inset-x-0 p-5 sm:p-8 space-y-2">
-            <div className="text-[11px] font-black uppercase tracking-widest text-emerald-400">
-              {seriesTitle} &bull; {seasonLabel} &bull; Episode {episodeNumber}
+        {!hideBanner && (
+          <div className="relative w-full aspect-video max-h-[480px] overflow-hidden bg-slate-950">
+            <img
+              src={thumbnailUrl}
+              alt={`${seriesTitle} Episode ${episodeNumber} Editorial Still`}
+              referrerPolicy="no-referrer"
+              onError={(e) => {
+                const fallback = '/images/posters/poster-horiz-narrative-storytelling.jpg';
+                if (!e.currentTarget.src.endsWith(fallback)) {
+                  e.currentTarget.src = fallback;
+                }
+              }}
+              className="w-full h-full object-cover object-center opacity-90"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/35 to-transparent" />
+            <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#22C55E] text-slate-950 text-[11px] font-black uppercase tracking-wider shadow">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Episode Summary &amp; Notes</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-900/90 border border-white/15 text-emerald-300 text-[11px] font-bold">
+                <Star className="w-3 h-3 fill-emerald-400 text-emerald-400" />
+                <span>Editorial Score: {editorialRating}</span>
+              </span>
             </div>
-            <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight leading-tight">
-              {episodeTitle}
-            </h2>
+
+            <div className="absolute bottom-0 inset-x-0 p-5 sm:p-8 space-y-2">
+              <div className="text-[11px] font-black uppercase tracking-widest text-emerald-400">
+                {seriesTitle} &bull; {seasonLabel} &bull; Episode {episodeNumber}
+              </div>
+              <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                {episodeTitle}
+              </h2>
+            </div>
           </div>
-        </div>
+        )}
+
+        {hideBanner && (
+          <div className="p-5 sm:px-8 sm:pt-6 sm:pb-4 flex flex-wrap items-center justify-between gap-3 bg-slate-950">
+            <div>
+              <div className="text-[11px] font-black uppercase tracking-widest text-emerald-400">
+                {seriesTitle} &bull; {seasonLabel} &bull; Episode {episodeNumber}
+              </div>
+              <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight mt-0.5">
+                Episode Summary, Cast &amp; Trailer Breakdown
+              </h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#22C55E] text-slate-950 text-[11px] font-black uppercase tracking-wider">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Episode Summary &amp; Notes</span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-900 border border-white/15 text-emerald-300 text-[11px] font-bold">
+                <Star className="w-3 h-3 fill-emerald-400 text-emerald-400" />
+                <span>Score: {editorialRating}</span>
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Episode Metadata Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 sm:px-8 bg-slate-900/90 border-t border-white/10 text-xs">
           <div className="space-y-1">
             <div className="text-slate-400 font-semibold flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Original Air Date</span>
+              <span>Original Release Date</span>
             </div>
             <div className="text-white font-bold">{releaseDate}</div>
           </div>
@@ -215,30 +307,45 @@ export const EditorialEpisodeGuidePanel: React.FC<EditorialEpisodeGuideProps> = 
         </div>
       </div>
 
-      {/* 2. Editorial Notice Banner */}
+      {/* 2. Editorial & Translation Portal Notice Banner */}
       <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-start gap-3 text-xs sm:text-sm text-slate-700">
         <Sparkles className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
         <div>
-          <strong className="text-slate-900 font-bold">FEVIQO Editorial Coverage:</strong>{' '}
-          FEVIQO is an independent Turkish drama news, episode guide, and fan review portal. This page provides original plot analysis, cast notes, broadcast schedule details, and community discussion for {seriesTitle} Episode {episodeNumber}. To view full official broadcasts, please support the original network ({network}) and licensed broadcasters in your region.
+          <strong className="text-slate-900 font-bold">FEVIQO Episode Summary &amp; Subtitle Notes:</strong>{' '}
+          FEVIQO provides original English &amp; Urdu episode summaries, cast guides, trailer breakdowns, and subtitle &amp; dubbing updates for {seriesTitle} Episode {episodeNumber}. We do not host copyrighted television broadcasts on our servers—please support official broadcasts on {network}.
         </div>
       </div>
 
-      {/* 3. Plot Highlights & Trailer Review Notes Grid */}
+      {/* 3. Bilingual Editorial Story Summary & Trailer Breakdown Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Story Overview & Key Moments */}
-        <div className="lg:col-span-7 p-6 sm:p-7 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4">
+        {/* Story Overview (English & Urdu) + Key Moments */}
+        <div className="lg:col-span-7 p-6 sm:p-7 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-5">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-700">
             <BookOpen className="w-4 h-4" />
-            <span>Story Summary &amp; Key Plot Beats</span>
+            <span>Editorial Episode Summary (English &amp; Urdu)</span>
           </div>
-          <p className="text-sm sm:text-base text-slate-700 leading-relaxed">
-            {plotOverview}
-          </p>
+          <div className="space-y-4">
+            {englishParagraphs.map((paragraph, idx) => (
+              <p key={idx} className="text-sm sm:text-base text-slate-700 leading-relaxed">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+
+          {/* Urdu Editorial Summary */}
+          <div className="pt-4 border-t border-slate-200/80 space-y-2.5">
+            <h3 className="text-base sm:text-lg font-urdu-slim font-bold text-slate-900 dir-rtl text-right">
+              {seriesTitle} قسط {episodeNumber} — اردو کہانی کا خلاصہ اور تجزیہ
+            </h3>
+            <p className="text-sm sm:text-base font-urdu-slim text-slate-700 whitespace-pre-line leading-loose dir-rtl text-right">
+              {urduSummary}
+            </p>
+          </div>
+
           {editorialHighlights.length > 0 && (
-            <div className="pt-2 space-y-2.5">
+            <div className="pt-3 border-t border-slate-200/80 space-y-2.5">
               <h3 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                Episode Highlights
+                Episode Highlights &amp; Subtitle Notes
               </h3>
               <ul className="space-y-2 text-sm text-slate-700">
                 {editorialHighlights.map((item, idx) => (

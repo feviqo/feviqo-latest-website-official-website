@@ -34,59 +34,49 @@ interface DramaItem {
 const dramas: DramaItem[] = [
   {
     id: "yeralti",
-    title: EDITORIAL_COMPLIANCE_MODE ? "Yeraltı — Episode Guide" : "Yeralti - Urdu Dub",
+    title: "Yeraltı — Subtitle & Dubbing Updates",
     urduTitle: "جرائم کی دنیا",
-    subtitle: EDITORIAL_COMPLIANCE_MODE
-      ? "Season 1 · Turkish Crime Drama · Episode Guide & Cast"
-      : "Season 1 · Turkish Drama · Urdu Dubbed Exclusive",
-    description: EDITORIAL_COMPLIANCE_MODE
-      ? "Explore our complete editorial guide to Yeraltı (جرائم کی دنیا): character profiles, syndicate rivalries, episode story summaries, release schedules, and viewer reviews."
-      : "Step into the dark criminal underworld in Yeralti - Urdu Dub (جرائم کی دنیا). Rival syndicates, high-stakes betrayals, and relentless power struggles unfold in exclusive Urdu Dubbed HD on FEVIQO Premium.",
+    subtitle: "Season 1 · Episode Summary & Notes · Urdu Dubbing Updates",
+    description: "Explore our bilingual editorial guide to Yeraltı (جرائم کی دنیا): character profiles, syndicate rivalries, episode summaries & notes, release dates, and Urdu dubbing updates on FEVIQO.",
     image: YERALTI_POSTER_URL,
     href: "/yeralti",
-    buttonLabel: EDITORIAL_COMPLIANCE_MODE ? "Read Episode Guide" : "Explore Yeralti - Urdu Dub",
+    buttonLabel: "Episode Summary & Notes",
     latestEpisodeUrl: "/yeralti/episode-23",
-    latestEpisodeLabel: EDITORIAL_COMPLIANCE_MODE ? "Episode 23 Story Summary" : undefined,
+    latestEpisodeLabel: "Episode 23 Summary & Notes",
     isUrduDubOnly: !EDITORIAL_COMPLIANCE_MODE
   },
   {
     id: "teskilat",
     title: "Teşkilat",
-    subtitle: EDITORIAL_COMPLIANCE_MODE
-      ? "Season 7 · Turkish Action Drama · Story Summary & Reviews"
-      : "Season 7 · Turkish Drama · Urdu Subtitles & Urdu Dubbed",
-    description: "An intense intelligence drama of missions, loyalty, sacrifice and betrayal. Follow our episode-by-episode story summaries, cast breakdowns, and critic notes on Altay and the secret operations team.",
+    subtitle: "Season 7 · Episode Guides · Urdu Subtitle & Dubbing Updates",
+    description: "An intense intelligence drama of missions, loyalty, sacrifice and betrayal. Follow our episode-by-episode summaries & notes, cast breakdowns, trailer analysis, and Urdu subtitle updates for Altay and the team.",
     image: "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
     href: "/teskilat",
-    buttonLabel: EDITORIAL_COMPLIANCE_MODE ? "Read Season 7 Episode Guide" : "Watch Teskilat Season 7",
+    buttonLabel: "Teşkilat Episode Summary & Notes",
     latestEpisodeUrl: "/teskilat/episode-189",
-    latestEpisodeLabel: EDITORIAL_COMPLIANCE_MODE ? "Episode 189 Story Summary" : "Episode 189 (Latest Free)"
+    latestEpisodeLabel: "Episode 189 Summary & Notes"
   },
   {
     id: "gunesin-dogdugu-yer",
     title: "Güneşin Doğduğu Yer",
-    subtitle: EDITORIAL_COMPLIANCE_MODE
-      ? "Turkish Family Saga · Cast & Episode Reviews"
-      : "Turkish Drama · Urdu Subtitles & Urdu Dubbed",
-    description: "A compelling Turkish story of ambition, heritage, and family rivalries. Read complete episode guides, character profiles, trailer analysis, and fan discussion threads.",
+    subtitle: "Turkish Family Saga · Episode Guides & Urdu Subtitles",
+    description: "A compelling Turkish story of ambition, heritage, and family rivalries. Read complete episode summaries & notes, character profiles, trailer analysis, and Urdu subtitle & dubbing updates.",
     image: "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
     href: "/gunesin-dogdugu-yer",
-    buttonLabel: EDITORIAL_COMPLIANCE_MODE ? "Explore Cast & Reviews" : "Watch Gunesin Dogdugu Yer",
+    buttonLabel: "Güneşin Episode Summary & Notes",
     latestEpisodeUrl: "/gunesin-dogdugu-yer/episode-7",
-    latestEpisodeLabel: EDITORIAL_COMPLIANCE_MODE ? "Episode 7 Story Summary" : "Episode 7 (Latest Free)"
+    latestEpisodeLabel: "Episode 7 Summary & Notes"
   },
   {
     id: "mehmed-fetihler-sultani",
     title: "Mehmed: Fetihler Sultanı",
-    subtitle: EDITORIAL_COMPLIANCE_MODE
-      ? "Season 4 · Historical Drama · Episode Guide & Cast"
-      : "Season 4 · Turkish Drama · Urdu Subtitles & Urdu Dubbed",
-    description: "The epic historical drama chronicling Sultan Mehmed II, the Conqueror of Constantinople. Read historical context notes, episode plot recaps, cast profiles, and trailer reviews.",
+    subtitle: "Season 4 · Historical Episode Guides & Urdu Subtitles",
+    description: "The epic historical drama chronicling Sultan Mehmed II, the Conqueror of Constantinople. Read historical context notes, episode summaries & notes, cast profiles, and Urdu subtitle & dubbing updates.",
     image: "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
     href: "/mehmed-fetihler-sultani",
-    buttonLabel: EDITORIAL_COMPLIANCE_MODE ? "Read Episode Guide" : "Explore Mehmed Hub",
+    buttonLabel: "Mehmed Episode Summary & Notes",
     latestEpisodeUrl: "/mehmed-fetihler-sultani/episode-90",
-    latestEpisodeLabel: EDITORIAL_COMPLIANCE_MODE ? "Episode 90 Story Summary" : "Episode 90 (Latest Free)"
+    latestEpisodeLabel: "Episode 90 Summary & Notes"
   }
 ];
 
@@ -110,14 +100,12 @@ const slides: SlideItem[] = [
     id: "yeralti",
     title: "Yeraltı",
     urduTitle: "جرائم کی دنیا",
-    eyebrow: EDITORIAL_COMPLIANCE_MODE ? "EPISODE GUIDE & REVIEWS" : "YERALTI - URDU DUB",
-    heading: EDITORIAL_COMPLIANCE_MODE ? "Yeraltı — Story Summary, Cast & Reviews" : "Yeralti - Urdu Dub",
-    badgeText: EDITORIAL_COMPLIANCE_MODE ? "Episode Guide · Cast & Reviews" : "Urdu Dubbed · Premium Exclusive",
+    eyebrow: "SUBTITLE & DUBBING UPDATES",
+    heading: "Yeraltı — Episode Summary & Urdu Dubbing Updates",
+    badgeText: "Subtitle & Dubbing Updates",
     logoUrl: YERALTI_LOGO_URL,
     tags: ["Turkish", "Crime", "Thriller"],
-    description: EDITORIAL_COMPLIANCE_MODE
-      ? "Dive into our comprehensive editorial coverage of Yeraltı (جرائم کی دنیا), featuring episode plot breakdowns, cast biographies, release schedules, and trailer review notes."
-      : "Enter the ruthless underworld in Yeralti - Urdu Dub (جرائم کی دنیا). Rival syndicates, deadly secrets, and high-stakes betrayals streaming exclusively in Urdu Dubbed HD on FEVIQO.",
+    description: "Dive into our comprehensive editorial coverage of Yeraltı (جرائم کی دنیا), featuring English & Urdu episode summaries, cast biographies, release schedules, trailer breakdowns, and Urdu dubbing updates.",
     image: YERALTI_POSTER_URL,
     href: "/yeralti",
     isUrduDubOnly: !EDITORIAL_COMPLIANCE_MODE
@@ -125,36 +113,36 @@ const slides: SlideItem[] = [
   {
     id: "teskilat",
     title: "TEŞKİLAT",
-    eyebrow: EDITORIAL_COMPLIANCE_MODE ? "SEASON 7 EPISODE GUIDE" : "TESKILAT",
-    heading: EDITORIAL_COMPLIANCE_MODE ? "TEŞKİLAT — Season 7 Episode Guide & Story Summary" : "TESKILAT — Ultra HD Urdu Subtitles & Dub",
-    badgeText: EDITORIAL_COMPLIANCE_MODE ? "Story Summary & Reviews" : "Urdu Subtitles & Dub",
+    eyebrow: "SEASON 7 EPISODE GUIDES",
+    heading: "TEŞKİLAT — Episode Guides & Urdu Subtitles",
+    badgeText: "Episode Summary & Notes",
     logoUrl: "https://lh3.googleusercontent.com/d/1hO0OhAjFTt4UPxwURNI8u0Hm7j0xz74Y",
     tags: ["Turkish", "Thriller", "Action"],
-    description: "Follow Altay and his intelligence unit through every twist of Season 7 with original episode recaps, cast profiles, trailer analysis, and community discussion.",
+    description: "Follow Altay and his intelligence unit through every twist of Season 7 with original English & Urdu episode recaps, cast profiles, trailer analysis, and Urdu subtitle & dubbing updates.",
     image: "https://lh3.googleusercontent.com/d/16Huz3NzGKaUqRD657ESze6kdkqnRl3W2",
     href: "/teskilat"
   },
   {
     id: "gunesin-dogdugu-yer",
     title: "GÜNEŞİN DOĞDUĞU YER",
-    eyebrow: EDITORIAL_COMPLIANCE_MODE ? "CAST & EPISODE REVIEWS" : "GUNESIN DOGDUGU YER",
-    heading: EDITORIAL_COMPLIANCE_MODE ? "GÜNEŞİN DOĞDUĞU YER — Story Summary & Cast Guide" : "GUNESIN DOGDUGU YER — Ultra HD Urdu Subtitles & Dub",
-    badgeText: EDITORIAL_COMPLIANCE_MODE ? "Episode Guide & Reviews" : "Urdu Subtitles & Dub",
+    eyebrow: "EPISODE SUMMARY & NOTES",
+    heading: "GÜNEŞİN DOĞDUĞU YER — Episode Guides & Urdu Subtitles",
+    badgeText: "Subtitle & Dubbing Updates",
     logoUrl: "https://lh3.googleusercontent.com/d/1ceV7W__33FQpHUPZMaxE8cahPItht54z",
     tags: ["Turkish", "Drama", "Mystery"],
-    description: "Explore the Anatolian family saga, character dynamics, release dates, and weekly episode reviews curated by the FEVIQO editorial team.",
+    description: "Explore the Anatolian family saga, character dynamics, release dates, trailer notes, and weekly Urdu subtitle & dubbing updates curated by the FEVIQO editorial team.",
     image: "https://lh3.googleusercontent.com/d/1K4RcO4j7hkWQ1Au3fvSAQodakty5nfFh",
     href: "/gunesin-dogdugu-yer"
   },
   {
     id: "mehmed-fetihler-sultani",
     title: "MEHMED: FETİHLER SULTANI",
-    eyebrow: EDITORIAL_COMPLIANCE_MODE ? "HISTORICAL EPISODE GUIDE" : "MEHMED FETIHLER SULTANI",
-    heading: EDITORIAL_COMPLIANCE_MODE ? "MEHMED: FETİHLER SULTANI — Season 4 Episode Guide" : "MEHMED FETIHLER SULTANI — Ultra HD Urdu Subtitles & Dub",
-    badgeText: EDITORIAL_COMPLIANCE_MODE ? "Story Summary & Cast" : "Urdu Subtitles & Dub",
+    eyebrow: "HISTORICAL EPISODE GUIDES",
+    heading: "MEHMED: FETİHLER SULTANI — Episode Guides & Urdu Subtitles",
+    badgeText: "Episode Summary & Notes",
     logoUrl: "https://lh3.googleusercontent.com/d/19HL2dzvRlKelis5qfA0ZyJ-vLUwU_ctZ",
     tags: ["Turkish", "Historical", "War"],
-    description: "Read detailed historical context, episode story summaries, cast profiles, and trailer review notes covering Sultan Mehmed II's Season 4 campaigns.",
+    description: "Read detailed historical context, English & Urdu episode summaries, cast profiles, trailer review notes, and Season 4 Urdu subtitle & dubbing updates covering Sultan Mehmed II.",
     image: "https://lh3.googleusercontent.com/d/1Je_-r1ngLfH15ryeju3suvZC2W0YSTL1",
     href: "/mehmed-fetihler-sultani"
   }
@@ -187,9 +175,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
 
-    document.title = EDITORIAL_COMPLIANCE_MODE
-      ? "Turkish Drama Episode Guides, Story Summaries & Cast Reviews | FEVIQO"
-      : "Turkish Dramas in Urdu Dub & Subtitles | Yeralti, Teskilat & Mehmed | FEVIQO";
+    document.title = "Turkish Drama Episode Guides & Urdu Subtitles | FEVIQO";
 
     let metaDesc = document.querySelector('meta[name="description"]');
     if (!metaDesc) {
@@ -199,9 +185,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
     }
     metaDesc.setAttribute(
       'content',
-      EDITORIAL_COMPLIANCE_MODE
-        ? "Explore original Turkish drama episode guides, story summaries, cast details, release dates, and editorial reviews for Teşkilat, Mehmed: Fetihler Sultanı, Güneşin Doğduğu Yer, and Yeraltı on FEVIQO."
-        : "Explore Turkish dramas in Urdu Dub and Urdu Subtitles on FEVIQO, including Yeralti - Urdu Dub (جرائم کی دنیا), Teskilat, Mehmed: Fetihler Sultani, and Gunesin Dogdugu Yer."
+      "Explore Turkish drama episode guides, English & Urdu story summaries, cast lists, release dates, trailer breakdowns, and subtitle & dubbing updates for Teşkilat, Mehmed: Fetihler Sultanı, Güneşin Doğduğu Yer, and Yeraltı on FEVIQO."
     );
 
     let metaRobots = document.querySelector('meta[name="robots"]');
@@ -406,17 +390,17 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                         {EDITORIAL_COMPLIANCE_MODE ? (
                           <>
                             <BookOpen className="w-4 h-4 text-black" />
-                            <span>Read Episode Guide</span>
+                            <span>Episode Summary &amp; Notes</span>
                           </>
                         ) : slide.isUrduDubOnly && !hasDramaAccess(slide.id) ? (
                           <>
                             <Lock className="w-4 h-4 text-black" />
-                            <span>Explore &amp; Unlock</span>
+                            <span>Subtitle &amp; Dubbing Updates</span>
                           </>
                         ) : (
                           <>
-                            <Play className="w-4 h-4 fill-current text-black" />
-                            <span>Watch Now</span>
+                            <BookOpen className="w-4 h-4 text-black" />
+                            <span>Episode Summary &amp; Notes</span>
                           </>
                         )}
                       </button>
@@ -465,15 +449,13 @@ export const DramasPage: React.FC<DramasPageProps> = ({
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="text-left space-y-2">
             <span className="text-xs font-black text-[#16a34a] tracking-widest uppercase block">
-              {EDITORIAL_COMPLIANCE_MODE ? 'FEVIQO EDITORIAL DRAMA PORTAL' : 'FEVIQO DRAMA COLLECTION'}
+              FEVIQO EDITORIAL &amp; SUBTITLE UPDATES
             </span>
             <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
-              {EDITORIAL_COMPLIANCE_MODE ? 'Turkish Drama Episode Guides & Reviews' : 'Featured Turkish Dramas'}
+              Turkish Drama Episode Guides &amp; Urdu Subtitles
             </h2>
             <p className="text-sm sm:text-base text-slate-500 max-w-xl font-normal">
-              {EDITORIAL_COMPLIANCE_MODE
-                ? 'Original episode plot summaries, cast & character breakdowns, release dates, trailer review notes, and reader discussions.'
-                : 'Choose your next story. Stream officially in high definition.'}
+              Original English &amp; Urdu episode summaries, cast breakdowns, release dates, trailer analysis, and weekly subtitle &amp; dubbing updates.
             </p>
           </div>
           {!EDITORIAL_COMPLIANCE_MODE && (
@@ -487,7 +469,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
               }}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#0B0B0D] hover:bg-[#22C55E] text-white hover:text-[#0B0B0D] text-xs font-bold transition shrink-0 self-start sm:self-auto"
             >
-              <span>Explore Premium Membership</span>
+              <span>VIP Membership · Dubbing Updates</span>
               <ChevronRight className="w-4 h-4" />
             </a>
           )}
@@ -644,7 +626,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                           }}
                           className="text-xs font-black text-[#22C55E] hover:underline shrink-0"
                         >
-                          {isUnlocked ? 'Watch Now →' : 'Unlock →'}
+                          {isUnlocked ? 'Open Notes →' : 'VIP Updates →'}
                         </a>
                       </div>
                     )}
@@ -655,8 +637,8 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                         <div className="flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                           <span className="text-xs font-bold text-slate-900">
-                            {EDITORIAL_COMPLIANCE_MODE ? 'Latest Episode Guide:' : 'Latest Free Stream:'}{' '}
-                            <span className="text-emerald-700">{drama.latestEpisodeLabel || 'New Episode Guide'}</span>
+                            Latest Update:{' '}
+                            <span className="text-emerald-700">{drama.latestEpisodeLabel || 'Episode Summary & Notes'}</span>
                           </span>
                         </div>
                         <a
@@ -669,7 +651,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                           }}
                           className="text-xs font-black text-emerald-700 hover:text-emerald-800 underline flex items-center gap-1 shrink-0"
                         >
-                          <span>{EDITORIAL_COMPLIANCE_MODE ? 'Read Summary' : 'Watch Now'}</span>
+                          <span>Episode Summary &amp; Notes</span>
                           <ChevronRight className="w-3.5 h-3.5" />
                         </a>
                       </div>
@@ -706,15 +688,25 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                           className="px-6 py-3 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs sm:text-sm tracking-wide rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                         >
                           <Lock className="w-4 h-4 text-slate-950" />
-                          <span>Unlock Yeralti - Urdu Dub</span>
+                          <span>Subtitle &amp; Dubbing Updates (VIP)</span>
                         </button>
                       ) : (
                         <a 
                           href={drama.latestEpisodeUrl || drama.href}
+                          onClick={(e) => {
+                            if (!e.metaKey && !e.ctrlKey) {
+                              e.preventDefault();
+                              window.dispatchEvent(
+                                new CustomEvent('feviqo-navigate-url', {
+                                  detail: drama.latestEpisodeUrl || drama.href,
+                                })
+                              );
+                            }
+                          }}
                           className="px-6 py-3 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs sm:text-sm tracking-wide rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-sm"
                         >
-                          <Play className="w-4 h-4 fill-current text-slate-950" />
-                          <span>{drama.latestEpisodeLabel ? `Watch ${drama.latestEpisodeLabel}` : drama.buttonLabel}</span>
+                          <BookOpen className="w-4 h-4 text-slate-950" />
+                          <span>{drama.buttonLabel}</span>
                         </a>
                       )}
 
@@ -728,7 +720,7 @@ export const DramasPage: React.FC<DramasPageProps> = ({
                         }}
                         className="px-5 py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 font-extrabold text-xs sm:text-sm rounded-lg transition border border-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <span>{EDITORIAL_COMPLIANCE_MODE ? 'Cast & Reviews' : 'Explore Series Hub'}</span>
+                        <span>Subtitle &amp; Dubbing Updates</span>
                         <ChevronRight className="w-4 h-4 text-slate-400" />
                       </a>
                     </div>

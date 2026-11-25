@@ -31,7 +31,6 @@ import {
   BookOpen
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
-import { Footer } from '../Footer';
 import { DramaMemberBar } from '../membership/DramaMemberBar';
 import { NativeVideoPlayer } from '../NativeVideoPlayer';
 import { AppRoute } from '../../types';
@@ -1721,106 +1720,35 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               </div>
 
               {!EDITORIAL_COMPLIANCE_MODE && (
-                <>
-                  {/* 8. Story Section */}
-                  <div className="space-y-6 pt-2 text-left max-w-4xl">
-                    <h2 className="text-2xl font-black text-[#0B0B0D]">Episode {selectedEpisode.episodeNumber} Story Recap</h2>
-
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-black text-[#22C55E] uppercase tracking-wider">English Story Summary</h3>
-                      <div className="text-slate-800 leading-relaxed font-normal space-y-6">
-                        {selectedEpisode.storyRecapEnglish.split('\n\n').map((block, idx) => {
-                          const trimmed = block.trim();
-                          if (!trimmed) return null;
-
-                          const isHeading = trimmed.length < 90 && (
-                            trimmed.endsWith(':') || 
-                            trimmed.includes(':') || 
-                            trimmed.includes('–') || 
-                            trimmed.includes('—') ||
-                            (!trimmed.includes('.') && trimmed.split(' ').length < 12)
-                          );
-
-                          if (isHeading) {
-                            return (
-                              <h3 
-                                key={idx} 
-                                className="text-xl sm:text-2xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4 tracking-tight"
-                              >
-                                {trimmed}
-                              </h3>
-                            );
-                          }
-
-                          if (trimmed.startsWith('- ') || trimmed.includes('\n- ')) {
-                            const items = trimmed.split('\n').map(li => li.replace(/^-\s*/, '').trim()).filter(Boolean);
-                            return (
-                              <ul key={idx} className="list-disc pl-6 text-slate-700 space-y-2.5 my-4">
-                                {items.map((item, itemIdx) => (
-                                  <li key={itemIdx} className="text-sm sm:text-base leading-relaxed">{item}</li>
-                                ))}
-                              </ul>
-                            );
-                          }
-
-                          return (
-                            <p key={idx} className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                              {trimmed}
-                            </p>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 pt-6 border-t border-slate-100">
-                      <h3 className="text-lg font-urdu-slim font-bold text-slate-900 dir-rtl text-right">
-                        تشکیلات سیزن 7 قسط {selectedEpisode.episodeNumber} اردو کہانی کا خلاصہ
-                      </h3>
-                      <p className="text-slate-700 text-base font-urdu-slim font-normal whitespace-pre-line leading-relaxed dir-rtl text-right">
-                        {selectedEpisode.storyRecapUrdu}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* 9. Minimal Episode Details Metadata Grid */}
-                  <div className="pt-8 border-t border-slate-200 text-left">
-                    <h3 className="text-sm font-bold text-[#0B0B0D] mb-4 uppercase tracking-wider">Episode Details</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-xs">
-                      <div>
-                        <div className="text-slate-400 font-medium">Series</div>
-                        <div className="text-[#0B0B0D] font-bold mt-0.5">Teskilat</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Season</div>
-                        <div className="text-[#0B0B0D] font-bold mt-0.5">{selectedEpisode.seasonNumber}</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Episode</div>
-                        <div className="text-[#0B0B0D] font-bold mt-0.5">{selectedEpisode.episodeNumber}</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Language</div>
-                        <div className="text-[#0B0B0D] font-bold mt-0.5">Urdu Subtitles</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Quality</div>
-                        <div className="text-[#0B0B0D] font-bold mt-0.5">HD 1080p</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Platform</div>
-                        <div className="text-[#22C55E] font-extrabold mt-0.5">FEVIQO</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 10. Search Keyword Tags & Search Engine Cloud (Fully crawled by Googlebot) */}
-                  <div className="sr-only" aria-hidden="true">
-                    <h3>Popular Search Queries &amp; Target Keywords</h3>
-                    <p>
-                      Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, Turkish Action Series Urdu, Turkish Intelligence Series, TRT1 Teskilat, Teskilat New Season Urdu, Teskilat NiaziPlay, Teskilat Season 7 Episode 4 Urdu Subtitles, Teskilat Episode 188 Urdu Subtitles, Teskilat Bolum 188 Urdu, Teskilat Season 7 Urdu, Teskilat Episode 4 Urdu, Teskilat 188 Urdu, Altay Ender Episode 188, Azra Teskilat Season 7, Korkut Yahya Episode 188, Bahar Yahya Teskilat, Ender Rescue Teskilat, Turkish Series Urdu Subtitles, Teskilat NiaziPlay, TRT1 Teskilat Episode 188, Salahuddin Ayyubi Series, Kurulus Osman Season 5 in Urdu Subtitles, Kurulus Osman Season 6 Urdu &amp; English Subtitles, Teskilat Season 4 Urdu Subtitles, Mehmed: Fetihler Sultani - Urdu &amp; English Subtitles, Al Sancak | Sipahi, Alparslan: Büyük Selçuklu, Ates Kuslari, Barbarosslar, Destan, Ertugrul Ghazi, Keiki Sniper, Kosem Sultan, Mendirman Jaloliddin Khawarzam, Mevlana Celaleddin Rumi, Soz Series, Sultan Abdulhamid, Sultan Mehmat Fatih, The Pit (Cukur), Turkish Dramas, Yunus Emre, Turkish series with Urdu subtitles, watch Turkish dramas online, historical Turkish series in Urdu, Ottoman Empire series with English subtitles, Islamic history dramas in Urdu, Turkish action series with Urdu dubbing, latest Turkish series 2024, Urdu dubbed Turkish historical dramas, stream Turkish series in HD, family-friendly Turkish dramas, Turkish war series with Urdu subtitles, best Turkish series to watch online, Turkish dramas based on true stories, top-rated Turkish series in Urdu, Turkish romantic dramas with English subtitles, Turkish thriller series in Urdu, online streaming of Turkish historical series, Turkish series with dual subtitles, popular Turkish dramas in Pakistan, Turkish series episodes in Urdu, best streaming platforms for Turkish series, online education games for kids, top adventure games for adults, fitness and health articles, latest technology news articles, financial advice for families, home improvement articles, educational articles for students, html5 games, games for children.
-                    </p>
-                  </div>
-                </>
+                <div className="pt-4 text-left">
+                  <EditorialEpisodeGuidePanel
+                    hideBanner
+                    seriesKey="teskilat"
+                    seriesTitle="Teşkilat"
+                    seasonLabel={`Season ${selectedEpisode.seasonNumber}`}
+                    episodeNumber={selectedEpisode.episodeNumber}
+                    episodeTitle={`Teşkilat Season ${selectedEpisode.seasonNumber} Episode ${selectedEpisode.episodeNumber} (Bölüm ${selectedEpisode.episodeNumber}) — Episode Summary & Notes`}
+                    releaseDate={selectedEpisode.releaseDate}
+                    duration={selectedEpisode.duration}
+                    network="TRT 1"
+                    genre="Action · Intelligence Thriller · Drama"
+                    thumbnailUrl={selectedEpisode.thumbnailUrl}
+                    plotOverview={getCleanTeskilatPlot(selectedEpisode)}
+                    plotOverviewUrdu={selectedEpisode.storyRecapUrdu}
+                    cast={TESKILAT_CAST}
+                    trailerReviewNotes={[
+                      `The official TRT 1 promotional preview for Bölüm ${selectedEpisode.episodeNumber} emphasizes rapid tactical pacing, sharp cross-cutting between headquarters strategy rooms and field operations, and heightened emotional tension around Altay’s team.`,
+                      'Cinematography leans into cool, high-contrast night lighting and handheld camera movement during pursuit sequences, underscoring the stakes of covert counter-intelligence work in Season 7.',
+                      'Dialogue excerpts in the teaser point toward shifting alliances and a critical test of loyalty bridging the previous chapter into this week’s confrontation.',
+                    ]}
+                    editorialHighlights={[
+                      'Focused character work from Tolga Sarıtaş as Altay Yalçın, balancing disciplined field command with deeply personal stakes.',
+                      'Tightly structured parallel storylines connecting Korkut’s undercover mission with central agency strategy.',
+                      'Bilingual English & Urdu episode breakdown paired with weekly subtitle & dubbing updates.',
+                    ]}
+                    editorialRating="9.1 / 10"
+                  />
+                </div>
               )}
 
               {/* 11. Episode Navigation */}
@@ -1990,15 +1918,6 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
           </div>
         )}
       </main>
-
-      <Footer
-        onBookCall={onBookCall}
-        onGetStarted={() => onNavigateFlow('register')}
-        onNavigateSection={() => onBackToHome()}
-        onNavigatePricing={onNavigatePricing}
-        onNavigateFlow={() => onNavigateFlow('login')}
-        onNavigatePage={onNavigatePage}
-      />
 
       {/* AD SETUP & SPONSORSHIP BOOKING MODAL */}
       {showAdSetupModal && (

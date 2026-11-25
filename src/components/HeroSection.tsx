@@ -158,7 +158,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
               }}
               className="text-[#16a34a] hover:underline font-bold"
             >
-              Watch Turkish Dramas in Urdu &rarr;
+              Turkish Drama Episode Guides &amp; Urdu Subtitles &rarr;
             </a>
             <span className="text-slate-300 hidden sm:inline">•</span>
             <a
@@ -171,7 +171,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
               }}
               className="text-slate-700 hover:text-[#16a34a] hover:underline"
             >
-              FEVIQO Premium Urdu Dubbed Membership
+              Subtitle &amp; Dubbing Updates
             </a>
           </div>
         </div>

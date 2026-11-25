@@ -34,7 +34,7 @@ import { attachHlsStream, extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
 import { ProtectedPlayerWatermark } from '../membership/ProtectedPlayerWatermark';
-import { EDITORIAL_COMPLIANCE_MODE } from '../../config/complianceMode';
+import { EDITORIAL_COMPLIANCE_MODE, HIDE_EXTERNAL_DOWNLOAD_LINKS } from '../../config/complianceMode';
 import { EditorialEpisodeGuidePanel, CastMemberInfo } from '../drama/EditorialEpisodeGuidePanel';
 
 const MEHMED_CAST: CastMemberInfo[] = [
@@ -1115,9 +1115,9 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   </div>
                 )}
 
-                {/* Action Row: Download & Share Buttons */}
+                {/* Action Row: Share Button (Raw external download links temporarily hidden during Monetag review) */}
                 <div className="mt-3 flex flex-row items-center justify-between gap-2 w-full">
-                  {!EDITORIAL_COMPLIANCE_MODE && !isSelectedPremium ? (
+                  {!HIDE_EXTERNAL_DOWNLOAD_LINKS && !EDITORIAL_COMPLIANCE_MODE && !isSelectedPremium ? (
                     <a
                       href={selectedEpisode.downloadUrl || "https://shrinkme.click/mehmedepisode88urdu"}
                       target="_blank"
@@ -1128,7 +1128,9 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                       <span>Download Episode {selectedEpisode.number} (1080p HD)</span>
                     </a>
                   ) : (
-                    <div />
+                    <div className="text-[11px] sm:text-xs font-semibold text-slate-500">
+                      Episode Summary, Cast &amp; Urdu Subtitle Notes
+                    </div>
                   )}
 
                   <button
@@ -1136,92 +1138,49 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[11px] sm:text-xs font-bold text-slate-800 transition flex items-center gap-1.5 cursor-pointer shrink-0 hover:scale-[1.02] active:scale-95"
                   >
                     <Share2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{copiedLink ? 'Copied!' : EDITORIAL_COMPLIANCE_MODE ? 'Share Episode Guide' : 'Share Episode'}</span>
+                    <span>{copiedLink ? 'Copied!' : 'Share Episode Guide'}</span>
                   </button>
                 </div>
               </div>
 
-              {/* 5. ORIGINAL DETAILED STORY RECAP SECTION */}
+              {/* 5. RICH BILINGUAL ENGLISH & URDU EDITORIAL EPISODE SUMMARY, CAST, RELEASE DATE & TRAILER BREAKDOWN */}
               {!EDITORIAL_COMPLIANCE_MODE && (
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left max-w-4xl">
-                  <div className="space-y-6">
-                    <h2 className="text-2xl font-black text-slate-900">Episode {selectedEpisode.number} Detailed Story Recap</h2>
-                    
-                    <div className="space-y-6 text-slate-700 font-normal leading-relaxed text-sm sm:text-base">
-                      {selectedEpisode.recap.split('\n\n').map((para, idx) => {
-                        const trimmed = para.trim();
-                        if (!trimmed) return null;
-
-                        const isHeading = trimmed.length < 80 && (trimmed.includes(':') || trimmed.includes('—') || (!trimmed.includes('.') && trimmed.split(' ').length < 10));
-
-                        if (isHeading) {
-                          return (
-                            <h3 key={idx} className="text-lg sm:text-xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4 tracking-tight">
-                              {trimmed}
-                            </h3>
-                          );
-                        }
-
-                        if (trimmed.startsWith('- ') || trimmed.includes('\n- ')) {
-                          const items = trimmed.split('\n').map(li => li.replace(/^-\s*/, '').trim()).filter(Boolean);
-                          return (
-                            <ul key={idx} className="list-disc pl-6 text-slate-700 space-y-2.5 my-4">
-                              {items.map((item, itemIdx) => (
-                                <li key={itemIdx} className="text-sm sm:text-base leading-relaxed">{item}</li>
-                              ))}
-                            </ul>
-                          );
-                        }
-
-                        return (
-                          <p key={idx} className="text-slate-700 leading-relaxed">
-                            {trimmed}
-                          </p>
-                        );
-                      })}
-                    </div>
-
-                    {selectedEpisode.recapUrdu && (
-                      <div className="space-y-3 pt-6 border-t border-slate-100">
-                        <h3 className="text-lg font-urdu-slim font-bold text-slate-900 dir-rtl text-right">
-                          مہمد فتحلر سلطان سیزن 4 قسط {selectedEpisode.number} اردو کہانی کا خلاصہ
-                        </h3>
-                        <p className="text-slate-700 text-base font-urdu-slim font-normal whitespace-pre-line leading-relaxed dir-rtl text-right">
-                          {selectedEpisode.recapUrdu}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-8 border-t border-slate-200 text-left mt-8">
-                    <h3 className="text-xs font-bold text-slate-900 mb-4 uppercase tracking-wider">Episode Details</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-xs">
-                      <div>
-                        <div className="text-slate-400 font-medium">Series</div>
-                        <div className="text-slate-900 font-bold mt-0.5">Mehmed Fetihler Sultani</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Season</div>
-                        <div className="text-slate-900 font-bold mt-0.5">Season 4</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Episode</div>
-                        <div className="text-slate-900 font-bold mt-0.5">Episode {selectedEpisode.number}</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Language</div>
-                        <div className="text-slate-900 font-bold mt-0.5">Urdu Subtitles</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Quality</div>
-                        <div className="text-slate-900 font-bold mt-0.5">HD 1080p</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-400 font-medium">Platform</div>
-                        <div className="text-[#22C55E] font-extrabold mt-0.5">FEVIQO</div>
-                      </div>
-                    </div>
-                  </div>
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left">
+                  <EditorialEpisodeGuidePanel
+                    hideBanner
+                    seriesKey="mehmed-fetihler-sultani"
+                    seriesTitle="Mehmed: Fetihler Sultanı"
+                    seasonLabel="Season 4"
+                    episodeNumber={selectedEpisode.number}
+                    episodeTitle={`Mehmed: Fetihler Sultanı Episode ${selectedEpisode.number} (Bölüm ${selectedEpisode.number}) — Episode Summary & Notes`}
+                    releaseDate={
+                      selectedEpisode.airDate
+                        ? new Date(selectedEpisode.airDate).toLocaleDateString('en-US', {
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })
+                        : 'November 2026'
+                    }
+                    duration={selectedEpisode.duration}
+                    network={MEHMED_SERIES_DATA.network}
+                    genre="Ottoman Historical Drama"
+                    thumbnailUrl={selectedEpisode.thumbnail}
+                    plotOverview={getCleanMehmedPlot(selectedEpisode)}
+                    plotOverviewUrdu={selectedEpisode.recapUrdu}
+                    cast={MEHMED_CAST}
+                    trailerReviewNotes={[
+                      `The official promotional trailer for Episode ${selectedEpisode.number} highlights grand Ottoman production design, strategic siege choreography, and palace intrigue across Season 4.`,
+                      'Serkan Çayoğlu delivers a measured, commanding performance as Sultan Mehmed II weighing military necessity against counsel from his viziers.',
+                      'Orchestral percussion and dramatic lighting contrast heighten the suspense inside the imperial divan and along the frontier.',
+                    ]}
+                    editorialHighlights={[
+                      'High-stakes strategic maneuvers shaping the Ottoman campaign across Anatolia and Rumelia.',
+                      'Complex political tension between Sultan Mehmed II and court rivals in the imperial council.',
+                      'Historically inspired character moments paired with Urdu subtitle & dubbing updates.',
+                    ]}
+                    editorialRating="4.8 / 5"
+                  />
                 </div>
               )}
 

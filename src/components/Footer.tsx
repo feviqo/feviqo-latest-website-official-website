@@ -206,7 +206,7 @@ export const Footer: React.FC<FooterProps> = ({
             </ul>
           </div>
 
-          {/* Column 3: Turkish Dramas (Urdu) */}
+          {/* Column 3: Turkish Drama Episode Guides & Urdu Subtitles */}
           <div>
             <h4 className="font-extrabold text-white text-sm uppercase tracking-wider mb-4 text-[#22C55E]">
               {t(MEMBERSHIP_COPY.footer.dramasHeading)}
@@ -214,8 +214,8 @@ export const Footer: React.FC<FooterProps> = ({
             <ul className="space-y-2 text-xs text-emerald-100 font-normal">
               <li>
                 <a href="/yeralti" onClick={(e) => { e.preventDefault(); nav('yeralti'); }} className="hover:text-white transition cursor-pointer font-black text-[#22C55E] flex items-center justify-between">
-                  <span>Yeraltı (Urdu Dubbed)</span>
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 font-black text-[9px] uppercase tracking-wider">NEW</span>
+                  <span>Yeraltı — Dubbing Updates</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 font-black text-[9px] uppercase tracking-wider">GUIDE</span>
                 </a>
               </li>
               <li>
@@ -229,8 +229,8 @@ export const Footer: React.FC<FooterProps> = ({
                   }}
                   className="hover:text-white transition cursor-pointer font-black text-amber-300 flex items-center justify-between"
                 >
-                  <span>Mehmed Ep 90 (Urdu Subtitles)</span>
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-600/80 text-white font-black text-[9px] uppercase tracking-wider">HD</span>
+                  <span>Mehmed Ep 90 — Summary &amp; Notes</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-600/80 text-white font-black text-[9px] uppercase tracking-wider">NEW</span>
                 </a>
               </li>
               <li>
@@ -244,12 +244,12 @@ export const Footer: React.FC<FooterProps> = ({
                   }}
                   className="hover:text-white transition cursor-pointer font-bold text-emerald-200 block"
                 >
-                  Mehmed Ep 89 (Urdu Subtitles)
+                  Mehmed Ep 89 — Episode Summary
                 </a>
               </li>
               <li>
                 <a href="/mehmed-fetihler-sultani" onClick={(e) => { e.preventDefault(); nav('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
-                  Mehmed: Fetihler Sultanı (Urdu)
+                  Mehmed: Subtitle &amp; Dubbing Updates
                 </a>
               </li>
               <li>
@@ -263,7 +263,7 @@ export const Footer: React.FC<FooterProps> = ({
                   }}
                   className="hover:text-white transition cursor-pointer font-bold text-amber-300 block"
                 >
-                  Güneşin Doğduğu Yer Ep 7 (Urdu)
+                  Güneşin Doğduğu Yer Ep 7 Notes
                 </a>
               </li>
               <li>
@@ -277,22 +277,22 @@ export const Footer: React.FC<FooterProps> = ({
                   }}
                   className="hover:text-white transition cursor-pointer font-bold text-emerald-300 block"
                 >
-                  Teşkilat Ep 189 (Urdu Subtitles)
+                  Teşkilat Ep 189 — Summary &amp; Notes
                 </a>
               </li>
               <li>
                 <a href="/teskilat" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
-                  Teşkilat Season 7 (Urdu Subtitles)
+                  Teşkilat Season 7 Episode Guides
                 </a>
               </li>
               <li>
                 <a href="/gunesin-dogdugu-yer" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer font-bold text-emerald-300 block">
-                  Güneşin Doğduğu Yer (Urdu)
+                  Güneşin Doğduğu Yer Guides
                 </a>
               </li>
               <li>
                 <a href="/dramas" onClick={(e) => { e.preventDefault(); nav('dramas'); }} className="hover:text-white transition cursor-pointer text-[#DBFF4C] font-extrabold underline block mt-1">
-                  All Turkish Dramas &rarr;
+                  All Episode Guides &amp; Urdu Subtitles &rarr;
                 </a>
               </li>
             </ul>
@@ -353,7 +353,7 @@ export const Footer: React.FC<FooterProps> = ({
                   }}
                   className="hover:text-[#22C55E] transition cursor-pointer block"
                 >
-                  Terms of Use
+                  Terms of Service
                 </a>
               </li>
               <li>
@@ -368,6 +368,20 @@ export const Footer: React.FC<FooterProps> = ({
                   className="hover:text-[#22C55E] transition cursor-pointer block"
                 >
                   DMCA &amp; Copyright Policy
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/disclaimer"
+                  onClick={(e) => {
+                    if (!e.metaKey && !e.ctrlKey) {
+                      e.preventDefault();
+                      nav('disclaimer');
+                    }
+                  }}
+                  className="hover:text-[#22C55E] transition cursor-pointer block"
+                >
+                  Disclaimer
                 </a>
               </li>
             </ul>
@@ -414,7 +428,19 @@ export const Footer: React.FC<FooterProps> = ({
               }}
               className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer"
             >
-              DMCA Policy
+              DMCA
+            </a>
+            <a
+              href="/disclaimer"
+              onClick={(e) => {
+                if (!e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  nav('disclaimer');
+                }
+              }}
+              className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer"
+            >
+              Disclaimer
             </a>
             <a
               href="/contact"
@@ -426,7 +452,7 @@ export const Footer: React.FC<FooterProps> = ({
               }}
               className="hover:text-[#22C55E] hover:underline font-semibold transition cursor-pointer"
             >
-              Contact
+              Contact Us
             </a>
             <a
               href="/sitemap.xml"

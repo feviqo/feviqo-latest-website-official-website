@@ -127,7 +127,7 @@ export function generateSitemapXml(): string {
 
     if (routeKey === '/' || routeKey === '/membership') priority = '1.0';
     if (routeKey.includes('episode-')) priority = '1.0';
-    if (['/privacy', '/privacy-policy', '/terms', '/dmca', '/contact'].includes(routeKey)) {
+    if (['/privacy', '/privacy-policy', '/terms', '/dmca', '/disclaimer', '/contact'].includes(routeKey)) {
       priority = '0.5';
       changefreq = 'monthly';
     }
