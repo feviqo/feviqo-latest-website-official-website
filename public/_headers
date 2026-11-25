@@ -15,6 +15,9 @@
 /robots.txt
   Content-Type: text/plain; charset=utf-8
   Cache-Control: public, max-age=3600, must-revalidate
+/sw.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate
 /membership
   Cache-Control: public, max-age=0, must-revalidate
 /membership/*

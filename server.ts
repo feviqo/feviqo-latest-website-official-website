@@ -7756,7 +7756,13 @@ async function startServer() {
       index: false,
       redirect: false,
       setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html') || filePath.endsWith('sitemap.xml') || filePath.endsWith('robots.txt')) {
+        if (
+          filePath.endsWith('.html') ||
+          filePath.endsWith('.txt') ||
+          filePath.endsWith('sitemap.xml') ||
+          filePath.endsWith('robots.txt') ||
+          path.basename(filePath) === 'sw.js'
+        ) {
           res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
         }
       },
@@ -7768,7 +7774,13 @@ async function startServer() {
       index: false,
       redirect: false,
       setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html') || filePath.endsWith('sitemap.xml') || filePath.endsWith('robots.txt')) {
+        if (
+          filePath.endsWith('.html') ||
+          filePath.endsWith('.txt') ||
+          filePath.endsWith('sitemap.xml') ||
+          filePath.endsWith('robots.txt') ||
+          path.basename(filePath) === 'sw.js'
+        ) {
           res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
         }
       },

@@ -26,7 +26,7 @@
     { "source": "/terms", "destination": "/terms/index.html" },
     { "source": "/account", "destination": "/account/index.html" },
     {
-      "source": "/((?!assets/|images/|logos/|videos/|uploads/|favicon|robots\\.txt|sitemap\\.xml|llms\\.txt|ai-catalog\\.json|ads\\.txt|feviqo-indexnow-key-2026\\.txt).*)",
+      "source": "/((?!assets/|images/|logos/|videos/|uploads/|favicon|robots\\.txt|sitemap\\.xml|llms\\.txt|ai-catalog\\.json|ads\\.txt|sw\\.js|feviqo-indexnow-key-2026\\.txt).*)",
       "destination": "/index.html"
     }
   ],
@@ -55,6 +55,15 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     }

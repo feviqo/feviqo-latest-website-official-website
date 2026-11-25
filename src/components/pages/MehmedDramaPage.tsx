@@ -15,7 +15,6 @@ import {
   Calendar,
   Search,
   DollarSign,
-  Sparkles,
   ShieldCheck,
   Sword,
   Globe,
@@ -27,13 +26,6 @@ import {
 import { Navbar } from '../Navbar';
 import { DramaMemberBar } from '../membership/DramaMemberBar';
 import { Footer } from '../Footer';
-import { AdBanner468x60 } from '../AdBanner468x60';
-import { AdBanner160x300 } from '../AdBanner160x300';
-import { AdBanner300x250 } from '../AdBanner300x250';
-import { AdBanner728x90 } from '../AdBanner728x90';
-import { AdBanner320x50 } from '../AdBanner320x50';
-import { AdBanner160x600 } from '../AdBanner160x600';
-import { AdNativeBanner } from '../AdNativeBanner';
 import { VastPreRollAdOverlay } from '../VastPreRollAdOverlay';
 import { MEHMED_SERIES_DATA, MEHMED_EPISODES, MehmedEpisode } from '../../data/mehmedData';
 import { isEpisodePremium } from '../../data/membershipCatalog';
@@ -973,31 +965,6 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     <Share2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>{copiedLink ? 'Copied!' : 'Share Episode'}</span>
                   </button>
-                </div>
-              </div>
-
-              {/* High-Converting Ads Row */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 my-4">
-
-                <div className="flex flex-col md:flex-row items-center justify-center gap-3 sm:gap-6 my-4">
-                  <AdBanner468x60 />
-                  <AdBanner300x250 />
-                  <AdBanner160x300 />
-                </div>
-
-                {/* Native Banner */}
-                <AdNativeBanner />
-
-                <div className="flex justify-center my-3">
-                  <a
-                    href="https://arwf.org/4/407c2859d48b877cf406dc93dcd6c1d5"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-6 py-2.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-black tracking-wide transition inline-flex items-center gap-2 shadow-sm"
-                  >
-                    <Sparkles className="w-4 h-4 text-emerald-600" />
-                    <span>Sponsored HD Stream Mirror (FEVIQO Fast Server)</span>
-                  </a>
                 </div>
               </div>
 
