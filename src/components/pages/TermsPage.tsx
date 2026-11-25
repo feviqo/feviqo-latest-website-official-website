@@ -175,13 +175,37 @@ export const TermsPage: React.FC<TermsPageProps> = ({
           </p>
         </section>
 
-        {/* Section 7: Third-Party Links & Advertisements */}
+        {/* Section 7: Editorial Content, Third-Party Links & Advertising */}
         <section className="space-y-4">
           <h2 className="text-2xl font-black text-slate-900 border-b border-slate-200 pb-2">
-            7. Third-Party Services &amp; Advertising
+            7. Editorial Information, Third-Party Services &amp; Advertising
           </h2>
           <p>
-            Our website (`feviqo.com`) may contain advertisements provided by Google AdSense and links to third-party websites or services. FEVIQO is not responsible for the content, privacy policies, or practices of any third-party websites or ad providers.
+            In addition to FEVIQO&rsquo;s video production services, <strong>feviqo.com</strong> publishes independent Turkish drama news, episode guides, story summaries, cast profiles, and fan reviews for informational purposes only. FEVIQO does not host or distribute copyrighted television broadcasts. For copyright inquiries, please review our{' '}
+            <a
+              href="/dmca"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigatePage('dmca');
+              }}
+              className="text-emerald-600 font-bold underline"
+            >
+              DMCA &amp; Copyright Policy
+            </a>.
+          </p>
+          <p>
+            Our website (<strong>feviqo.com</strong>) displays advertisements served by third-party advertising partners including <strong>Monetag</strong> and <strong>Google AdSense</strong>, and may include links to external websites. FEVIQO is not responsible for the content, privacy practices, or policies of third-party websites or advertising providers. Please review our{' '}
+            <a
+              href="/privacy-policy"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigatePage('privacy');
+              }}
+              className="text-emerald-600 font-bold underline"
+            >
+              Privacy Policy
+            </a>{' '}
+            for details on cookies and opt-out controls.
           </p>
         </section>
 
@@ -192,13 +216,23 @@ export const TermsPage: React.FC<TermsPageProps> = ({
             <span>Legal Contact</span>
           </h2>
           <p className="text-slate-300 text-sm">
-            If you have any questions regarding these Terms of Service, please contact our legal team:
+            If you have any questions regarding these Terms of Use, please contact our legal desk:
           </p>
           <div className="text-sm font-bold text-emerald-400">
             Email: <a href="mailto:partner@feviqo.com" className="underline">partner@feviqo.com</a>
           </div>
           <p className="text-xs text-slate-400 pt-2">
-            FEVIQO Ltd. &bull; Unlimited Video Editing &amp; Digital Media Distribution
+            FEVIQO Ltd. &bull; Editorial Portal &amp; Creative Video Studio &bull;{' '}
+            <a
+              href="/contact"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigatePage('contact');
+              }}
+              className="text-emerald-300 underline"
+            >
+              Contact Page
+            </a>
           </p>
         </section>
 

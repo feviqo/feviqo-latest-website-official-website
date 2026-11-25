@@ -149,19 +149,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
           </button>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs sm:text-sm font-semibold text-slate-600">
             <a
-              href="/membership"
-              onClick={(e) => {
-                if (!e.metaKey && !e.ctrlKey) {
-                  e.preventDefault();
-                  window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: '/membership' }));
-                }
-              }}
-              className="text-[#16a34a] hover:underline font-bold"
-            >
-              FEVIQO Premium Membership (Turkish Dramas in Urdu) &rarr;
-            </a>
-            <span className="text-slate-300 hidden sm:inline">•</span>
-            <a
               href="/dramas"
               onClick={(e) => {
                 if (!e.metaKey && !e.ctrlKey) {
@@ -169,9 +156,22 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
                   window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: '/dramas' }));
                 }
               }}
+              className="text-[#16a34a] hover:underline font-bold"
+            >
+              Turkish Drama Episode Guides &amp; Reviews &rarr;
+            </a>
+            <span className="text-slate-300 hidden sm:inline">•</span>
+            <a
+              href="/teskilat"
+              onClick={(e) => {
+                if (!e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: '/teskilat' }));
+                }
+              }}
               className="text-slate-700 hover:text-[#16a34a] hover:underline"
             >
-              Explore Urdu Dramas
+              Cast &amp; Story Summaries
             </a>
           </div>
         </div>

@@ -41,6 +41,8 @@ import { DramasPage } from './components/pages/DramasPage';
 import { AboutUsPage } from './components/pages/AboutUsPage';
 import { PrivacyPolicyPage } from './components/pages/PrivacyPolicyPage';
 import { TermsPage } from './components/pages/TermsPage';
+import { DmcaPolicyPage } from './components/pages/DmcaPolicyPage';
+import { ContactPage } from './components/pages/ContactPage';
 import { MembershipPage } from './components/pages/MembershipPage';
 import { GlobalPhoneCompletionGuard } from './components/membership/GlobalPhoneCompletionGuard';
 import { LanguageProvider } from './i18n/LanguageContext';
@@ -151,6 +153,8 @@ export default function App() {
       if (path.includes('/about') || hash.includes('#about')) return 'about';
       if (path.includes('/privacy') || hash.includes('#privacy')) return 'privacy';
       if (path.includes('/terms') || hash.includes('#terms')) return 'terms';
+      if (path.includes('/dmca') || hash.includes('#dmca')) return 'dmca';
+      if (path.includes('/contact') || hash.includes('#contact')) return 'contact';
     }
     return 'home';
   });
@@ -300,6 +304,10 @@ export default function App() {
         setCurrentRoute('privacy');
       } else if (path.includes('/terms') || hash.includes('#terms')) {
         setCurrentRoute('terms');
+      } else if (path.includes('/dmca') || hash.includes('#dmca')) {
+        setCurrentRoute('dmca');
+      } else if (path.includes('/contact') || hash.includes('#contact')) {
+        setCurrentRoute('contact');
       } else {
         setCurrentRoute('home');
       }
@@ -353,19 +361,21 @@ export default function App() {
       'platform': 'FEVIQO Flow Portal - Manage Video Edits & Assets',
       'admin': 'FEVIQO Admin Portal - Dashboard & Client Management',
       'turkish-drama': 'Turkish TV & Drama Content Licensing | FEVIQO',
-      'teskilat-urdu': 'Teskilat Season 7 Episode 4 Urdu Subtitles | Bolum 188 - FEVIQO.com',
-      'gunesin-dogdugu-yer': 'Gunesin Dogdugu Yer Urdu Subtitles – All Episodes | FEVIQO',
-      'mehmed-fetihler-sultani': 'Mehmed Season 4 Episode 90 Urdu Subtitles | Bolum 90 - FEVIQO',
-      'yeralti': 'Yeralti - Urdu Dub (جرائم کی دنیا) | Turkish Drama — FEVIQO',
-      'dramas': 'Turkish Dramas Portal - Stream Premium Series & Movies | FEVIQO',
-      'membership': 'FEVIQO Premium Membership & Pricing | Watch Turkish Dramas in Urdu',
-      'account': 'My Account | FEVIQO Premium Membership',
+      'teskilat-urdu': 'Teşkilat Season 7 Episode Guide, Story Summary & Cast | FEVIQO',
+      'gunesin-dogdugu-yer': 'Güneşin Doğduğu Yer Episode Guide, Cast & Reviews | FEVIQO',
+      'mehmed-fetihler-sultani': 'Mehmed: Fetihler Sultanı Episode Guide & Story Summary | FEVIQO',
+      'yeralti': 'Yeraltı Episode Guide, Cast & Story Reviews | FEVIQO',
+      'dramas': 'Turkish Drama Episode Guides, Story Summaries & Reviews | FEVIQO',
+      'membership': 'FEVIQO Reader Membership & Community Plans | FEVIQO',
+      'account': 'My Account | FEVIQO',
       'admin-memberships': 'FEVIQO Membership & Payment Verification Admin',
       'admin-automation': 'FEVIQO WhatsApp Cloud API & Automation Admin',
       'admin-automation-whatsapp': 'FEVIQO Manual WhatsApp Center & Customer Queue',
       'admin-automation-leads': 'FEVIQO Video Editing Leads & WhatsApp Inbox',
-      'privacy': 'Privacy Policy & Cookie Disclosure | FEVIQO',
-      'terms': 'Terms of Service & Usage Agreement | FEVIQO'
+      'privacy': 'Privacy Policy & Advertising Cookie Disclosure | FEVIQO',
+      'terms': 'Terms of Use & Editorial Policy | FEVIQO',
+      'dmca': 'DMCA & Copyright Policy | FEVIQO',
+      'contact': 'Contact Us | FEVIQO'
     };
 
     const pathConfig = getSEOConfigForPath(window.location.pathname);
@@ -400,6 +410,10 @@ export default function App() {
     const newPath =
       route === 'home'
         ? '/'
+        : route === 'privacy'
+        ? '/privacy-policy'
+        : route === 'teskilat-urdu'
+        ? '/teskilat'
         : route === 'admin-memberships'
         ? '/admin/memberships'
         : route === 'admin-automation'
@@ -763,6 +777,28 @@ export default function App() {
       case 'terms':
         return (
           <TermsPage
+            onBackToHome={() => navigateTo('home')}
+            onBookCall={handleOpenBookCall}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
+            onNavigatePage={(route) => navigateTo(route)}
+          />
+        );
+
+      case 'dmca':
+        return (
+          <DmcaPolicyPage
+            onBackToHome={() => navigateTo('home')}
+            onBookCall={handleOpenBookCall}
+            onNavigatePricing={() => navigateTo('pricing')}
+            onNavigateFlow={(view) => navigateTo('flow', view)}
+            onNavigatePage={(route) => navigateTo(route)}
+          />
+        );
+
+      case 'contact':
+        return (
+          <ContactPage
             onBackToHome={() => navigateTo('home')}
             onBookCall={handleOpenBookCall}
             onNavigatePricing={() => navigateTo('pricing')}

@@ -16,7 +16,8 @@ import {
   Search,
   DollarSign,
   Lock,
-  ShieldCheck
+  ShieldCheck,
+  BookOpen
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { DramaMemberBar } from '../membership/DramaMemberBar';
@@ -28,6 +29,34 @@ import { attachHlsStream, extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
 import { ProtectedPlayerWatermark } from '../membership/ProtectedPlayerWatermark';
+import { EDITORIAL_COMPLIANCE_MODE } from '../../config/complianceMode';
+import { EditorialEpisodeGuidePanel, CastMemberInfo } from '../drama/EditorialEpisodeGuidePanel';
+
+const GUNESIN_CAST: CastMemberInfo[] = [
+  {
+    actor: 'Anatolian Lead Ensemble',
+    character: 'Family Elders & Heirs',
+    roleNote: 'Central figures navigating generational heritage, honor, and regional rivalries.',
+  },
+  {
+    actor: 'Supporting Cast',
+    character: 'Rival Household Strategists',
+    roleNote: 'Characters whose ambitions challenge the balance of power across the valley.',
+  },
+  {
+    actor: 'Featured Performers',
+    character: 'Local Community & Allies',
+    roleNote: 'Voices grounding the series in traditional Anatolian culture and emotional stakes.',
+  },
+];
+
+const getCleanGunesinPlot = (ep: GunesinEpisode) => {
+  const raw = ep.recap || ep.shortSummary || '';
+  if (/premium|subscribe|unlock|watch online|download|stream/i.test(raw)) {
+    return `Episode ${ep.number} of Güneşin Doğduğu Yer deepens the Anatolian family saga as closely guarded secrets test long-standing loyalties. ${GUNESIN_SERIES_DATA.synopsis}\n\nAs tensions rise between rival households, the characters must weigh duty to family against their desire for justice and peace.`;
+  }
+  return raw;
+};
 
 interface GunesinDramaPageProps {
   onBackToHome: () => void;
@@ -97,6 +126,36 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
   // SEO & Google Search Keyword Optimization Effect for Main & Episode 3 Pages
   useEffect(() => {
     const keywordsEl = document.querySelector('meta[name="keywords"]');
+
+    if (EDITORIAL_COMPLIANCE_MODE) {
+      const num = selectedEpisode.number;
+      const pageTitle =
+        activeView === 'episode-detail'
+          ? `Güneşin Doğduğu Yer Episode ${num} — Episode Guide, Story Summary & Cast Review | FEVIQO`
+          : 'Güneşin Doğduğu Yer — Episode Guide, Story Summary & Cast Reviews | FEVIQO';
+      const metaDesc =
+        activeView === 'episode-detail'
+          ? `Read our original episode guide, story summary, release notes, and cast review for Güneşin Doğduğu Yer Episode ${num} on FEVIQO.`
+          : 'Explore Güneşin Doğduğu Yer episode guides, character profiles, release dates, and reader reviews on FEVIQO.';
+      document.title = pageTitle;
+      const metaDescEl = document.querySelector('meta[name="description"]');
+      if (metaDescEl) metaDescEl.setAttribute('content', metaDesc);
+      if (keywordsEl) {
+        keywordsEl.setAttribute(
+          'content',
+          `gunesin dogdugu yer episode ${num} guide, gunesin dogdugu yer story summary, turkish drama reviews, feviqo`
+        );
+      }
+      const ogTitleEl = document.querySelector('meta[property="og:title"]');
+      if (ogTitleEl) ogTitleEl.setAttribute('content', pageTitle);
+      const ogDescEl = document.querySelector('meta[property="og:description"]');
+      if (ogDescEl) ogDescEl.setAttribute('content', metaDesc);
+      const twTitleEl = document.querySelector('meta[name="twitter:title"]');
+      if (twTitleEl) twTitleEl.setAttribute('content', pageTitle);
+      const twDescEl = document.querySelector('meta[name="twitter:description"]');
+      if (twDescEl) twDescEl.setAttribute('content', metaDesc);
+      return;
+    }
 
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.number;
@@ -205,12 +264,17 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
     : undefined;
 
   useEffect(() => {
+    if (EDITORIAL_COMPLIANCE_MODE) return;
     if (activeView === 'episode-detail' && isSelectedPremium) {
       verifyAndUnlockEpisode('gunesin-dogdugu-yer', selectedEpSlug);
     }
   }, [activeView, isSelectedPremium, selectedEpSlug, verifyAndUnlockEpisode]);
 
   const handleSelectEpisode = (ep: GunesinEpisode) => {
+    if (EDITORIAL_COMPLIANCE_MODE) {
+      navigateToEpisode(ep);
+      return;
+    }
     const epIsPremium = Boolean(ep.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', ep.slug));
     if (!epIsPremium) {
       navigateToEpisode(ep);
@@ -222,6 +286,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
   };
 
   useEffect(() => {
+    if (EDITORIAL_COMPLIANCE_MODE) return;
     if (activeView === 'episode-detail' && videoRef.current && resolvedStreamUrl) {
       const cleanup = attachHlsStream(videoRef.current, resolvedStreamUrl, {
         autoPlay: false,
@@ -278,29 +343,33 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
         onNavigatePage={onNavigatePage}
       />
 
-      <DramaMemberBar dramaId="gunesin-dogdugu-yer" onNavigatePage={onNavigatePage} />
+      {!EDITORIAL_COMPLIANCE_MODE && (
+        <DramaMemberBar dramaId="gunesin-dogdugu-yer" onNavigatePage={onNavigatePage} />
+      )}
 
       {/* TOP IN-STREAM SPONSORSHIP / AD PLACEMENT HEADER BANNER */}
-      <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs">
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
-              SPONSORSHIP
-            </span>
-            <span className="font-semibold text-emerald-100">
-              In-Stream Pre-Roll &amp; Banner Advertising for Gunesin Dogdugu Yer Urdu Portal
-            </span>
-          </div>
+      {!EDITORIAL_COMPLIANCE_MODE && (
+        <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
+                SPONSORSHIP
+              </span>
+              <span className="font-semibold text-emerald-100">
+                In-Stream Pre-Roll &amp; Banner Advertising for Gunesin Dogdugu Yer Urdu Portal
+              </span>
+            </div>
 
-          <button
-            onClick={onBookCall}
-            className="px-4 py-1.5 rounded-full bg-white hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
-          >
-            <DollarSign className="w-3.5 h-3.5 text-emerald-800" />
-            <span>Book Ad Setup / Sponsor</span>
-          </button>
+            <button
+              onClick={onBookCall}
+              className="px-4 py-1.5 rounded-full bg-white hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-800" />
+              <span>Book Ad Setup / Sponsor</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* PRIMARY CONTAINER */}
       <main className="w-full">
@@ -352,21 +421,29 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
 
                       {/* Primary Descriptive H1 Title */}
                       <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-                        Gunesin Dogdugu Yer Urdu Subtitles
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'Güneşin Doğduğu Yer — Episode Guide & Reviews'
+                          : 'Gunesin Dogdugu Yer Urdu Subtitles'}
                       </h1>
 
                       {/* Urdu Translation below logo */}
                       <div className="text-xl sm:text-2xl font-urdu-slim text-slate-300 font-normal dir-rtl leading-relaxed">
-                        گنیشین دوغدوغو یر (Gunesin Dogdugu Yer Urdu)
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'گنیشین دوغدوغو یر — Episode Guide & Story Summary'
+                          : 'گنیشین دوغدوغو یر (Gunesin Dogdugu Yer Urdu)'}
                       </div>
 
                       {/* Series badges */}
                       <div className="text-xs sm:text-sm text-slate-300 font-medium flex flex-wrap items-center gap-2.5 pt-1 select-none">
                         <span className="font-bold text-white">Season 1</span>
                         <span>•</span>
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">HD</span>
+                        <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">
+                          {EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'HD'}
+                        </span>
                         <span>•</span>
-                        <span className="font-medium text-slate-200">Urdu Subtitles</span>
+                        <span className="font-medium text-slate-200">
+                          {EDITORIAL_COMPLIANCE_MODE ? 'Cast & Reviews' : 'Urdu Subtitles'}
+                        </span>
                         <span>•</span>
                         <span className="text-slate-300">Anatolian Family Saga</span>
                       </div>
@@ -379,7 +456,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
 
                     {/* Right button panel */}
                     <div className="lg:col-span-4 flex flex-col items-stretch lg:items-end justify-center gap-2 w-full">
-                      {isDramaUnlocked && (
+                      {!EDITORIAL_COMPLIANCE_MODE && isDramaUnlocked && (
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] font-bold self-start lg:self-end">
                           <ShieldCheck className="w-3.5 h-3.5" />
                           <span>FEVIQO Premium Active</span>
@@ -389,29 +466,35 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                         onClick={() => handleSelectEpisode(latestEpisode)}
                         className="w-full lg:w-auto px-10 py-4 bg-[#22C55E] hover:bg-emerald-600 active:scale-95 text-slate-950 font-black text-sm rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg"
                       >
-                        {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked ? (
+                        {EDITORIAL_COMPLIANCE_MODE ? (
+                          <BookOpen className="w-4 h-4" />
+                        ) : Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked ? (
                           <Lock className="w-4 h-4" />
                         ) : (
                           <Play className="w-4 h-4 fill-current" />
                         )}
                         <span>
-                          {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked
+                          {EDITORIAL_COMPLIANCE_MODE
+                            ? `Read Episode ${latestEpisode.number} Guide`
+                            : Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked
                             ? `Unlock Episode ${latestEpisode.number} (Premium)`
                             : `Watch Episode ${latestEpisode.number} Now`}
                         </span>
                       </button>
-                      <a
-                        href="/membership"
-                        onClick={(e) => {
-                          if (!e.metaKey && !e.ctrlKey) {
-                            e.preventDefault();
-                            onNavigatePage('membership');
-                          }
-                        }}
-                        className="w-full lg:w-auto px-5 py-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
-                      >
-                        <span>Explore FEVIQO Premium Plans</span>
-                      </a>
+                      {!EDITORIAL_COMPLIANCE_MODE && (
+                        <a
+                          href="/membership"
+                          onClick={(e) => {
+                            if (!e.metaKey && !e.ctrlKey) {
+                              e.preventDefault();
+                              onNavigatePage('membership');
+                            }
+                          }}
+                          className="w-full lg:w-auto px-5 py-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
+                        >
+                          <span>Explore FEVIQO Premium Plans</span>
+                        </a>
+                      )}
                     </div>
 
                   </div>
@@ -429,7 +512,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                       latestEpisode.isLockedPremium ||
                         isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)
                     );
-                    const isLatestLocked = isLatestPremium && !isDramaUnlocked;
+                    const isLatestLocked = !EDITORIAL_COMPLIANCE_MODE && isLatestPremium && !isDramaUnlocked;
                     return (
                       <a
                         href={
@@ -445,7 +528,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                       >
                         <img 
                           src={latestEpisode.thumbnail} 
-                          alt={`Gunesin Dogdugu Yer Episode ${latestEpisode.number}`}
+                          alt={`Güneşin Doğduğu Yer Episode ${latestEpisode.number} Guide`}
                           referrerPolicy="no-referrer"
                           className={`w-full h-full object-cover transition duration-300 ${
                             isLatestLocked
@@ -470,7 +553,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                               </span>
                             </div>
                           </>
-                        ) : isLatestPremium ? (
+                        ) : !EDITORIAL_COMPLIANCE_MODE && isLatestPremium ? (
                           <>
                             <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded bg-emerald-500 text-slate-950 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
                               <ShieldCheck className="w-3 h-3" />
@@ -485,11 +568,15 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                         ) : (
                           <>
                             <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
-                              NEW
+                              {EDITORIAL_COMPLIANCE_MODE ? 'EPISODE GUIDE' : 'NEW'}
                             </div>
                             <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
                               <div className="w-11 h-11 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                                <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
+                                {EDITORIAL_COMPLIANCE_MODE ? (
+                                  <BookOpen className="w-5 h-5 text-slate-950" />
+                                ) : (
+                                  <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
+                                )}
                               </div>
                             </div>
                           </>
@@ -502,17 +589,19 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                   <div className="flex-1 space-y-4">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 font-bold uppercase tracking-wider">
-                        <span>LATEST RELEASE</span>
+                        <span>{EDITORIAL_COMPLIANCE_MODE ? 'LATEST STORY SUMMARY' : 'LATEST RELEASE'}</span>
                         <span>·</span>
                         <span>EPISODE {latestEpisode.number}</span>
-                        {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && (
+                        {!EDITORIAL_COMPLIANCE_MODE && Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && (
                           <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-[10px] font-black">
                             {isDramaUnlocked ? 'MEMBERSHIP UNLOCKED' : 'FEVIQO PREMIUM'}
                           </span>
                         )}
                       </div>
                       <h2 className="text-2xl font-black text-slate-900 hover:text-[#22C55E] cursor-pointer transition" onClick={() => handleSelectEpisode(latestEpisode)}>
-                        {latestEpisode.title}
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? `Güneşin Doğduğu Yer Episode ${latestEpisode.number} — Story Summary & Cast Review`
+                          : latestEpisode.title}
                       </h2>
                       <p className="text-xs text-slate-500 flex items-center gap-3">
                         <span className="flex items-center gap-1">
@@ -528,20 +617,26 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     </div>
 
                     <p className="text-slate-600 text-sm leading-relaxed max-w-3xl">
-                      {latestEpisode.shortSummary}
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? getCleanGunesinPlot(latestEpisode).split('\n\n')[0]
+                        : latestEpisode.shortSummary}
                     </p>
 
                     <button 
                       onClick={() => handleSelectEpisode(latestEpisode)}
                       className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-lg transition duration-150 cursor-pointer"
                     >
-                      {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked ? (
+                      {EDITORIAL_COMPLIANCE_MODE ? (
+                        <BookOpen className="w-3.5 h-3.5" />
+                      ) : Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked ? (
                         <Lock className="w-3.5 h-3.5" />
                       ) : (
                         <Play className="w-3.5 h-3.5 fill-current" />
                       )}
                       <span>
-                        {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? `Read Episode ${latestEpisode.number} Guide`
+                          : Boolean(latestEpisode.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', latestEpisode.slug)) && !isDramaUnlocked
                           ? `Unlock Episode ${latestEpisode.number} with Premium`
                           : `Watch Episode ${latestEpisode.number} Now`}
                       </span>
@@ -557,10 +652,12 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6 text-left">
                   <div className="space-y-1">
                     <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-                      <span>Episodes</span>
+                      <span>{EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'Episodes'}</span>
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500">
-                      Watch Gunesin Dogdugu Yer with premium Urdu subtitles.
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'Read story summaries, character spotlights, release dates, and reviews for Güneşin Doğduğu Yer.'
+                        : 'Watch Gunesin Dogdugu Yer with premium Urdu subtitles.'}
                     </p>
                   </div>
 
@@ -603,7 +700,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {filteredEpisodes.map((ep) => {
                       const epPremium = Boolean(ep.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', ep.slug));
-                      const isLocked = epPremium && !isDramaUnlocked;
+                      const isLocked = !EDITORIAL_COMPLIANCE_MODE && epPremium && !isDramaUnlocked;
                       const isCheckingThis = checkingEpisodeKey === `gunesin-dogdugu-yer:${ep.slug}`;
                       return (
                         <a
@@ -624,7 +721,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                           <div className="relative aspect-video bg-slate-950 border-b border-slate-100/10 overflow-hidden">
                             <img 
                               src={ep.thumbnail} 
-                              alt={ep.title}
+                              alt={`Güneşin Doğduğu Yer Episode ${ep.number} Guide`}
                               referrerPolicy="no-referrer"
                               className={`w-full h-full object-cover transition duration-300 ${
                                 isLocked
@@ -649,15 +746,25 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                               </>
                             ) : (
                               <>
-                                {epPremium && (
+                                {!EDITORIAL_COMPLIANCE_MODE && epPremium && (
                                   <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md bg-[#22C55E] text-[#0B0B0D]">
                                     <ShieldCheck className="w-3 h-3" />
                                     <span>Unlocked · Urdu Dubbed</span>
                                   </div>
                                 )}
+                                {EDITORIAL_COMPLIANCE_MODE && (
+                                  <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md bg-[#22C55E] text-[#0B0B0D]">
+                                    <BookOpen className="w-3 h-3" />
+                                    <span>Episode Guide</span>
+                                  </div>
+                                )}
                                 <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
                                   <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                                    <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                    {EDITORIAL_COMPLIANCE_MODE ? (
+                                      <BookOpen className="w-4 h-4 text-slate-950" />
+                                    ) : (
+                                      <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                    )}
                                   </div>
                                 </div>
                               </>
@@ -673,13 +780,17 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                                 <span>{ep.duration}</span>
                               </div>
                               <h3 className={`text-sm sm:text-base font-black group-hover:text-[#22C55E] transition line-clamp-2 ${isLocked ? 'text-white' : 'text-slate-900'}`}>
-                                {ep.title}
+                                {EDITORIAL_COMPLIANCE_MODE
+                                  ? `Güneşin Doğduğu Yer Episode ${ep.number} — Story Summary`
+                                  : ep.title}
                               </h3>
                             </div>
                             
                             <div className="pt-2 flex items-center justify-between text-xs text-[#22C55E] font-bold">
                               <span>
-                                {isLocked
+                                {EDITORIAL_COMPLIANCE_MODE
+                                  ? 'Read Episode Guide'
+                                  : isLocked
                                   ? 'Unlock with FEVIQO Premium'
                                   : epPremium
                                   ? 'Unlocked with Membership'
@@ -709,17 +820,19 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                   <div className="lg:col-span-8 space-y-6">
                     <div className="space-y-1">
                       <span className="text-xs font-black text-emerald-600 tracking-widest uppercase block">THE STORYLINE</span>
-                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">About Gunesin Dogdugu Yer</h2>
+                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">About Güneşin Doğduğu Yer</h2>
                     </div>
 
                     <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal">
-                      FEVIQO brings you official high-definition streaming for Gunesin Dogdugu Yer with premium Urdu subtitles. Stream the latest episodes weekly in 1080p HD, and explore story guides, recaps, and characters.
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'FEVIQO publishes original episode guides, spoiler-free story summaries, character profiles, and fan reviews for Güneşin Doğduğu Yer. Explore weekly narrative analyses and cast notes.'
+                        : 'FEVIQO brings you official high-definition streaming for Gunesin Dogdugu Yer with premium Urdu subtitles. Stream the latest episodes weekly in 1080p HD, and explore story guides, recaps, and characters.'}
                     </p>
 
                     <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Story So Far (Spoiler-Free)</h3>
                       <p className="text-slate-500 text-sm leading-relaxed max-w-3xl">
-                        Update this section with a full, detailed synopsis of season development once confirmed. As the first episodes introduce the audience to core family hierarchies and secret operations, the protagonist remains caught in a turf battle.
+                        As the opening season introduces viewers to deeply rooted family hierarchies, regional alliances, and unspoken betrayals, the lead characters must balance honor and survival at every turning point.
                       </p>
                     </div>
                   </div>
@@ -790,24 +903,60 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
 
               {/* Title & Meta Row */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-left space-y-2">
-                <span className="text-xs font-black text-emerald-600 tracking-widest uppercase">GUNESIN DOGDUGU YER &bull; EPISODE {selectedEpisode.number}</span>
+                <span className="text-xs font-black text-emerald-600 tracking-widest uppercase">
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? `GÜNEŞİN DOĞDUĞU YER • EPISODE ${selectedEpisode.number} GUIDE`
+                    : `GUNESIN DOGDUGU YER • EPISODE ${selectedEpisode.number}`}
+                </span>
                 <h1 className="text-xl sm:text-4xl font-black tracking-tight text-slate-900">
-                  {isSelectedPremium
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? `Güneşin Doğduğu Yer Episode ${selectedEpisode.number} — Story Summary, Cast & Review`
+                    : isSelectedPremium
                     ? `Gunesin Dogdugu Yer Episode ${selectedEpisode.number} Urdu Dubbed - Bolum ${selectedEpisode.number}`
                     : `Gunesin Dogdugu Yer Episode ${selectedEpisode.number} Urdu Subtitles - Bolum ${selectedEpisode.number}`}
                 </h1>
                 <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center gap-2 sm:gap-3">
-                  <span>Duration: {selectedEpisode.duration}</span>
+                  <span>Runtime: {selectedEpisode.duration}</span>
                   <span>&bull;</span>
-                  <span>{isSelectedPremium ? 'Urdu Dubbed' : 'Urdu Subtitles'}</span>
+                  <span>{EDITORIAL_COMPLIANCE_MODE ? 'Editorial Episode Guide' : isSelectedPremium ? 'Urdu Dubbed' : 'Urdu Subtitles'}</span>
                   <span>&bull;</span>
-                  <span>HD 1080p Streaming</span>
+                  <span>{EDITORIAL_COMPLIANCE_MODE ? 'Cast & Reviews' : 'HD 1080p Streaming'}</span>
                 </p>
               </div>
 
-              {/* Secure 16:9 Anti-Download Mux Video Player OR Locked Premium Gate */}
+              {/* Editorial Episode Guide OR Secure 16:9 Video Player */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                {isSelectedPremium && !resolvedStreamUrl ? (
+                {EDITORIAL_COMPLIANCE_MODE ? (
+                  <EditorialEpisodeGuidePanel
+                    seriesKey="gunesin-dogdugu-yer"
+                    seriesTitle="Güneşin Doğduğu Yer"
+                    seasonLabel={`Season ${selectedEpisode.season}`}
+                    episodeNumber={selectedEpisode.number}
+                    episodeTitle={`Güneşin Doğduğu Yer Episode ${selectedEpisode.number} — Story Summary & Review`}
+                    releaseDate={new Date(selectedEpisode.airDate).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    duration={selectedEpisode.duration}
+                    network={GUNESIN_SERIES_DATA.network}
+                    genre="Anatolian Family Drama"
+                    thumbnailUrl={selectedEpisode.thumbnail}
+                    plotOverview={getCleanGunesinPlot(selectedEpisode)}
+                    cast={GUNESIN_CAST}
+                    trailerReviewNotes={[
+                      `The Episode ${selectedEpisode.number} preview highlights sweeping Anatolian landscapes paired with intimate family confrontations.`,
+                      'Dramatic pacing balances emotional dialogue with unexpected plot reversals among rival households.',
+                      'Visual composition and musical motifs emphasize heritage, loyalty, and unspoken grief.',
+                    ]}
+                    editorialHighlights={[
+                      'Major turning point in the family power struggle introduced in Season 1.',
+                      'Character motivations come into sharper focus through subtle dramatic exchanges.',
+                      'Sets up high-stakes emotional choices heading into the next broadcast chapter.',
+                    ]}
+                    editorialRating="4.6 / 5"
+                  />
+                ) : isSelectedPremium && !resolvedStreamUrl ? (
                   <div className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0B0B0D] shadow-2xl flex items-center justify-center select-none aspect-video border border-zinc-800 mx-auto">
                     <img
                       src={selectedEpisode.thumbnail}
@@ -928,9 +1077,9 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                 )}
               </div>
 
-              {/* Actions Row: Download & Share Buttons (Guaranteed same line on phones) */}
+              {/* Actions Row */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-3 flex flex-row items-center justify-between gap-2 w-full">
-                {!isSelectedPremium && selectedEpisode.downloadUrl ? (
+                {!EDITORIAL_COMPLIANCE_MODE && !isSelectedPremium && selectedEpisode.downloadUrl ? (
                   <a
                     href={selectedEpisode.downloadUrl}
                     target="_blank"
@@ -950,66 +1099,69 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                     className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[11px] sm:text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer shrink-0 hover:scale-[1.02] active:scale-95"
                   >
                     <Share2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{copiedLink ? 'Copied!' : 'Share Episode'}</span>
+                    <span>{copiedLink ? 'Copied!' : EDITORIAL_COMPLIANCE_MODE ? 'Share Guide' : 'Share Episode'}</span>
                   </button>
 
                   <button 
                     onClick={handleBackToOverview}
                     className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-[11px] sm:text-xs font-bold rounded-xl transition inline-flex items-center gap-1.5 cursor-pointer shrink-0 hover:scale-[1.02] active:scale-95"
                   >
-                    <span>Series Directory</span>
+                    <span>{EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'Series Directory'}</span>
                   </button>
                 </div>
               </div>
 
               {/* 5. ORIGINAL DETAILED STORY RECAP SECTION */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left max-w-4xl">
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-black text-slate-900">Episode {selectedEpisode.number} Detailed Story Recap</h2>
-                  
-                  {/* Dynamic split paragraphs rendering */}
-                  <div className="space-y-6 text-slate-600 font-normal leading-relaxed text-sm sm:text-base">
-                    {selectedEpisode.recap.split('\n\n').map((para, idx) => {
-                      const trimmed = para.trim();
-                      if (!trimmed) return null;
+              {!EDITORIAL_COMPLIANCE_MODE && (
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left max-w-4xl">
+                  <div className="space-y-6">
+                    <h2 className="text-2xl font-black text-slate-900">Episode {selectedEpisode.number} Detailed Story Recap</h2>
+                    
+                    <div className="space-y-6 text-slate-600 font-normal leading-relaxed text-sm sm:text-base">
+                      {selectedEpisode.recap.split('\n\n').map((para, idx) => {
+                        const trimmed = para.trim();
+                        if (!trimmed) return null;
 
-                      const isHeading = trimmed.length < 80 && (trimmed.includes(':') || trimmed.includes('—') || (!trimmed.includes('.') && trimmed.split(' ').length < 10));
+                        const isHeading = trimmed.length < 80 && (trimmed.includes(':') || trimmed.includes('—') || (!trimmed.includes('.') && trimmed.split(' ').length < 10));
 
-                      if (isHeading) {
+                        if (isHeading) {
+                          return (
+                            <h3 key={idx} className="text-lg sm:text-xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4">
+                              {trimmed}
+                            </h3>
+                          );
+                        }
+
                         return (
-                          <h3 key={idx} className="text-lg sm:text-xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4">
+                          <p key={idx} className="text-slate-600">
                             {trimmed}
-                          </h3>
+                          </p>
                         );
-                      }
-
-                      return (
-                        <p key={idx} className="text-slate-600">
-                          {trimmed}
-                        </p>
-                      );
-                    })}
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* 7. ALL EPISODES DRAWER LIST / RELATED LINKS */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-wider">All Season 1 Episodes</h3>
+                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-wider">
+                      {EDITORIAL_COMPLIANCE_MODE ? 'More Season 1 Episode Guides' : 'All Season 1 Episodes'}
+                    </h3>
                     <button 
                       onClick={handleBackToOverview}
                       className="text-xs font-bold text-[#22C55E] hover:underline"
                     >
-                      Back to Directory &rarr;
+                      Back to Episode Guide &rarr;
                     </button>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                     {GUNESIN_EPISODES.filter(ep => ep.number !== selectedEpisode.number).map(ep => {
                       const epPremium = Boolean(ep.isLockedPremium || isEpisodePremium('gunesin-dogdugu-yer', ep.slug));
-                      const isLocked = epPremium && !isDramaUnlocked;
+                      const isLocked = !EDITORIAL_COMPLIANCE_MODE && epPremium && !isDramaUnlocked;
                       return (
                         <a
                           key={ep.slug}
@@ -1027,7 +1179,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                           <div className="aspect-video relative overflow-hidden bg-slate-950">
                             <img 
                               src={ep.thumbnail} 
-                              alt={ep.title}
+                              alt={`Güneşin Doğduğu Yer Episode ${ep.number} Guide`}
                               referrerPolicy="no-referrer"
                               className={`w-full h-full object-cover ${isLocked ? 'brightness-50' : ''}`}
                             />
@@ -1043,7 +1195,7 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                                   </div>
                                 </div>
                               </>
-                            ) : epPremium ? (
+                            ) : !EDITORIAL_COMPLIANCE_MODE && epPremium ? (
                               <div className="absolute top-2 left-2 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 bg-[#22C55E] text-[#0B0B0D]">
                                 <ShieldCheck className="w-2.5 h-2.5" />
                                 <span>Unlocked</span>
@@ -1053,7 +1205,9 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
                           <div className="p-4 space-y-1">
                             <span className={`text-[10px] font-bold ${isLocked ? 'text-zinc-400' : 'text-slate-400'}`}>EPISODE {ep.number}</span>
                             <h4 className={`text-sm font-black group-hover:text-[#22C55E] transition truncate ${isLocked ? 'text-white' : 'text-slate-900'}`}>
-                              {ep.title}
+                              {EDITORIAL_COMPLIANCE_MODE
+                                ? `Güneşin Doğduğu Yer Episode ${ep.number} — Story Summary`
+                                : ep.title}
                             </h4>
                           </div>
                         </a>
@@ -1067,6 +1221,15 @@ export const GunesinDramaPage: React.FC<GunesinDramaPageProps> = ({
           )}
         </AnimatePresence>
       </main>
+
+      <Footer
+        onBookCall={onBookCall}
+        onGetStarted={onBookCall}
+        onNavigateSection={() => onNavigatePage('home')}
+        onNavigatePricing={onNavigatePricing}
+        onNavigateFlow={() => onNavigateFlow()}
+        onNavigatePage={onNavigatePage}
+      />
 
       <PremiumEpisodeModal
         gateState={gateState}

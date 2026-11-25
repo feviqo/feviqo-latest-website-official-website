@@ -27,9 +27,11 @@ import {
   Subtitles,
   Sliders,
   PictureInPicture2,
-  Lock
+  Lock,
+  BookOpen
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
+import { Footer } from '../Footer';
 import { DramaMemberBar } from '../membership/DramaMemberBar';
 import { NativeVideoPlayer } from '../NativeVideoPlayer';
 import { AppRoute } from '../../types';
@@ -39,6 +41,57 @@ import { isEpisodePremium } from '../../data/membershipCatalog';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
 import { ProtectedPlayerWatermark } from '../membership/ProtectedPlayerWatermark';
+import { EDITORIAL_COMPLIANCE_MODE } from '../../config/complianceMode';
+import { EditorialEpisodeGuidePanel, CastMemberInfo } from '../drama/EditorialEpisodeGuidePanel';
+
+const TESKILAT_CAST: CastMemberInfo[] = [
+  {
+    actor: 'Tolga Sarıtaş',
+    character: 'Altay Yalçın (Kurt Bey)',
+    roleNote: 'Elite intelligence field operative balancing national security operations with protecting his son Ender.',
+  },
+  {
+    actor: 'Yunus Emre Yıldırımer',
+    character: 'Korkut Sönmezay',
+    roleNote: 'Deep-cover intelligence officer infiltrating rival networks under extreme personal risk.',
+  },
+  {
+    actor: 'Serdar Yeğin',
+    character: 'Uzay Çelenkli',
+    roleNote: 'Technical intelligence analyst coordinating covert surveillance and digital countermeasures.',
+  },
+  {
+    actor: 'Murat Han',
+    character: 'Hamdi',
+    roleNote: 'Underground contact whose shifting loyalties shape Korkut’s operations.',
+  },
+  {
+    actor: 'Adnan Biricik',
+    character: 'Tuğrul Başkan',
+    roleNote: 'Senior agency strategist directing high-stakes counter-intelligence responses.',
+  },
+  {
+    actor: 'Supporting Cast',
+    character: 'Azra, Bahar & Şahin',
+    roleNote: 'Key figures caught in Season 7’s central web of double-crosses and loyalty tests.',
+  },
+];
+
+const getCleanTeskilatPlot = (ep: TeskilatEpisode) => {
+  const raw = ep.storyRecapEnglish || '';
+  if (/premium membership|subscribe to|unlock/i.test(raw)) {
+    return `Season 7 Episode ${ep.episodeNumber} (Bölüm ${ep.episodeNumber}) of Teşkilat continues the high-stakes intelligence saga as Altay Yalçın and the covert task force confront escalating cross-border threats and internal betrayals.\n\nBalancing tactical counter-espionage with deeply personal stakes, this chapter tests the trust between field operatives and sets up major turning points for the remainder of Season 7.`;
+  }
+  return raw
+    .split('\n\n')
+    .filter(
+      (p) =>
+        !/watch teskilat|where to watch|search tags:|target search keywords:|subscribe to|niaziplay/i.test(
+          p
+        )
+    )
+    .join('\n\n');
+};
 
 interface TeskilatEpisode {
   id: string;
@@ -412,6 +465,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   }, [selectedEpisode?.id]);
 
   useEffect(() => {
+    if (EDITORIAL_COMPLIANCE_MODE) return;
     if (activeView === 'episode-detail' && isSelectedPremium && !resolvedStreamUrl) {
       verifyAndUnlockEpisode('teskilat', selectedEpSlug);
     }
@@ -479,6 +533,36 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   // SEO & Google Search Keyword Optimization Effect for Main & Episode Pages
   useEffect(() => {
     const keywordsEl = document.querySelector('meta[name="keywords"]');
+
+    if (EDITORIAL_COMPLIANCE_MODE) {
+      const num = selectedEpisode.episodeNumber;
+      const pageTitle =
+        activeView === 'episode-detail'
+          ? `Teşkilat Season 7 Episode ${num} — Episode Guide, Story Summary & Cast Review | FEVIQO`
+          : 'Teşkilat Season 7 — Episode Guide, Story Summary & Cast Reviews | FEVIQO';
+      const metaDesc =
+        activeView === 'episode-detail'
+          ? `Read our original episode guide, story summary, cast breakdown, and trailer review for Teşkilat Season 7 Episode ${num} (Bölüm ${num}) on FEVIQO.`
+          : 'Explore Teşkilat Season 7 episode guides, spoiler-aware story summaries, cast profiles, and fan reviews on FEVIQO.';
+      document.title = pageTitle;
+      const metaDescEl = document.querySelector('meta[name="description"]');
+      if (metaDescEl) metaDescEl.setAttribute('content', metaDesc);
+      if (keywordsEl) {
+        keywordsEl.setAttribute(
+          'content',
+          `teskilat season 7 episode ${num} guide, teskilat story summary, teskilat cast and reviews, turkish drama review, feviqo`
+        );
+      }
+      const ogTitleEl = document.querySelector('meta[property="og:title"]');
+      if (ogTitleEl) ogTitleEl.setAttribute('content', pageTitle);
+      const ogDescEl = document.querySelector('meta[property="og:description"]');
+      if (ogDescEl) ogDescEl.setAttribute('content', metaDesc);
+      const twTitleEl = document.querySelector('meta[name="twitter:title"]');
+      if (twTitleEl) twTitleEl.setAttribute('content', pageTitle);
+      const twDescEl = document.querySelector('meta[name="twitter:description"]');
+      if (twDescEl) twDescEl.setAttribute('content', metaDesc);
+      return;
+    }
 
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.episodeNumber;
@@ -559,6 +643,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
   const hlsRef = useRef<Hls | null>(null);
 
   useEffect(() => {
+    if (EDITORIAL_COMPLIANCE_MODE) return;
     const video = videoRef.current;
     if (!video || !resolvedStreamUrl) return;
 
@@ -809,29 +894,33 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
         onNavigatePage={onNavigatePage}
       />
 
-      <DramaMemberBar dramaId="teskilat" onNavigatePage={onNavigatePage} />
+      {!EDITORIAL_COMPLIANCE_MODE && (
+        <DramaMemberBar dramaId="teskilat" onNavigatePage={onNavigatePage} />
+      )}
 
       {/* TOP IN-STREAM SPONSORSHIP / AD PLACEMENT HEADER BANNER */}
-      <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs">
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
-              SPONSORSHIP
-            </span>
-            <span className="font-semibold text-emerald-100">
-              In-Stream Pre-Roll &amp; Banner Advertising for Teskilat Urdu Portal
-            </span>
-          </div>
+      {!EDITORIAL_COMPLIANCE_MODE && (
+        <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
+                SPONSORSHIP
+              </span>
+              <span className="font-semibold text-emerald-100">
+                In-Stream Pre-Roll &amp; Banner Advertising for Teskilat Urdu Portal
+              </span>
+            </div>
 
-          <button
-            onClick={() => setShowAdSetupModal(true)}
-            className="px-4 py-1.5 rounded-full bg-white hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
-          >
-            <DollarSign className="w-3.5 h-3.5 text-emerald-800" />
-            <span>Book Ad Setup / Sponsor</span>
-          </button>
+            <button
+              onClick={() => setShowAdSetupModal(true)}
+              className="px-4 py-1.5 rounded-full bg-white hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-800" />
+              <span>Book Ad Setup / Sponsor</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* MAIN CONTAINER */}
       <main className="flex-1">
@@ -876,28 +965,38 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
                     {/* Primary Descriptive H1 Title */}
                     <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-                      Teskilat Season 7 Urdu Subtitles
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'Teşkilat Season 7 — Episode Guide & Reviews'
+                        : 'Teskilat Season 7 Urdu Subtitles'}
                     </h1>
 
                     {/* Urdu Title below logo */}
                     <div className="text-xl sm:text-2xl font-urdu-slim text-slate-300 font-normal dir-rtl leading-relaxed">
-                      تشکیلات سیزن 7 اردو ترجمہ کے ساتھ (Teskilat Urdu)
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'تشکیلات سیزن 7 — Episode Guide & Story Summary'
+                        : 'تشکیلات سیزن 7 اردو ترجمہ کے ساتھ (Teskilat Urdu)'}
                     </div>
 
                     {/* Hero Metadata Line */}
                     <div className="text-xs sm:text-sm text-slate-300 font-medium flex flex-wrap items-center gap-2.5 pt-1 select-none">
                       <span className="font-bold text-white">Season 7</span>
                       <span>•</span>
-                      <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">HD</span>
+                      <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">
+                        {EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'HD'}
+                      </span>
                       <span>•</span>
-                      <span className="font-medium text-slate-200">Urdu Subtitles</span>
+                      <span className="font-medium text-slate-200">
+                        {EDITORIAL_COMPLIANCE_MODE ? 'Cast & Reviews' : 'Urdu Subtitles'}
+                      </span>
                       <span>•</span>
                       <span className="text-slate-300">Altay • Ender • Korkut</span>
                     </div>
 
                     {/* Short Description */}
                     <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-normal max-w-2xl">
-                      Watch Teskilat Season 7 Urdu Subtitles on FEVIQO. Stream official Teskilat Urdu episodes, story recaps, and HD releases weekly.
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'Read original Teşkilat Season 7 episode guides, spoiler-aware story summaries, cast profiles, trailer notes, and fan discussions on FEVIQO.'
+                        : 'Watch Teskilat Season 7 Urdu Subtitles on FEVIQO. Stream official Teskilat Urdu episodes, story recaps, and HD releases weekly.'}
                     </p>
 
                   </div>
@@ -909,30 +1008,36 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                         onClick={() => handleOpenEpisode(EPISODE_189)}
                         className="w-full lg:w-auto px-8 py-3.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 shadow-lg cursor-pointer hover:scale-[1.02]"
                       >
-                        <Play className="w-4 h-4 fill-current text-slate-950" />
-                        <span>Watch Episode 189</span>
+                        {EDITORIAL_COMPLIANCE_MODE ? (
+                          <BookOpen className="w-4 h-4 text-slate-950" />
+                        ) : (
+                          <Play className="w-4 h-4 fill-current text-slate-950" />
+                        )}
+                        <span>{EDITORIAL_COMPLIANCE_MODE ? 'Read Episode 189 Guide' : 'Watch Episode 189'}</span>
                       </button>
 
                       <a
                         href="#episode-directory"
                         className="w-full lg:w-auto px-6 py-3.5 bg-slate-900 border border-slate-700 hover:bg-slate-800 text-white font-bold text-sm tracking-wide rounded-md transition duration-150 flex items-center justify-center gap-2 cursor-pointer text-center"
                       >
-                        <span>Browse Episodes</span>
+                        <span>{EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'Browse Episodes'}</span>
                       </a>
                     </div>
-                    <a
-                      href="/membership"
-                      onClick={(e) => {
-                        if (!e.metaKey && !e.ctrlKey) {
-                          e.preventDefault();
-                          onNavigatePage('membership');
-                        }
-                      }}
-                      className="w-full lg:w-auto px-5 py-2.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
-                    >
-                      <Lock className="w-3.5 h-3.5" />
-                      <span>FEVIQO Premium Membership — Unlock Urdu Episodes</span>
-                    </a>
+                    {!EDITORIAL_COMPLIANCE_MODE && (
+                      <a
+                        href="/membership"
+                        onClick={(e) => {
+                          if (!e.metaKey && !e.ctrlKey) {
+                            e.preventDefault();
+                            onNavigatePage('membership');
+                          }
+                        }}
+                        className="w-full lg:w-auto px-5 py-2.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
+                      >
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>FEVIQO Premium Membership — Unlock Urdu Episodes</span>
+                      </a>
+                    )}
                   </div>
 
                 </div>
@@ -948,13 +1053,17 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 const isLatestPremium = Boolean(
                   latestEp.isLockedPremium || isEpisodePremium('teskilat', latestSlug)
                 );
-                const isLatestUnlocked = !isLatestPremium || hasDramaAccess('teskilat');
-                const isLatestLocked = isLatestPremium && !isLatestUnlocked;
+                const isLatestUnlocked = EDITORIAL_COMPLIANCE_MODE || !isLatestPremium || hasDramaAccess('teskilat');
+                const isLatestLocked = !EDITORIAL_COMPLIANCE_MODE && isLatestPremium && !isLatestUnlocked;
                 const isCheckingLatest = checkingEpisodeKey === `teskilat:${latestSlug}`;
                 const latestHref = isLatestLocked
                   ? `/membership?drama=teskilat&episode=${latestSlug}`
                   : `/teskilat/${latestSlug}`;
                 const handleOpenLatest = () => {
+                  if (EDITORIAL_COMPLIANCE_MODE) {
+                    handleOpenEpisode(latestEp);
+                    return;
+                  }
                   if (isLatestPremium) {
                     attemptWatchEpisode('teskilat', latestSlug, latestEp.titleEnglish, () => {
                       handleOpenEpisode(latestEp);
@@ -968,10 +1077,12 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <div className="space-y-6 text-left">
                     <div className="space-y-1">
                       <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                        SEASON 7 &bull; EPISODE 194 (BOLUM 194) &bull; URDU DUBBED
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'SEASON 7 • EPISODE 194 (BÖLÜM 194) • STORY SUMMARY'
+                          : 'SEASON 7 • EPISODE 194 (BOLUM 194) • URDU DUBBED'}
                       </div>
                       <h2 className="text-2xl sm:text-4xl font-black text-[#0B0B0D]">
-                        Latest Episode
+                        {EDITORIAL_COMPLIANCE_MODE ? 'Latest Episode Guide' : 'Latest Episode'}
                       </h2>
                     </div>
 
@@ -987,8 +1098,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       >
                         <img
                           src={latestEp.directoryThumbnailUrl || latestEp.thumbnailUrl}
-                          alt="Teskilat Episode 194 Urdu Dubbed - Bolum 194 FEVIQO"
-                          title="Teskilat Episode 194 Urdu Dubbed - Bolum 194 FEVIQO"
+                          alt="Teşkilat Episode 194 Story Summary & Review — FEVIQO"
+                          title="Teşkilat Episode 194 Story Summary & Review — FEVIQO"
                           referrerPolicy="no-referrer"
                           className={`w-full h-full object-cover transition-transform duration-500 ${
                             isLatestLocked
@@ -997,12 +1108,26 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           }`}
                         />
                         <div className="absolute top-3 left-3 px-2.5 py-1 rounded bg-[#0B0B0D]/90 border border-[#22C55E]/40 text-[#22C55E] text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 shadow-lg">
-                          {isLatestLocked ? <Lock className="w-3 h-3" /> : <Play className="w-3 h-3 fill-current" />}
-                          <span>{isLatestLocked ? 'URDU DUBBED · PREMIUM' : 'LATEST · UNLOCKED'}</span>
+                          {EDITORIAL_COMPLIANCE_MODE ? (
+                            <BookOpen className="w-3 h-3" />
+                          ) : isLatestLocked ? (
+                            <Lock className="w-3 h-3" />
+                          ) : (
+                            <Play className="w-3 h-3 fill-current" />
+                          )}
+                          <span>
+                            {EDITORIAL_COMPLIANCE_MODE
+                              ? 'EPISODE GUIDE · REVIEW'
+                              : isLatestLocked
+                              ? 'URDU DUBBED · PREMIUM'
+                              : 'LATEST · UNLOCKED'}
+                          </span>
                         </div>
                         <div className="absolute inset-0 bg-slate-950/20 group-hover:bg-slate-950/10 transition-colors flex items-center justify-center">
                           <div className="w-14 h-14 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
-                            {isLatestLocked ? (
+                            {EDITORIAL_COMPLIANCE_MODE ? (
+                              <BookOpen className="w-6 h-6 text-slate-950" />
+                            ) : isLatestLocked ? (
                               <Lock className="w-6 h-6 text-slate-950" />
                             ) : (
                               <Play className="w-6 h-6 fill-current text-slate-950 ml-0.5" />
@@ -1014,19 +1139,29 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       {/* Content & Description */}
                       <div className="lg:col-span-6 space-y-4">
                         <div className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-black uppercase tracking-wider">
-                          {isLatestUnlocked ? 'LATEST RELEASE · UNLOCKED' : 'LATEST RELEASE · FEVIQO PREMIUM'}
+                          {EDITORIAL_COMPLIANCE_MODE
+                            ? 'FEATURED EPISODE GUIDE · CAST & REVIEWS'
+                            : isLatestUnlocked
+                            ? 'LATEST RELEASE · UNLOCKED'
+                            : 'LATEST RELEASE · FEVIQO PREMIUM'}
                         </div>
 
                         <h3 className="text-2xl sm:text-3xl font-black text-[#0B0B0D]">
-                          Teskilat Season 7 Episode 194 (Bolum 194) Urdu Dubbed
+                          {EDITORIAL_COMPLIANCE_MODE
+                            ? 'Teşkilat Season 7 Episode 194 (Bölüm 194) — Story Summary & Review'
+                            : 'Teskilat Season 7 Episode 194 (Bolum 194) Urdu Dubbed'}
                         </h3>
 
-                        <div className="text-lg font-urdu-slim text-slate-800 dir-rtl text-right font-normal leading-relaxed">
-                          {latestEp.titleUrdu}
-                        </div>
+                        {!EDITORIAL_COMPLIANCE_MODE && (
+                          <div className="text-lg font-urdu-slim text-slate-800 dir-rtl text-right font-normal leading-relaxed">
+                            {latestEp.titleUrdu}
+                          </div>
+                        )}
 
                         <p className="text-slate-600 text-sm leading-relaxed">
-                          {latestEp.storyRecapEnglish}
+                          {EDITORIAL_COMPLIANCE_MODE
+                            ? getCleanTeskilatPlot(latestEp).split('\n\n')[0]
+                            : latestEp.storyRecapEnglish}
                         </p>
 
                         {/* Minimal Information Strip */}
@@ -1035,9 +1170,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           <span>&bull;</span>
                           <span>Espionage Drama</span>
                           <span>&bull;</span>
-                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">1080p HD</span>
+                          <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">
+                            {EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : '1080p HD'}
+                          </span>
                           <span>&bull;</span>
-                          <span>Urdu Dubbed</span>
+                          <span>{EDITORIAL_COMPLIANCE_MODE ? 'Cast & Reviews' : 'Urdu Dubbed'}</span>
                         </div>
 
                         {/* Actions */}
@@ -1046,13 +1183,17 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                             onClick={handleOpenLatest}
                             className="px-6 py-3 rounded-full bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs transition cursor-pointer inline-flex items-center gap-2"
                           >
-                            {isLatestLocked ? (
+                            {EDITORIAL_COMPLIANCE_MODE ? (
+                              <BookOpen className="w-4 h-4 text-slate-950" />
+                            ) : isLatestLocked ? (
                               <Lock className="w-4 h-4 text-slate-950" />
                             ) : (
                               <Play className="w-4 h-4 fill-current text-slate-950" />
                             )}
                             <span>
-                              {isCheckingLatest
+                              {EDITORIAL_COMPLIANCE_MODE
+                                ? 'Read Episode 194 Guide'
+                                : isCheckingLatest
                                 ? 'Checking Access...'
                                 : isLatestLocked
                                 ? 'Unlock Episode 194 (Premium)'
@@ -1068,7 +1209,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                             }}
                             className="text-xs font-bold text-slate-700 hover:text-[#0B0B0D] transition cursor-pointer"
                           >
-                            Open Episode &rarr;
+                            {EDITORIAL_COMPLIANCE_MODE ? 'Open Story Summary →' : 'Open Episode →'}
                           </a>
                         </div>
                       </div>
@@ -1081,27 +1222,31 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
             {/* 7. SHORT SEASON INTRODUCTION (EDITORIAL) */}
             <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-left">
               <div className="p-8 rounded-3xl bg-slate-50 border border-slate-200/80 space-y-3">
-                <h2 className="text-xl font-black text-[#0B0B0D]">Teskilat Season 7 Overview</h2>
+                <h2 className="text-xl font-black text-[#0B0B0D]">Teşkilat Season 7 Overview</h2>
                 <div className="text-base font-urdu-slim text-slate-800 dir-rtl text-right font-normal">
-                  تشکیلات سیزن 7 اردو ترجمہ کے ساتھ
+                  تشکیلات سیزن 7 — Story Summary &amp; Cast Guide
                 </div>
                 <p className="text-slate-600 text-sm leading-relaxed font-normal">
-                  FEVIQO brings you official high-definition streaming for Teskilat Season 7 with full Urdu subtitles. Stream the latest espionage operations, story recaps, and agent arcs in 1080p HD.
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? 'FEVIQO publishes original episode guides, character breakdowns, trailer review notes, and community discussion threads for Teşkilat Season 7. Explore plot recaps and cast highlights for every chapter.'
+                    : 'FEVIQO brings you official high-definition streaming for Teskilat Season 7 with full Urdu subtitles. Stream the latest espionage operations, story recaps, and agent arcs in 1080p HD.'}
                 </p>
               </div>
             </section>
 
-            {/* EPISODE DIRECTORY - SMALL GRID BOXES MATCHING GONUL DAGI & MEHMED */}
+            {/* EPISODE DIRECTORY */}
             <section id="episode-directory" className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
               <div className="text-left space-y-2 mb-8">
                 <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                  EPISODE DIRECTORY
+                  EPISODE GUIDE DIRECTORY
                 </div>
                 <h2 className="text-3xl font-black text-[#0B0B0D]">
-                  Teskilat Season 7 Episodes
+                  {EDITORIAL_COMPLIANCE_MODE ? 'Teşkilat Season 7 Episode Guides' : 'Teskilat Season 7 Episodes'}
                 </h2>
                 <p className="text-slate-600 text-sm">
-                  Watch available Season 7 episodes with Urdu subtitles on FEVIQO.
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? 'Read Season 7 episode summaries, character notes, and viewer reviews on FEVIQO.'
+                    : 'Watch available Season 7 episodes with Urdu subtitles on FEVIQO.'}
                 </p>
               </div>
 
@@ -1111,8 +1256,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   const epSlug = `episode-${ep.episodeNumber}`;
                   const isPremiumEp =
                     Boolean(ep.isLockedPremium) || isEpisodePremium('teskilat', epSlug);
-                  const isUnlocked = !isPremiumEp || hasDramaAccess('teskilat');
-                  const isLocked = isPremiumEp && !isUnlocked;
+                  const isUnlocked = EDITORIAL_COMPLIANCE_MODE || !isPremiumEp || hasDramaAccess('teskilat');
+                  const isLocked = !EDITORIAL_COMPLIANCE_MODE && isPremiumEp && !isUnlocked;
                   const isCheckingThis = checkingEpisodeKey === `teskilat:${epSlug}`;
 
                   return (
@@ -1121,6 +1266,10 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       key={ep.id}
                       onClick={(e) => {
                         e.preventDefault();
+                        if (EDITORIAL_COMPLIANCE_MODE) {
+                          handleOpenEpisode(ep);
+                          return;
+                        }
                         if (isPremiumEp) {
                           attemptWatchEpisode('teskilat', epSlug, ep.titleEnglish, () => {
                             handleOpenEpisode(ep);
@@ -1140,20 +1289,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                         {ep.thumbnailUrl ? (
                           <img
                             src={ep.directoryThumbnailUrl || ep.thumbnailUrl}
-                            alt={
-                              isLocked
-                                ? `Teskilat Episode ${ep.episodeNumber} Urdu Dubbed - FEVIQO Premium`
-                                : ep.episodeNumber === 188
-                                ? 'Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu'
-                                : `Teskilat Urdu Episode ${ep.episodeNumber} Subtitles Thumbnail - Season 7`
-                            }
-                            title={
-                              isLocked
-                                ? `Teskilat Episode ${ep.episodeNumber} - Unlock with FEVIQO Premium`
-                                : ep.episodeNumber === 188
-                                ? 'Teskilat Episode 188, Teskilat 188, teskilat urdu, teskilat teskilat episode 188 urdu'
-                                : `Teskilat Urdu Episode ${ep.episodeNumber} Subtitles`
-                            }
+                            alt={`Teşkilat Season 7 Episode ${ep.episodeNumber} Story Summary & Review`}
+                            title={`Teşkilat Season 7 Episode ${ep.episodeNumber} Guide`}
                             referrerPolicy="no-referrer"
                             className={`w-full h-full object-cover transition duration-300 ${
                               isLocked
@@ -1189,7 +1326,12 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           </>
                         ) : (
                           <>
-                            {isPremiumEp ? (
+                            {EDITORIAL_COMPLIANCE_MODE ? (
+                              <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1">
+                                <BookOpen className="w-2.5 h-2.5" />
+                                <span>EPISODE GUIDE</span>
+                              </div>
+                            ) : isPremiumEp ? (
                               <div className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
                                 UNLOCKED WITH MEMBERSHIP
                               </div>
@@ -1200,7 +1342,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                             ) : null}
                             <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
                               <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                                <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                {EDITORIAL_COMPLIANCE_MODE ? (
+                                  <BookOpen className="w-4 h-4 text-slate-950" />
+                                ) : (
+                                  <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                )}
                               </div>
                             </div>
                           </>
@@ -1217,7 +1363,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           >
                             <span>EPISODE {ep.episodeNumber}</span>
                             <span>·</span>
-                            <span>{isPremiumEp ? 'Urdu Dubbed' : ep.duration}</span>
+                            <span>{EDITORIAL_COMPLIANCE_MODE ? ep.duration : isPremiumEp ? 'Urdu Dubbed' : ep.duration}</span>
                           </div>
                           <h3
                             className={`text-sm sm:text-base font-black transition line-clamp-2 ${
@@ -1227,8 +1373,8 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                             }`}
                           >
                             {ep.episodeNumber >= 192
-                              ? `Teskilat Season 7 Episode ${ep.episodeNumber} (Bolum ${ep.episodeNumber})`
-                              : `Teskilat Season 7 Episode ${
+                              ? `Teşkilat Season 7 Episode ${ep.episodeNumber} (Bölüm ${ep.episodeNumber})`
+                              : `Teşkilat Season 7 Episode ${
                                   ep.episodeNumber === 189
                                     ? '5'
                                     : ep.episodeNumber === 188
@@ -1236,7 +1382,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                                     : ep.episodeNumber === 187
                                     ? '3'
                                     : '2'
-                                } (Bolum ${ep.episodeNumber})`}
+                                } (Bölüm ${ep.episodeNumber})`}
                           </h3>
                         </div>
 
@@ -1250,7 +1396,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           <span className="inline-flex items-center gap-1.5">
                             {isLocked && <Lock className="w-3.5 h-3.5" />}
                             <span>
-                              {isLocked
+                              {EDITORIAL_COMPLIANCE_MODE
+                                ? 'Read Episode Guide'
+                                : isLocked
                                 ? 'Urdu Dubbed — Premium Access'
                                 : isPremiumEp
                                 ? isCheckingThis
@@ -1267,7 +1415,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 })}
               </div>
 
-              {/* CROSS-DISCOVERY: Mehmed Fetihler Sultanı Episode 89 Power Card */}
+              {/* CROSS-DISCOVERY: Mehmed Fetihler Sultanı Card */}
               <div className="mt-12 p-6 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-950 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-800">
                 <div className="space-y-2 text-left">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-[#22C55E] text-xs font-black uppercase tracking-wider">
@@ -1275,10 +1423,14 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     Trending Now On FEVIQO
                   </span>
                   <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-                    Mehmed: Fetihler Sultanı Episode 89 (Urdu Subtitles)
+                    {EDITORIAL_COMPLIANCE_MODE
+                      ? 'Mehmed: Fetihler Sultanı — Episode Guide & Cast Reviews'
+                      : 'Mehmed: Fetihler Sultanı Episode 89 (Urdu Subtitles)'}
                   </h3>
                   <p className="text-sm text-slate-300 max-w-xl">
-                    Stream the new Mehmed Bolum 89 release in 1080p Ultra HD with synced Urdu translation.
+                    {EDITORIAL_COMPLIANCE_MODE
+                      ? 'Read historical episode summaries, cast profiles, and Season 4 analysis for Mehmed: Fetihler Sultanı.'
+                      : 'Stream the new Mehmed Bolum 89 release in 1080p Ultra HD with synced Urdu translation.'}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
@@ -1286,14 +1438,14 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     href="/mehmed-fetihler-sultani/episode-90"
                     className="px-6 py-3 bg-[#22C55E] hover:bg-emerald-500 text-slate-950 font-black text-xs sm:text-sm rounded-xl transition-all shadow-md flex items-center gap-2"
                   >
-                    <span>Watch Episode 90</span>
+                    <span>{EDITORIAL_COMPLIANCE_MODE ? 'Read Episode 90 Guide' : 'Watch Episode 90'}</span>
                     <ChevronRight className="w-4 h-4 text-slate-950" />
                   </a>
                   <a
                     href="/mehmed-fetihler-sultani"
                     className="px-4 py-3 bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm rounded-xl transition border border-white/10"
                   >
-                    Series Hub
+                    {EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'Series Hub'}
                   </a>
                 </div>
               </div>
@@ -1301,7 +1453,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
 
           </div>
         ) : (
-          /* EDITORIAL WATCH EPISODE PAGE - FEVIQO BRIEF SPEC */
+          /* EDITORIAL EPISODE GUIDE PAGE */
           <div className="bg-white text-[#0B0B0D] min-h-screen py-2 sm:py-10">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4 sm:space-y-8">
               
@@ -1310,22 +1462,30 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 <nav className="text-xs text-slate-500 font-medium flex items-center gap-2">
                   <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>FEVIQO</span>
                   <span>/</span>
-                  <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>Teskilat</span>
+                  <span className="hover:text-slate-900 cursor-pointer" onClick={handleBackToOverview}>Teşkilat</span>
                   <span>/</span>
                   <span>Season 7</span>
                   <span>/</span>
-                  <span className="text-slate-900 font-bold">Episode {selectedEpisode.episodeNumber}</span>
+                  <span className="text-slate-900 font-bold">
+                    {EDITORIAL_COMPLIANCE_MODE
+                      ? `Episode ${selectedEpisode.episodeNumber} Guide`
+                      : `Episode ${selectedEpisode.episodeNumber}`}
+                  </span>
                 </nav>
               </div>
 
               {/* 4. Episode Header */}
               <div className="space-y-2 text-left px-4 sm:px-0">
                 <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                  TESKILAT &bull; SEASON {selectedEpisode.seasonNumber}
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? `TEŞKİLAT • SEASON ${selectedEpisode.seasonNumber} • EPISODE GUIDE`
+                    : `TESKILAT • SEASON ${selectedEpisode.seasonNumber}`}
                 </div>
 
                 <h1 className="text-xl sm:text-4xl font-black text-[#0B0B0D] tracking-tight">
-                  {selectedEpisode.episodeNumber >= 192 ? (
+                  {EDITORIAL_COMPLIANCE_MODE ? (
+                    `Teşkilat Season 7 Episode ${selectedEpisode.episodeNumber} (Bölüm ${selectedEpisode.episodeNumber}) — Story Summary, Cast & Review`
+                  ) : selectedEpisode.episodeNumber >= 192 ? (
                     resolvedStreamUrl
                       ? `Teskilat Season 7 Episode ${selectedEpisode.episodeNumber} Urdu Dubbed (Unlocked · FEVIQO Premium)`
                       : `Teskilat Season 7 Episode ${selectedEpisode.episodeNumber} Urdu Dubbed (FEVIQO Premium)`
@@ -1337,24 +1497,32 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </h1>
 
                 <p className="text-xs font-bold text-slate-500 pt-0.5">
-                  {isSelectedPremium
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? 'Turkish Drama Episode Guide • Story Summary, Cast & Reader Reviews • FEVIQO.com'
+                    : isSelectedPremium
                     ? resolvedStreamUrl
                       ? 'Urdu Dubbed • Unlocked with FEVIQO Premium • FEVIQO.com'
                       : 'Urdu Dubbed • FEVIQO Premium Access • FEVIQO.com'
                     : 'Urdu & English Subtitles • 1080p HD • FEVIQO.com'}
                 </p>
 
-                <p className="text-base sm:text-xl font-urdu-slim font-normal text-slate-900 dir-rtl text-right pt-1 leading-relaxed">
-                  {selectedEpisode.titleUrdu}
-                </p>
+                {!EDITORIAL_COMPLIANCE_MODE && (
+                  <p className="text-base sm:text-xl font-urdu-slim font-normal text-slate-900 dir-rtl text-right pt-1 leading-relaxed">
+                    {selectedEpisode.titleUrdu}
+                  </p>
+                )}
 
                 <div className="text-xs text-slate-500 font-medium pt-1 flex items-center gap-2 sm:gap-3">
                   <span>{selectedEpisode.duration}</span>
                   <span>&bull;</span>
-                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">HD</span>
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-900 font-bold text-[10px]">
+                    {EDITORIAL_COMPLIANCE_MODE ? 'TRT 1' : 'HD'}
+                  </span>
                   <span>&bull;</span>
                   <span>
-                    {isSelectedPremium
+                    {EDITORIAL_COMPLIANCE_MODE
+                      ? 'Episode Guide & Reviews'
+                      : isSelectedPremium
                       ? resolvedStreamUrl
                         ? 'Unlocked with Membership'
                         : 'FEVIQO Premium Episode'
@@ -1363,8 +1531,34 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
               </div>
 
-              {/* 5 & 6. Secure Anti-Download Main Video Player OR Locked Premium Gate */}
-              {isSelectedPremium && !resolvedStreamUrl ? (
+              {/* 5 & 6. Editorial Guide Panel (Compliance Mode) OR Video Player / Locked Gate */}
+              {EDITORIAL_COMPLIANCE_MODE ? (
+                <EditorialEpisodeGuidePanel
+                  seriesKey="teskilat"
+                  seriesTitle="Teşkilat"
+                  seasonLabel={`Season ${selectedEpisode.seasonNumber}`}
+                  episodeNumber={selectedEpisode.episodeNumber}
+                  episodeTitle={`Teşkilat Season ${selectedEpisode.seasonNumber} Episode ${selectedEpisode.episodeNumber} (Bölüm ${selectedEpisode.episodeNumber})`}
+                  releaseDate={selectedEpisode.releaseDate}
+                  duration={selectedEpisode.duration}
+                  network="TRT 1"
+                  genre="Action · Intelligence Thriller · Drama"
+                  thumbnailUrl={selectedEpisode.thumbnailUrl}
+                  plotOverview={getCleanTeskilatPlot(selectedEpisode)}
+                  cast={TESKILAT_CAST}
+                  trailerReviewNotes={[
+                    `The official TRT 1 promotional preview for Bölüm ${selectedEpisode.episodeNumber} emphasizes rapid tactical pacing, sharp cross-cutting between headquarters strategy rooms and field operations, and heightened emotional tension around Altay’s team.`,
+                    `Cinematography leans into cool, high-contrast night lighting and handheld camera movement during pursuit sequences, underscoring the stakes of covert counter-intelligence work in Season 7.`,
+                    `Dialogue excerpts in the teaser point toward shifting alliances and a critical test of loyalty that directly bridges the closing twist of the previous chapter into this week's confrontation.`,
+                  ]}
+                  editorialHighlights={[
+                    `Focused character work from Tolga Sarıtaş as Altay Yalçın, balancing disciplined field command with deeply personal stakes.`,
+                    `Tightly structured parallel storylines connecting Korkut's undercover mission with central agency strategy.`,
+                    `Production design and location shooting maintain TRT 1's signature espionage thriller scale across Season 7.`,
+                  ]}
+                  editorialRating="9.1 / 10"
+                />
+              ) : isSelectedPremium && !resolvedStreamUrl ? (
                 <div className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0B0B0D] shadow-2xl flex items-center justify-center select-none aspect-video border border-zinc-800 mx-auto">
                   <img
                     src={selectedEpisode.thumbnailUrl}
@@ -1504,11 +1698,15 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                 </div>
               )}
 
-              {/* 7. Player Surrounding Info Row */}
+              {/* 7. Surrounding Info & Share Row */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 border-b border-slate-200/80">
                 <div>
                   <div className="text-lg font-black text-[#0B0B0D]">Episode {selectedEpisode.episodeNumber}</div>
-                  <div className="text-xs text-slate-500 font-medium">Season {selectedEpisode.seasonNumber} &bull; Urdu Subtitles</div>
+                  <div className="text-xs text-slate-500 font-medium">
+                    {EDITORIAL_COMPLIANCE_MODE
+                      ? `Season ${selectedEpisode.seasonNumber} • Story Summary, Cast & Reviews`
+                      : `Season ${selectedEpisode.seasonNumber} • Urdu Subtitles`}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -1517,111 +1715,113 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs transition cursor-pointer"
                   >
                     {copiedLink ? <Check className="w-4 h-4 text-[#22C55E]" /> : <Share2 className="w-4 h-4 text-slate-700" />}
-                    <span>{copiedLink ? 'Link Copied!' : 'Share Episode'}</span>
+                    <span>{copiedLink ? 'Link Copied!' : EDITORIAL_COMPLIANCE_MODE ? 'Share Episode Guide' : 'Share Episode'}</span>
                   </button>
                 </div>
               </div>
 
-              {/* 8. Story Section */}
-              <div className="space-y-6 pt-2 text-left max-w-4xl">
-                <h2 className="text-2xl font-black text-[#0B0B0D]">Episode {selectedEpisode.episodeNumber} Story Recap</h2>
+              {!EDITORIAL_COMPLIANCE_MODE && (
+                <>
+                  {/* 8. Story Section */}
+                  <div className="space-y-6 pt-2 text-left max-w-4xl">
+                    <h2 className="text-2xl font-black text-[#0B0B0D]">Episode {selectedEpisode.episodeNumber} Story Recap</h2>
 
-                <div className="space-y-4">
-                  <h3 className="text-xs font-black text-[#22C55E] uppercase tracking-wider">English Story Summary</h3>
-                  <div className="text-slate-800 leading-relaxed font-normal space-y-6">
-                    {selectedEpisode.storyRecapEnglish.split('\n\n').map((block, idx) => {
-                      const trimmed = block.trim();
-                      if (!trimmed) return null;
+                    <div className="space-y-4">
+                      <h3 className="text-xs font-black text-[#22C55E] uppercase tracking-wider">English Story Summary</h3>
+                      <div className="text-slate-800 leading-relaxed font-normal space-y-6">
+                        {selectedEpisode.storyRecapEnglish.split('\n\n').map((block, idx) => {
+                          const trimmed = block.trim();
+                          if (!trimmed) return null;
 
-                      // Check if it should be treated as a title / heading
-                      const isHeading = trimmed.length < 90 && (
-                        trimmed.endsWith(':') || 
-                        trimmed.includes(':') || 
-                        trimmed.includes('–') || 
-                        trimmed.includes('—') ||
-                        (!trimmed.includes('.') && trimmed.split(' ').length < 12)
-                      );
+                          const isHeading = trimmed.length < 90 && (
+                            trimmed.endsWith(':') || 
+                            trimmed.includes(':') || 
+                            trimmed.includes('–') || 
+                            trimmed.includes('—') ||
+                            (!trimmed.includes('.') && trimmed.split(' ').length < 12)
+                          );
 
-                      if (isHeading) {
-                        return (
-                          <h3 
-                            key={idx} 
-                            className="text-xl sm:text-2xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4 tracking-tight"
-                          >
-                            {trimmed}
-                          </h3>
-                        );
-                      }
+                          if (isHeading) {
+                            return (
+                              <h3 
+                                key={idx} 
+                                className="text-xl sm:text-2xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4 tracking-tight"
+                              >
+                                {trimmed}
+                              </h3>
+                            );
+                          }
 
-                      // Check if it's a bulleted list
-                      if (trimmed.startsWith('- ') || trimmed.includes('\n- ')) {
-                        const items = trimmed.split('\n').map(li => li.replace(/^-\s*/, '').trim()).filter(Boolean);
-                        return (
-                          <ul key={idx} className="list-disc pl-6 text-slate-700 space-y-2.5 my-4">
-                            {items.map((item, itemIdx) => (
-                              <li key={itemIdx} className="text-sm sm:text-base leading-relaxed">{item}</li>
-                            ))}
-                          </ul>
-                        );
-                      }
+                          if (trimmed.startsWith('- ') || trimmed.includes('\n- ')) {
+                            const items = trimmed.split('\n').map(li => li.replace(/^-\s*/, '').trim()).filter(Boolean);
+                            return (
+                              <ul key={idx} className="list-disc pl-6 text-slate-700 space-y-2.5 my-4">
+                                {items.map((item, itemIdx) => (
+                                  <li key={itemIdx} className="text-sm sm:text-base leading-relaxed">{item}</li>
+                                ))}
+                              </ul>
+                            );
+                          }
 
-                      return (
-                        <p key={idx} className="text-sm sm:text-base text-slate-700 leading-relaxed">
-                          {trimmed}
-                        </p>
-                      );
-                    })}
+                          return (
+                            <p key={idx} className="text-sm sm:text-base text-slate-700 leading-relaxed">
+                              {trimmed}
+                            </p>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 pt-6 border-t border-slate-100">
+                      <h3 className="text-lg font-urdu-slim font-bold text-slate-900 dir-rtl text-right">
+                        تشکیلات سیزن 7 قسط {selectedEpisode.episodeNumber} اردو کہانی کا خلاصہ
+                      </h3>
+                      <p className="text-slate-700 text-base font-urdu-slim font-normal whitespace-pre-line leading-relaxed dir-rtl text-right">
+                        {selectedEpisode.storyRecapUrdu}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-3 pt-6 border-t border-slate-100">
-                  <h3 className="text-lg font-urdu-slim font-bold text-slate-900 dir-rtl text-right">
-                    تشکیلات سیزن 7 قسط {selectedEpisode.episodeNumber} اردو کہانی کا خلاصہ
-                  </h3>
-                  <p className="text-slate-700 text-base font-urdu-slim font-normal whitespace-pre-line leading-relaxed dir-rtl text-right">
-                    {selectedEpisode.storyRecapUrdu}
-                  </p>
-                </div>
-              </div>
+                  {/* 9. Minimal Episode Details Metadata Grid */}
+                  <div className="pt-8 border-t border-slate-200 text-left">
+                    <h3 className="text-sm font-bold text-[#0B0B0D] mb-4 uppercase tracking-wider">Episode Details</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-xs">
+                      <div>
+                        <div className="text-slate-400 font-medium">Series</div>
+                        <div className="text-[#0B0B0D] font-bold mt-0.5">Teskilat</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Season</div>
+                        <div className="text-[#0B0B0D] font-bold mt-0.5">{selectedEpisode.seasonNumber}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Episode</div>
+                        <div className="text-[#0B0B0D] font-bold mt-0.5">{selectedEpisode.episodeNumber}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Language</div>
+                        <div className="text-[#0B0B0D] font-bold mt-0.5">Urdu Subtitles</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Quality</div>
+                        <div className="text-[#0B0B0D] font-bold mt-0.5">HD 1080p</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Platform</div>
+                        <div className="text-[#22C55E] font-extrabold mt-0.5">FEVIQO</div>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* 9. Minimal Episode Details Metadata Grid */}
-              <div className="pt-8 border-t border-slate-200 text-left">
-                <h3 className="text-sm font-bold text-[#0B0B0D] mb-4 uppercase tracking-wider">Episode Details</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-xs">
-                  <div>
-                    <div className="text-slate-400 font-medium">Series</div>
-                    <div className="text-[#0B0B0D] font-bold mt-0.5">Teskilat</div>
+                  {/* 10. Search Keyword Tags & Search Engine Cloud (Fully crawled by Googlebot) */}
+                  <div className="sr-only" aria-hidden="true">
+                    <h3>Popular Search Queries &amp; Target Keywords</h3>
+                    <p>
+                      Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, Turkish Action Series Urdu, Turkish Intelligence Series, TRT1 Teskilat, Teskilat New Season Urdu, Teskilat NiaziPlay, Teskilat Season 7 Episode 4 Urdu Subtitles, Teskilat Episode 188 Urdu Subtitles, Teskilat Bolum 188 Urdu, Teskilat Season 7 Urdu, Teskilat Episode 4 Urdu, Teskilat 188 Urdu, Altay Ender Episode 188, Azra Teskilat Season 7, Korkut Yahya Episode 188, Bahar Yahya Teskilat, Ender Rescue Teskilat, Turkish Series Urdu Subtitles, Teskilat NiaziPlay, TRT1 Teskilat Episode 188, Salahuddin Ayyubi Series, Kurulus Osman Season 5 in Urdu Subtitles, Kurulus Osman Season 6 Urdu &amp; English Subtitles, Teskilat Season 4 Urdu Subtitles, Mehmed: Fetihler Sultani - Urdu &amp; English Subtitles, Al Sancak | Sipahi, Alparslan: Büyük Selçuklu, Ates Kuslari, Barbarosslar, Destan, Ertugrul Ghazi, Keiki Sniper, Kosem Sultan, Mendirman Jaloliddin Khawarzam, Mevlana Celaleddin Rumi, Soz Series, Sultan Abdulhamid, Sultan Mehmat Fatih, The Pit (Cukur), Turkish Dramas, Yunus Emre, Turkish series with Urdu subtitles, watch Turkish dramas online, historical Turkish series in Urdu, Ottoman Empire series with English subtitles, Islamic history dramas in Urdu, Turkish action series with Urdu dubbing, latest Turkish series 2024, Urdu dubbed Turkish historical dramas, stream Turkish series in HD, family-friendly Turkish dramas, Turkish war series with Urdu subtitles, best Turkish series to watch online, Turkish dramas based on true stories, top-rated Turkish series in Urdu, Turkish romantic dramas with English subtitles, Turkish thriller series in Urdu, online streaming of Turkish historical series, Turkish series with dual subtitles, popular Turkish dramas in Pakistan, Turkish series episodes in Urdu, best streaming platforms for Turkish series, online education games for kids, top adventure games for adults, fitness and health articles, latest technology news articles, financial advice for families, home improvement articles, educational articles for students, html5 games, games for children.
+                    </p>
                   </div>
-                  <div>
-                    <div className="text-slate-400 font-medium">Season</div>
-                    <div className="text-[#0B0B0D] font-bold mt-0.5">{selectedEpisode.seasonNumber}</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400 font-medium">Episode</div>
-                    <div className="text-[#0B0B0D] font-bold mt-0.5">{selectedEpisode.episodeNumber}</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400 font-medium">Language</div>
-                    <div className="text-[#0B0B0D] font-bold mt-0.5">Urdu Subtitles</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400 font-medium">Quality</div>
-                    <div className="text-[#0B0B0D] font-bold mt-0.5">HD 1080p</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400 font-medium">Platform</div>
-                    <div className="text-[#22C55E] font-extrabold mt-0.5">FEVIQO</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 10. Search Keyword Tags & Search Engine Cloud (Fully crawled by Googlebot) */}
-              <div className="sr-only" aria-hidden="true">
-                <h3>Popular Search Queries &amp; Target Keywords</h3>
-                <p>
-                  Teskilat Season 7, Teskilat Season 7 Urdu Subtitles, Teskilat Urdu Subtitles, Teşkilat Season 7 Urdu, Teskilat Season 7 Watch Online, Teskilat Episode 185 Urdu Subtitles, Teskilat Bolum 185 Urdu, Altay Teskilat Season 7, Korkut Teskilat, Turkish Series Urdu Subtitles, Turkish Action Series Urdu, Turkish Intelligence Series, TRT1 Teskilat, Teskilat New Season Urdu, Teskilat NiaziPlay, Teskilat Season 7 Episode 4 Urdu Subtitles, Teskilat Episode 188 Urdu Subtitles, Teskilat Bolum 188 Urdu, Teskilat Season 7 Urdu, Teskilat Episode 4 Urdu, Teskilat 188 Urdu, Altay Ender Episode 188, Azra Teskilat Season 7, Korkut Yahya Episode 188, Bahar Yahya Teskilat, Ender Rescue Teskilat, Turkish Series Urdu Subtitles, Teskilat NiaziPlay, TRT1 Teskilat Episode 188, Salahuddin Ayyubi Series, Kurulus Osman Season 5 in Urdu Subtitles, Kurulus Osman Season 6 Urdu &amp; English Subtitles, Teskilat Season 4 Urdu Subtitles, Mehmed: Fetihler Sultani - Urdu &amp; English Subtitles, Al Sancak | Sipahi, Alparslan: Büyük Selçuklu, Ates Kuslari, Barbarosslar, Destan, Ertugrul Ghazi, Keiki Sniper, Kosem Sultan, Mendirman Jaloliddin Khawarzam, Mevlana Celaleddin Rumi, Soz Series, Sultan Abdulhamid, Sultan Mehmat Fatih, The Pit (Cukur), Turkish Dramas, Yunus Emre, Turkish series with Urdu subtitles, watch Turkish dramas online, historical Turkish series in Urdu, Ottoman Empire series with English subtitles, Islamic history dramas in Urdu, Turkish action series with Urdu dubbing, latest Turkish series 2024, Urdu dubbed Turkish historical dramas, stream Turkish series in HD, family-friendly Turkish dramas, Turkish war series with Urdu subtitles, best Turkish series to watch online, Turkish dramas based on true stories, top-rated Turkish series in Urdu, Turkish romantic dramas with English subtitles, Turkish thriller series in Urdu, online streaming of Turkish historical series, Turkish series with dual subtitles, popular Turkish dramas in Pakistan, Turkish series episodes in Urdu, best streaming platforms for Turkish series, online education games for kids, top adventure games for adults, fitness and health articles, latest technology news articles, financial advice for families, home improvement articles, educational articles for students, html5 games, games for children.
-                </p>
-              </div>
+                </>
+              )}
 
               {/* 11. Episode Navigation */}
               <div className="pt-10 border-t border-slate-200">
@@ -1629,13 +1829,21 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   <button 
                     onClick={() => {
                       if (selectedEpisode.episodeNumber === 194) {
-                        attemptWatchEpisode('teskilat', 'episode-193', EPISODE_193.titleEnglish, () => {
+                        if (EDITORIAL_COMPLIANCE_MODE) {
                           handleOpenEpisode(EPISODE_193);
-                        });
+                        } else {
+                          attemptWatchEpisode('teskilat', 'episode-193', EPISODE_193.titleEnglish, () => {
+                            handleOpenEpisode(EPISODE_193);
+                          });
+                        }
                       } else if (selectedEpisode.episodeNumber === 193) {
-                        attemptWatchEpisode('teskilat', 'episode-192', EPISODE_192.titleEnglish, () => {
+                        if (EDITORIAL_COMPLIANCE_MODE) {
                           handleOpenEpisode(EPISODE_192);
-                        });
+                        } else {
+                          attemptWatchEpisode('teskilat', 'episode-192', EPISODE_192.titleEnglish, () => {
+                            handleOpenEpisode(EPISODE_192);
+                          });
+                        }
                       } else if (selectedEpisode.episodeNumber === 192) {
                         handleOpenEpisode(EPISODE_189);
                       } else if (selectedEpisode.episodeNumber === 189) {
@@ -1645,7 +1853,7 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       } else if (selectedEpisode.episodeNumber === 187) {
                         handleOpenEpisode(FEATURED_SEASON7_EPISODE);
                       } else {
-                        showToast('Episode 185 loading...');
+                        showToast('You are viewing the earliest Season 7 guide.');
                       }
                     }}
                     className="p-4 rounded-2xl border border-slate-200/80 hover:border-slate-400 text-left transition group cursor-pointer"
@@ -1660,7 +1868,9 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                     onClick={handleBackToOverview}
                     className="p-4 rounded-2xl hover:bg-slate-50 text-center transition cursor-pointer"
                   >
-                    <div className="text-[#0B0B0D] font-extrabold text-sm">All Episodes</div>
+                    <div className="text-[#0B0B0D] font-extrabold text-sm">
+                      {EDITORIAL_COMPLIANCE_MODE ? 'All Guides' : 'All Episodes'}
+                    </div>
                   </button>
 
                   <button 
@@ -1672,30 +1882,44 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                       } else if (selectedEpisode.episodeNumber === 188) {
                         handleOpenEpisode(EPISODE_189);
                       } else if (selectedEpisode.episodeNumber === 189) {
-                        attemptWatchEpisode('teskilat', 'episode-192', EPISODE_192.titleEnglish, () => {
+                        if (EDITORIAL_COMPLIANCE_MODE) {
                           handleOpenEpisode(EPISODE_192);
-                        });
+                        } else {
+                          attemptWatchEpisode('teskilat', 'episode-192', EPISODE_192.titleEnglish, () => {
+                            handleOpenEpisode(EPISODE_192);
+                          });
+                        }
                       } else if (selectedEpisode.episodeNumber === 192) {
-                        attemptWatchEpisode('teskilat', 'episode-193', EPISODE_193.titleEnglish, () => {
+                        if (EDITORIAL_COMPLIANCE_MODE) {
                           handleOpenEpisode(EPISODE_193);
-                        });
+                        } else {
+                          attemptWatchEpisode('teskilat', 'episode-193', EPISODE_193.titleEnglish, () => {
+                            handleOpenEpisode(EPISODE_193);
+                          });
+                        }
                       } else {
-                        attemptWatchEpisode('teskilat', 'episode-194', EPISODE_194.titleEnglish, () => {
+                        if (EDITORIAL_COMPLIANCE_MODE) {
                           handleOpenEpisode(EPISODE_194);
-                        });
+                        } else {
+                          attemptWatchEpisode('teskilat', 'episode-194', EPISODE_194.titleEnglish, () => {
+                            handleOpenEpisode(EPISODE_194);
+                          });
+                        }
                       }
                     }}
                     className="p-4 rounded-2xl border border-slate-200/80 hover:border-slate-400 text-right transition group cursor-pointer"
                   >
                     <div className="text-slate-400 text-[10px] uppercase font-bold">
-                      {selectedEpisode.episodeNumber >= 189
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'Next Guide →'
+                        : selectedEpisode.episodeNumber >= 189
                         ? hasDramaAccess('teskilat')
                           ? 'Unlocked · Next →'
                           : 'Premium Episode'
                         : 'Next →'}
                     </div>
                     <div className="text-[#0B0B0D] font-extrabold text-sm mt-0.5 group-hover:text-[#22C55E] transition inline-flex items-center gap-1.5 justify-end">
-                      {selectedEpisode.episodeNumber >= 189 && !hasDramaAccess('teskilat') && (
+                      {!EDITORIAL_COMPLIANCE_MODE && selectedEpisode.episodeNumber >= 189 && !hasDramaAccess('teskilat') && (
                         <Lock className="w-3.5 h-3.5 text-[#22C55E]" />
                       )}
                       <span>
@@ -1706,13 +1930,19 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                           : selectedEpisode.episodeNumber === 188
                           ? 'Episode 189'
                           : selectedEpisode.episodeNumber === 189
-                          ? hasDramaAccess('teskilat')
+                          ? EDITORIAL_COMPLIANCE_MODE
+                            ? 'Episode 192'
+                            : hasDramaAccess('teskilat')
                             ? 'Episode 192 (Watch Now)'
                             : 'Episode 192 (Premium)'
                           : selectedEpisode.episodeNumber === 192
-                          ? hasDramaAccess('teskilat')
+                          ? EDITORIAL_COMPLIANCE_MODE
+                            ? 'Episode 193'
+                            : hasDramaAccess('teskilat')
                             ? 'Episode 193 (Watch Now)'
                             : 'Episode 193 (Premium)'
+                          : EDITORIAL_COMPLIANCE_MODE
+                          ? 'Episode 194'
                           : hasDramaAccess('teskilat')
                           ? 'Episode 194 (Watch Now)'
                           : 'Episode 194 (Premium)'}
@@ -1729,7 +1959,11 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-[#0B0B0D] transition cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back to Teskilat Season 7 Overview</span>
+                  <span>
+                    {EDITORIAL_COMPLIANCE_MODE
+                      ? 'Back to Teşkilat Season 7 Episode Guide'
+                      : 'Back to Teskilat Season 7 Overview'}
+                  </span>
                 </button>
               </div>
 
@@ -1737,13 +1971,17 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
               <div className="mt-8 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-left">
                   <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 block">Recommended Turkish Drama</span>
-                  <p className="text-xs sm:text-sm font-bold text-slate-900">Mehmed: Fetihler Sultanı Episode 89 (Bolum 89) Urdu Subtitles</p>
+                  <p className="text-xs sm:text-sm font-bold text-slate-900">
+                    {EDITORIAL_COMPLIANCE_MODE
+                      ? 'Mehmed: Fetihler Sultanı Episode 89 — Story Summary & Cast Review'
+                      : 'Mehmed: Fetihler Sultanı Episode 89 (Bolum 89) Urdu Subtitles'}
+                  </p>
                 </div>
                 <a
                   href="/mehmed-fetihler-sultani/episode-89/"
                   className="px-4 py-2 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 text-xs font-black rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
                 >
-                  <span>Watch Mehmed 89</span>
+                  <span>{EDITORIAL_COMPLIANCE_MODE ? 'Read Mehmed 89 Guide' : 'Watch Mehmed 89'}</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </a>
               </div>
@@ -1752,6 +1990,15 @@ export const TeskilatDramaPage: React.FC<TeskilatDramaPageProps> = ({
           </div>
         )}
       </main>
+
+      <Footer
+        onBookCall={onBookCall}
+        onGetStarted={() => onNavigateFlow('register')}
+        onNavigateSection={() => onBackToHome()}
+        onNavigatePricing={onNavigatePricing}
+        onNavigateFlow={() => onNavigateFlow('login')}
+        onNavigatePage={onNavigatePage}
+      />
 
       {/* AD SETUP & SPONSORSHIP BOOKING MODAL */}
       {showAdSetupModal && (

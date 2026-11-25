@@ -2,6 +2,7 @@ import { DEFAULT_PAGE_SEO } from './seoStore';
 import { GUNESIN_EPISODES } from '../data/gunesinDogduguYer';
 import { MEHMED_EPISODES } from '../data/mehmedData';
 import { YERALTI_EPISODES } from '../data/yeraltiData';
+import { EDITORIAL_COMPLIANCE_MODE } from '../config/complianceMode';
 import fs from 'fs';
 import path from 'path';
 
@@ -126,13 +127,13 @@ export function generateSitemapXml(): string {
 
     if (routeKey === '/' || routeKey === '/membership') priority = '1.0';
     if (routeKey.includes('episode-')) priority = '1.0';
-    if (['/privacy', '/terms'].includes(routeKey)) {
+    if (['/privacy', '/privacy-policy', '/terms', '/dmca', '/contact'].includes(routeKey)) {
       priority = '0.5';
       changefreq = 'monthly';
     }
 
     let videoInfo: VideoXmlInfo | undefined = undefined;
-    if (routeKey === '/teskilat/episode-189') {
+    if (!EDITORIAL_COMPLIANCE_MODE && routeKey === '/teskilat/episode-189') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/15lsrpRxnIw6C491oFLSXMXCC50o2ByfC',
         title: 'Teskilat Season 7 Episode 189 Urdu Subtitles (Full Episode) – Teskilat 189. Bölüm Urdu',
@@ -209,7 +210,7 @@ export function generateSitemapXml(): string {
         description: 'Watch Gunesin Dogdugu Yer Episode 4 in HD Urdu Subtitles with story recap on FEVIQO.com.',
         contentLoc: 'https://stream.mux.com/Ck3e005cjwlomj37YDhAp2WFDcwAOcpGsPLagVVtxaVU.m3u8'
       };
-    } else if (routeKey === '/gunesin-dogdugu-yer/episode-3') {
+    } else if (!EDITORIAL_COMPLIANCE_MODE && routeKey === '/gunesin-dogdugu-yer/episode-3') {
       videoInfo = {
         thumbnail: 'https://lh3.googleusercontent.com/d/1VsQl3XReqSBLh5sk5UbalpsaVoSs0ggj',
         title: 'Gunesin Dogdugu Yer Episode 3 Urdu Subtitles – Bolum 3',
@@ -224,6 +225,9 @@ export function generateSitemapXml(): string {
         contentLoc: 'https://stream.mux.com/1SOwsPef4cWsfimczylaL5ulTCrpulBV1QG7KAmK77M.m3u8',
         duration: '45'
       };
+    }
+    if (EDITORIAL_COMPLIANCE_MODE && routeKey !== '/') {
+      videoInfo = undefined;
     }
 
     const sitemapImageLoc =
@@ -245,14 +249,17 @@ export function generateSitemapXml(): string {
   // 2. Güneşin Episodes
   GUNESIN_EPISODES.forEach((ep) => {
     const epPath = `/gunesin-dogdugu-yer/${ep.slug}`;
-    const firstEmbed = ep.embeds && ep.embeds[0] ? ep.embeds[0].src : undefined;
+    const firstEmbed = !EDITORIAL_COMPLIANCE_MODE && ep.embeds && ep.embeds[0] ? ep.embeds[0].src : undefined;
+    const epTitle = EDITORIAL_COMPLIANCE_MODE
+      ? `Güneşin Doğduğu Yer Episode ${ep.number} — Episode Guide & Story Summary | FEVIQO`
+      : ep.title;
     addNode(
       epPath,
       '1.0',
       'daily',
       ep.airDate ? ep.airDate.split('T')[0] : defaultLastmod,
       ep.thumbnail,
-      ep.title,
+      epTitle,
       firstEmbed ? {
         thumbnail: ep.thumbnail,
         title: ep.title,
@@ -265,14 +272,17 @@ export function generateSitemapXml(): string {
   // 3. Mehmed Episodes
   MEHMED_EPISODES.forEach((ep) => {
     const epPath = `/mehmed-fetihler-sultani/${ep.slug}`;
-    const firstEmbed = ep.embeds && ep.embeds[0] ? ep.embeds[0].src : undefined;
+    const firstEmbed = !EDITORIAL_COMPLIANCE_MODE && ep.embeds && ep.embeds[0] ? ep.embeds[0].src : undefined;
+    const epTitle = EDITORIAL_COMPLIANCE_MODE
+      ? `Mehmed: Fetihler Sultanı Episode ${ep.number} — Story Summary, Cast & Review | FEVIQO`
+      : ep.title;
     addNode(
       epPath,
       '1.0',
       'daily',
       ep.airDate ? ep.airDate.split('T')[0] : defaultLastmod,
       ep.thumbnail,
-      ep.title,
+      epTitle,
       firstEmbed ? {
         thumbnail: ep.thumbnail,
         title: ep.title,
@@ -285,13 +295,16 @@ export function generateSitemapXml(): string {
   // 4. Yeralti Episodes (never expose protected streams)
   YERALTI_EPISODES.forEach((ep) => {
     const epPath = `/yeralti/${ep.slug}`;
+    const epTitle = EDITORIAL_COMPLIANCE_MODE
+      ? `Yeraltı Episode ${ep.number} — Story Summary, Cast & Review | FEVIQO`
+      : ep.title;
     addNode(
       epPath,
       '1.0',
       'daily',
       ep.airDate ? ep.airDate.split('T')[0] : defaultLastmod,
       ep.thumbnail,
-      ep.title,
+      epTitle,
       undefined
     );
   });

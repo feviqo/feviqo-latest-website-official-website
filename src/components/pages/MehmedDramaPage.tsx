@@ -21,7 +21,8 @@ import {
   Film,
   Server,
   Download,
-  Lock
+  Lock,
+  BookOpen
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { DramaMemberBar } from '../membership/DramaMemberBar';
@@ -33,6 +34,52 @@ import { attachHlsStream, extractMuxPlaybackId } from '../../utils/hlsPlayer';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
 import { ProtectedPlayerWatermark } from '../membership/ProtectedPlayerWatermark';
+import { EDITORIAL_COMPLIANCE_MODE } from '../../config/complianceMode';
+import { EditorialEpisodeGuidePanel, CastMemberInfo } from '../drama/EditorialEpisodeGuidePanel';
+
+const MEHMED_CAST: CastMemberInfo[] = [
+  {
+    actor: 'Serkan Çayoğlu',
+    character: 'Sultan Mehmed II (Fatih)',
+    roleNote: 'Young Ottoman sovereign leading military strategy, statecraft, and imperial reform.',
+  },
+  {
+    actor: 'Selim Bayraktar',
+    character: 'Çandarlı Halil Pasha',
+    roleNote: 'Grand Vizier navigating delicate diplomacy and palace political rivalries.',
+  },
+  {
+    actor: 'Sinan Albayrak',
+    character: 'Zağanos Pasha',
+    roleNote: 'Loyal commander and strategic advisor supporting Mehmed’s boldest campaigns.',
+  },
+  {
+    actor: 'Seçkin Özdemir',
+    character: 'Emperor Konstantinos XI',
+    roleNote: 'Byzantine ruler fortifying defenses and forming counter-alliances.',
+  },
+  {
+    actor: 'Tuba Ünsal',
+    character: 'Mara Hatun',
+    roleNote: 'Influential court figure bridging Ottoman palace politics and regional diplomacy.',
+  },
+  {
+    actor: 'Ghassan Massoud',
+    character: 'Ebu Eyyûb el-Ensârî',
+    roleNote: 'Spiritual legacy figure inspiring the historical ethos of the campaign.',
+  },
+];
+
+const getCleanMehmedPlot = (ep: MehmedEpisode) => {
+  const raw = ep.recap || ep.shortSummary || '';
+  if (/premium membership|subscribe to|unlock|watch online|download/i.test(raw)) {
+    return `In Season 4 Episode ${ep.number} (Bölüm ${ep.number}) of Mehmed: Fetihler Sultanı, Sultan Mehmed II faces both external military pressures and shifting political factions inside the imperial council. ${MEHMED_SERIES_DATA.synopsis}\n\nThis episode highlights tactical diplomacy, battlefield resolve, and the personal sacrifices demanded by imperial leadership.`;
+  }
+  return raw
+    .split('\n\n')
+    .filter((p) => !/watch mehmed|where to watch|subscribe to|download/i.test(p))
+    .join('\n\n');
+};
 
 interface MehmedDramaPageProps {
   onBackToHome: () => void;
@@ -102,6 +149,36 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
   // SEO & Google Search Keyword Optimization Effect for Main & Episode Pages
   useEffect(() => {
     const keywordsEl = document.querySelector('meta[name="keywords"]');
+
+    if (EDITORIAL_COMPLIANCE_MODE) {
+      const num = selectedEpisode.number;
+      const pageTitle =
+        activeView === 'episode-detail'
+          ? `Mehmed: Fetihler Sultanı Episode ${num} — Episode Guide, Story Summary & Cast Review | FEVIQO`
+          : 'Mehmed: Fetihler Sultanı — Episode Guide, Story Summary & Cast Reviews | FEVIQO';
+      const metaDesc =
+        activeView === 'episode-detail'
+          ? `Read our original episode guide, historical story summary, cast breakdown, and trailer review for Mehmed: Fetihler Sultanı Episode ${num} (Bölüm ${num}).`
+          : 'Explore Mehmed: Fetihler Sultanı episode guides, Ottoman historical drama reviews, cast profiles, and release schedules on FEVIQO.';
+      document.title = pageTitle;
+      const metaDescEl = document.querySelector('meta[name="description"]');
+      if (metaDescEl) metaDescEl.setAttribute('content', metaDesc);
+      if (keywordsEl) {
+        keywordsEl.setAttribute(
+          'content',
+          `mehmed fetihler sultani episode ${num} guide, mehmed story summary, ottoman historical drama cast and reviews, feviqo`
+        );
+      }
+      const ogTitleEl = document.querySelector('meta[property="og:title"]');
+      if (ogTitleEl) ogTitleEl.setAttribute('content', pageTitle);
+      const ogDescEl = document.querySelector('meta[property="og:description"]');
+      if (ogDescEl) ogDescEl.setAttribute('content', metaDesc);
+      const twTitleEl = document.querySelector('meta[name="twitter:title"]');
+      if (twTitleEl) twTitleEl.setAttribute('content', pageTitle);
+      const twDescEl = document.querySelector('meta[name="twitter:description"]');
+      if (twDescEl) twDescEl.setAttribute('content', metaDesc);
+      return;
+    }
 
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.number;
@@ -205,12 +282,17 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
     : undefined;
 
   useEffect(() => {
+    if (EDITORIAL_COMPLIANCE_MODE) return;
     if (activeView === 'episode-detail' && isSelectedPremium) {
       verifyAndUnlockEpisode('mehmed-fetihler-sultani', selectedEpSlug);
     }
   }, [activeView, isSelectedPremium, selectedEpSlug, verifyAndUnlockEpisode]);
 
   const handleSelectEpisode = (ep: MehmedEpisode) => {
+    if (EDITORIAL_COMPLIANCE_MODE) {
+      navigateToEpisode(ep);
+      return;
+    }
     const epIsPremium = Boolean(ep.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', ep.slug));
     if (!epIsPremium) {
       navigateToEpisode(ep);
@@ -222,6 +304,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
   };
 
   useEffect(() => {
+    if (EDITORIAL_COMPLIANCE_MODE) return;
     if (activeView === 'episode-detail' && videoRef.current && resolvedStreamUrl) {
       const cleanup = attachHlsStream(videoRef.current, resolvedStreamUrl, {
         autoPlay: false,
@@ -277,29 +360,33 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
         onNavigatePage={onNavigatePage}
       />
 
-      <DramaMemberBar dramaId="mehmed-fetihler-sultani" onNavigatePage={onNavigatePage} />
+      {!EDITORIAL_COMPLIANCE_MODE && (
+        <DramaMemberBar dramaId="mehmed-fetihler-sultani" onNavigatePage={onNavigatePage} />
+      )}
 
       {/* TOP IN-STREAM SPONSORSHIP / AD PLACEMENT HEADER BANNER */}
-      <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#22C55E] text-slate-950 font-black text-[10px] uppercase tracking-wider">
-              SPONSORSHIP
-            </span>
-            <span className="font-semibold text-emerald-100">
-              In-Stream Pre-Roll &amp; Banner Advertising for Mehmed Fetihler Sultani Urdu Portal
-            </span>
-          </div>
+      {!EDITORIAL_COMPLIANCE_MODE && (
+        <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#22C55E] text-slate-950 font-black text-[10px] uppercase tracking-wider">
+                SPONSORSHIP
+              </span>
+              <span className="font-semibold text-emerald-100">
+                In-Stream Pre-Roll &amp; Banner Advertising for Mehmed Fetihler Sultani Urdu Portal
+              </span>
+            </div>
 
-          <button
-            onClick={onBookCall}
-            className="px-4 py-1.5 rounded-full bg-white hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
-          >
-            <DollarSign className="w-3.5 h-3.5 text-emerald-800" />
-            <span>Book Ad Setup / Sponsor</span>
-          </button>
+            <button
+              onClick={onBookCall}
+              className="px-4 py-1.5 rounded-full bg-white hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-800" />
+              <span>Book Ad Setup / Sponsor</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* PRIMARY CONTENT CONTAINER */}
       <main className="w-full flex-1">
@@ -351,21 +438,29 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
 
                       {/* Primary Descriptive H1 Title */}
                       <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-                        Mehmed Fetihler Sultani Urdu Subtitles
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'Mehmed: Fetihler Sultanı — Episode Guide & Reviews'
+                          : 'Mehmed Fetihler Sultani Urdu Subtitles'}
                       </h1>
 
                       {/* Urdu Translation below logo */}
                       <div className="text-xl sm:text-2xl font-urdu-slim text-slate-300 font-normal dir-rtl leading-relaxed">
-                        مہمد فتحلر سلطان (Sultan Mehmed II Urdu)
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'مہمد فتحلر سلطان — Episode Guide & Story Summary'
+                          : 'مہمد فتحلر سلطان (Sultan Mehmed II Urdu)'}
                       </div>
 
                       {/* Series badges */}
                       <div className="text-xs sm:text-sm text-slate-300 font-medium flex flex-wrap items-center gap-2.5 pt-1 select-none">
                         <span className="font-bold text-white">Season 4</span>
                         <span>•</span>
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">HD</span>
+                        <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">
+                          {EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'HD'}
+                        </span>
                         <span>•</span>
-                        <span className="font-medium text-slate-200">Urdu Subtitles</span>
+                        <span className="font-medium text-slate-200">
+                          {EDITORIAL_COMPLIANCE_MODE ? 'Cast & Reviews' : 'Urdu Subtitles'}
+                        </span>
                         <span>•</span>
                         <span className="text-slate-300">Ottoman Empire Historical Series</span>
                       </div>
@@ -378,7 +473,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
 
                     {/* Right button panel */}
                     <div className="lg:col-span-4 flex flex-col items-stretch lg:items-end justify-center gap-2 w-full">
-                      {isDramaUnlocked && (
+                      {!EDITORIAL_COMPLIANCE_MODE && isDramaUnlocked && (
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] font-bold self-start lg:self-end">
                           <ShieldCheck className="w-3.5 h-3.5" />
                           <span>FEVIQO Premium Active</span>
@@ -386,7 +481,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                       )}
                       <a 
                         href={
-                          Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && !isDramaUnlocked
+                          !EDITORIAL_COMPLIANCE_MODE && Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && !isDramaUnlocked
                             ? `/membership?drama=mehmed-fetihler-sultani&episode=${latestEpisode.slug}`
                             : `/mehmed-fetihler-sultani/${latestEpisode.slug}`
                         }
@@ -396,29 +491,35 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                         }}
                         className="w-full lg:w-auto px-10 py-4 bg-[#22C55E] hover:bg-emerald-600 active:scale-95 text-slate-950 font-black text-sm rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg"
                       >
-                        {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && !isDramaUnlocked ? (
+                        {EDITORIAL_COMPLIANCE_MODE ? (
+                          <BookOpen className="w-4 h-4" />
+                        ) : Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && !isDramaUnlocked ? (
                           <Lock className="w-4 h-4" />
                         ) : (
                           <Play className="w-4 h-4 fill-current" />
                         )}
                         <span>
-                          {Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && !isDramaUnlocked
+                          {EDITORIAL_COMPLIANCE_MODE
+                            ? `Read Episode ${latestEpisode.number} Guide`
+                            : Boolean(latestEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)) && !isDramaUnlocked
                             ? `Unlock Episode ${latestEpisode.number} (Premium)`
                             : `Watch Episode ${latestEpisode.number} Now`}
                         </span>
                       </a>
-                      <a
-                        href="/membership"
-                        onClick={(e) => {
-                          if (!e.metaKey && !e.ctrlKey) {
-                            e.preventDefault();
-                            onNavigatePage('membership');
-                          }
-                        }}
-                        className="w-full lg:w-auto px-5 py-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
-                      >
-                        <span>Explore FEVIQO Premium Plans</span>
-                      </a>
+                      {!EDITORIAL_COMPLIANCE_MODE && (
+                        <a
+                          href="/membership"
+                          onClick={(e) => {
+                            if (!e.metaKey && !e.ctrlKey) {
+                              e.preventDefault();
+                              onNavigatePage('membership');
+                            }
+                          }}
+                          className="w-full lg:w-auto px-5 py-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
+                        >
+                          <span>Explore FEVIQO Premium Plans</span>
+                        </a>
+                      )}
                     </div>
 
                   </div>
@@ -436,7 +537,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                       latestEpisode.isLockedPremium ||
                         isEpisodePremium('mehmed-fetihler-sultani', latestEpisode.slug)
                     );
-                    const isLatestLocked = isLatestPremium && !isDramaUnlocked;
+                    const isLatestLocked = !EDITORIAL_COMPLIANCE_MODE && isLatestPremium && !isDramaUnlocked;
                     const latestHref = isLatestLocked
                       ? `/membership?drama=mehmed-fetihler-sultani&episode=${latestEpisode.slug}`
                       : `/mehmed-fetihler-sultani/${latestEpisode.slug}`;
@@ -452,7 +553,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                         >
                           <img 
                             src={latestEpisode.thumbnail} 
-                            alt={`Mehmed Fetihler Sultani Episode ${latestEpisode.number}`}
+                            alt={`Mehmed: Fetihler Sultanı Episode ${latestEpisode.number} Guide`}
                             referrerPolicy="no-referrer"
                             className={`w-full h-full object-cover transition duration-300 ${
                               isLatestLocked
@@ -477,7 +578,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                                 </span>
                               </div>
                             </>
-                          ) : isLatestPremium ? (
+                          ) : !EDITORIAL_COMPLIANCE_MODE && isLatestPremium ? (
                             <>
                               <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded bg-emerald-500 text-slate-950 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
                                 <ShieldCheck className="w-3 h-3" />
@@ -492,11 +593,15 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                           ) : (
                             <>
                               <div className="absolute top-3 left-3 px-2 py-0.5 rounded bg-[#22C55E] text-slate-950 text-[9px] font-black uppercase tracking-wider">
-                                NEW
+                                {EDITORIAL_COMPLIANCE_MODE ? 'EPISODE GUIDE' : 'NEW'}
                               </div>
                               <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
                                 <div className="w-11 h-11 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                                  <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
+                                  {EDITORIAL_COMPLIANCE_MODE ? (
+                                    <BookOpen className="w-5 h-5 text-slate-950" />
+                                  ) : (
+                                    <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
+                                  )}
                                 </div>
                               </div>
                             </>
@@ -507,10 +612,10 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                         <div className="flex-1 space-y-4">
                           <div className="space-y-2">
                             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 font-bold uppercase tracking-wider">
-                              <span>LATEST RELEASE</span>
+                              <span>{EDITORIAL_COMPLIANCE_MODE ? 'FEATURED STORY SUMMARY' : 'LATEST RELEASE'}</span>
                               <span>·</span>
-                              <span>EPISODE {latestEpisode.number} (BOLUM {latestEpisode.number})</span>
-                              {isLatestPremium && (
+                              <span>EPISODE {latestEpisode.number} (BÖLÜM {latestEpisode.number})</span>
+                              {!EDITORIAL_COMPLIANCE_MODE && isLatestPremium && (
                                 <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-[10px] font-black">
                                   {isDramaUnlocked ? 'MEMBERSHIP UNLOCKED' : 'FEVIQO PREMIUM'}
                                 </span>
@@ -525,7 +630,9 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                               className="block"
                             >
                               <h2 className="text-2xl font-black text-slate-900 hover:text-[#22C55E] cursor-pointer transition">
-                                {latestEpisode.title}
+                                {EDITORIAL_COMPLIANCE_MODE
+                                  ? `Mehmed: Fetihler Sultanı Episode ${latestEpisode.number} — Story Summary & Cast Review`
+                                  : latestEpisode.title}
                               </h2>
                             </a>
                             <p className="text-xs text-slate-500 flex items-center gap-3">
@@ -536,7 +643,9 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                           </div>
 
                           <p className="text-slate-600 text-sm leading-relaxed max-w-3xl">
-                            {latestEpisode.shortSummary}
+                            {EDITORIAL_COMPLIANCE_MODE
+                              ? getCleanMehmedPlot(latestEpisode).split('\n\n')[0]
+                              : latestEpisode.shortSummary}
                           </p>
 
                           <a 
@@ -547,13 +656,17 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                             }}
                             className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-lg transition duration-150 cursor-pointer"
                           >
-                            {isLatestLocked ? (
+                            {EDITORIAL_COMPLIANCE_MODE ? (
+                              <BookOpen className="w-3.5 h-3.5" />
+                            ) : isLatestLocked ? (
                               <Lock className="w-3.5 h-3.5" />
                             ) : (
                               <Play className="w-3.5 h-3.5 fill-current" />
                             )}
                             <span>
-                              {isLatestLocked
+                              {EDITORIAL_COMPLIANCE_MODE
+                                ? `Read Episode ${latestEpisode.number} Guide`
+                                : isLatestLocked
                                 ? `Unlock Episode ${latestEpisode.number} with Premium`
                                 : `Watch Episode ${latestEpisode.number} Now`}
                             </span>
@@ -572,10 +685,12 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6 text-left">
                   <div className="space-y-1">
                     <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-                      <span>Episodes</span>
+                      <span>{EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'Episodes'}</span>
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500">
-                      Watch Mehmed Fetihler Sultani with premium Urdu subtitles.
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'Explore historical episode summaries, cast profiles, trailer notes, and fan discussions for Mehmed: Fetihler Sultanı.'
+                        : 'Watch Mehmed Fetihler Sultani with premium Urdu subtitles.'}
                     </p>
                   </div>
 
@@ -618,7 +733,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {filteredEpisodes.map((ep) => {
                       const epPremium = Boolean(ep.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', ep.slug));
-                      const isLocked = epPremium && !isDramaUnlocked;
+                      const isLocked = !EDITORIAL_COMPLIANCE_MODE && epPremium && !isDramaUnlocked;
                       const isCheckingThis = checkingEpisodeKey === `mehmed-fetihler-sultani:${ep.slug}`;
                       return (
                         <a 
@@ -639,7 +754,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                           <div className="relative aspect-video bg-slate-950 border-b border-slate-100/10 overflow-hidden">
                             <img 
                               src={ep.thumbnail} 
-                              alt={ep.title}
+                              alt={`Mehmed: Fetihler Sultanı Episode ${ep.number} Guide`}
                               referrerPolicy="no-referrer"
                               className={`w-full h-full object-cover transition duration-300 ${
                                 isLocked
@@ -664,15 +779,25 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                               </>
                             ) : (
                               <>
-                                {epPremium && (
+                                {!EDITORIAL_COMPLIANCE_MODE && epPremium && (
                                   <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md bg-[#22C55E] text-[#0B0B0D]">
                                     <ShieldCheck className="w-3 h-3" />
                                     <span>Unlocked · Urdu Dubbed</span>
                                   </div>
                                 )}
+                                {EDITORIAL_COMPLIANCE_MODE && (
+                                  <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md bg-[#22C55E] text-[#0B0B0D]">
+                                    <BookOpen className="w-3 h-3" />
+                                    <span>Episode Guide</span>
+                                  </div>
+                                )}
                                 <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
                                   <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                                    <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                    {EDITORIAL_COMPLIANCE_MODE ? (
+                                      <BookOpen className="w-4 h-4 text-slate-950" />
+                                    ) : (
+                                      <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                    )}
                                   </div>
                                 </div>
                               </>
@@ -688,13 +813,17 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                                 <span>{ep.duration}</span>
                               </div>
                               <h3 className={`text-sm sm:text-base font-black group-hover:text-[#22C55E] transition line-clamp-2 ${isLocked ? 'text-white' : 'text-slate-900'}`}>
-                                {ep.title}
+                                {EDITORIAL_COMPLIANCE_MODE
+                                  ? `Mehmed: Fetihler Sultanı Episode ${ep.number} — Story Summary`
+                                  : ep.title}
                               </h3>
                             </div>
                             
                             <div className="pt-2 flex items-center justify-between text-xs text-[#22C55E] font-bold">
                               <span>
-                                {isLocked
+                                {EDITORIAL_COMPLIANCE_MODE
+                                  ? 'Read Episode Guide'
+                                  : isLocked
                                   ? 'Unlock with FEVIQO Premium'
                                   : epPremium
                                   ? 'Unlocked with Membership'
@@ -724,11 +853,13 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   <div className="lg:col-span-8 space-y-6">
                     <div className="space-y-1">
                       <span className="text-xs font-black text-emerald-600 tracking-widest uppercase block">THE STORYLINE</span>
-                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">About Mehmed: Fetihler Sultani</h2>
+                      <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">About Mehmed: Fetihler Sultanı</h2>
                     </div>
 
                     <p className="text-slate-600 text-sm sm:text-base leading-relaxed font-normal">
-                      FEVIQO brings you official high-definition streaming for Mehmed Fetihler Sultani with premium Urdu subtitles. Stream the latest Season 4 episodes weekly in 1080p HD, and explore story guides, recaps, and historical characters.
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'FEVIQO publishes original episode guides, historical context, cast profiles, and weekly reviews for Mehmed: Fetihler Sultanı. Explore detailed Season 4 story summaries and community discussion.'
+                        : 'FEVIQO brings you official high-definition streaming for Mehmed Fetihler Sultani with premium Urdu subtitles. Stream the latest Season 4 episodes weekly in 1080p HD, and explore story guides, recaps, and historical characters.'}
                     </p>
 
                     <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
@@ -797,9 +928,11 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                 <nav aria-label="Breadcrumb" className="text-xs text-slate-500 font-medium flex items-center gap-2">
                   <a href="/" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); onNavigatePage('home'); }}>FEVIQO</a>
                   <span className="text-slate-300">/</span>
-                  <a href="/dramas" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); onNavigatePage('dramas'); }}>Turkish Dramas</a>
+                  <a href="/dramas" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); onNavigatePage('dramas'); }}>
+                    {EDITORIAL_COMPLIANCE_MODE ? 'Episode Guides' : 'Turkish Dramas'}
+                  </a>
                   <span className="text-slate-300">/</span>
-                  <a href="/mehmed-fetihler-sultani" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); handleBackToOverview(); }}>Mehmed Fetihler Sultani</a>
+                  <a href="/mehmed-fetihler-sultani" className="hover:text-slate-900 transition-colors" onClick={(e) => { e.preventDefault(); handleBackToOverview(); }}>Mehmed: Fetihler Sultanı</a>
                   <span className="text-slate-300">/</span>
                   <span className="text-emerald-600 font-bold">Episode {selectedEpisode.number}</span>
                 </nav>
@@ -807,22 +940,62 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
 
               {/* Title & Meta Row */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-left space-y-2">
-                <span className="text-xs font-black text-emerald-600 tracking-widest uppercase">MEHMED FETIHLER SULTANI &bull; EPISODE {selectedEpisode.number}</span>
+                <span className="text-xs font-black text-emerald-600 tracking-widest uppercase">
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? `MEHMED: FETİHLER SULTANI • EPISODE ${selectedEpisode.number} GUIDE`
+                    : `MEHMED FETIHLER SULTANI • EPISODE ${selectedEpisode.number}`}
+                </span>
                 <h1 className="text-xl sm:text-4xl font-black tracking-tight text-slate-900">
-                  {selectedEpisode.title}
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? `Mehmed: Fetihler Sultanı Episode ${selectedEpisode.number} — Story Summary, Cast & Review`
+                    : selectedEpisode.title}
                 </h1>
                 <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center gap-2 sm:gap-3">
-                  <span>Duration: {selectedEpisode.duration}</span>
+                  <span>Runtime: {selectedEpisode.duration}</span>
                   <span>&bull;</span>
-                  <span>{isSelectedPremium ? 'Urdu Dubbed' : 'Urdu Subtitles'}</span>
+                  <span>{EDITORIAL_COMPLIANCE_MODE ? 'Editorial Episode Guide' : isSelectedPremium ? 'Urdu Dubbed' : 'Urdu Subtitles'}</span>
                   <span>&bull;</span>
-                  <span>HD 1080p Streaming</span>
+                  <span>{EDITORIAL_COMPLIANCE_MODE ? 'Cast & Reviews' : 'HD 1080p Streaming'}</span>
                 </p>
               </div>
 
-              {/* Secure 16:9 Anti-Download Video Player OR Locked Premium Gate */}
+              {/* Editorial Episode Guide OR Secure 16:9 Video Player */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                {isSelectedPremium && !resolvedStreamUrl ? (
+                {EDITORIAL_COMPLIANCE_MODE ? (
+                  <EditorialEpisodeGuidePanel
+                    seriesKey="mehmed-fetihler-sultani"
+                    seriesTitle="Mehmed: Fetihler Sultanı"
+                    seasonLabel="Season 4"
+                    episodeNumber={selectedEpisode.number}
+                    episodeTitle={`Mehmed: Fetihler Sultanı Episode ${selectedEpisode.number} (Bölüm ${selectedEpisode.number}) — Story Summary & Review`}
+                    releaseDate={
+                      selectedEpisode.airDate
+                        ? new Date(selectedEpisode.airDate).toLocaleDateString('en-US', {
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })
+                        : 'November 2026'
+                    }
+                    duration={selectedEpisode.duration}
+                    network={MEHMED_SERIES_DATA.network}
+                    genre="Ottoman Historical Drama"
+                    thumbnailUrl={selectedEpisode.thumbnail}
+                    plotOverview={getCleanMehmedPlot(selectedEpisode)}
+                    cast={MEHMED_CAST}
+                    trailerReviewNotes={[
+                      `The promotional trailer for Episode ${selectedEpisode.number} showcases grand Ottoman production design, siege choreography, and palace intrigue.`,
+                      'Serkan Çayoğlu delivers a measured, commanding performance as Sultan Mehmed II weighing military necessity against counsel from his viziers.',
+                      'Orchestral percussion and lighting contrast heighten the suspense inside the imperial divan.',
+                    ]}
+                    editorialHighlights={[
+                      'High-stakes strategic maneuvers shaping the Ottoman campaign across Anatolia and Rumelia.',
+                      'Complex political tension between Sultan Mehmed II and court rivals in the imperial council.',
+                      'Historically inspired character moments paired with dramatic Season 4 cliffhangers.',
+                    ]}
+                    editorialRating="4.8 / 5"
+                  />
+                ) : isSelectedPremium && !resolvedStreamUrl ? (
                   <div className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0B0B0D] shadow-2xl flex items-center justify-center select-none aspect-video border border-zinc-800 mx-auto">
                     <img
                       src={selectedEpisode.thumbnail}
@@ -942,9 +1115,9 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                   </div>
                 )}
 
-                {/* Action Row: Download & Share Buttons (Guaranteed same line on phones) */}
+                {/* Action Row: Download & Share Buttons */}
                 <div className="mt-3 flex flex-row items-center justify-between gap-2 w-full">
-                  {!isSelectedPremium ? (
+                  {!EDITORIAL_COMPLIANCE_MODE && !isSelectedPremium ? (
                     <a
                       href={selectedEpisode.downloadUrl || "https://shrinkme.click/mehmedepisode88urdu"}
                       target="_blank"
@@ -963,95 +1136,94 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[11px] sm:text-xs font-bold text-slate-800 transition flex items-center gap-1.5 cursor-pointer shrink-0 hover:scale-[1.02] active:scale-95"
                   >
                     <Share2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>{copiedLink ? 'Copied!' : 'Share Episode'}</span>
+                    <span>{copiedLink ? 'Copied!' : EDITORIAL_COMPLIANCE_MODE ? 'Share Episode Guide' : 'Share Episode'}</span>
                   </button>
                 </div>
               </div>
 
               {/* 5. ORIGINAL DETAILED STORY RECAP SECTION */}
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left max-w-4xl">
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-black text-slate-900">Episode {selectedEpisode.number} Detailed Story Recap</h2>
-                  
-                  {/* English Story Summary */}
-                  <div className="space-y-6 text-slate-700 font-normal leading-relaxed text-sm sm:text-base">
-                    {selectedEpisode.recap.split('\n\n').map((para, idx) => {
-                      const trimmed = para.trim();
-                      if (!trimmed) return null;
+              {!EDITORIAL_COMPLIANCE_MODE && (
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left max-w-4xl">
+                  <div className="space-y-6">
+                    <h2 className="text-2xl font-black text-slate-900">Episode {selectedEpisode.number} Detailed Story Recap</h2>
+                    
+                    <div className="space-y-6 text-slate-700 font-normal leading-relaxed text-sm sm:text-base">
+                      {selectedEpisode.recap.split('\n\n').map((para, idx) => {
+                        const trimmed = para.trim();
+                        if (!trimmed) return null;
 
-                      const isHeading = trimmed.length < 80 && (trimmed.includes(':') || trimmed.includes('—') || (!trimmed.includes('.') && trimmed.split(' ').length < 10));
+                        const isHeading = trimmed.length < 80 && (trimmed.includes(':') || trimmed.includes('—') || (!trimmed.includes('.') && trimmed.split(' ').length < 10));
 
-                      if (isHeading) {
+                        if (isHeading) {
+                          return (
+                            <h3 key={idx} className="text-lg sm:text-xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4 tracking-tight">
+                              {trimmed}
+                            </h3>
+                          );
+                        }
+
+                        if (trimmed.startsWith('- ') || trimmed.includes('\n- ')) {
+                          const items = trimmed.split('\n').map(li => li.replace(/^-\s*/, '').trim()).filter(Boolean);
+                          return (
+                            <ul key={idx} className="list-disc pl-6 text-slate-700 space-y-2.5 my-4">
+                              {items.map((item, itemIdx) => (
+                                <li key={itemIdx} className="text-sm sm:text-base leading-relaxed">{item}</li>
+                              ))}
+                            </ul>
+                          );
+                        }
+
                         return (
-                          <h3 key={idx} className="text-lg sm:text-xl font-black text-slate-900 border-l-4 border-[#22C55E] pl-3.5 mt-8 mb-4 tracking-tight">
+                          <p key={idx} className="text-slate-700 leading-relaxed">
                             {trimmed}
-                          </h3>
+                          </p>
                         );
-                      }
+                      })}
+                    </div>
 
-                      if (trimmed.startsWith('- ') || trimmed.includes('\n- ')) {
-                        const items = trimmed.split('\n').map(li => li.replace(/^-\s*/, '').trim()).filter(Boolean);
-                        return (
-                          <ul key={idx} className="list-disc pl-6 text-slate-700 space-y-2.5 my-4">
-                            {items.map((item, itemIdx) => (
-                              <li key={itemIdx} className="text-sm sm:text-base leading-relaxed">{item}</li>
-                            ))}
-                          </ul>
-                        );
-                      }
-
-                      return (
-                        <p key={idx} className="text-slate-700 leading-relaxed">
-                          {trimmed}
+                    {selectedEpisode.recapUrdu && (
+                      <div className="space-y-3 pt-6 border-t border-slate-100">
+                        <h3 className="text-lg font-urdu-slim font-bold text-slate-900 dir-rtl text-right">
+                          مہمد فتحلر سلطان سیزن 4 قسط {selectedEpisode.number} اردو کہانی کا خلاصہ
+                        </h3>
+                        <p className="text-slate-700 text-base font-urdu-slim font-normal whitespace-pre-line leading-relaxed dir-rtl text-right">
+                          {selectedEpisode.recapUrdu}
                         </p>
-                      );
-                    })}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Urdu Story Summary */}
-                  {selectedEpisode.recapUrdu && (
-                    <div className="space-y-3 pt-6 border-t border-slate-100">
-                      <h3 className="text-lg font-urdu-slim font-bold text-slate-900 dir-rtl text-right">
-                        مہمد فتحلر سلطان سیزن 4 قسط {selectedEpisode.number} اردو کہانی کا خلاصہ
-                      </h3>
-                      <p className="text-slate-700 text-base font-urdu-slim font-normal whitespace-pre-line leading-relaxed dir-rtl text-right">
-                        {selectedEpisode.recapUrdu}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Minimal Episode Details Metadata Grid */}
-                <div className="pt-8 border-t border-slate-200 text-left mt-8">
-                  <h3 className="text-xs font-bold text-slate-900 mb-4 uppercase tracking-wider">Episode Details</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-xs">
-                    <div>
-                      <div className="text-slate-400 font-medium">Series</div>
-                      <div className="text-slate-900 font-bold mt-0.5">Mehmed Fetihler Sultani</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-medium">Season</div>
-                      <div className="text-slate-900 font-bold mt-0.5">Season 4</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-medium">Episode</div>
-                      <div className="text-slate-900 font-bold mt-0.5">Episode {selectedEpisode.number}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-medium">Language</div>
-                      <div className="text-slate-900 font-bold mt-0.5">Urdu Subtitles</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-medium">Quality</div>
-                      <div className="text-slate-900 font-bold mt-0.5">HD 1080p</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-400 font-medium">Platform</div>
-                      <div className="text-[#22C55E] font-extrabold mt-0.5">FEVIQO</div>
+                  <div className="pt-8 border-t border-slate-200 text-left mt-8">
+                    <h3 className="text-xs font-bold text-slate-900 mb-4 uppercase tracking-wider">Episode Details</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-xs">
+                      <div>
+                        <div className="text-slate-400 font-medium">Series</div>
+                        <div className="text-slate-900 font-bold mt-0.5">Mehmed Fetihler Sultani</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Season</div>
+                        <div className="text-slate-900 font-bold mt-0.5">Season 4</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Episode</div>
+                        <div className="text-slate-900 font-bold mt-0.5">Episode {selectedEpisode.number}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Language</div>
+                        <div className="text-slate-900 font-bold mt-0.5">Urdu Subtitles</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Quality</div>
+                        <div className="text-slate-900 font-bold mt-0.5">HD 1080p</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-400 font-medium">Platform</div>
+                        <div className="text-[#22C55E] font-extrabold mt-0.5">FEVIQO</div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Navigation Back & Related Links */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-slate-100 pt-10 text-left">
@@ -1065,7 +1237,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs transition cursor-pointer"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    <span>Back to Mehmed Directory</span>
+                    <span>{EDITORIAL_COMPLIANCE_MODE ? 'Back to Mehmed Episode Guide' : 'Back to Mehmed Directory'}</span>
                   </a>
 
                   {/* Previous / Next Episode Navigation with crawlable HTML links */}
@@ -1073,7 +1245,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     {prevEpisode && (
                       <a
                         href={
-                          Boolean(prevEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', prevEpisode.slug)) && !isDramaUnlocked
+                          !EDITORIAL_COMPLIANCE_MODE && Boolean(prevEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', prevEpisode.slug)) && !isDramaUnlocked
                             ? `/membership?drama=mehmed-fetihler-sultani&episode=${prevEpisode.slug}`
                             : `/mehmed-fetihler-sultani/${prevEpisode.slug}`
                         }
@@ -1083,7 +1255,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                         }}
                         rel="prev"
                         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-[#22C55E] hover:text-[#22C55E] text-slate-700 font-bold text-xs transition shadow-sm"
-                        title={`Watch Mehmed Episode ${prevEpisode.number}`}
+                        title={EDITORIAL_COMPLIANCE_MODE ? `Read Mehmed Episode ${prevEpisode.number} Guide` : `Watch Mehmed Episode ${prevEpisode.number}`}
                       >
                         <ChevronLeft className="w-4 h-4" />
                         <span>Episode {prevEpisode.number} (Previous)</span>
@@ -1092,7 +1264,7 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                     {nextEpisode && (
                       <a
                         href={
-                          Boolean(nextEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', nextEpisode.slug)) && !isDramaUnlocked
+                          !EDITORIAL_COMPLIANCE_MODE && Boolean(nextEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', nextEpisode.slug)) && !isDramaUnlocked
                             ? `/membership?drama=mehmed-fetihler-sultani&episode=${nextEpisode.slug}`
                             : `/mehmed-fetihler-sultani/${nextEpisode.slug}`
                         }
@@ -1102,9 +1274,9 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
                         }}
                         rel="next"
                         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#22C55E] hover:bg-[#16a34a] text-white font-bold text-xs transition shadow-sm"
-                        title={`Watch Mehmed Episode ${nextEpisode.number}`}
+                        title={EDITORIAL_COMPLIANCE_MODE ? `Read Mehmed Episode ${nextEpisode.number} Guide` : `Watch Mehmed Episode ${nextEpisode.number}`}
                       >
-                        {Boolean(nextEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', nextEpisode.slug)) && !isDramaUnlocked && (
+                        {!EDITORIAL_COMPLIANCE_MODE && Boolean(nextEpisode.isLockedPremium || isEpisodePremium('mehmed-fetihler-sultani', nextEpisode.slug)) && !isDramaUnlocked && (
                           <Lock className="w-3.5 h-3.5" />
                         )}
                         <span>Episode {nextEpisode.number} (Next)</span>
@@ -1120,23 +1292,25 @@ export const MehmedDramaPage: React.FC<MehmedDramaPageProps> = ({
         </AnimatePresence>
       </main>
 
-      {/* Search Keyword Tags & Search Engine Cloud (Invisible on UI, fully crawled by Googlebot) */}
-      <div className="sr-only" aria-hidden="true">
-        <h3>Popular Search Queries &amp; Tags for Mehmed Fetihler Sultani</h3>
-        <p>
-          Users found this page using search keywords: mehmed fetihler sultani episode 87 urdu, mehmed fetihler sultani season 4 episode 4 urdu subtitles, mehmed fetihler sultani 87 urdu, watch mehmed fetihler sultani episode 87 urdu subtitles, mehmed fetihler sultani bolum 87 urdu, and sultan mehmed fetihler sultani urdu subtitles online.
-        </p>
-        <p>
-          mehmed fetihler sultani 87 urdu,
-          mehmed fetihler sultani episode 87,
-          mehmed fetihler sultani season 4 episode 4,
-          mehmed fetihler sultani 87 urdu subtitles,
-          watch mehmed fetihler sultani 87 urdu subtitles,
-          mehmed season 4 episode 4 urdu subtitles,
-          sultan mehmed fatih episode 87 urdu subtitles,
-          feviqo mehmed fetihler sultani 87
-        </p>
-      </div>
+      {/* Search Keyword Tags & Search Engine Cloud (Hidden in editorial compliance mode) */}
+      {!EDITORIAL_COMPLIANCE_MODE && (
+        <div className="sr-only" aria-hidden="true">
+          <h3>Popular Search Queries &amp; Tags for Mehmed Fetihler Sultani</h3>
+          <p>
+            Users found this page using search keywords: mehmed fetihler sultani episode 87 urdu, mehmed fetihler sultani season 4 episode 4 urdu subtitles, mehmed fetihler sultani 87 urdu, watch mehmed fetihler sultani episode 87 urdu subtitles, mehmed fetihler sultani bolum 87 urdu, and sultan mehmed fetihler sultani urdu subtitles online.
+          </p>
+          <p>
+            mehmed fetihler sultani 87 urdu,
+            mehmed fetihler sultani episode 87,
+            mehmed fetihler sultani season 4 episode 4,
+            mehmed fetihler sultani 87 urdu subtitles,
+            watch mehmed fetihler sultani 87 urdu subtitles,
+            mehmed season 4 episode 4 urdu subtitles,
+            sultan mehmed fatih episode 87 urdu subtitles,
+            feviqo mehmed fetihler sultani 87
+          </p>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer 

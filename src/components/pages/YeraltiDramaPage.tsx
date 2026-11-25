@@ -11,6 +11,7 @@ import {
   DollarSign,
   Lock,
   ShieldCheck,
+  BookOpen,
 } from 'lucide-react';
 import { Navbar } from '../Navbar';
 import { DramaMemberBar } from '../membership/DramaMemberBar';
@@ -25,6 +26,37 @@ import { attachHlsStream } from '../../utils/hlsPlayer';
 import { useDramaEntitlement } from '../membership/useDramaEntitlement';
 import { PremiumEpisodeModal } from '../membership/PremiumEpisodeModal';
 import { ProtectedPlayerWatermark } from '../membership/ProtectedPlayerWatermark';
+import { EDITORIAL_COMPLIANCE_MODE } from '../../config/complianceMode';
+import {
+  EditorialEpisodeGuidePanel,
+  CastMemberInfo,
+} from '../drama/EditorialEpisodeGuidePanel';
+
+const YERALTI_CAST: CastMemberInfo[] = [
+  {
+    actor: 'Lead Crime Ensemble',
+    character: 'Chief Investigator & Undercover Task Force',
+    roleNote: 'Follows investigators navigating shifting underworld alliances and hidden syndicates.',
+  },
+  {
+    actor: 'Supporting Cast',
+    character: 'Rival Syndicate Strategists',
+    roleNote: 'Power brokers whose territorial disputes drive the central Season 1 intrigue.',
+  },
+  {
+    actor: 'Guest Ensemble',
+    character: 'Informants & Family Witnesses',
+    roleNote: 'Characters caught between loyalty, survival, and exposing the truth.',
+  },
+];
+
+const getCleanYeraltiPlot = (ep: YeraltiEpisode) => {
+  const raw = ep.recap || ep.shortSummary || '';
+  if (/premium|subscribe|unlock|urdu dub|watch/i.test(raw)) {
+    return `In Episode ${ep.number} of Yeraltı (جرائم کی دنیا), the escalating rivalry across the urban underworld forces key characters into a tense tactical standoff. ${YERALTI_SERIES_DATA.synopsis}\n\nThis chapter deepens the moral dilemmas facing both investigators and insiders, setting up pivotal alliances and unanswered questions for the episodes ahead.`;
+  }
+  return raw;
+};
 
 interface YeraltiDramaPageProps {
   onBackToHome: () => void;
@@ -89,6 +121,37 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
 
   useEffect(() => {
     const keywordsEl = document.querySelector('meta[name="keywords"]');
+    if (EDITORIAL_COMPLIANCE_MODE) {
+      if (activeView === 'episode-detail') {
+        const num = selectedEpisode.number;
+        const pageTitle = `Yeraltı Episode ${num} — Episode Guide, Story Summary & Cast Review | FEVIQO`;
+        const metaDesc = `Read our original episode guide, story summary, cast notes, and trailer review for Yeraltı (جرائم کی دنیا) Episode ${num} on FEVIQO.`;
+        document.title = pageTitle;
+        const metaDescEl = document.querySelector('meta[name="description"]');
+        if (metaDescEl) metaDescEl.setAttribute('content', metaDesc);
+        if (keywordsEl) {
+          keywordsEl.setAttribute(
+            'content',
+            `yeralti episode ${num} guide, yeralti story summary, yeralti cast and reviews, turkish crime drama review, feviqo`
+          );
+        }
+      } else {
+        const pageTitle = 'Yeraltı (جرائم کی دنیا) — Episode Guide, Story Summary & Cast Reviews | FEVIQO';
+        const metaDesc =
+          'Explore Yeraltı (جرائم کی دنیا) episode guides, spoiler-free story summaries, character profiles, and fan reviews on FEVIQO.';
+        document.title = pageTitle;
+        const metaDescEl = document.querySelector('meta[name="description"]');
+        if (metaDescEl) metaDescEl.setAttribute('content', metaDesc);
+        if (keywordsEl) {
+          keywordsEl.setAttribute(
+            'content',
+            'yeralti episode guide, yeralti story summary, yeralti cast reviews, turkish drama news, feviqo'
+          );
+        }
+      }
+      return;
+    }
+
     if (activeView === 'episode-detail') {
       const num = selectedEpisode.number;
       const pageTitle = `Yeralti - Urdu Dub Episode ${num} (جرائم کی دنیا) | FEVIQO`;
@@ -178,12 +241,17 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
     : undefined;
 
   useEffect(() => {
+    if (EDITORIAL_COMPLIANCE_MODE) return;
     if (activeView === 'episode-detail' && isSelectedPremium) {
       verifyAndUnlockEpisode('yeralti', selectedEpSlug);
     }
   }, [activeView, isSelectedPremium, selectedEpSlug, verifyAndUnlockEpisode]);
 
   const handleSelectEpisode = (ep: YeraltiEpisode) => {
+    if (EDITORIAL_COMPLIANCE_MODE) {
+      navigateToEpisode(ep);
+      return;
+    }
     const epIsPremium = Boolean(
       ep.isLockedPremium || isEpisodePremium('yeralti', ep.slug)
     );
@@ -197,6 +265,7 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
   };
 
   useEffect(() => {
+    if (EDITORIAL_COMPLIANCE_MODE) return;
     if (activeView === 'episode-detail' && videoRef.current && resolvedStreamUrl) {
       const cleanup = attachHlsStream(videoRef.current, resolvedStreamUrl, {
         autoPlay: false,
@@ -231,6 +300,7 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
 
   const latestEpisode = YERALTI_EPISODES[0];
   const isLatestLocked =
+    !EDITORIAL_COMPLIANCE_MODE &&
     Boolean(latestEpisode.isLockedPremium || isEpisodePremium('yeralti', latestEpisode.slug)) &&
     !isDramaUnlocked;
 
@@ -244,28 +314,32 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
         onNavigatePage={onNavigatePage}
       />
 
-      <DramaMemberBar dramaId="yeralti" onNavigatePage={onNavigatePage} />
+      {!EDITORIAL_COMPLIANCE_MODE && (
+        <DramaMemberBar dramaId="yeralti" onNavigatePage={onNavigatePage} />
+      )}
 
       {/* TOP SPONSORSHIP BAR */}
-      <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs">
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
-              URDU DUB EXCLUSIVE
-            </span>
-            <span className="font-semibold text-emerald-100">
-              Yeralti - Urdu Dub (جرائم کی دنیا) — Exclusive FEVIQO Premium Series
-            </span>
+      {!EDITORIAL_COMPLIANCE_MODE && (
+        <div className="bg-[#031d12] text-white border-b border-emerald-950/80 py-3 px-4">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
+                URDU DUB EXCLUSIVE
+              </span>
+              <span className="font-semibold text-emerald-100">
+                Yeralti - Urdu Dub (جرائم کی دنیا) — Exclusive FEVIQO Premium Series
+              </span>
+            </div>
+            <button
+              onClick={onBookCall}
+              className="px-4 py-1.5 rounded-full bg-white hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-emerald-800" />
+              <span>Book Ad Setup / Sponsor</span>
+            </button>
           </div>
-          <button
-            onClick={onBookCall}
-            className="px-4 py-1.5 rounded-full bg-white hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md cursor-pointer shrink-0 flex items-center gap-1.5"
-          >
-            <DollarSign className="w-3.5 h-3.5 text-emerald-800" />
-            <span>Book Ad Setup / Sponsor</span>
-          </button>
         </div>
-      </div>
+      )}
 
       <main className="w-full flex-1">
         <AnimatePresence mode="wait">
@@ -292,10 +366,10 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                       }
                     }}
                     className={`w-full h-full object-contain block transition duration-300 ${
-                      !isDramaUnlocked ? 'brightness-75' : ''
+                      !EDITORIAL_COMPLIANCE_MODE && !isDramaUnlocked ? 'brightness-75' : ''
                     }`}
                   />
-                  {!isDramaUnlocked && (
+                  {!EDITORIAL_COMPLIANCE_MODE && !isDramaUnlocked && (
                     <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 px-3.5 py-1.5 rounded-full bg-[#0B0B0D]/90 border border-[#22C55E]/50 text-[#22C55E] text-[11px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 shadow-xl">
                       <Lock className="w-3.5 h-3.5" />
                       <span>Urdu Dub · Locked for Free Users</span>
@@ -308,14 +382,16 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                   <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-center text-left">
                     <div className="lg:col-span-8 space-y-4 sm:space-y-5">
                       <div className="text-[11px] font-black uppercase tracking-widest text-[#22C55E]">
-                        FEVIQO • YERALTI - URDU DUB
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'FEVIQO • TURKISH DRAMA EPISODE GUIDE'
+                          : 'FEVIQO • YERALTI - URDU DUB'}
                       </div>
 
                       {/* Official Graphic Logo */}
                       <div className="h-14 sm:h-20 w-auto flex items-center justify-start select-none">
                         <img
                           src={YERALTI_SERIES_DATA.logoUrl}
-                          alt="Yeralti - Urdu Dub Official Logo"
+                          alt="Yeraltı Official Series Artwork"
                           referrerPolicy="no-referrer"
                           className="h-full w-auto object-contain max-w-[260px] sm:max-w-[360px]"
                           loading="eager"
@@ -324,7 +400,9 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
 
                       {/* Main Heading */}
                       <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-                        Yeralti - Urdu Dub
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'Yeraltı — Episode Guide, Story Summary & Reviews'
+                          : 'Yeralti - Urdu Dub'}
                       </h1>
 
                       {/* Sub Urdu Name */}
@@ -336,10 +414,12 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                         <span className="font-bold text-white">Season 1</span>
                         <span>•</span>
                         <span className="px-2 py-0.5 rounded bg-slate-800 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">
-                          HD 1080p
+                          {EDITORIAL_COMPLIANCE_MODE ? 'Episode Guide' : 'HD 1080p'}
                         </span>
                         <span>•</span>
-                        <span className="font-bold text-[#22C55E]">Urdu Dubbed</span>
+                        <span className="font-bold text-[#22C55E]">
+                          {EDITORIAL_COMPLIANCE_MODE ? 'Cast & Reviews' : 'Urdu Dubbed'}
+                        </span>
                         <span>•</span>
                         <span className="text-slate-300">Crime Action Thriller</span>
                       </div>
@@ -350,17 +430,18 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                     </div>
 
                     <div className="lg:col-span-4 flex flex-col items-stretch lg:items-end justify-center gap-2.5 w-full">
-                      {isDramaUnlocked ? (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] font-bold self-start lg:self-end">
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          <span>FEVIQO Premium Active</span>
-                        </div>
-                      ) : (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-[#22C55E]/40 text-[#22C55E] text-[11px] font-black uppercase tracking-wider self-start lg:self-end">
-                          <Lock className="w-3.5 h-3.5" />
-                          <span>Premium Urdu Dub Exclusive</span>
-                        </div>
-                      )}
+                      {!EDITORIAL_COMPLIANCE_MODE &&
+                        (isDramaUnlocked ? (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[11px] font-bold self-start lg:self-end">
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            <span>FEVIQO Premium Active</span>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-[#22C55E]/40 text-[#22C55E] text-[11px] font-black uppercase tracking-wider self-start lg:self-end">
+                            <Lock className="w-3.5 h-3.5" />
+                            <span>Premium Urdu Dub Exclusive</span>
+                          </div>
+                        ))}
 
                       <a
                         href={
@@ -374,34 +455,40 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                         }}
                         className="w-full lg:w-auto px-10 py-4 bg-[#22C55E] hover:bg-emerald-600 active:scale-95 text-slate-950 font-black text-sm rounded-lg transition duration-150 flex items-center justify-center gap-2 cursor-pointer shadow-lg"
                       >
-                        {isLatestLocked ? (
+                        {EDITORIAL_COMPLIANCE_MODE ? (
+                          <BookOpen className="w-4 h-4" />
+                        ) : isLatestLocked ? (
                           <Lock className="w-4 h-4" />
                         ) : (
                           <Play className="w-4 h-4 fill-current" />
                         )}
                         <span>
-                          {isLatestLocked
+                          {EDITORIAL_COMPLIANCE_MODE
+                            ? `Read Episode ${latestEpisode.number} Guide`
+                            : isLatestLocked
                             ? `Unlock Episode ${latestEpisode.number} (Premium)`
                             : `Watch Episode ${latestEpisode.number} Now`}
                         </span>
                       </a>
 
-                      <a
-                        href="/membership?drama=yeralti"
-                        onClick={(e) => {
-                          if (!e.metaKey && !e.ctrlKey) {
-                            e.preventDefault();
-                            window.dispatchEvent(
-                              new CustomEvent('feviqo-navigate-url', {
-                                detail: '/membership?drama=yeralti',
-                              })
-                            );
-                          }
-                        }}
-                        className="w-full lg:w-auto px-5 py-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
-                      >
-                        <span>Explore FEVIQO Premium Plans</span>
-                      </a>
+                      {!EDITORIAL_COMPLIANCE_MODE && (
+                        <a
+                          href="/membership?drama=yeralti"
+                          onClick={(e) => {
+                            if (!e.metaKey && !e.ctrlKey) {
+                              e.preventDefault();
+                              window.dispatchEvent(
+                                new CustomEvent('feviqo-navigate-url', {
+                                  detail: '/membership?drama=yeralti',
+                                })
+                              );
+                            }
+                          }}
+                          className="w-full lg:w-auto px-5 py-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/35 text-emerald-300 text-xs font-bold flex items-center justify-center gap-2 transition"
+                        >
+                          <span>Explore FEVIQO Premium Plans</span>
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -458,12 +545,25 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                     ) : (
                       <>
                         <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded bg-emerald-500 text-slate-950 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
-                          <ShieldCheck className="w-3 h-3" />
-                          <span>Unlocked · Urdu Dubbed</span>
+                          {EDITORIAL_COMPLIANCE_MODE ? (
+                            <>
+                              <BookOpen className="w-3 h-3" />
+                              <span>Episode Guide</span>
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck className="w-3 h-3" />
+                              <span>Unlocked · Urdu Dubbed</span>
+                            </>
+                          )}
                         </div>
                         <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
                           <div className="w-11 h-11 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                            <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
+                            {EDITORIAL_COMPLIANCE_MODE ? (
+                              <BookOpen className="w-5 h-5 text-slate-950" />
+                            ) : (
+                              <Play className="w-5 h-5 fill-current text-slate-950 ml-0.5" />
+                            )}
                           </div>
                         </div>
                       </>
@@ -473,18 +573,24 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                   <div className="flex-1 space-y-4">
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 font-bold uppercase tracking-wider">
-                        <span>FEATURED URDU DUB</span>
+                        <span>{EDITORIAL_COMPLIANCE_MODE ? 'FEATURED STORY SUMMARY' : 'FEATURED URDU DUB'}</span>
                         <span>·</span>
                         <span>EPISODE {latestEpisode.number}</span>
                         <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 text-[10px] font-black">
-                          {isDramaUnlocked ? 'MEMBERSHIP UNLOCKED' : 'FEVIQO PREMIUM'}
+                          {EDITORIAL_COMPLIANCE_MODE
+                            ? 'CAST & REVIEWS'
+                            : isDramaUnlocked
+                            ? 'MEMBERSHIP UNLOCKED'
+                            : 'FEVIQO PREMIUM'}
                         </span>
                       </div>
                       <h2
                         className="text-2xl font-black text-slate-900 hover:text-[#22C55E] cursor-pointer transition"
                         onClick={() => handleSelectEpisode(latestEpisode)}
                       >
-                        {latestEpisode.title}
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? `Yeraltı Episode ${latestEpisode.number} — Story Summary & Cast Review`
+                          : latestEpisode.title}
                       </h2>
                       <p className="text-xs text-slate-500 flex items-center gap-3">
                         <span className="flex items-center gap-1">
@@ -498,7 +604,9 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                     </div>
 
                     <p className="text-slate-600 text-sm leading-relaxed max-w-3xl">
-                      {latestEpisode.shortSummary}
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? getCleanYeraltiPlot(latestEpisode).split('\n\n')[0]
+                        : latestEpisode.shortSummary}
                     </p>
 
                     <a
@@ -513,13 +621,17 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                       }}
                       className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#22C55E] hover:bg-emerald-600 text-slate-950 font-black text-xs rounded-lg transition duration-150 cursor-pointer"
                     >
-                      {isLatestLocked ? (
+                      {EDITORIAL_COMPLIANCE_MODE ? (
+                        <BookOpen className="w-3.5 h-3.5" />
+                      ) : isLatestLocked ? (
                         <Lock className="w-3.5 h-3.5" />
                       ) : (
                         <Play className="w-3.5 h-3.5 fill-current" />
                       )}
                       <span>
-                        {isLatestLocked
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? `Read Episode ${latestEpisode.number} Guide`
+                          : isLatestLocked
                           ? `Unlock Episode ${latestEpisode.number} with Premium`
                           : `Watch Episode ${latestEpisode.number} Now`}
                       </span>
@@ -536,10 +648,14 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-slate-100 pb-6 text-left">
                   <div className="space-y-1">
                     <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">
-                      Yeralti - Urdu Dub Episodes
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'Yeraltı Episode Guide'
+                        : 'Yeralti - Urdu Dub Episodes'}
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500">
-                      جرائم کی دنیا — Urdu Dubbed episodes are locked for free users and unlock immediately with FEVIQO Premium.
+                      {EDITORIAL_COMPLIANCE_MODE
+                        ? 'جرائم کی دنیا — Browse episode plot summaries, release dates, cast profiles, and reader discussions.'
+                        : 'جرائم کی دنیا — Urdu Dubbed episodes are locked for free users and unlock immediately with FEVIQO Premium.'}
                     </p>
                   </div>
 
@@ -586,7 +702,7 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                       const epPremium = Boolean(
                         ep.isLockedPremium || isEpisodePremium('yeralti', ep.slug)
                       );
-                      const isLocked = epPremium && !isDramaUnlocked;
+                      const isLocked = !EDITORIAL_COMPLIANCE_MODE && epPremium && !isDramaUnlocked;
                       const isCheckingThis = checkingEpisodeKey === `yeralti:${ep.slug}`;
                       return (
                         <a
@@ -609,7 +725,7 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                           <div className="relative aspect-video bg-slate-950 border-b border-slate-100/10 overflow-hidden">
                             <img
                               src={ep.thumbnail}
-                              alt={ep.title}
+                              alt={`Yeraltı Episode ${ep.number} Story Summary`}
                               referrerPolicy="no-referrer"
                               onError={(e) => {
                                 const fallback = '/images/posters/poster-horiz-narrative-storytelling.jpg';
@@ -643,12 +759,25 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                             ) : (
                               <>
                                 <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md bg-[#22C55E] text-[#0B0B0D]">
-                                  <ShieldCheck className="w-3 h-3" />
-                                  <span>Unlocked · Urdu Dubbed</span>
+                                  {EDITORIAL_COMPLIANCE_MODE ? (
+                                    <>
+                                      <BookOpen className="w-3 h-3" />
+                                      <span>Episode Guide</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ShieldCheck className="w-3 h-3" />
+                                      <span>Unlocked · Urdu Dubbed</span>
+                                    </>
+                                  )}
                                 </div>
                                 <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
                                   <div className="w-10 h-10 rounded-full bg-[#22C55E] text-slate-950 flex items-center justify-center shadow-lg">
-                                    <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                    {EDITORIAL_COMPLIANCE_MODE ? (
+                                      <BookOpen className="w-4 h-4 text-slate-950" />
+                                    ) : (
+                                      <Play className="w-4 h-4 fill-current text-slate-950 ml-0.5" />
+                                    )}
                                   </div>
                                 </div>
                               </>
@@ -671,13 +800,17 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                                   isLocked ? 'text-white' : 'text-slate-900'
                                 }`}
                               >
-                                {ep.title}
+                                {EDITORIAL_COMPLIANCE_MODE
+                                  ? `Yeraltı Episode ${ep.number} — Story Summary & Review`
+                                  : ep.title}
                               </h3>
                             </div>
 
                             <div className="pt-2 flex items-center justify-between text-xs text-[#22C55E] font-bold">
                               <span>
-                                {isLocked
+                                {EDITORIAL_COMPLIANCE_MODE
+                                  ? 'Read Episode Guide'
+                                  : isLocked
                                   ? 'Unlock with FEVIQO Premium'
                                   : 'Unlocked with Membership'}
                               </span>
@@ -712,7 +845,9 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                         THE STORYLINE
                       </span>
                       <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                        About Yeralti - Urdu Dub (جرائم کی دنیا)
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'About Yeraltı (جرائم کی دنیا)'
+                          : 'About Yeralti - Urdu Dub (جرائم کی دنیا)'}
                       </h2>
                     </div>
 
@@ -722,10 +857,14 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
 
                     <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
                       <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                        Exclusive FEVIQO Urdu Dubbed Release
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'Editorial Coverage & Episode Guides'
+                          : 'Exclusive FEVIQO Urdu Dubbed Release'}
                       </h3>
                       <p className="text-slate-500 text-sm leading-relaxed max-w-3xl">
-                        Every episode of Yeralti - Urdu Dub (جرائم کی دنیا) is professionally dubbed in Urdu HD exclusively for FEVIQO Premium Members. Choose Yeralti - Urdu Dub in any Starter, Standard, Plus, or VIP plan to unlock every release automatically.
+                        {EDITORIAL_COMPLIANCE_MODE
+                          ? 'FEVIQO publishes original, spoiler-aware episode guides, character breakdowns, trailer reviews, and community discussion notes for Yeraltı (جرائم کی دنیا). We do not host or stream copyrighted video broadcasts.'
+                          : 'Every episode of Yeralti - Urdu Dub (جرائم کی دنیا) is professionally dubbed in Urdu HD exclusively for FEVIQO Premium Members. Choose Yeralti - Urdu Dub in any Starter, Standard, Plus, or VIP plan to unlock every release automatically.'}
                       </p>
                     </div>
                   </div>
@@ -738,7 +877,9 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                     <div className="space-y-4 text-xs">
                       <div className="border-b border-slate-200 pb-3 flex justify-between">
                         <span className="text-slate-500 font-medium">Series Title</span>
-                        <span className="text-slate-900 font-bold">Yeralti - Urdu Dub</span>
+                        <span className="text-slate-900 font-bold">
+                          {EDITORIAL_COMPLIANCE_MODE ? 'Yeraltı' : 'Yeralti - Urdu Dub'}
+                        </span>
                       </div>
                       <div className="border-b border-slate-200 pb-3 flex justify-between">
                         <span className="text-slate-500 font-medium">Urdu Name</span>
@@ -751,9 +892,13 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                         <span className="text-slate-900 font-bold">Turkey</span>
                       </div>
                       <div className="border-b border-slate-200 pb-3 flex justify-between">
-                        <span className="text-slate-500 font-medium">Audio Format</span>
+                        <span className="text-slate-500 font-medium">
+                          {EDITORIAL_COMPLIANCE_MODE ? 'Coverage Format' : 'Audio Format'}
+                        </span>
                         <span className="text-emerald-600 font-extrabold">
-                          {YERALTI_SERIES_DATA.dubLanguage}
+                          {EDITORIAL_COMPLIANCE_MODE
+                            ? 'Episode Guide & Reviews'
+                            : YERALTI_SERIES_DATA.dubLanguage}
                         </span>
                       </div>
                       <div className="border-b border-slate-200 pb-3 flex justify-between">
@@ -796,14 +941,14 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                     className="hover:text-slate-900 cursor-pointer transition-colors"
                     onClick={() => onNavigatePage('dramas')}
                   >
-                    Dramas
+                    {EDITORIAL_COMPLIANCE_MODE ? 'Episode Guides' : 'Dramas'}
                   </span>
                   <span className="text-slate-300">/</span>
                   <span
                     className="hover:text-slate-900 cursor-pointer transition-colors"
                     onClick={handleBackToOverview}
                   >
-                    Yeralti - Urdu Dub
+                    {EDITORIAL_COMPLIANCE_MODE ? 'Yeraltı' : 'Yeralti - Urdu Dub'}
                   </span>
                   <span className="text-slate-300">/</span>
                   <span className="text-emerald-600 font-bold">
@@ -815,23 +960,53 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
               {/* Title & Meta */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-left space-y-2">
                 <span className="text-xs font-black text-emerald-600 tracking-widest uppercase">
-                  YERALTI - URDU DUB (جرائم کی دنیا) &bull; EPISODE {selectedEpisode.number}
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? `YERALTI (جرائم کی دنیا) • EPISODE ${selectedEpisode.number} GUIDE`
+                    : `YERALTI - URDU DUB (جرائم کی دنیا) • EPISODE ${selectedEpisode.number}`}
                 </span>
                 <h1 className="text-xl sm:text-4xl font-black tracking-tight text-slate-900">
-                  {selectedEpisode.title}
+                  {EDITORIAL_COMPLIANCE_MODE
+                    ? `Yeraltı Episode ${selectedEpisode.number} — Story Summary, Cast & Review`
+                    : selectedEpisode.title}
                 </h1>
                 <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center gap-2 sm:gap-3">
-                  <span>Duration: {selectedEpisode.duration}</span>
+                  <span>Runtime: {selectedEpisode.duration}</span>
                   <span>&bull;</span>
-                  <span>Urdu Dubbed</span>
+                  <span>{EDITORIAL_COMPLIANCE_MODE ? 'Editorial Episode Guide' : 'Urdu Dubbed'}</span>
                   <span>&bull;</span>
-                  <span>HD 1080p Streaming</span>
+                  <span>{EDITORIAL_COMPLIANCE_MODE ? 'Cast & Reviews' : 'HD 1080p Streaming'}</span>
                 </p>
               </div>
 
-              {/* Locked Gate OR Protected Stream Player */}
+              {/* Editorial Episode Guide OR Video Player */}
               <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                {isSelectedPremium && !resolvedStreamUrl ? (
+                {EDITORIAL_COMPLIANCE_MODE ? (
+                  <EditorialEpisodeGuidePanel
+                    seriesKey="yeralti"
+                    seriesTitle="Yeraltı (جرائم کی دنیا)"
+                    seasonLabel="Season 1"
+                    episodeNumber={selectedEpisode.number}
+                    episodeTitle={`Yeraltı Episode ${selectedEpisode.number} — Story Summary & Review`}
+                    releaseDate="November 2026"
+                    duration={selectedEpisode.duration}
+                    network="Turkish Crime Thriller"
+                    genre="Crime · Action · Thriller"
+                    thumbnailUrl={selectedEpisode.thumbnail}
+                    plotOverview={getCleanYeraltiPlot(selectedEpisode)}
+                    cast={YERALTI_CAST}
+                    trailerReviewNotes={[
+                      `Episode ${selectedEpisode.number} raises the stakes with tightly framed urban suspense sequences and moody nighttime cinematography.`,
+                      'The promotional teaser highlights fractured loyalties within the syndicate while keeping key character motives ambiguous.',
+                      'Sound design and restrained dialogue build tension steadily toward the closing confrontation.',
+                    ]}
+                    editorialHighlights={[
+                      'High-stakes confrontation between rival power factions in the city underworld.',
+                      'Deeper insight into character loyalties, personal risks, and covert strategy.',
+                      'Cliffhanger final beat that sets the tone for the upcoming episode arc.',
+                    ]}
+                    editorialRating="4.7 / 5"
+                  />
+                ) : isSelectedPremium && !resolvedStreamUrl ? (
                   <div className="w-full relative rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0B0B0D] shadow-2xl flex items-center justify-center select-none aspect-video border border-zinc-800 mx-auto">
                     <img
                       src={selectedEpisode.thumbnail}
@@ -937,27 +1112,29 @@ export const YeraltiDramaPage: React.FC<YeraltiDramaPageProps> = ({
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs transition cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  <span>Back to Yeralti - Urdu Dub</span>
+                  <span>{EDITORIAL_COMPLIANCE_MODE ? 'Back to Yeraltı Episode Guide' : 'Back to Yeralti - Urdu Dub'}</span>
                 </button>
                 <button
                   onClick={handleShareLink}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold text-xs transition cursor-pointer"
                 >
                   <Share2 className="w-4 h-4 text-[#22C55E]" />
-                  <span>{copiedLink ? 'Link Copied!' : 'Share Episode'}</span>
+                  <span>{copiedLink ? 'Link Copied!' : EDITORIAL_COMPLIANCE_MODE ? 'Share Episode Guide' : 'Share Episode'}</span>
                 </button>
               </div>
 
-              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-left space-y-4">
-                <h2 className="text-2xl font-black text-slate-900">
-                  Episode {selectedEpisode.number} Overview
-                </h2>
-                <div className="space-y-4 text-slate-600 leading-relaxed text-sm sm:text-base">
-                  {selectedEpisode.recap.split('\n\n').map((para, idx) => (
-                    <p key={idx}>{para.trim()}</p>
-                  ))}
+              {!EDITORIAL_COMPLIANCE_MODE && (
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-left space-y-4">
+                  <h2 className="text-2xl font-black text-slate-900">
+                    Episode {selectedEpisode.number} Overview
+                  </h2>
+                  <div className="space-y-4 text-slate-600 leading-relaxed text-sm sm:text-base">
+                    {selectedEpisode.recap.split('\n\n').map((para, idx) => (
+                      <p key={idx}>{para.trim()}</p>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

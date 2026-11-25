@@ -206,7 +206,9 @@ export type AppRoute =
   | 'admin-automation-whatsapp'
   | 'admin-automation-leads'
   | 'privacy'
-  | 'terms';
+  | 'terms'
+  | 'dmca'
+  | 'contact';
 
 export interface PreselectedPlan {
   id: string; // 'scale' | 'pro' | 'inhouse'

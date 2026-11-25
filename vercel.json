@@ -23,7 +23,10 @@
     { "source": "/testimonials", "destination": "/testimonials/index.html" },
     { "source": "/turkish-drama", "destination": "/turkish-drama/index.html" },
     { "source": "/privacy", "destination": "/privacy/index.html" },
+    { "source": "/privacy-policy", "destination": "/index.html" },
     { "source": "/terms", "destination": "/terms/index.html" },
+    { "source": "/dmca", "destination": "/index.html" },
+    { "source": "/contact", "destination": "/index.html" },
     { "source": "/account", "destination": "/account/index.html" },
     {
       "source": "/((?!assets/|images/|logos/|videos/|uploads/|favicon|robots\\.txt|sitemap\\.xml|llms\\.txt|ai-catalog\\.json|ads\\.txt|sw\\.js|feviqo-indexnow-key-2026\\.txt).*)",

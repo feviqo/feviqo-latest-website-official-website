@@ -60,7 +60,7 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({
           </h1>
 
           <p className="text-slate-200 text-sm sm:text-base leading-relaxed max-w-2xl font-medium opacity-90">
-            Last Updated: September 28, 2026 &bull; FEVIQO Ltd. ("FEVIQO", "we", "us", or "our")
+            Last Updated: November 2026 &bull; FEVIQO Ltd. (&ldquo;FEVIQO&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;)
           </p>
         </div>
       </section>
@@ -75,7 +75,7 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({
             <span>Your Privacy Matters at FEVIQO</span>
           </h2>
           <p className="text-sm text-slate-700">
-            This Privacy Policy explains how FEVIQO collects, uses, discloses, and safeguards your information when you visit <strong>https://feviqo.com</strong> or use our video editing and digital media services. Please read this policy carefully.
+            This Privacy Policy explains how FEVIQO collects, uses, discloses, and safeguards your information when you visit <strong>https://feviqo.com</strong>, read our Turkish drama episode guides and reviews, or use our video editing and creative studio services. Please read this policy carefully.
           </p>
         </div>
 
@@ -89,35 +89,44 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({
           </p>
           <ul className="list-disc pl-6 space-y-2 text-slate-600">
             <li>
-              <strong>Personal Information Provided Voluntarily:</strong> Contact details such as your name, email address, company name, phone number, and project briefs submitted via booking forms, contact forms, or portal registrations (`partner@feviqo.com`).
+              <strong>Personal Information Provided Voluntarily:</strong> Contact details such as your name, email address, company name, phone number, and inquiries submitted via booking forms, our contact page, or portal registrations (<code>partner@feviqo.com</code>).
             </li>
             <li>
               <strong>Log Data &amp; Device Information:</strong> Internet Protocol (IP) address, browser type, internet service provider (ISP), referring/exit pages, operating system, date/time stamp, and clickstream data.
             </li>
             <li>
-              <strong>Video Media &amp; Brand Assets:</strong> Raw footage, brand guidelines, audio files, and instructions uploaded to FEVIQO Flow or cloud storage integrations.
+              <strong>Video Media &amp; Brand Assets:</strong> Raw footage, brand guidelines, audio files, and instructions uploaded to FEVIQO Flow or cloud storage integrations by studio clients.
             </li>
           </ul>
         </section>
 
-        {/* Section 2: Google AdSense & Third-Party Advertising Cookies */}
+        {/* Section 2: Third-Party Advertising Partners (Monetag & Google AdSense) */}
         <section className="space-y-4 p-6 bg-slate-50 rounded-2xl border border-slate-200">
           <h2 className="text-2xl font-black text-slate-900 border-b border-slate-200 pb-2 flex items-center gap-2">
             <Globe className="w-6 h-6 text-[#22C55E]" />
-            <span>2. Google AdSense &amp; Third-Party Cookies Disclosure</span>
+            <span>2. Third-Party Advertising Partners (Monetag, Cookies &amp; Web Beacons)</span>
           </h2>
           <p className="font-semibold text-slate-900">
-            FEVIQO partners with Google AdSense and third-party advertising networks to serve advertisements on our website (`feviqo.com`).
+            FEVIQO works with third-party advertising networks—including <strong>Monetag</strong> and <strong>Google AdSense</strong>—to display advertisements on <strong>feviqo.com</strong>.
           </p>
           <ul className="list-disc pl-6 space-y-3 text-slate-700 text-sm">
             <li>
-              <strong>Third-Party Vendor Cookies:</strong> Third-party vendors, including Google, use cookies to serve ads based on a user's prior visits to FEVIQO or other websites on the internet.
+              <strong>Monetag &amp; Third-Party Ad Technologies:</strong> Third-party advertising partners such as <strong>Monetag</strong> may use cookies, JavaScript, service workers, and web beacons in their respective advertisements and links that appear on <strong>feviqo.com</strong>. These technologies automatically receive your IP address and non-personally identifiable browser/device signals to measure advertising effectiveness, prevent ad fraud, and personalize the advertising content you see.
             </li>
             <li>
-              <strong>Google's DART Cookie &amp; Advertising Cookies:</strong> Google's use of advertising cookies enables it and its partners to serve ads to users based on their visit to FEVIQO and/or other sites across the Internet.
+              <strong>No Direct Control Over Third-Party Cookies:</strong> FEVIQO has no access to or direct control over the cookies or web beacons placed by third-party advertising partners. We encourage you to consult the respective privacy policies of our advertising partners, including <a href="https://monetag.com/privacy-policy/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline">Monetag&rsquo;s Privacy Policy</a>, for detailed information on their data practices.
             </li>
             <li>
-              <strong>Opt-Out Options:</strong> Users may opt out of personalized advertising by visiting <a href="https://adssettings.google.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline">Google Ad Settings</a>. Alternatively, users can opt out of a third-party vendor's use of cookies for personalized advertising by visiting <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline">www.aboutads.info</a>.
+              <strong>Google Advertising Cookies:</strong> Google and its partners may also use advertising cookies to serve ads based on a user&rsquo;s prior visits to FEVIQO or other websites across the Internet.
+            </li>
+            <li>
+              <strong>How to Opt Out of Personalized Ads &amp; Cookies:</strong>
+              <ul className="list-circle pl-5 mt-2 space-y-1.5 text-slate-600">
+                <li>You can disable or clear cookies and web beacons at any time through your web browser&rsquo;s privacy settings (Chrome, Safari, Firefox, Edge).</li>
+                <li>You can opt out of push notifications or service worker permissions directly in your browser&rsquo;s site settings for <code>feviqo.com</code>.</li>
+                <li>You can opt out of interest-based advertising across participating ad networks via the <a href="https://optout.networkadvertising.org/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline">Network Advertising Initiative (NAI)</a> and the <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline">Digital Advertising Alliance (DAA / YourAdChoices)</a>.</li>
+                <li>You can manage Google ad personalization at <a href="https://adssettings.google.com" target="_blank" rel="noopener noreferrer" className="text-emerald-600 font-bold underline">Google Ad Settings</a>.</li>
+              </ul>
             </li>
           </ul>
         </section>
@@ -128,10 +137,10 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({
             3. Cookies &amp; Tracking Technologies
           </h2>
           <p>
-            FEVIQO uses 'cookies' and similar tracking technologies to store information including visitors' preferences and the pages on the website that the visitor accessed or visited. The information is used to optimize the users' experience by customizing our web page content based on visitors' browser type and/or other information.
+            FEVIQO uses cookies, local storage, and web beacons to remember visitor preferences (such as language selection and reader discussion comments), measure site performance, and deliver relevant editorial and advertising experiences.
           </p>
           <p>
-            You can choose to disable cookies through your individual browser options. Detailed information about cookie management with specific web browsers can be found at the browsers' respective websites.
+            You may choose to disable cookies through your individual browser options. Please note that disabling certain cookies may affect site preferences, though core editorial articles and episode guides remain accessible.
           </p>
         </section>
 
@@ -146,7 +155,7 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({
           <ul className="list-disc pl-6 space-y-2 text-slate-600">
             <li><strong>The right to access:</strong> You have the right to request copies of your personal data.</li>
             <li><strong>The right to rectification:</strong> You have the right to request that we correct any information you believe is inaccurate.</li>
-            <li><strong>The right to erasure ("Right to be Forgotten"):</strong> You have the right to request that we erase your personal data under certain conditions.</li>
+            <li><strong>The right to erasure (&ldquo;Right to be Forgotten&rdquo;):</strong> You have the right to request that we erase your personal data under certain conditions.</li>
             <li><strong>The right to restrict processing:</strong> You have the right to request that we restrict the processing of your personal data.</li>
             <li><strong>The right to object to processing:</strong> You have the right to object to our processing of your personal data.</li>
           </ul>
@@ -166,17 +175,17 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({
           <ul className="list-disc pl-6 space-y-2 text-slate-600">
             <li>Request that a business disclose the categories and specific pieces of personal data collected about consumers.</li>
             <li>Request that a business delete any personal data about the consumer that a business collected.</li>
-            <li>Request that a business that sells or shares a consumer's personal data, not sell or share the consumer's personal data. FEVIQO does not sell personal information to third parties.</li>
+            <li>Request that a business that sells or shares a consumer&rsquo;s personal data not sell or share the consumer&rsquo;s personal data. FEVIQO does not sell personal information to third parties.</li>
           </ul>
         </section>
 
         {/* Section 6: Children's Information */}
         <section className="space-y-4">
           <h2 className="text-2xl font-black text-slate-900 border-b border-slate-200 pb-2">
-            6. Children's Privacy (COPPA Compliance)
+            6. Children&rsquo;s Privacy (COPPA Compliance)
           </h2>
           <p>
-            Another part of our priority is adding protection for children while using the internet. FEVIQO does not knowingly collect any Personal Identifiable Information from children under the age of 13 (or 16 in certain jurisdictions). If you think that your child provided this kind of information on our website, we strongly encourage you to contact us immediately and we will do our best efforts to promptly remove such information from our records.
+            Protecting children online is a core priority at FEVIQO. We do not knowingly collect any Personal Identifiable Information from children under the age of 13 (or 16 in certain jurisdictions). If you believe that your child provided personal information on our website, please contact us immediately and we will promptly remove such information from our records.
           </p>
         </section>
 
@@ -187,13 +196,23 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({
             <span>Contact Privacy Desk</span>
           </h2>
           <p className="text-slate-300 text-sm">
-            If you have additional questions or require more information about our Privacy Policy or AdSense cookie choices, do not hesitate to contact us:
+            If you have questions about this Privacy Policy, third-party advertising partners (including Monetag), or cookie opt-out choices, please contact us:
           </p>
           <div className="text-sm font-bold text-emerald-400">
             Email: <a href="mailto:partner@feviqo.com" className="underline">partner@feviqo.com</a>
           </div>
           <p className="text-xs text-slate-400 pt-2">
-            FEVIQO Ltd. &bull; Unlimited Video Editing &amp; Digital Media Distribution
+            FEVIQO Ltd. &bull; Editorial Portal &amp; Creative Video Studio &bull;{' '}
+            <a
+              href="/contact"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigatePage('contact');
+              }}
+              className="text-emerald-300 underline"
+            >
+              Contact Form
+            </a>
           </p>
         </section>
 

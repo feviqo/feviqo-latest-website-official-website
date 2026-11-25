@@ -1188,6 +1188,76 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Public Contact Page Form Endpoint
+const CONTACT_MESSAGES_FILE = path.join(DATA_DIR, 'contact_messages.json');
+app.post('/api/contact', async (req, res) => {
+  try {
+    const rawName = String(req.body?.name || '').trim().slice(0, 120);
+    const rawEmail = String(req.body?.email || '').trim().slice(0, 180);
+    const rawTopic = String(req.body?.topic || 'General Inquiry').trim().slice(0, 120);
+    const rawMessage = String(req.body?.message || '').trim().slice(0, 4000);
+
+    if (!rawName || !rawEmail || !rawEmail.includes('@') || !rawMessage) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide a valid name, email address, and message.',
+      });
+    }
+
+    const record = {
+      id: `contact-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: rawName,
+      email: rawEmail,
+      topic: rawTopic,
+      message: rawMessage,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      let existing: any[] = [];
+      if (fs.existsSync(CONTACT_MESSAGES_FILE)) {
+        const parsed = JSON.parse(fs.readFileSync(CONTACT_MESSAGES_FILE, 'utf-8'));
+        if (Array.isArray(parsed)) existing = parsed;
+      }
+      existing.unshift(record);
+      if (existing.length > 500) existing = existing.slice(0, 500);
+      fs.writeFileSync(CONTACT_MESSAGES_FILE, JSON.stringify(existing, null, 2), 'utf-8');
+    } catch (storageErr) {
+      console.warn('[Contact API] Local log write warning:', storageErr);
+    }
+
+    const escapeHtml = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    // Dispatch email notification asynchronously so user gets fast confirmation
+    void sendServerEmail({
+      to: 'partner@feviqo.com',
+      subject: `[FEVIQO Contact] ${rawTopic} — ${rawName}`,
+      type: 'contact_form',
+      data: { name: rawName, email: rawEmail, topic: rawTopic },
+      html: `<div style="font-family:sans-serif;line-height:1.6;">
+        <h2>New Contact Form Submission (feviqo.com)</h2>
+        <p><strong>Name:</strong> ${escapeHtml(rawName)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(rawEmail)}</p>
+        <p><strong>Department:</strong> ${escapeHtml(rawTopic)}</p>
+        <p><strong>Message:</strong><br/>${escapeHtml(rawMessage).replace(/\n/g, '<br/>')}</p>
+      </div>`,
+    }).catch(() => {});
+
+    return res.status(200).json({
+      success: true,
+      id: record.id,
+      message: 'Your message has been received. Our team will respond shortly.',
+    });
+  } catch (err: any) {
+    console.error('[Contact API] Error:', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Unable to submit message right now. Please email partner@feviqo.com.',
+    });
+  }
+});
+
 // Direct Media Upload API (supports images, videos, audio, documents)
 app.post('/api/upload', (req, res) => {
   try {
