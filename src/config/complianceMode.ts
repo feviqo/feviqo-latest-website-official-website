@@ -6,4 +6,4 @@
  * original editorial episode guides, story summaries, cast profiles, trailer review
  * notes, and reader discussion sections instead.
  */
-export const EDITORIAL_COMPLIANCE_MODE = true;
+export const EDITORIAL_COMPLIANCE_MODE = false;

@@ -303,9 +303,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div>
                       <div className="text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
                         <span>Mehmed: Fetihler Sultanı</span>
-                        <span className="px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 text-[9px] font-black uppercase">GUIDE</span>
+                        <span className="px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 text-[9px] font-black uppercase">NEW</span>
                       </div>
-                      <div className="text-slate-300 text-xs mt-0.5">Season 4 Episode Guide, historical story summaries &amp; cast.</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Watch Season 4 episodes in 1080p HD with Urdu subtitles.</div>
                     </div>
                   </a>
 
@@ -322,8 +322,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <Globe className="w-4 h-4 text-emerald-400" />
                     </div>
                     <div>
-                      <div className="text-white text-xs font-bold uppercase tracking-wider">Teşkilat Episode Guide</div>
-                      <div className="text-slate-300 text-xs mt-0.5">Season 7 story summaries, cast profiles &amp; trailer reviews.</div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Teşkilat (Urdu Subtitles)</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Watch Season 7 full episodes in HD Urdu subtitles &amp; dubbed.</div>
                     </div>
                   </button>
 
@@ -339,7 +339,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                     <div>
                       <div className="text-white text-xs font-bold uppercase tracking-wider">Güneşin Doğduğu Yer</div>
-                      <div className="text-slate-300 text-xs mt-0.5">Episode guides, Anatolian family saga summaries &amp; cast.</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Watch latest episodes in 1080p HD with Urdu subtitles.</div>
                     </div>
                   </button>
 
@@ -354,8 +354,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <Globe className="w-4 h-4 text-emerald-400" />
                     </div>
                     <div>
-                      <div className="text-white text-xs font-bold uppercase tracking-wider">Yeraltı — Cast &amp; Reviews</div>
-                      <div className="text-slate-300 text-xs mt-0.5">Crime thriller episode summaries, character notes &amp; reviews.</div>
+                      <div className="text-white text-xs font-bold uppercase tracking-wider">Yeraltı (Urdu Dubbed)</div>
+                      <div className="text-slate-300 text-xs mt-0.5">Watch Yeraltı (جرائم کی دنیا) episodes in Urdu Dubbed HD.</div>
                     </div>
                   </button>
 
@@ -369,7 +369,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-full text-left p-2.5 rounded-xl hover:bg-white/10 flex items-center gap-2.5 transition group cursor-pointer text-slate-300 hover:text-white"
                   >
                     <Globe className="w-3.5 h-3.5 text-emerald-400" />
-                    <span className="text-xs font-semibold">All Drama Guides &amp; Reviews</span>
+                    <span className="text-xs font-semibold">All Turkish Dramas</span>
                   </a>
                 </div>
               </div>
@@ -590,9 +590,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>About Us & Executive Leadership</span>
               </button>
 
-              {/* Drama Guides Section placed in mobile menu */}
+              {/* Turkish Dramas Section placed in mobile menu */}
               <div className="border-t border-[#064e3b] pt-3.5 mt-3.5 space-y-1.5">
-                <div className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Episode Guides &amp; Reviews</div>
+                <div className="px-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Turkish Dramas (Urdu)</div>
                 
                 <a 
                   href="/mehmed-fetihler-sultani"
@@ -607,7 +607,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="w-full text-left py-2.5 px-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/60 font-extrabold cursor-pointer text-emerald-300 flex items-center justify-between border border-emerald-500/10"
                 >
                   <span>Mehmed: Fetihler Sultanı</span>
-                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">GUIDE</span>
+                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">NEW</span>
                 </a>
                 
                 <button 
@@ -620,7 +620,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="w-full text-left py-2.5 px-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/60 font-extrabold cursor-pointer text-emerald-300 flex items-center justify-between border border-emerald-500/10"
                 >
                   <span>Teşkilat (Season 7)</span>
-                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">SUMMARY</span>
+                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">URDU</span>
                 </button>
 
                 <button 
@@ -631,7 +631,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="w-full text-left py-2.5 px-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/60 font-extrabold cursor-pointer text-emerald-300 flex items-center justify-between border border-emerald-500/10"
                 >
                   <span>Güneşin Doğduğu Yer</span>
-                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">REVIEWS</span>
+                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">HD</span>
                 </button>
 
                 <button 
@@ -641,8 +641,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }}
                   className="w-full text-left py-2.5 px-3 rounded-xl bg-slate-900/40 hover:bg-slate-900/60 font-extrabold cursor-pointer text-emerald-300 flex items-center justify-between border border-emerald-500/10"
                 >
-                  <span>Yeraltı</span>
-                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">CAST</span>
+                  <span>Yeraltı (Urdu Dubbed)</span>
+                  <span className="text-[9px] uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500 text-slate-950 font-black">DUBBED</span>
                 </button>
 
                 <button 
@@ -652,7 +652,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }}
                   className="w-full text-left py-2 px-3 rounded-xl hover:bg-white/5 font-semibold cursor-pointer text-slate-300 flex items-center justify-between text-xs"
                 >
-                  <span>All Drama Episode Guides</span>
+                  <span>All Turkish Dramas</span>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                 </button>
               </div>

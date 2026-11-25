@@ -158,20 +158,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
               }}
               className="text-[#16a34a] hover:underline font-bold"
             >
-              Turkish Drama Episode Guides &amp; Reviews &rarr;
+              Watch Turkish Dramas in Urdu &rarr;
             </a>
             <span className="text-slate-300 hidden sm:inline">•</span>
             <a
-              href="/teskilat"
+              href="/membership"
               onClick={(e) => {
                 if (!e.metaKey && !e.ctrlKey) {
                   e.preventDefault();
-                  window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: '/teskilat' }));
+                  window.dispatchEvent(new CustomEvent('feviqo-navigate-url', { detail: '/membership' }));
                 }
               }}
               className="text-slate-700 hover:text-[#16a34a] hover:underline"
             >
-              Cast &amp; Story Summaries
+              FEVIQO Premium Urdu Dubbed Membership
             </a>
           </div>
         </div>

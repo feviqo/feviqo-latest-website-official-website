@@ -206,7 +206,7 @@ export const Footer: React.FC<FooterProps> = ({
             </ul>
           </div>
 
-          {/* Column 3: Drama Episode Guides & Reviews */}
+          {/* Column 3: Turkish Dramas (Urdu) */}
           <div>
             <h4 className="font-extrabold text-white text-sm uppercase tracking-wider mb-4 text-[#22C55E]">
               {t(MEMBERSHIP_COPY.footer.dramasHeading)}
@@ -214,8 +214,8 @@ export const Footer: React.FC<FooterProps> = ({
             <ul className="space-y-2 text-xs text-emerald-100 font-normal">
               <li>
                 <a href="/yeralti" onClick={(e) => { e.preventDefault(); nav('yeralti'); }} className="hover:text-white transition cursor-pointer font-black text-[#22C55E] flex items-center justify-between">
-                  <span>Yeraltı — Episode Guide</span>
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 font-black text-[9px] uppercase tracking-wider">GUIDE</span>
+                  <span>Yeraltı (Urdu Dubbed)</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 font-black text-[9px] uppercase tracking-wider">NEW</span>
                 </a>
               </li>
               <li>
@@ -229,8 +229,8 @@ export const Footer: React.FC<FooterProps> = ({
                   }}
                   className="hover:text-white transition cursor-pointer font-black text-amber-300 flex items-center justify-between"
                 >
-                  <span>Mehmed Ep 90 — Story Summary</span>
-                  <span className="px-1.5 py-0.5 rounded bg-emerald-600/80 text-white font-black text-[9px] uppercase tracking-wider">NEW</span>
+                  <span>Mehmed Ep 90 (Urdu Subtitles)</span>
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-600/80 text-white font-black text-[9px] uppercase tracking-wider">HD</span>
                 </a>
               </li>
               <li>
@@ -244,12 +244,12 @@ export const Footer: React.FC<FooterProps> = ({
                   }}
                   className="hover:text-white transition cursor-pointer font-bold text-emerald-200 block"
                 >
-                  Mehmed Ep 89 — Review &amp; Cast
+                  Mehmed Ep 89 (Urdu Subtitles)
                 </a>
               </li>
               <li>
                 <a href="/mehmed-fetihler-sultani" onClick={(e) => { e.preventDefault(); nav('mehmed-fetihler-sultani'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
-                  Mehmed: Fetihler Sultanı Guide
+                  Mehmed: Fetihler Sultanı (Urdu)
                 </a>
               </li>
               <li>
@@ -263,7 +263,7 @@ export const Footer: React.FC<FooterProps> = ({
                   }}
                   className="hover:text-white transition cursor-pointer font-bold text-amber-300 block"
                 >
-                  Güneşin Doğduğu Yer Ep 7 Summary
+                  Güneşin Doğduğu Yer Ep 7 (Urdu)
                 </a>
               </li>
               <li>
@@ -277,22 +277,22 @@ export const Footer: React.FC<FooterProps> = ({
                   }}
                   className="hover:text-white transition cursor-pointer font-bold text-emerald-300 block"
                 >
-                  Teşkilat Ep 189 — Story Summary
+                  Teşkilat Ep 189 (Urdu Subtitles)
                 </a>
               </li>
               <li>
                 <a href="/teskilat" onClick={(e) => { e.preventDefault(); nav('teskilat-urdu'); }} className="hover:text-white transition cursor-pointer font-bold text-[#22C55E] block">
-                  Teşkilat Season 7 Episode Guide
+                  Teşkilat Season 7 (Urdu Subtitles)
                 </a>
               </li>
               <li>
                 <a href="/gunesin-dogdugu-yer" onClick={(e) => { e.preventDefault(); nav('gunesin-dogdugu-yer'); }} className="hover:text-white transition cursor-pointer font-bold text-emerald-300 block">
-                  Güneşin Doğduğu Yer Cast &amp; Reviews
+                  Güneşin Doğduğu Yer (Urdu)
                 </a>
               </li>
               <li>
                 <a href="/dramas" onClick={(e) => { e.preventDefault(); nav('dramas'); }} className="hover:text-white transition cursor-pointer text-[#DBFF4C] font-extrabold underline block mt-1">
-                  All Drama Guides &amp; Reviews &rarr;
+                  All Turkish Dramas &rarr;
                 </a>
               </li>
             </ul>
