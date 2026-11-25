@@ -20,51 +20,75 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
   }, []);
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const heroVideoSrc = assets.heroVideo || '/videos/feviqo-hero-video.mp4';
-  const heroPosterSrc = assets.heroPoster || 'https://feviqo.com/images/feviqo-hero-poster.jpg';
+  const DEFAULT_HERO_VIDEO = '/videos/feviqo-hero-video.mp4';
+  const heroVideoSrc = assets.heroVideo || DEFAULT_HERO_VIDEO;
 
-  // Handle HLS stream or native playback with muted autoplay
+  // Handle native MP4 or HLS playback with reliable muted autoplay & seamless infinite loop
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
 
-    const cleanupHls = attachHlsStream(vid, heroVideoSrc, {
-      autoPlay: true,
-      onReady: () => {
-        vid.muted = isMuted;
-        vid.play().then(() => setIsPlaying(true)).catch(() => {});
-      },
-      onError: () => {
-        if (vid && vid.src !== '/videos/feviqo-hero-video.mp4') {
-          vid.src = '/videos/feviqo-hero-video.mp4';
-          vid.muted = isMuted;
-          vid.play().then(() => setIsPlaying(true)).catch(() => {});
-        }
-      },
-    });
-
     vid.defaultMuted = true;
-    vid.muted = isMuted;
+    vid.muted = true;
+    vid.loop = true;
     vid.playsInline = true;
 
-    const attemptPlay = () => {
+    const tryAutoPlay = () => {
       if (!vid) return;
-      vid.muted = true;
+      vid.loop = true;
       const playPromise = vid.play();
       if (playPromise !== undefined) {
         playPromise
           .then(() => setIsPlaying(true))
           .catch(() => {
             vid.muted = true;
+            setIsMuted(true);
             vid.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
           });
       }
     };
 
-    attemptPlay();
+    if (isHlsStream(heroVideoSrc)) {
+      const cleanupHls = attachHlsStream(vid, heroVideoSrc, {
+        autoPlay: true,
+        muted: true,
+        onReady: () => {
+          tryAutoPlay();
+        },
+        onError: () => {
+          if (vid && !vid.currentSrc.endsWith(DEFAULT_HERO_VIDEO)) {
+            vid.src = DEFAULT_HERO_VIDEO;
+            vid.load();
+            tryAutoPlay();
+          }
+        },
+      });
+      return () => {
+        cleanupHls();
+      };
+    }
+
+    // Direct native MP4 playback
+    const targetHref = (() => {
+      try {
+        return new URL(heroVideoSrc, window.location.origin).href;
+      } catch {
+        return heroVideoSrc;
+      }
+    })();
+    if (vid.src !== targetHref) {
+      vid.src = heroVideoSrc;
+      vid.load();
+    }
+
+    const onCanPlay = () => {
+      tryAutoPlay();
+    };
+    vid.addEventListener('canplay', onCanPlay);
+    tryAutoPlay();
 
     return () => {
-      if (cleanupHls) cleanupHls();
+      vid.removeEventListener('canplay', onCanPlay);
     };
   }, [heroVideoSrc]);
 
@@ -196,8 +220,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
                 {/* Horizontal Widescreen Video Player */}
                 <video
                   ref={videoRef}
-                  src={heroVideoSrc}
-                  poster={heroPosterSrc}
+                  src={isHlsStream(heroVideoSrc) ? undefined : heroVideoSrc}
                   autoPlay
                   muted={isMuted}
                   loop
@@ -206,18 +229,24 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onBookCall, onOpenVide
                   onPlaying={() => setIsPlaying(true)}
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
+                  onEnded={(e) => {
+                    const vid = e.currentTarget;
+                    vid.currentTime = 0;
+                    vid.play().then(() => setIsPlaying(true)).catch(() => {});
+                  }}
                   onError={() => {
                     const vid = videoRef.current;
-                    if (vid && vid.src !== '/videos/feviqo-hero-video.mp4') {
-                      vid.src = '/videos/feviqo-hero-video.mp4';
+                    if (vid && !vid.src.endsWith(DEFAULT_HERO_VIDEO)) {
+                      vid.src = DEFAULT_HERO_VIDEO;
+                      vid.muted = true;
+                      setIsMuted(true);
+                      vid.load();
                       vid.play().then(() => setIsPlaying(true)).catch(() => {});
                     }
                   }}
                   className="w-full h-full object-cover cursor-pointer aspect-[16/9]"
                   onClick={toggleSound}
                 >
-                  <source src={heroVideoSrc} />
-                  <source src="/videos/feviqo-hero-video.mp4" type="video/mp4" />
                   <track kind="captions" src="/captions/empty.vtt" srcLang="en" label="English" default />
                 </video>
 

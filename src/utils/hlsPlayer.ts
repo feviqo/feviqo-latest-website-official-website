@@ -93,6 +93,48 @@ export function attachHlsStream(
     video.muted = true;
   }
 
+  // Native MP4 / WebM / MOV files must play directly through the HTML5 <video> element
+  // rather than being passed into hls.js (which expects an .m3u8 manifest).
+  if (!isHlsStream(streamUrl)) {
+    const resolvedTarget = (() => {
+      try {
+        return new URL(streamUrl, window.location.origin).href;
+      } catch {
+        return streamUrl;
+      }
+    })();
+    if (video.currentSrc !== resolvedTarget && video.src !== resolvedTarget) {
+      video.src = streamUrl;
+    }
+    const onNativeReady = () => {
+      if (destroyed) return;
+      options.onManifestParsed?.();
+      options.onReady?.();
+      if (options.autoPlay) {
+        video.play().catch(() => {});
+      }
+    };
+    const onNativeError = () => {
+      if (destroyed) return;
+      options.onError?.(video.error);
+    };
+    video.addEventListener('loadeddata', onNativeReady);
+    video.addEventListener('canplay', onNativeReady);
+    video.addEventListener('error', onNativeError);
+    if (video.readyState >= 2) {
+      onNativeReady();
+    } else if (options.autoPlay) {
+      video.play().catch(() => {});
+    }
+    return () => {
+      destroyed = true;
+      clearTimers();
+      video.removeEventListener('loadeddata', onNativeReady);
+      video.removeEventListener('canplay', onNativeReady);
+      video.removeEventListener('error', onNativeError);
+    };
+  }
+
   // If this is a direct (non-proxied) Mux URL on a <mux-video> element that already
   // natively manages its own playback-id & hls.js engine, avoid attaching a duplicate
   // competing Hls instance that causes mid-playback stalls/conflicts.
