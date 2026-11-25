@@ -2613,11 +2613,19 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                                     </div>
                                   );
                                 })()}
-                                {(req.promoCode || (req.discountTotalPkr || 0) > 0 || (req.discountTotalUsd || 0) > 0) && (
-                                  <div className="text-[11px] text-emerald-700 font-medium mt-0.5 flex items-center gap-1.5">
+                                {(req.promoCode || req.referralCodeUsed || (req.discountTotalPkr || 0) > 0 || (req.discountTotalUsd || 0) > 0) && (
+                                  <div className="text-[11px] text-emerald-700 font-medium mt-0.5 flex flex-wrap items-center gap-1.5">
                                     {req.promoCode && (
                                       <span className="font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200">
                                         {req.promoCode}
+                                      </span>
+                                    )}
+                                    {req.referralCodeUsed && (
+                                      <span
+                                        title="Private referral link / QR attribution code"
+                                        className="font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200"
+                                      >
+                                        Ref: {req.referralCodeUsed}
                                       </span>
                                     )}
                                     {((req.discountTotalPkr || 0) > 0 || (req.discountTotalUsd || 0) > 0) && (
@@ -5250,6 +5258,15 @@ export const MembershipAdminPage: React.FC<MembershipAdminPageProps> = ({
                       </>
                     );
                   })()}
+
+                  {selectedRequest.referralCodeUsed && (
+                    <>
+                      <dt className="text-slate-500 font-medium">Referral Source</dt>
+                      <dd className="font-mono font-bold text-indigo-700 text-xs">
+                        {selectedRequest.referralCodeUsed}
+                      </dd>
+                    </>
+                  )}
 
                   {selectedRequest.visitorCountryCode && (
                     <>
